@@ -22,7 +22,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat deploy/v9_3_chunks/part_* | base64 -d > app/index.html
+          cat deploy/v9_3_chunks/part_* | base64 -d | gzip -d > app/index.html
           test "$(sha256sum app/index.html | awk '{print $1}')" = "97b0caa3d198e0cba64d8b4929c23e6459d5ca936208b48eeecde28adc579e8d"
           grep -q "2026-08-31-fixed-catalog-paper-print-preview-9-3" app/index.html
           rm -rf deploy/v9_3_chunks deploy/v9_3_READY .github/workflows/assemble-v9-3.yml
