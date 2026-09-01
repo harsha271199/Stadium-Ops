@@ -1,0 +1,33 @@
+name: Assemble V9.3 frontend
+
+on:
+  push:
+    branches:
+      - deploy/v9-3-staging
+    paths:
+      - deploy/v9_3_READY
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: deploy/v9-3-staging
+          fetch-depth: 0
+      - name: Assemble and verify frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat deploy/v9_3_chunks/part_* | base64 -d > app/index.html
+          test "$(sha256sum app/index.html | awk '{print $1}')" = "97b0caa3d198e0cba64d8b4929c23e6459d5ca936208b48eeecde28adc579e8d"
+          grep -q "2026-08-31-fixed-catalog-paper-print-preview-9-3" app/index.html
+          rm -rf deploy/v9_3_chunks deploy/v9_3_READY .github/workflows/assemble-v9-3.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Deploy V9.3 frontend"
+          git push origin HEAD:deploy/v9-3-staging
