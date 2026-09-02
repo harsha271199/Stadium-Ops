@@ -1,0 +1,49 @@
+name: Stage Stadium Ops V11.8.2
+
+on:
+  push:
+    branches: [deploy/v11-8-2]
+    paths:
+      - 'deploy/v11_8_2.html.gz.b64'
+
+permissions:
+  contents: write
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: deploy/v11-8-2
+          fetch-depth: 0
+      - name: Decode and verify V11.8.2
+        shell: bash
+        run: |
+          base64 -d deploy/v11_8_2.html.gz.b64 > /tmp/v11.html.gz
+          gunzip -c /tmp/v11.html.gz > /tmp/v11.html
+          echo '2cadc671c489c0642d4277280ef7a0e0ae248bd52cab5d0bb1911bb27e488503  /tmp/v11.html' | sha256sum -c -
+          grep -q "2026-09-02-coverage-routing-food-eta-production-11-8-2" /tmp/v11.html
+          grep -q "Managers and Support Managers use last name, not PIN" /tmp/v11.html
+          grep -q "Tap to claim + start delivery" /tmp/v11.html
+          cp /tmp/v11.html app/index.html
+          rm -f deploy/v11_8_2.html.gz.b64 .github/workflows/deploy-v11-8-2.yml
+      - name: Validate JavaScript
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('app/index.html').read_text(encoding='utf-8')
+          js='\n'.join(re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S|re.I))
+          Path('/tmp/check.js').write_text(js,encoding='utf-8')
+          PY
+          node --check /tmp/check.js
+      - name: Commit staged production build
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/index.html deploy .github/workflows/deploy-v11-8-2.yml
+          git commit -m 'Stage Stadium Ops V11.8.2 production build'
+          git push origin deploy/v11-8-2
