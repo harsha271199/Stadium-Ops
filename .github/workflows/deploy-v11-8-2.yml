@@ -4,7 +4,7 @@ on:
   push:
     branches: [deploy/v11-8-2]
     paths:
-      - 'deploy/v11_8_2.html.gz.b64'
+      - 'deploy/v11_8_2_part_06.txt'
 
 permissions:
   contents: write
@@ -20,14 +20,15 @@ jobs:
       - name: Decode and verify V11.8.2
         shell: bash
         run: |
-          base64 -d deploy/v11_8_2.html.gz.b64 > /tmp/v11.html.gz
+          cat deploy/v11_8_2_part_0*.txt > /tmp/v11.b64
+          base64 -d /tmp/v11.b64 > /tmp/v11.html.gz
           gunzip -c /tmp/v11.html.gz > /tmp/v11.html
           echo '2cadc671c489c0642d4277280ef7a0e0ae248bd52cab5d0bb1911bb27e488503  /tmp/v11.html' | sha256sum -c -
           grep -q "2026-09-02-coverage-routing-food-eta-production-11-8-2" /tmp/v11.html
           grep -q "Managers and Support Managers use last name, not PIN" /tmp/v11.html
           grep -q "Tap to claim + start delivery" /tmp/v11.html
           cp /tmp/v11.html app/index.html
-          rm -f deploy/v11_8_2.html.gz.b64 .github/workflows/deploy-v11-8-2.yml
+          rm -f deploy/v11_8_2.html.gz.b64 deploy/v11_8_2_part_0*.txt .github/workflows/deploy-v11-8-2.yml
       - name: Validate JavaScript
         shell: bash
         run: |
