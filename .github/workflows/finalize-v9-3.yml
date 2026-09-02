@@ -35,7 +35,7 @@ jobs:
           def gitsha(p):
               d=p.read_bytes(); return hashlib.sha1(f'blob {len(d)}\0'.encode()+d).hexdigest()
           assert gitsha(p6)=='fd552b3c9fc985ff276218cf06f75e11f7e97feb'
-          assert gitsha(p7)=='4ff91e81c4d1c0b1546420a308363d456191d97d'
+          assert gitsha(p7)=='4ff9e9c4c73862b01f63d5888416cc9ee2730fe6'
           b64=''.join((base/f'part_{i:03d}').read_text() for i in range(11))
           packed=base64.b64decode(b64)
           assert hashlib.sha256(packed).hexdigest()=='1e6a6bd70989b891a282663b7e89c230ed7bc0021758b72ee4a080a0524b3623'
