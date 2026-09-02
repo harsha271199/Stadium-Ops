@@ -2323,7 +2323,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-08-31-fixed-catalog-paper-print-preview-9-3';
+const BUILD_TAG = '2026-09-02-warehouse-delivery-action-hotfix-9-3-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9789,8 +9789,11 @@ async function loadTsStockRequests(stand) {
       if (_tsTransfer.status === 'pending') {
         await sb('transfers?id=eq.'+_tsTransfer.id, { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ status:'delivering' }) });
         _tsTransfer.status = 'delivering';
-        renderTsStatus();
       }
+      // Request items merge asynchronously after the screen first opens.
+      // If the initial transfer_items query was empty, Mark delivered was
+      // hidden and never restored for an already-delivering request.
+      renderTsStatus();
     }
   }
   // Once merged, requests live as checklist items, not a separate card —
@@ -11203,9 +11206,9 @@ async function loadWhToDeliver() {
     const sub = mine
       ? '🚚 You’re on the way' + (s.requests.length > 1 ? ' · '+s.requests.length+' requests' : '')
       : s.urgent
-        ? '🔴 URGENT request · Tap to start delivery'
+        ? '🔴 URGENT · Tap to claim + start delivery'
         : pending
-          ? '📥 Stock requested · Tap to start delivery'
+          ? '📥 Stock requested · Tap to claim + start delivery'
           : '🚚 Planned transfer · Tap to open';
     const etaRow=s.eta?stockEtaHtml({etaDeadline:new Date(s.eta).toISOString(),status:'Pending'}):'';
     return `<div class="delivery-card${s.urgent?' urgent':''}${s.mine?' mine':''}" onclick="whStartDeliveryForStand('${escapeAttr(s.stand)}',${s.transferId || 'null'})">
@@ -11668,6 +11671,7 @@ async function tsToggleItem(id) {
   it.delivered = !it.delivered;
   if (it.delivered && !it.qty_delivered) it.qty_delivered = it.qty_requested;
   renderTsItems();
+  renderTsStatus();
   await sb('transfer_items?id=eq.'+id, { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ delivered: it.delivered, qty_delivered: it.qty_delivered||0 }) });
 }
 
@@ -11689,6 +11693,7 @@ async function tsRemoveItem(id) {
   // phantom Transfer OUT before anything has actually been delivered.
   _tsItems = _tsItems.filter(i => i.id !== id);
   renderTsItems();
+  renderTsStatus();
   toast('Removed ' + it.item_name);
 }
 
