@@ -4,7 +4,7 @@ on:
   push:
     branches: [deploy/v11-8-2]
     paths:
-      - 'deploy/v11_8_2_part_06.txt'
+      - 'deploy/v11_8_2_patch_part_07.txt'
 
 permissions:
   contents: write
@@ -17,18 +17,20 @@ jobs:
         with:
           ref: deploy/v11-8-2
           fetch-depth: 0
-      - name: Decode and verify V11.8.2
+      - name: Rebuild and verify V11.8.2
         shell: bash
         run: |
-          cat deploy/v11_8_2_part_0*.txt > /tmp/v11.b64
-          base64 -d /tmp/v11.b64 > /tmp/v11.html.gz
-          gunzip -c /tmp/v11.html.gz > /tmp/v11.html
-          echo '2cadc671c489c0642d4277280ef7a0e0ae248bd52cab5d0bb1911bb27e488503  /tmp/v11.html' | sha256sum -c -
-          grep -q "2026-09-02-coverage-routing-food-eta-production-11-8-2" /tmp/v11.html
-          grep -q "Managers and Support Managers use last name, not PIN" /tmp/v11.html
-          grep -q "Tap to claim + start delivery" /tmp/v11.html
-          cp /tmp/v11.html app/index.html
-          rm -f deploy/v11_8_2.html.gz.b64 deploy/v11_8_2_part_0*.txt .github/workflows/deploy-v11-8-2.yml
+          echo '0f458ebc6b1c6707b0e4c712de6fb8dd9f0d6a81ed13b5710fe37b50638f9b94  app/index.html' | sha256sum -c -
+          cat deploy/v11_8_2_patch_part_0*.txt > /tmp/patch.b64
+          base64 -d /tmp/patch.b64 > /tmp/v11.patch.gz
+          gunzip -c /tmp/v11.patch.gz > /tmp/v11.patch
+          echo 'f97de5698c739cc30794bd6f014b7b9689248d336b4398482eeafca7d630aafe  /tmp/v11.patch' | sha256sum -c -
+          git apply /tmp/v11.patch
+          echo '2cadc671c489c0642d4277280ef7a0e0ae248bd52cab5d0bb1911bb27e488503  app/index.html' | sha256sum -c -
+          grep -q "2026-09-02-coverage-routing-food-eta-production-11-8-2" app/index.html
+          grep -q "Managers and Support Managers use last name, not PIN" app/index.html
+          grep -q "Tap to claim + start delivery" app/index.html
+          rm -f deploy/v11_8_2.html.gz.b64 deploy/v11_8_2_part_*.txt deploy/v11_8_2_patch_part_*.txt .github/workflows/deploy-v11-8-2.yml
       - name: Validate JavaScript
         shell: bash
         run: |
