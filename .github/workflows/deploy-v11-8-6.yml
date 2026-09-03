@@ -13,41 +13,60 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout main
+        uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
 
-      - name: Assemble and apply V11.8.6
+      - name: Verify current production base
         shell: bash
         run: |
-          set -euo pipefail
-          cat .deploy/v1186_00.b64 .deploy/v1186_01.b64 .deploy/v1186_02.b64 .deploy/v1186_03.b64 .deploy/v1186_04.b64 .deploy/v1186_05.b64 .deploy/v1186_06.b64 .deploy/v1186_07.b64 .deploy/v1186_08.b64 | base64 -d | xz -d > /tmp/v1186.patch
-          git apply --check /tmp/v1186.patch
-          git apply /tmp/v1186.patch
+          echo 'e70e99015a2a3a2c2905a2feafca818124f81153d27f449017a4471605606624  app/index.html' | sha256sum -c -
 
-      - name: Validate production frontend
+      - name: Rebuild and apply V11.8.6 patch
         shell: bash
         run: |
           set -euo pipefail
+          cat .github/v1186_patch/chunk* > /tmp/v1186.b64
+          base64 -d /tmp/v1186.b64 | xz -d > /tmp/v1186.patch
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/v1186.patch')
+          lines=p.read_text(encoding='utf-8').splitlines(True)
+          if len(lines) < 2 or not lines[0].startswith('--- ') or not lines[1].startswith('+++ '):
+              raise SystemExit('Unexpected patch header')
+          lines[0]='--- app/index.html\n'
+          lines[1]='+++ app/index.html\n'
+          p.write_text(''.join(lines),encoding='utf-8')
+          PY
+          patch -p0 < /tmp/v1186.patch
+
+      - name: Validate final frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '1fda079482f845d2cb6034f549193b0eb17a9128663e5de1272c9139733d1d25  app/index.html' | sha256sum -c -
           python - <<'PY'
           from pathlib import Path
           import re, collections
-          p=Path('app/index.html')
-          s=p.read_text(encoding='utf-8')
-          assert "const BUILD_TAG = '2026-09-03-stadium-ops-production-11-8-6';" in s
-          assert 'ID 88000 · PIN 6400' not in s
+          s=Path('app/index.html').read_text(encoding='utf-8')
+          assert "2026-09-03-polished-production-11-8-6" in s
+          assert "Tap to claim + start delivery" in s
+          assert "mgrV10ShowNeedsAction" in s
+          assert "stock_requests?on_conflict=client_uuid" in s
+          assert "kitchen_requests?on_conflict=client_uuid" in s
           scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S|re.I)
           js='\n'.join(x for x in scripts if x.strip())
-          Path('/tmp/v1186.js').write_text(js,encoding='utf-8')
+          Path('/tmp/index-check.js').write_text(js,encoding='utf-8')
           names=re.findall(r'\b(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(',js)
           dups={k:v for k,v in collections.Counter(names).items() if v>1}
           assert not dups, dups
           print('V11.8.6 validation PASS; functions',len(names))
           PY
-          node --check /tmp/v1186.js
+          node --check /tmp/index-check.js
 
-      - name: Bump app cache
+      - name: Bump service worker cache
         shell: bash
         run: |
           python - <<'PY'
@@ -57,18 +76,18 @@ jobs:
           s=p.read_text(encoding='utf-8')
           s,n=re.subn(r"const CACHE_VERSION = '[^']+';","const CACHE_VERSION = 'stadium-ops-v4-v11-8-6';",s,count=1)
           if n != 1:
-              raise SystemExit('Could not find CACHE_VERSION in app/sw.js')
+              raise SystemExit('Could not find CACHE_VERSION')
           p.write_text(s,encoding='utf-8')
           PY
 
-      - name: Commit production deployment
+      - name: Commit production release and remove deployment staging
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          rm -f .deploy/v1186_*.b64
+          git rm -r .github/v1186_patch
           git rm .github/workflows/deploy-v11-8-6.yml
-          git add -A app/index.html app/sw.js .deploy
-          git commit -m 'Deploy Stadium Ops V11.8.6'
+          git add app/index.html app/sw.js
+          git commit -m 'Deploy Stadium Ops V11.8.6 polished game-day release'
           git push origin main
