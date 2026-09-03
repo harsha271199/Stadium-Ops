@@ -10,7 +10,7 @@
 //
 // Bumped after the 2026-09-02 Warehouse delivery-action hotfix so installed
 // phones drop any older cached HTML and pick up the corrected production file.
-const CACHE_VERSION = 'stadium-ops-v3-warehouse-delivery-hotfix';
+const CACHE_VERSION = 'stadium-ops-v4-v11-8-6';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
