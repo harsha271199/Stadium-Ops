@@ -1,0 +1,31 @@
+name: Probe staged V11.8.6 payload
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/probe-v1186-payload.yml']
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Decode staged payload
+        shell: bash
+        run: |
+          cat .deploy/v1186_00.b64 .deploy/v1186_01.b64 .deploy/v1186_02.b64 .deploy/v1186_03.b64 .deploy/v1186_04.b64 .deploy/v1186_05.b64 .deploy/v1186_06.b64 .deploy/v1186_07.b64 .deploy/v1186_08.b64 | base64 -d | xz -d > /tmp/v1186.decoded
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          p=Path('/tmp/v1186.decoded')
+          s=p.read_text(errors='replace')
+          info='bytes='+str(p.stat().st_size)+'\nsha256='+hashlib.sha256(p.read_bytes()).hexdigest()+'\nfirst500='+repr(s[:500])+'\nhas_v1186='+str('2026-09-03-app-feel-production-11-8-6' in s)+'\nhas_patch='+str(s.startswith('---') or '\n@@ ' in s)+'\n'
+          Path('.deploy/v1186_probe.txt').write_text(info)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .deploy/v1186_probe.txt
+          git commit -m 'Record V11.8.6 payload probe'
+          git push origin main
