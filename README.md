@@ -3,8 +3,11 @@
 Game-day concessions operations for Aramark Sports + Entertainment at Arizona State University.
 
 **Live:** [asu-aramark.netlify.app](https://asu-aramark.netlify.app)
+**Current build:** `2026-09-20-food-runner-area-notify-1` (shown on the login screen footer — check it against the live site after every deploy)
 
 Replaces paper checklists, inventory count sheets, stock requests and break time sheets with a phone app that works in a stadium concourse on bad WiFi.
+
+See [CHANGELOG.md](CHANGELOG.md) for the build history.
 
 ---
 
@@ -114,6 +117,9 @@ These are all real bugs that reached production:
 - Never hardcode a stand list in the app. It goes stale the moment a stand is added or renamed, and fails silently.
 - Any submit button that writes a record needs `withLock()` **and** a client-side UUID generated once when the form opens — not per tap. Generating it per tap defeats the database's duplicate protection entirely.
 - Surface errors on screen. Nobody has devtools open on a concourse.
+- A menu that hides a button from the wrong role is not the same as blocking the action. The function the button calls needs its own role check too — otherwise it's still reachable directly (e.g. from the browser console) by anyone signed in, regardless of role.
+- `.catch(()=>({_err:true}))` on an `sb()` call is silent by design — great for not crashing the UI, but it also means a typo'd column name in a `select=` (PostgREST returns HTTP 400 for an unknown column) can make a whole feature quietly do nothing, forever, with zero visible error. If a check that should sometimes fire never seems to, verify the actual query against the live schema before assuming the logic is wrong.
+- `escapeHtml()` a field even when you're sure it's "just an internal note" — the risk isn't the person who typed it, it's that a *different role* reads it back on their own screen later.
 
 ---
 
@@ -134,6 +140,9 @@ Tables worth knowing:
 | `transfers` / `transfer_items` | Warehouse deliveries and force restock |
 | `employee_directory` | Full roster for walk-in type-ahead search |
 | `npo_groups` / `npo_members` | Volunteer groups. `npo_groups.stand` is comma-joined for multi-stand groups. |
+| `staff_accounts` | Manager/Warehouse/Food/Tech/Admin logins — `employee_id`, `pin`, `role`. Anyone with the app's own publishable key can read/write this directly; app-level role checks (not RLS) are the only thing stopping a lower-tier session from editing it. |
+| `zone_assignments` | Generic stand-assignment table, keyed by `role` (`warehouse`, `supervisor`). Powers each person's "My Stands" filter and routes push notifications to whoever's actually covering that stand. |
+| `kitchen_runner_assignments` | Same idea as `zone_assignments`, specifically for Food Runner coverage areas (Food Manager → Runner Areas). Drives the "suggested runner" hint and the direct heads-up push when a request comes in for that runner's area. |
 
 Handy checks:
 

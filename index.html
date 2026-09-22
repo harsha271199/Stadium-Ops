@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#E4002B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -144,7 +144,7 @@
   .check-item{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;box-shadow:var(--shadow)}
   .check-item-label{font-size:14px;font-weight:500;margin-bottom:10px}
   .check-options{display:flex;gap:6px}
-  .check-opt{flex:1;padding:10px;border:1px solid var(--border-strong);border-radius:6px;background:var(--bg-input);color:var(--text-2);font-size:13px;cursor:pointer;font-family:inherit;font-weight:600}
+  .check-opt{flex:1;min-height:44px;padding:13px 10px;border:1px solid var(--border-strong);border-radius:6px;background:var(--bg-input);color:var(--text-2);font-size:13px;cursor:pointer;font-family:inherit;font-weight:600}
   .check-opt.selected.done{background:rgba(0,166,81,0.15);border-color:var(--success);color:var(--success)}
   .check-opt.selected.issue{background:rgba(255,140,0,0.15);border-color:var(--warning);color:var(--warning)}
   .check-opt.selected.na{background:var(--bg-elevated);border-color:var(--border-strong);color:var(--text)}
@@ -153,9 +153,11 @@
   .inv-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;box-shadow:var(--shadow)}
   .inv-name{font-size:14px}
   .inv-counter{display:flex;align-items:center;gap:10px}
-  .inv-counter button{width:34px;height:34px;border-radius:50%;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-family:inherit}
+  .inv-counter button{width:44px;height:44px;border-radius:50%;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-family:inherit;flex-shrink:0}
   .inv-counter input{width:48px;text-align:center;font-size:16px;font-weight:600;background:transparent;border:none;color:var(--text);font-family:inherit}
   .inv-counter input:focus{outline:none}
+  .stock-step-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-family:inherit;flex-shrink:0;padding:0}
+  .stock-step-btn:active{background:var(--border-strong)}
 
   /* CHIPS */
   .chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
@@ -286,7 +288,9 @@
   .wh-tools-details .wh-tools-inner{padding:0 12px 12px}
   .delivery-card{display:flex;align-items:center;gap:12px;padding:14px;margin-bottom:9px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;cursor:pointer;min-height:72px}
   .delivery-card:active{transform:scale(.99)}
-  .delivery-card.urgent{border-left:5px solid #DC2626}.delivery-card.mine{border-left:5px solid var(--info)}
+  .delivery-card.urgent{border:1.5px solid #DC2626;border-left:5px solid #DC2626;background:rgba(220,38,38,0.06)}
+  .delivery-card.mine{border-left:5px solid var(--info)}
+  .delivery-urgent-badge{display:inline-block;background:#DC2626;color:#fff;font-size:11px;font-weight:800;letter-spacing:.03em;padding:3px 8px;border-radius:20px;margin-bottom:3px}
   .delivery-status{font-size:11px;color:var(--text-2);margin-top:4px;line-height:1.35}
 
   .working-stand-control .ws-label{font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--text-2);text-transform:uppercase;margin-bottom:5px}
@@ -861,6 +865,7 @@
   #screen-bedcheck.simple-tool-open #mgr-simple-shell{display:none !important}
   #screen-bedcheck.simple-tool-open #mgr-v10-shell{display:block !important}
   #screen-bedcheck.simple-tool-open #mgr-v10-bottom-nav,
+  #screen-bedcheck.simple-tool-open #mgr-coverage-profile,
   #screen-bedcheck.simple-tool-open #mgr-v10-home,
   #screen-bedcheck.simple-tool-open #mgr-v10-requests,
   #screen-bedcheck.simple-tool-open #mgr-v10-manage{display:none !important}
@@ -1364,6 +1369,21 @@
   .leadership-team-toolbar .btn{margin:0;flex:1;min-width:135px}
   .team-move-btn{border-color:#7C3AED !important;color:#7C3AED !important}
 
+  /* Wide reconciliation/report tables (inventory detail, time sheet) are
+     unreadable as a shrunk table on a phone — below 480px, turn each row
+     into a stacked card instead of a tiny multi-column grid, using the
+     column name (data-label) as a label in front of each value. The table
+     still renders normally (with horizontal scroll) on tablet/desktop. */
+  @media (max-width: 480px) {
+    table.responsive-table, table.responsive-table thead, table.responsive-table tbody,
+    table.responsive-table th, table.responsive-table td, table.responsive-table tr { display: block; }
+    table.responsive-table { min-width: 0 !important; }
+    table.responsive-table thead { position: absolute; left: -9999px; }
+    table.responsive-table tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; padding: 2px 0; }
+    table.responsive-table td { display: flex !important; justify-content: space-between; align-items: center; gap: 10px; text-align: right !important; border-bottom: none !important; }
+    table.responsive-table td::before { content: attr(data-label); font-weight: 600; color: var(--text-2); text-align: left; flex-shrink: 0; }
+  }
+
 </style>
 </head>
 <body>
@@ -1433,6 +1453,23 @@
 </svg>
 
 <div id="toast" class="toast"></div>
+
+<!-- ============ SHARED CONFIRM / ALERT DIALOG ============
+     Replaces native confirm()/alert() for the highest-stakes actions so
+     they look like part of the app (matches the existing bottom-sheet /
+     centered-card modal pattern already used by worker-actions-modal and
+     move-modal above) instead of a jarring browser-chrome popup, and so
+     button labels can say what will actually happen instead of OK/Cancel. -->
+<div id="app-confirm-modal" data-a11y-skip style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px" onclick="if(event.target.id==='app-confirm-modal')_appDialogClose(false)">
+  <div role="alertdialog" aria-modal="true" aria-labelledby="app-confirm-title" aria-describedby="app-confirm-message" style="background:var(--bg-card);border-radius:14px;width:100%;max-width:420px;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,0.3)" onclick="event.stopPropagation()">
+    <div id="app-confirm-title" style="font-size:16px;font-weight:700;margin-bottom:8px"></div>
+    <div id="app-confirm-message" style="font-size:14px;color:var(--text-2);white-space:pre-line;line-height:1.5"></div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btn btn-outline" id="app-confirm-cancel-btn" style="margin:0">Cancel</button>
+      <button class="btn btn-primary" id="app-confirm-ok-btn" style="margin:0">OK</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============ LOGIN ============ -->
 <div class="screen active" id="screen-login">
@@ -1667,7 +1704,7 @@
         </div>
 
         <!-- Tile 4: My Team -->
-        <div class="action-tile" id="myteam-tile" onclick="state.user && state.user.isNpo ? goNpoRoster() : showScreen('screen-submenu-team')">
+        <div class="action-tile" id="myteam-tile" onclick="goMyTeamTileTapped()">
           <span class="tile-icon">👥</span>
           <div class="tile-label" id="myteam-tile-label">My Team</div>
           <div class="tile-sub" id="myteam-tile-sub">Staff · Feedback · Walk-in</div>
@@ -1690,9 +1727,9 @@
         <span class="icon">🔄</span>
         <span class="text"><div>Stand Transfer Record</div><div class="sub">Today's stand-to-stand transfers</div></span>
       </button>
-      <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAllStockReqs()">
-        <span class="icon">📦</span>
-        <span class="text"><div>All Stock Requests</div><div class="sub">Monitor every stand's stock</div></span>
+      <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="mgrSimpleAllRequests()">
+        <span class="icon">📣</span>
+        <span class="text"><div>All Requests</div><div class="sub">Stock · Food · IT across all stands</div></span>
       </button>
       <!-- "Stock request for another stand" removed as a separate button —
            Request Stock and Report IT Issue (in the Requests submenu) now
@@ -1846,10 +1883,6 @@
     <details class="request-more" id="stand-request-more">
       <summary><span>••• More request tools</span><span style="color:var(--text-3)">Transfers · Refund · Maintenance</span></summary>
       <div class="request-more-body">
-        <button class="sub-menu-btn" id="leadership-request-monitor-btn" style="display:none;border-left:4px solid #7C3AED" onclick="openLeadershipRequestMonitor()">
-          <span class="smb-icon">📊</span>
-          <div><div class="smb-label">All-Stadium Request Monitor</div><div class="smb-sub">All stands · Stock + Food + IT</div></div>
-        </button>
         <button class="sub-menu-btn" id="addstock-btn" style="border-left:4px solid #F59E0B" onclick="goAddStockMyself()">
           <span class="smb-icon">➕</span>
           <div><div class="smb-label">Add Stock Myself</div><div class="smb-sub">Log stock you brought in directly</div></div>
@@ -1941,13 +1974,13 @@
       <span class="smb-icon">👥</span>
       <div><div class="smb-label">My NPO Group</div><div class="smb-sub">Roster · attendance at main stand</div></div>
     </button>
-    <button class="sub-menu-btn smb-green" id="walkin-home-btn" onclick="showScreen('screen-walkin')">
+    <button class="sub-menu-btn smb-green" id="walkin-home-btn" onclick="leadershipOpenWalkin()">
       <span class="smb-icon">➕</span>
       <div><div class="smb-label">Add Walk-in Worker</div><div class="smb-sub">Worker not on today's schedule</div></div>
     </button>
-    <button class="sub-menu-btn smb-orange" id="moverequest-btn" onclick="showScreen('screen-movereq')">
+    <button class="sub-menu-btn smb-orange" id="moverequest-btn" onclick="goMoveWorkerViaTeam()">
       <span class="smb-icon">🔄</span>
-      <div><div class="smb-label">Request Worker Move</div><div class="smb-sub">Move someone to another stand</div></div>
+      <div><div class="smb-label">Move Worker to Another Stand</div><div class="smb-sub">Pick the person, then their new stand</div></div>
     </button>
   </div>
 </div>
@@ -2390,34 +2423,14 @@
     <div id="walkin-search-results" style="margin-bottom:10px"></div>
     <label class="form-label">Name (Last, First)</label>
     <input class="form-input" type="text" id="walkin-name" placeholder="e.g. Smith, John">
-    <label class="form-label">ID (5-digit login, or full 8-digit if you have it)</label>
-    <input class="form-input" type="tel" inputmode="numeric" id="walkin-empid" maxlength="8" placeholder="e.g. 45678 or 32445678">
+    <label class="form-label">Employee ID — use the full 8 digits</label>
+    <input class="form-input" type="tel" inputmode="numeric" id="walkin-empid" maxlength="8" placeholder="e.g. 32445678">
+    <div style="font-size:11px;color:var(--text-2);margin:-4px 0 10px">Enter all 8 digits if you can — a 5-digit ID still works for login, but has to be corrected by hand later for tip distribution.</div>
     <button class="btn btn-primary" onclick="submitWalkin()">Add walk-in & enable login →</button>
   </div>
 </div>
 
 <!-- ============ MOVE REQUEST ============ -->
-<div class="screen" id="screen-move">
-  <div class="page-header">
-    <div class="back-btn" role="button" tabindex="0" aria-label="Back" onclick="goRoleHome()">←</div>
-    <div><div class="page-title">Request worker move</div><div class="page-sub">Supervisor must approve</div></div>
-  </div>
-  <div class="content">
-    <div class="notice">⚠️ Sends a request to supervisor. Worker will only move once approved.</div>
-    <label class="form-label" style="margin-top:0">Worker Name</label>
-    <input class="form-input" type="text" id="move-name" placeholder="Last, First">
-    <label class="form-label">ID (last 5 digits)</label>
-    <input class="form-input" type="tel" inputmode="numeric" id="move-empid" maxlength="5">
-    <label class="form-label">Current stand</label>
-    <input class="form-input" type="text" id="move-from" placeholder="e.g. Graduation 204 MAS">
-    <label class="form-label">Move to which stand</label>
-    <input class="form-input" type="text" id="move-to" placeholder="e.g. Graduation 207 MAS">
-    <label class="form-label">Reason</label>
-    <textarea class="form-input" id="move-reason" placeholder="Why this move..."></textarea>
-    <button class="btn btn-warning" onclick="submitMove()">Request approval →</button>
-  </div>
-</div>
-
 <!-- ============ MY STOCK REQUESTS (stand lead view) ============ -->
 <div class="screen" id="screen-my-requests">
   <div class="page-header">
@@ -2457,12 +2470,11 @@
         <button class="tab-item" data-cat="kitchen" onclick="standRequestsCatChanged('kitchen',this)" style="white-space:nowrap">🍔 Food</button>
         <button class="tab-item" data-cat="it" onclick="standRequestsCatChanged('it',this)" style="white-space:nowrap">🔧 IT/Tech</button>
       </div>
-      <div id="stand-requests-actions" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px">
-        <button class="btn btn-ghost" onclick="standReqNewStock()" style="margin:0;padding:9px 4px;font-size:10px">📦<br><b>Request Stock</b></button>
-        <button class="btn btn-ghost" onclick="standReqForceStock()" style="margin:0;padding:9px 4px;font-size:10px;border-color:#F59E0B">➕<br><b>Force Stock</b></button>
-        <button class="btn btn-ghost" onclick="standReqNewKitchen()" style="margin:0;padding:9px 4px;font-size:10px">🍔<br><b>Kitchen</b></button>
-        <button class="btn btn-ghost" onclick="standReqNewIT()" style="margin:0;padding:9px 4px;font-size:10px">🔧<br><b>IT</b></button>
-      </div>
+      <!-- Quick-create buttons (Request Stock / Force Stock / Kitchen / IT)
+           removed from here — this screen is for VIEWING existing
+           requests before sending another one; each of those already has
+           its own dedicated button on the main Requests menu, so having
+           them again here was pure duplication. -->
     </div>
     <div id="stand-requests-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
   </div>
@@ -2529,7 +2541,7 @@
         </span>
       </button>
 
-      <button class="gameday-report-btn" type="button" onclick="openGameDayFeedback()">
+      <button class="gameday-report-btn" type="button" id="mgr-simple-feedback-btn" onclick="openGameDayFeedback()">
         <span>🗣️ Game-Day Feedback</span>
         <span class="sub">Compliment, concern, or issue ↗</span>
       </button>
@@ -2574,10 +2586,6 @@
           <span class="icon">🔄</span>
           <span class="text"><div>Stand Transfer Record</div><div class="sub">Today's stand-to-stand transfers</div></span>
         </button>
-        <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAllStockReqs()">
-          <span class="icon">📦</span>
-          <span class="text"><div>All Stock Requests</div><div class="sub">Monitor every stand's stock</div></span>
-        </button>
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="mgrSimpleAllRequests()">
           <span class="icon">📣</span>
           <span class="text"><div>All Requests</div><div class="sub">Stock · Food · IT across all stands</div></span>
@@ -2585,10 +2593,24 @@
       </div>
 
       <div id="mgr-simple-extra-tools" style="display:none">
-        <div class="section-title">Additional Access</div>
-        <div id="mgr-simple-extra-tools-list"></div>
+        <button class="big-action" id="mgr-tools-toggle" style="border-left:4px solid var(--asu-gold);width:100%" onclick="toggleManagerToolsMenu()">
+          <span class="icon">🧰</span>
+          <span class="text"><div>Manager Tools</div><div class="sub" id="mgr-tools-toggle-sub">Inventory · Feedback · Break Sheets · downloads</div></span>
+          <span id="mgr-tools-chevron" style="margin-left:auto;font-size:18px;color:var(--text-3);transition:transform .2s">▾</span>
+        </button>
+        <div id="mgr-simple-extra-tools-list" class="mgr-tools-grid" style="display:none"></div>
       </div>
     </div>
+
+    <style>
+      /* Manager Tools menu — responsive grid: single column on phones,
+         two columns on wider screens / desktop, so it's easy to scan
+         either way. */
+      .mgr-tools-grid{margin-top:8px;display:grid;grid-template-columns:1fr;gap:8px}
+      @media(min-width:640px){.mgr-tools-grid{grid-template-columns:1fr 1fr}}
+      .mgr-tools-grid .big-action{margin:0;width:100%}
+      #mgr-tools-toggle.open #mgr-tools-chevron{transform:rotate(180deg)}
+    </style>
 
     <!-- V11.4 SUPPORT MANAGER — LEGACY HELPER (retained but hidden) -->
     <div id="support-ops-shell">
@@ -2789,6 +2811,7 @@
     <div id="mgr-reports" style="display:none">
       <button class="btn btn-ghost" onclick="loadMgrFeedback()" style="width:100%">⭐ Worker feedback (from leads &amp; supervisors)</button>
       <button class="btn btn-ghost" onclick="exportFeedbackCSV()" id="fb-csv-btn" style="width:100%;margin-top:8px;display:none">⬇️ Download feedback CSV</button>
+      <button class="btn btn-ghost" onclick="exportFeedbackPDF()" id="fb-pdf-btn" style="width:100%;margin-top:8px;display:none">📄 Download feedback PDF</button>
       <div id="mgr-feedback-list" style="margin-top:10px"></div>
       <div style="height:1px;background:var(--border);margin:16px 0"></div>
       <button class="btn btn-ghost" onclick="loadMgrChecklists()" style="width:100%">✅ Stand checklists (today) — with ⚠ issues</button>
@@ -3029,6 +3052,24 @@
       </div>
 
       <div class="card" style="margin-top:12px;padding:14px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">🔄 Roll Count Out → next Exp Start</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">
+          For a multi-day event using the same inventory: this takes each stand's most recent
+          <b>Count Out</b> and sets it as the <b>Exp Start / On-Hand</b> for the next count — so tonight's
+          closing shelf becomes tomorrow's opening. Only stands that actually submitted a Count Out are
+          changed; everything else is left untouched. Nothing else is altered — this does not delete or
+          re-order any items.
+        </div>
+        <label class="form-label" style="margin-top:0">Which stands?</label>
+        <select class="form-input" id="roll-stand-select">
+          <option value="__all__">All stands with a recent Count Out</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:8px 0"><input type="checkbox" id="roll-confirm" style="width:16px;height:16px"> I understand this overwrites current Exp Start / On-Hand</label>
+        <button class="btn btn-primary" id="roll-btn" onclick="adminRollCountOut()">🔄 Roll counts forward</button>
+        <div id="roll-status" style="font-size:12px;margin-top:8px"></div>
+      </div>
+
+      <div class="card" style="margin-top:12px;padding:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleAdminSection('npo')">
           <div>
             <div style="font-weight:700;font-size:14px">🤝 NPO groups</div>
@@ -3138,7 +3179,7 @@
 </div>
 
 <!-- ============ WORKER ACTION SHEET (manager) ============ -->
-<div id="worker-actions-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:flex-end;justify-content:center" onclick="closeWorkerActions(event)">
+<div id="worker-actions-modal" data-a11y-skip style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;align-items:flex-end;justify-content:center" onclick="closeWorkerActions(event)">
   <div style="background:var(--bg-card);border-radius:16px 16px 0 0;width:100%;max-width:500px;padding:20px;box-shadow:0 -4px 20px rgba(0,0,0,0.2)" onclick="event.stopPropagation()">
     <div style="text-align:center;margin-bottom:12px">
       <div style="font-size:16px;font-weight:700" id="wa-name">—</div>
@@ -3160,7 +3201,7 @@
 </div>
 
 <!-- ============ MOVE DIALOG ============ -->
-<div id="move-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9001;align-items:center;justify-content:center;padding:20px" onclick="closeMoveDialog(event)">
+<div id="move-modal" data-a11y-skip style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9001;align-items:center;justify-content:center;padding:20px" onclick="closeMoveDialog(event)">
   <div style="background:var(--bg-card);border-radius:14px;width:100%;max-width:480px;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,0.3)" onclick="event.stopPropagation()">
     <div style="font-size:16px;font-weight:700;margin-bottom:6px">Move worker</div>
     <div style="font-size:13px;color:var(--text-2);margin-bottom:14px" id="mv-info">—</div>
@@ -3174,7 +3215,7 @@
 </div>
 
 <!-- ============ MOVE WORKER (Team Control) ============ -->
-<div id="move-worker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9001;align-items:center;justify-content:center;padding:20px" onclick="if(event.target.id==='move-worker-modal')closeMoveTeamWorker()">
+<div id="move-worker-modal" data-a11y-skip style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9001;align-items:center;justify-content:center;padding:20px" onclick="if(event.target.id==='move-worker-modal')closeMoveTeamWorker()">
   <div style="background:var(--bg-card);border-radius:14px;width:100%;max-width:480px;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,0.3)" onclick="event.stopPropagation()">
     <div style="font-size:16px;font-weight:700;margin-bottom:6px" id="move-worker-name">—</div>
     <div style="font-size:13px;color:var(--text-2);margin-bottom:14px" id="move-worker-from">—</div>
@@ -3536,6 +3577,11 @@
     <!-- MODE 0: TRANSFERS (assigned deliveries) -->
     <div id="wh-mode-transfers">
       <div class="notice info" style="font-size:12px;margin-bottom:12px">🚚 Deliver assigned transfers to stands. Tap a stand → check off items → done. Or scan the stand's QR code.</div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="wh-tf-filter-btn" data-tf="today" onclick="whSetTransferFilter('today',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--aramark-red);color:#fff;font-weight:700">Today's venue</button>
+        <button class="wh-tf-filter-btn" data-tf="recent" onclick="whSetTransferFilter('recent',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-weight:700">Last 2 days</button>
+        <button class="wh-tf-filter-btn" data-tf="all" onclick="whSetTransferFilter('all',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-weight:700">All open</button>
+      </div>
       <div id="wh-transfers-list"><div class="loading"><div class="spinner"></div>Loading transfers…</div></div>
     </div>
 
@@ -3665,11 +3711,9 @@
   <div class="content">
     <div class="tab-bar">
       <div class="tab-item active" onclick="supTab(this,'live')">Live</div>
-      <div class="tab-item" onclick="supTab(this,'moves')">Moves <span class="badge-count" id="sup-moves-count">0</span></div>
       <div class="tab-item" onclick="supTab(this,'requests')">Stock</div>
     </div>
     <div id="sup-live"><div class="loading"><div class="spinner"></div>Loading...</div></div>
-    <div id="sup-moves" style="display:none"><div class="loading"><div class="spinner"></div>Loading...</div></div>
     <div id="sup-requests" style="display:none"><div class="loading"><div class="spinner"></div>Loading...</div></div>
   </div>
 </div>
@@ -3679,7 +3723,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-06-force-restock-gameday-ui-1';
+const BUILD_TAG = '2026-09-20-food-runner-area-notify-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -3785,6 +3829,42 @@ async function withLock(btn, label, fn) {
 }
 // Resolve the button that triggered the current inline onclick
 function evtBtn(){ try { return (window.event && window.event.currentTarget) || null; } catch(e){ return null; } }
+
+// ============ SHARED CONFIRM / ALERT DIALOG ============
+// Branded replacement for native confirm()/alert() — same look everywhere,
+// works with the on-screen back button (setupBackButton() below already
+// treats it as the top-most thing to close), and lets a Cancel/OK label say
+// what will actually happen instead of a bare "OK".
+let _appDialogResolve = null;
+function _appDialogClose(result) {
+  const m = document.getElementById('app-confirm-modal');
+  if (m) m.style.display = 'none';
+  const resolve = _appDialogResolve;
+  _appDialogResolve = null;
+  if (resolve) resolve(result);
+}
+// confirmAction(message, {title, confirmLabel, cancelLabel, danger}) -> Promise<boolean>
+function confirmAction(message, opts) {
+  opts = opts || {};
+  return new Promise(resolve => {
+    _appDialogResolve = resolve;
+    document.getElementById('app-confirm-title').textContent = opts.title || 'Please confirm';
+    document.getElementById('app-confirm-message').textContent = message;
+    const okBtn = document.getElementById('app-confirm-ok-btn');
+    const cancelBtn = document.getElementById('app-confirm-cancel-btn');
+    okBtn.textContent = opts.confirmLabel || 'OK';
+    okBtn.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+    cancelBtn.textContent = opts.cancelLabel || 'Cancel';
+    cancelBtn.style.display = opts.hideCancel ? 'none' : '';
+    okBtn.onclick = () => _appDialogClose(true);
+    cancelBtn.onclick = () => _appDialogClose(false);
+    document.getElementById('app-confirm-modal').style.display = 'flex';
+  });
+}
+// notifyUser(message, {title}) -> Promise<void> — single-button alert() replacement
+function notifyUser(message, opts) {
+  return confirmAction(message, Object.assign({ confirmLabel: 'OK', hideCancel: true }, opts || {}));
+}
 
 // ============================================================
 // SUPABASE BACKEND ADAPTER
@@ -4539,7 +4619,15 @@ async function api(action, data) {
       return r._err ? {ok:false,error:'Could not send request'} : {ok:true};
     }
     case 'getStockRequests': {
-      const rows = await sb('stock_requests?order=created_at.desc&select=*');
+      // Real fix: this returned EVERY stock request ever created, so on a
+      // volleyball night the "All Stock Requests" screen was full of stale
+      // football requests from days earlier — noise that makes the screen
+      // useless for the thing it exists for (seeing what's open right
+      // now). Scoped to the current stadium day, which correctly treats
+      // midnight–6am as still belonging to the previous night's event so a
+      // late finish doesn't lose its own requests at midnight.
+      const dayStart = stadiumDay() + 'T06:00:00-07:00';
+      const rows = await sb('stock_requests?created_at=gte.'+encodeURIComponent(dayStart)+'&order=created_at.desc&select=*');
       if (rows._err) return {ok:false,error:'Network'};
       return { ok:true, requests: rows.map(mapStock) };
     }
@@ -4551,23 +4639,51 @@ async function api(action, data) {
     // Only once someone is actually given an assignment does their view
     // narrow. Set by the Warehouse Manager from their own login.
     case 'getStandsList': {
-      // V11.11.15 — LIVE STAND SOURCE.
-      // Current Mountain America Stadium locations come from Supabase, not
-      // STAND_SOURCE_2026. This prevents QR/picker failures after a stand is
-      // added or renamed. The hardcoded 68 remain metadata/offline fallback only.
-      const venueQ=encodeURIComponent('Mountain America Stadium');
-      let rows = await sb('stands?venue=eq.'+venueQ+'&select=stand_name,stand_type,is_main_stand,lead_access_for_all,venue&order=stand_name.asc');
+      // Stands come from Supabase, not the hardcoded list — that list goes
+      // stale the moment a stand is added or renamed, and fails silently.
+      //
+      // Real bug fixed here: this used to hardcode venue = 'Mountain
+      // America Stadium', so on a volleyball or soccer night every picker
+      // showed 68 irrelevant football stands while HIDING the stands
+      // people were actually working at. The only reason a supervisor saw
+      // their own stand at all was populateStandPicker separately pushing
+      // their default stand back in — their colleagues' stands at the same
+      // venue stayed invisible.
+      //
+      // Now it scopes to the venue(s) actually being used today, worked
+      // out from today's real schedule. Football night shows football
+      // stands; volleyball night shows the volleyball stands. No hardcoded
+      // venue to go stale, and it adapts automatically to any new venue.
+      const today = localISODate();
+      let venues = [];
+      const todaySched = await sb('schedule?is_test=neq.true&event_date=eq.'+today+'&select=location').catch(()=>({_err:true}));
+      if (!todaySched._err && Array.isArray(todaySched) && todaySched.length) {
+        const locs = [...new Set(todaySched.map(r=>r.location).filter(Boolean))];
+        if (locs.length) {
+          const inList = locs.map(l=>'"'+String(l).replace(/"/g,'')+'"').join(',');
+          const vr = await sb('stands?stand_name=in.('+encodeURIComponent(inList)+')&select=venue').catch(()=>({_err:true}));
+          if (!vr._err && Array.isArray(vr)) {
+            venues = [...new Set(vr.map(r=>r.venue).filter(v=>v && !/inactive/i.test(v)))];
+          }
+        }
+      }
+      // No schedule yet today (or nothing matched) — fall back to every
+      // active venue rather than showing an empty picker.
+      const venueFilter = venues.length
+        ? '&venue=in.('+encodeURIComponent(venues.map(v=>'"'+v.replace(/"/g,'')+'"').join(','))+')'
+        : '';
+      let rows = await sb('stands?select=stand_name,stand_type,is_main_stand,lead_access_for_all,venue'+venueFilter+'&order=stand_name.asc');
       let sqlNotRun = false;
       if (rows._err) {
         // Backward-compatible fallback if lead_access_for_all is unavailable.
-        rows = await sb('stands?venue=eq.'+venueQ+'&select=stand_name,stand_type,is_main_stand,venue&order=stand_name.asc');
+        rows = await sb('stands?select=stand_name,stand_type,is_main_stand,venue'+venueFilter+'&order=stand_name.asc');
         sqlNotRun = true;
         if (rows._err) return { ok:false, error: rows.status === 404 ? 'stands table missing' : 'Network' };
         rows = rows.map(r => Object.assign({ lead_access_for_all:false }, r));
       }
       const metaByName=new Map(STAND_SOURCE_2026.map(x=>[x.name,x]));
       const current=(rows||[])
-        .filter(r=>r&&r.stand_name&&!isHiddenInactiveStand2026(r.stand_name))
+        .filter(r=>r&&r.stand_name&&!isHiddenInactiveStand2026(r.stand_name)&&!/inactive/i.test(r.venue||''))
         .map(r=>{
           const canon=canonicalStandName2026(r.stand_name);
           const meta=metaByName.get(canon)||{};
@@ -4875,10 +4991,39 @@ async function api(action, data) {
       // V11.11.37 — Team Control must include NPO-only stands too.
       // NPO rosters live outside schedule, so merge them into the all-stands
       // summary using the same synthetic employee IDs used by My Team.
+      //
+      // Real bug fixed here: NPO groups were being merged in unconditionally
+      // — every active group, every single day, regardless of whether NPO
+      // is actually working today. NPO doesn't have day-by-day schedule
+      // rows the way regular staff do, so there was nothing gating this at
+      // all. On a Soccer or DFA night, football's NPO-staffed stands (and
+      // the NPO badge on them) were showing up even though NPO wasn't
+      // there and football wasn't happening. Fixed the same way every
+      // other venue-scoping fix in this app works: only show an NPO
+      // group if its assigned stand's VENUE matches what's actually
+      // running today, worked out from today's real schedule.
+      const todayVenuesForNpo = new Set();
+      {
+        const todayLocs = [...new Set(dedupedSched.map(r=>r.location||r.event_name).filter(Boolean))];
+        if (todayLocs.length) {
+          const inList = todayLocs.map(l=>'"'+String(l).replace(/"/g,'')+'"').join(',');
+          const vr = await sb('stands?stand_name=in.('+encodeURIComponent(inList)+')&select=venue').catch(()=>({_err:true}));
+          if (!vr._err && Array.isArray(vr)) vr.forEach(r=>{ if (r.venue) todayVenuesForNpo.add(r.venue); });
+        }
+      }
       const [npoGroups,npoMembers]=await Promise.all([
         sb('npo_groups?is_active=eq.true&select=id,group_name,stand').catch(()=>({_err:true})),
         sb('npo_members?is_active=eq.true&select=id,group_id,member_name,is_lead').catch(()=>({_err:true}))
       ]);
+      let npoStandVenue={};
+      if(!npoGroups._err&&Array.isArray(npoGroups)&&npoGroups.length){
+        const allNpoStands=[...new Set(npoGroups.flatMap(g=>String(g.stand||'').split(',').map(x=>x.trim()).filter(Boolean)))];
+        if(allNpoStands.length){
+          const inList=allNpoStands.map(l=>'"'+l.replace(/"/g,'')+'"').join(',');
+          const vr=await sb('stands?stand_name=in.('+encodeURIComponent(inList)+')&select=stand_name,venue').catch(()=>({_err:true}));
+          if(!vr._err&&Array.isArray(vr))vr.forEach(r=>{npoStandVenue[r.stand_name]=r.venue;});
+        }
+      }
       if(!npoGroups._err&&!npoMembers._err&&Array.isArray(npoGroups)&&Array.isArray(npoMembers)){
         const membersByGroup={};
         npoMembers.forEach(m=>(membersByGroup[m.group_id]=membersByGroup[m.group_id]||[]).push(m));
@@ -4889,7 +5034,11 @@ async function api(action, data) {
         });
         npoGroups.forEach(g=>{
           const members=membersByGroup[g.id]||[];
-          String(g.stand||'').split(',').map(x=>canonicalStandName2026(x.trim())).filter(Boolean).forEach(st=>{
+          String(g.stand||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(rawStand=>{
+            // Skip this group's stand entirely if it belongs to a venue
+            // that isn't actually running today.
+            if(todayVenuesForNpo.size && npoStandVenue[rawStand] && !todayVenuesForNpo.has(npoStandVenue[rawStand]))return;
+            const st=canonicalStandName2026(rawStand);
             const bucket=(standsMap[st]=standsMap[st]||{stand:st,total:0,here:0,onBreak:0,left:0,absent:0,pending:0,workers:[],hasNpo:true});
             bucket.hasNpo=true;
             members.forEach(m=>{
@@ -5083,11 +5232,6 @@ async function api(action, data) {
       return r._err ? {ok:false} : {ok:true};
     }
 
-    // ---------- MOVE REQUESTS (kept minimal; no separate table) ----------
-    case 'requestMove': return {ok:true};
-    case 'getMoveRequests': return {ok:true, moves:[]};
-    case 'approveMove': return {ok:true};
-    case 'denyMove': return {ok:true};
     case 'addWalkin': {
       const today=localISODate();
       const rawId=String(data.empId||'').replace(/\D/g,'');
@@ -5145,15 +5289,62 @@ async function api(action, data) {
     case 'getStandSheet': {
       let rows=[],lastErr=null;
       for(const candidate of standDbCandidateNames2026(data.stand)){
-        const r=await sb('stand_sheets?stand=eq.'+encodeURIComponent(candidate)+'&order=category.asc,item_name.asc&select=*');
+        // The real reason this needs to be pure id order, not
+        // category-then-id: the whole point of this screen is that
+        // Count In / Count Out numbers get copied back onto the actual
+        // Yellow Dog paper form afterward, row by row. That paper form is
+        // one continuous numbered sequence (1-63) — Chargeable, Non-
+        // Chargeable and Supplies items are already interspersed in
+        // their real printed order, not grouped into sections. id order
+        // reproduces that exact sequence (confirmed against the real
+        // sheet), and correctly puts any items added after the sheet was
+        // printed — like a stand's handwritten extras — at the true end
+        // of the list, not just the end of whichever category they
+        // happen to be tagged with.
+        const r=await sb('stand_sheets?stand=eq.'+encodeURIComponent(candidate)+'&order=sort_order.asc.nullslast,id.asc&select=*');
         if(r._err){lastErr=r;continue;}
         rows=r;
         if(rows.length)break;
       }
       if(lastErr&&(!Array.isArray(rows)||!rows.length)) return {ok:false,error:'Network'};
-      return { ok:true, items: (rows||[]).map((r,i)=>({ seq:i+1, itemName:r.item_name, unit:r.unit, pack:r.pack, onHand:r.on_hand, restock:r.restock, expStart:r.exp_start, chargeable:r.chargeable, category:r.category||'', vendor:r.vendor||'' })) };
+      return { ok:true, items: (rows||[]).map((r,i)=>({ seq:i+1, itemName:r.item_name, unit:r.unit, pack:r.pack, onHand:r.on_hand, restock:r.restock, expStart:r.exp_start, chargeable:r.chargeable, category:r.category||'', vendor:r.vendor||'', isAddon:!!r.is_addon })) };
     }
     case 'submitInventoryEntry': {
+      const today = stadiumDay();
+      // Real fix: continuing a genuinely partial entry (e.g. only 5 of 60
+      // items had a real number so far) needs to UPDATE that same row,
+      // merging the new counts in with what was already there — not
+      // insert a second, conflicting row, and not silently drop the
+      // items that were already recorded.
+      if (data.updateEntryId) {
+        const existing = await sb('inventory_entries?id=eq.'+data.updateEntryId+'&select=counts,notes,phase').catch(()=>({_err:true}));
+        if (existing._err || !Array.isArray(existing) || !existing.length) return {ok:false,error:'Could not find the entry to update'};
+        // CRITICAL GUARD: only merge into an entry of the SAME phase. This
+        // is the real root cause of the DFA 143 near-loss — a Count Out
+        // submitted through the "fill in the rest" continue-flow was
+        // merging into an existing Count IN entry, silently writing
+        // closing numbers on top of opening ones (and appearing to the
+        // user as "it won't submit"). If the phases don't match, we do
+        // NOT merge — we fall through and create a proper separate entry
+        // for this phase instead.
+        if (existing[0].phase === data.phase) {
+          const mergedCounts = Object.assign({}, existing[0].counts||{}, data.counts||{});
+          const pf = data.phase === 'Count In' ? 'countIn' : data.phase === 'Count Out' ? 'countOut' : null;
+          if (pf) {
+            const wrong = pf === 'countIn' ? 'countOut' : 'countIn';
+            Object.keys(mergedCounts).forEach(function(k){
+              const e = mergedCounts[k]; if (!e || typeof e !== 'object') return;
+              if ((e[pf] === undefined || e[pf] === '') && e[wrong] !== undefined && e[wrong] !== '') e[pf] = e[wrong];
+              if (wrong in e) delete e[wrong];
+            });
+          }
+          const r = await sb('inventory_entries?id=eq.'+data.updateEntryId, { method:'PATCH', headers:{Prefer:'return=minimal'},
+            body: JSON.stringify({ counts: mergedCounts, notes: data.notes || existing[0].notes || '', submitted_by: data.submittedBy||data.name }) });
+          return r._err ? {ok:false,error:'Could not update'} : {ok:true, count:Object.keys(mergedCounts).length};
+        }
+        // Phase mismatch — fall through to normal insert below, so this
+        // phase gets its own entry instead of corrupting the other one.
+      }
       // Same race-condition guard as checklists — re-checked right here,
       // at the moment of actually saving, since a check only at screen-open
       // time wouldn't catch two people who both started around the same
@@ -5162,7 +5353,6 @@ async function api(action, data) {
       // Uses stadiumDay(), not plain today — a Count Out submitted after
       // midnight for a late-running game needs to land on the event's
       // actual day, not silently roll onto tomorrow's date.
-      const today = stadiumDay();
       const already = await sb('inventory_entries?stand=eq.'+encodeURIComponent(data.stand)+'&phase=eq.'+encodeURIComponent(data.phase)+'&entry_date=eq.'+today+'&select=submitted_by,created_at').catch(()=>({_err:true}));
       if (!already._err && Array.isArray(already) && already.length) {
         const prior = already[0];
@@ -5175,24 +5365,23 @@ async function api(action, data) {
         r = await sb('inventory_entries', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
       }
       if (r._err) return {ok:false,error:'Could not submit'};
-      // Carry the closing count forward as the starting point for the
-      // NEXT event at this stand — a Count Out is the real, physical
-      // truth of what's actually left on the shelf, so that's what the
-      // next game should start counting FROM, not whatever number was
-      // originally loaded when the catalog was first set up. Only ever
-      // uses a REAL submitted countOut number, never a computed/expected
-      // guess — if someone didn't actually count an item this time, its
-      // stand_sheets baseline is left exactly as it was.
-      if (data.phase === 'Count Out' && data.counts) {
-        const updates = Object.keys(data.counts)
-          .map(name => ({ name, countOut: data.counts[name] && data.counts[name].countOut }))
-          .filter(x => x.countOut !== undefined && x.countOut !== '' && x.countOut !== null);
-        for (const u of updates) {
-          await sb('stand_sheets?stand=eq.'+encodeURIComponent(data.stand)+'&item_name=eq.'+encodeURIComponent(u.name),
-            { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ on_hand: u.countOut, exp_start: u.countOut }) }
-          ).catch(() => {}); // best-effort — a failed carry-forward shouldn't fail the actual Count Out submission that already succeeded
-        }
-      }
+      // Carry-forward deliberately REMOVED.
+      //
+      // This used to overwrite stand_sheets.on_hand and .exp_start with
+      // the Count Out numbers the moment Count Out was submitted, so the
+      // next event would "start" from the real closing shelf count. The
+      // intention was reasonable but the effect was wrong in practice:
+      // the printed report reads On-Hand live from stand_sheets, so the
+      // instant a stand closed out, THAT SAME NIGHT's report started
+      // showing On-Hand = that night's own Count Out. Circular and
+      // meaningless — On-Hand is supposed to be the pre-event starting
+      // stock, and it silently stopped being that.
+      //
+      // On-Hand / Exp Start now stay exactly as loaded (from the Yellow
+      // Dog sheet), and change only when someone deliberately updates the
+      // catalog. If it's 0, it stays 0. Count Out is recorded in
+      // inventory_entries where it belongs and never writes back over the
+      // stand's baseline.
       return {ok:true, count:Object.keys(data.counts||{}).length};
     }
     case 'getInventoryByDate': {
@@ -5296,7 +5485,7 @@ async function api(action, data) {
         scheduleRows
       ] = await Promise.all([
         qualifyingStands.length
-          ? sb('stand_sheets?stand=in.(' + qualifyingStands.map(s => encodeURIComponent('"' + s.replace(/"/g,'\\"') + '"')).join(',') + ')&order=id.asc&select=*')
+          ? sb('stand_sheets?stand=in.(' + qualifyingStands.map(s => encodeURIComponent('"' + s.replace(/"/g,'\\"') + '"')).join(',') + ')&order=sort_order.asc.nullslast,id.asc&select=*')
           : Promise.resolve([]),
         sb('stock_requests?status=eq.delivered&created_at=gte.'+t0+'&created_at=lt.'+t1+'&select=*'),
         sb('stock_ledger?game_date=eq.'+d+'&movement_type=in.(transfer_in,force_stock,stand_transfer)&select=*'),
@@ -5326,6 +5515,7 @@ async function api(action, data) {
         if (!it.expStart) it.expStart = r.exp_start || '';
         if (it.onHand === undefined) it.onHand = r.on_hand;
         if (it.restock === undefined) it.restock = r.restock;
+        it.isAddon = !!r.is_addon;
       });
 
       // Delivered stock requests are useful for audit/display. These are NOT
@@ -5631,11 +5821,11 @@ async function resolveWarehouseAssigneesForStand(stand) {
 function stockItemsHtml(r){
   const j = r.itemsJson;
   if (j && j.items && j.items.length) {
-    let h = j.items.map(function(it){ return '<div style="padding:1px 0">• <b>' + it.qty + '×</b> ' + it.itemName + (it.unit ? ' <span style="opacity:.65;font-size:11px">(' + it.unit + ')</span>' : '') + '</div>'; }).join('');
-    if (j.other) h += '<div style="padding:1px 0">• Other: ' + j.other + '</div>';
+    let h = j.items.map(function(it){ return '<div style="padding:1px 0">• <b>' + escapeHtml(it.qty) + '×</b> ' + escapeHtml(it.itemName) + (it.unit ? ' <span style="opacity:.65;font-size:11px">(' + escapeHtml(it.unit) + ')</span>' : '') + '</div>'; }).join('');
+    if (j.other) h += '<div style="padding:1px 0">• Other: ' + escapeHtml(j.other) + '</div>';
     return h;
   }
-  return r.items || '';
+  return escapeHtml(r.items || '');
 }
 function stockStatusLabel(s){ if(s==='claimed')return'On the way'; if(s==='delivered')return'Fulfilled'; return'Pending'; }
 function mapIT(r){ return { id:r.id, timestamp:r.created_at, stand:r.stand, requestedBy:r.reported_by, category:r.category, subCategory:'', urgency:urgNorm(r.urgency), details:r.description, status:itStatusLabel(r.status), claimedBy:r.claimed_by||'', techMessage:r.resolution_note||'', resolutionNote:r.resolution_note||'' }; }
@@ -6133,8 +6323,8 @@ function whRoleLabel(role) {
 // both for the normal case (shift ends) and especially if these end up on
 // shared devices — someone handing a phone to the next person needs a fast,
 // obvious way to clear the previous person's identity before continuing.
-function staffLogout() {
-  if (!confirm('Log out on this device?')) return;
+async function staffLogout() {
+  if (!(await confirmAction('You’ll need your ID and PIN to sign back in on this device.', {title:'Log out on this device?', confirmLabel:'Log out'}))) return;
   localStorage.removeItem('stadium_staff');
   state.staffAccount = null;
   state.whName = null;
@@ -6195,6 +6385,20 @@ function isManagerOpsSession() {
   return !!(!state.user && state.staffAccount && state.staffAccount.group === 'manager' &&
     ['support_manager','manager','admin'].includes(state.staffAccount.role));
 }
+// Real in-function guards (not just hidden buttons) for the highest-stakes
+// admin/warehouse actions — added because several call sites reached these
+// via a menu router that checked role, but the target function itself did
+// not, so it stayed callable directly (e.g. from devtools) by any signed-in
+// staff session regardless of role.
+function isAdminSession() {
+  return !!(state.staffAccount && state.staffAccount.role === 'admin');
+}
+function isWarehouseManagerSession() {
+  return !!(state.staffAccount && state.staffAccount.role === 'warehouse_manager');
+}
+function isWarehouseSupervisorSession() {
+  return !!(state.staffAccount && state.staffAccount.role === 'warehouse_supervisor');
+}
 function getFieldOpsActor() {
   if (state.user) return {name:state.user.name, empId:state.user.empId, role:state.user.role};
   if (state.staffAccount) return {name:state.staffAccount.name, empId:state.staffAccount.empId, role:state.staffAccount.role};
@@ -6220,7 +6424,11 @@ function requireSupportStand(){ const s=getSupportWorkingStand(); if(!s){toast('
 function fieldOpsBack(){ if(isManagerOpsSession()){showScreen('screen-bedcheck');restoreMgrSidebarState();return;} showScreen('screen-home'); }
 function supportOpenStandStatus(){ if(!requireSupportStand())return; state.standTaskReturnScreen='screen-bedcheck'; showScreen('screen-all-checks'); }
 function supportOpenChecks(){ const s=requireSupportStand(); if(!s)return; state.standTaskReturnScreen='screen-bedcheck'; goChecks(s); }
-function supportOpenInventory(){ const s=requireSupportStand(); if(!s)return; state.standTaskReturnScreen='screen-bedcheck'; goInventory(s); }
+// Real guard: Support Manager is deliberately blocked from Inventory
+// (see the intent documented where mgrV10OpenTool('reports') is gated for
+// support_manager). Not currently wired to any button, but this function
+// was otherwise directly console-callable and would have contradicted that.
+function supportOpenInventory(){ if(isSupportManagerSession())return; const s=requireSupportStand(); if(!s)return; state.standTaskReturnScreen='screen-bedcheck'; goInventory(s); }
 function supportOpenFoodSafety(){ const s=requireSupportStand(); if(!s)return; state.standTaskReturnScreen='screen-bedcheck'; goFoodSafety(s); }
 function supportOpenKitchenRequest(){ const s=requireSupportStand(); if(!s)return; state.standTaskReturnScreen='screen-bedcheck'; goKitchenRequest(s); }
 function supportOpenRequests(){ const s=requireSupportStand(); if(!s)return; state.standTaskReturnScreen='screen-bedcheck'; goStandRequests(s); }
@@ -6793,8 +7001,8 @@ async function markBreakEnd() {
     else toast(res.error || 'Failed — try again', 'error');
   });
 }
-function confirmLeave() {
-  if (!confirm('Leave this stand? Only do this at end of shift OR if moving to another stand.')) return;
+async function confirmLeave() {
+  if (!(await confirmAction('Only do this at end of shift OR if you’re moving to another stand.', {title:'Leave this stand?', confirmLabel:'Leave stand', danger:true}))) return;
   markLeft();
 }
 async function markLeft() {
@@ -7480,10 +7688,15 @@ function reqScreenBack() {
   if(state.standTaskReturnScreen==='screen-submenu-requests'){ state.standTaskReturnScreen=''; showScreen('screen-submenu-requests'); return; }
   if (state._mgrTeamStandalone && state.staffAccount && state.staffAccount.group === 'manager') {
     state._mgrTeamStandalone=false;
-    state.mgrV10TeamMode='live';
     showScreen('screen-bedcheck');
     restoreMgrSidebarState();
-    mgrV10View('team',true);
+    // Support Manager, Manager and Admin all reach a single stand's My
+    // Team by tapping a card in Team Control — so Back must return to
+    // that Team Control stand list, not the generic team view (which for
+    // a support manager routed through supportOpsTab and landed somewhere
+    // else entirely — the "doesn't go back properly" bug). Reopening
+    // Team Control puts them exactly where they were.
+    mgrSimpleOpenTeamControl();
     return;
   }
   if (state.staffAccount && state.staffAccount.group === 'warehouse') {
@@ -7685,12 +7898,28 @@ function renderStockItems() {
     const val = state.stockQty[i] || '';
     html += '<div class="card" style="padding:10px 12px;margin-bottom:6px;display:' + (show ? 'block' : 'none') + '">'
       + '<div style="display:flex;align-items:center;gap:10px">'
-      + '<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;line-height:1.3">' + item.itemName + '</div>'
-      + '<div style="font-size:11px;color:var(--text-2)">' + (item.unit || '') + ' · ' + (item.pack || '') + '</div></div>'
-      + '<input type="number" min="0" step="any" class="form-input" data-stock-idx="' + i + '" value="' + val + '" placeholder="0" inputmode="decimal" oninput="state.stockQty[this.dataset.stockIdx]=this.value" style="width:84px;margin:0;text-align:center;font-weight:600;flex-shrink:0">'
+      + '<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;line-height:1.3">' + escapeHtml(item.itemName) + '</div>'
+      + '<div style="font-size:11px;color:var(--text-2)">' + escapeHtml(item.unit || '') + ' · ' + escapeHtml(item.pack || '') + '</div></div>'
+      + '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0">'
+      + '<button type="button" aria-label="One fewer case" onclick="stockStep(' + i + ',-1)" class="stock-step-btn">−</button>'
+      + '<input type="number" min="0" step="any" class="form-input" data-stock-idx="' + i + '" value="' + val + '" placeholder="0" inputmode="decimal" oninput="state.stockQty[this.dataset.stockIdx]=this.value" style="width:52px;margin:0;padding:8px 2px;text-align:center;font-weight:600;flex-shrink:0">'
+      + '<button type="button" aria-label="One more case" onclick="stockStep(' + i + ',1)" class="stock-step-btn">+</button>'
+      + '</div>'
       + '</div></div>';
   });
   document.getElementById('stock-items-list').innerHTML = html || '<div class="notice info" style="font-size:12px">No items match your search.</div>';
+}
+
+// One-tap +/- instead of opening a number keyboard for every single item —
+// on game day these are almost always small whole numbers of cases, and a
+// stand lead calling in a request needs this to be fast and one-handed,
+// not "find the field, tap it, wait for the keyboard, type a digit."
+function stockStep(i, delta) {
+  const input = document.querySelector('input[data-stock-idx="' + i + '"]');
+  if (!input) return;
+  const next = Math.max(0, (parseFloat(input.value) || 0) + delta);
+  input.value = next || '';
+  state.stockQty[i] = next || '';
 }
 
 async function submitStock() {
@@ -7864,9 +8093,30 @@ async function leadershipOpenWalkinFromHome(){
   await leadershipOpenWalkin();
   state._walkinReturn='manager_home';
 }
+// Replaces a dead button: the old "Request Worker Move" called
+// showScreen('screen-movereq') for a screen that does not exist anywhere
+// in this file, so tapping it did nothing at all. Moving a worker is
+// already fully built and working inside My Team (pick the person → 📍
+// Move stand → choose destination), so this now routes there instead of
+// duplicating that flow as a second, separate screen that could drift
+// out of sync with it.
+async function goMoveWorkerViaTeam(){
+  const who=getRequesterIdentity();
+  if(!(['support_manager','manager','admin'].includes(who.tier||'')||isSupervisorSession()))
+    return toast('Supervisor or Manager access required to move workers','error');
+  const stand=getOperationalStand(who)||who.homeStand||state.activeStand||'';
+  if(!stand)return toast('Choose a working stand first','error');
+  state.myTeamStand=stand;
+  toast('Pick the person, then tap 📍 Move stand');
+  await goMyTeam();
+}
 async function leadershipOpenWalkin(){
   const who=getRequesterIdentity();
-  if(!['support_manager','manager','admin'].includes(who.tier||''))return toast('Manager access required','error');
+  // Stand Lead now included — they're responsible for exactly one stand,
+  // and adding a walk-in to that stand is a reasonable, contained action.
+  // Move Worker (cross-stand authority) stays Supervisor+ only — a
+  // separate, deliberate decision, not bundled in with this.
+  if(!(['support_manager','manager','admin'].includes(who.tier||'')||isSupervisorSession()||(state.user&&state.user.role==='lead')))return toast('Access required','error');
   state._walkinReturn='manager_team';
   showScreen('screen-walkin');
   const searchBox=document.getElementById('walkin-search'); if(searchBox)searchBox.value='';
@@ -7936,31 +8186,20 @@ async function submitWalkin() {
   const sel=document.getElementById('walkin-stand-select');
   const stand=leadership ? ((sel&&sel.value)||state.myTeamStand||state.activeStand||'') : (getOperationalStand(who)||(state.user&&state.user.stand)||'');
   if(!stand)return toast('Select a stand','error');
-  const res = await api('addWalkin', { name, empId, stand });
-  if (res.ok) {
-    toast('✅ '+name+' added · login '+empId+' + last name');
-    document.getElementById('walkin-name').value = ''; document.getElementById('walkin-empid').value = '';
-    if(leadership||state._walkinReturn==='manager_team'){
-      state._walkinReturn=''; state.myTeamStand=stand;
-      showScreen('screen-bedcheck'); restoreMgrSidebarState(); mgrSimpleOpenTeamControl();
-      setTimeout(()=>leadershipOpenStandAttendance(stand),100);
-    }else showScreen('screen-home');
-  } else toast(res.error||'Could not add worker','error');
-}
-
-async function submitMove() {
-  const name = document.getElementById('move-name').value.trim();
-  const empId = document.getElementById('move-empid').value.trim();
-  const from = document.getElementById('move-from').value.trim();
-  const to = document.getElementById('move-to').value.trim();
-  const reason = document.getElementById('move-reason').value.trim();
-  if (!name || !empId || !from || !to) return toast('Fill all required fields', 'error');
-  const res = await api('requestMove', { name, empId, fromStand: from, toStand: to, requestedBy: state.user.name, reason });
-  if (res.ok) {
-    toast('⚠️ Move request sent to supervisor');
-    ['move-name','move-empid','move-from','move-to','move-reason'].forEach(id => document.getElementById(id).value = '');
-    showScreen('screen-home');
-  }
+  // Wrapped in withLock — this was a direct, unprotected insert, so a
+  // double-tap on flaky WiFi could add the same walk-in twice.
+  await withLock(evtBtn(), 'Adding…', async () => {
+    const res = await api('addWalkin', { name, empId, stand });
+    if (res.ok) {
+      toast('✅ '+name+' added · login '+empId+' + last name');
+      document.getElementById('walkin-name').value = ''; document.getElementById('walkin-empid').value = '';
+      if(leadership||state._walkinReturn==='manager_team'){
+        state._walkinReturn=''; state.myTeamStand=stand;
+        showScreen('screen-bedcheck'); restoreMgrSidebarState(); mgrSimpleOpenTeamControl();
+        setTimeout(()=>leadershipOpenStandAttendance(stand),100);
+      }else showScreen('screen-home');
+    } else toast(res.error||'Could not add worker','error');
+  });
 }
 
 // ============ MY STOCK REQUESTS (stand lead) ============
@@ -7986,17 +8225,17 @@ async function loadMyRequests() {
     
     let statusLine = '';
     if (r.status === 'Pending') statusLine = '<div style="font-size:13px;color:var(--warning);font-weight:600;margin-top:8px">⏳ Waiting for warehouse...</div>';
-    else if (r.status === 'On the way') statusLine = `<div style="font-size:13px;color:var(--info);font-weight:600;margin-top:8px">🚚 ${r.claimedBy || 'Warehouse'} is on the way!</div>`;
-    else if (r.status === 'Fulfilled') statusLine = `<div style="font-size:13px;color:var(--success);font-weight:600;margin-top:8px">✅ Delivered${r.claimedBy ? ' by '+r.claimedBy : ''}</div>`;
-    
+    else if (r.status === 'On the way') statusLine = `<div style="font-size:13px;color:var(--info);font-weight:600;margin-top:8px">🚚 ${escapeHtml(r.claimedBy) || 'Warehouse'} is on the way!</div>`;
+    else if (r.status === 'Fulfilled') statusLine = `<div style="font-size:13px;color:var(--success);font-weight:600;margin-top:8px">✅ Delivered${r.claimedBy ? ' by '+escapeHtml(r.claimedBy) : ''}</div>`;
+
     return `<div class="req-card ${cardClass}">
       <div class="req-header">
-        <div><div class="req-stand" style="font-size:13px;font-weight:400">${stockItemsHtml(r)}</div><div class="req-time">Requested ${timeAgo(r.timestamp)} · ${r.urgency}</div></div>
-        <span class="status-pill ${pillClass}">${r.status === 'Pending' ? r.urgency : r.status}</span>
+        <div><div class="req-stand" style="font-size:13px;font-weight:400">${stockItemsHtml(r)}</div><div class="req-time">Requested ${timeAgo(r.timestamp)} · ${escapeHtml(r.urgency)}</div></div>
+        <span class="status-pill ${pillClass}">${r.status === 'Pending' ? escapeHtml(r.urgency) : escapeHtml(r.status)}</span>
       </div>
-      ${r.quantity ? `<div class="req-qty">"${r.quantity}"</div>` : ''}
-      ${r.notes ? `<div class="req-qty">Notes: ${r.notes}</div>` : ''}
-      ${r.warehouseMessage ? `<div class="req-wh-msg">💬 Warehouse: ${r.warehouseMessage}</div>` : ''}
+      ${r.quantity ? `<div class="req-qty">"${escapeHtml(r.quantity)}"</div>` : ''}
+      ${r.notes ? `<div class="req-qty">Notes: ${escapeHtml(r.notes)}</div>` : ''}
+      ${r.warehouseMessage ? `<div class="req-wh-msg">💬 Warehouse: ${escapeHtml(r.warehouseMessage)}</div>` : ''}
       ${stockEtaHtml(r)}
       ${statusLine}
     </div>`;
@@ -8100,11 +8339,14 @@ async function loadStandRequests(){
   const stand=allMode?'':defaultStand;
   if(!allMode&&!stand)return;
 
-  // Category filter — only meaningful in the combined "All stands" view,
-  // where Stock/Food/IT get mixed together with no way to isolate one.
+  // Real fix: this filter used to only show in the combined "All stands"
+  // manager view — a bartender/stand lead looking at their OWN stand's
+  // requests got no filter at all and had to scroll through everything
+  // mixed together. Now shown for every view, single-stand or all-stands,
+  // so everyone gets the same Stock/Food/IT filtering managers already had.
   const catFilter=document.getElementById('stand-requests-cat-filter');
-  if(catFilter)catFilter.style.display=allMode?'flex':'none';
-  const cat=allMode?(state.standRequestsCat||'all'):'all';
+  if(catFilter)catFilter.style.display='flex';
+  const cat=state.standRequestsCat||'all';
   if(catFilter)catFilter.querySelectorAll('.tab-item').forEach(t=>t.classList.toggle('active',t.dataset.cat===cat));
 
   const sub=document.getElementById('stand-requests-sub'),title=document.getElementById('stand-requests-title');
@@ -8112,9 +8354,6 @@ async function loadStandRequests(){
   if(title)title.textContent=allMode?'All Stadium Requests':stand;
   const helper=document.getElementById('stand-requests-helper');
   if(helper)helper.textContent=allMode?'Monitor Stock, Food and IT across all stands.':'Live status — Waiting → On the Way → Delivered/Resolved.';
-
-  const actions=document.getElementById('stand-requests-actions');
-  if(actions)actions.style.display=allMode?'none':'grid';
 
   const [stockRes,kitchenRows,itRes]=await Promise.all([
     allMode?api('getStockRequests',{}).catch(()=>({ok:false,requests:[]})):api('getMyRequests',{stand}).catch(()=>({ok:false,requests:[]})),
@@ -8237,6 +8476,21 @@ async function pollMyRequestsBadge() {
 
 
 // ============ MY TEAM (stand lead) ============
+// Real fix: for Stand Lead and Supervisor, this used to open a 3-item
+// submenu (See My Team / Add Walk-in / Move Worker) — but a plain Stand
+// Lead has no permission to use the latter two at all (tapping them just
+// produces an error), and a Supervisor already has both available
+// directly inside "See My Team" (the +Add worker flow and each worker's
+// own 📍 Move stand button). The submenu was adding a screen with no real
+// use for either role. Both now go straight to See My Team.
+function goMyTeamTileTapped(){
+  if (state.user && state.user.isNpo) { goNpoRoster(); return; }
+  const role = state.user && state.user.role;
+  if (role === 'lead' || role === 'supervisor') { goMyTeam(); return; }
+  // Any other case (e.g. a plain worker) keeps the existing submenu —
+  // left unchanged since it wasn't part of what was asked here.
+  showScreen('screen-submenu-team');
+}
 async function goMyTeam() {
   state._fbOpen = null; state._fbRating = null;
   const who = getRequesterIdentity();
@@ -8336,8 +8590,22 @@ async function loadMyTeam() {
   const pending = visibleTeam.filter(w => w.status === 'scheduled');
   
   let html = '';
-  const leadershipCanAddMove = ['support_manager','manager','admin'].includes(actor.tier||'');
-  if(leadershipCanAddMove){
+  // Supervisors are responsible for several stands at once (all 3 at
+  // Desert Financial Arena, a whole section at football), so moving a
+  // worker between their own stands is a normal part of the job — not a
+  // manager-only action. Previously this was manager-tier only, which
+  // left a supervisor with no way to shift someone except re-adding them
+  // as a walk-in at the other stand, creating a duplicate person record.
+  // canManageTeamRole() still applies, so a supervisor can move workers
+  // and leads but not an equal-or-higher role.
+  //
+  // Split into two flags: Add Worker now also includes Stand Lead (their
+  // own single stand, a contained action), but Move Worker — cross-stand
+  // authority — stays Supervisor-and-above only, a deliberate, separate
+  // decision that must not get pulled in by widening the other one.
+  const leadershipCanAdd = ['support_manager','manager','admin'].includes(actor.tier||'') || isSupervisorSession() || (state.user&&state.user.role==='lead');
+  const leadershipCanMove = ['support_manager','manager','admin'].includes(actor.tier||'') || isSupervisorSession();
+  if(leadershipCanAdd){
     html += `<div class="leadership-team-toolbar">
       <button class="btn btn-primary" onclick="leadershipAddWorkerToCurrentStand()">＋ Add worker</button>
       <button class="btn btn-ghost" onclick="leadershipRefreshCurrentTeam()">↻ Refresh team</button>
@@ -8372,8 +8640,8 @@ async function loadMyTeam() {
     html += `<div class="card" style="padding:12px 14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div style="flex:1">
-          <div style="font-weight:600;font-size:14px">${w.name}</div>
-          <div style="font-size:11px;color:var(--text-2);margin-top:2px">${w.role || ''}${w.isNpo?'':' · ID '+w.empId}</div>
+          <div style="font-weight:600;font-size:14px">${escapeHtml(w.name)}</div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:2px">${escapeHtml(w.role || '')}${w.isNpo?'':' · ID '+escapeHtml(w.empId)}</div>
           <div style="font-size:11px;color:var(--text-3);margin-top:2px">${w.isNpo?'Approved NPO roster':((w.startTime || '—')+' – '+(w.endTime || '—'))}</div>
         </div>
         <div>${statusBadge}</div>
@@ -8387,7 +8655,7 @@ async function loadMyTeam() {
         ${w.status === 'working' && w.onBreak && canManageTeamRole(w.role) ? `<button class="btn btn-ghost" onclick="teamBreakEnd(${i})" style="flex:1;padding:8px;font-size:12px;border-color:#00A651;color:#00A651">✅ End break</button>` : ''}
         ${canClockOut ? `<button class="btn btn-ghost" onclick="teamClockOut(${i})" style="flex:1;padding:8px;font-size:12px;border-color:#DC2626;color:#DC2626">⏹ Clock out</button>` : ''}
         ${w.status === 'left' && canManageTeamRole(w.role) ? `<button class="btn btn-ghost" onclick="teamResume(${i})" style="flex:1;padding:8px;font-size:12px;border-color:#00A651;color:#00A651">↩️ Resume</button>` : ''}
-        ${leadershipCanAddMove && !w.isNpo && canManageTeamRole(w.role) ? `<button class="btn btn-ghost team-move-btn" onclick="leadershipMoveTeamWorker(${i})" style="flex:1;padding:8px;font-size:12px">📍 Move stand</button>` : ''}
+        ${leadershipCanMove && !w.isNpo && canManageTeamRole(w.role) ? `<button class="btn btn-ghost team-move-btn" onclick="leadershipMoveTeamWorker(${i})" style="flex:1;padding:8px;font-size:12px">📍 Move stand</button>` : ''}
         ${mapRole(w.role)==='worker' && canGrantTeamStandAccess() ? `<button class="btn btn-ghost" onclick="teamToggleStandAccess(${i},${!w.standAccessEnabled},this)" style="flex:1;padding:8px;font-size:12px;${w.standAccessEnabled?'border-color:#DC2626;color:#DC2626':'border-color:#0066B3;color:#0066B3'}">${w.standAccessEnabled?'🔒 Remove stand access':'🔓 Enable stand access'}</button>` : ''}
         ${canManageTeamRole(w.role) && !w.isNpo ? `<button class="btn btn-ghost" onclick="toggleFb(${i})" style="flex:1;padding:8px;font-size:12px">⭐ Feedback</button>` : ''}
       </div>
@@ -8416,7 +8684,7 @@ async function leadershipRefreshCurrentTeam(){
 
 async function leadershipAddWorkerToCurrentStand(){
   const who=getRequesterIdentity();
-  if(!['support_manager','manager','admin'].includes(who.tier||''))return toast('Manager access required','error');
+  if(!(['support_manager','manager','admin'].includes(who.tier||'')||isSupervisorSession()||(state.user&&state.user.role==='lead')))return toast('Access required','error');
   const stand=state.myTeamStand;
   if(!stand)return toast('Select a stand first','error');
   // Same bug as Move Stand — two back-to-back prompt() boxes for name
@@ -8429,7 +8697,7 @@ async function leadershipAddWorkerToCurrentStand(){
 
 async function leadershipMoveTeamWorker(i){
   const who=getRequesterIdentity();
-  if(!['support_manager','manager','admin'].includes(who.tier||''))return toast('Manager access required','error');
+  if(!(['support_manager','manager','admin'].includes(who.tier||'')||isSupervisorSession()))return toast('Supervisor or Manager access required','error');
   const w=state._team&&state._team[i];
   if(!w)return;
   if(w.isNpo)return toast('NPO placement is controlled by the NPO group assignment','error');
@@ -8657,27 +8925,25 @@ const MGR_SECTIONS = {
 // Do not simplify the UI by removing permissions from any lower tier.
 // V11.11.4 — Manager-tier screens use the SAME Supervisor UI.
 const SUPERVISOR_STYLE_EXTRA_ACCESS={
-  support_manager:[
-    {key:'team_control',icon:'👥',title:'Team Control',sub:'All stands · Active · Present/Absent · Breaks',action:"mgrSimpleOpenTeamControl()"},
-    {key:'add_walkin',icon:'🚶',title:'Add Walk-in Worker',sub:'Someone not on today\'s schedule',action:"leadershipOpenWalkinFromHome()"}
-  ],
+  // Team Control and Add Walk-in intentionally removed from here — the
+  // main "My Team" tile already routes support_manager/manager/admin
+  // straight into Team Control (mgrSimpleTeam → mgrSimpleOpenTeamControl),
+  // and Add Walk-in lives inside that flow. Having them again as separate
+  // tiles was pure duplication that made the screen busier for no reason.
+  support_manager:[],
   manager:[
-    {key:'team_control',icon:'👥',title:'Team Control',sub:'Active · Break · Not in · Present/Absent · all stands',action:"mgrSimpleOpenTeamControl()"},
-    {key:'add_walkin',icon:'🚶',title:'Add Walk-in Worker',sub:'Someone not on today\'s schedule',action:"leadershipOpenWalkinFromHome()"},
-    {key:'inv',icon:'📋',title:'Inventory',sub:'Stand-by-stand count sheets & print report',action:"mgrV10OpenTool('inv')"},
-    {key:'reports',icon:'📊',title:'Records',sub:'Feedback, checklist & food-safety history',action:"mgrV10OpenTool('reports')"},
+    {key:'inv',icon:'📋',title:'Inventory',sub:'Count sheets · print & download report',action:"mgrV10OpenTool('inv')"},
+    {key:'reports',icon:'⭐',title:'Feedback & Records',sub:'Worker feedback · download PDF/CSV · checklists',action:"mgrV10OpenTool('reports')"},
+    {key:'times',icon:'🕐',title:'Break Time Sheets',sub:'Break log · tip distribution CSV',action:"mgrV10OpenTool('times')"},
     {key:'transfers',icon:'🔁',title:'Transfer Management',sub:'Plan and review stock transfers',action:"mgrV10OpenTool('transfers')"},
-    {key:'refunds',icon:'💵',title:'Refunds',sub:'Review refund assistance activity',action:"mgrV10OpenTool('refunds')"},
-    {key:'times',icon:'🕐',title:'Times & Records',sub:'Break time sheet · tip distribution CSV',action:"mgrV10OpenTool('times')"}
+    {key:'refunds',icon:'💵',title:'Refunds',sub:'Review refund assistance activity',action:"mgrV10OpenTool('refunds')"}
   ],
   admin:[
-    {key:'team_control',icon:'👥',title:'Team Control',sub:'Active · Break · Not in · Present/Absent · all stands',action:"mgrSimpleOpenTeamControl()"},
-    {key:'add_walkin',icon:'🚶',title:'Add Walk-in Worker',sub:'Someone not on today\'s schedule',action:"leadershipOpenWalkinFromHome()"},
-    {key:'inv',icon:'📋',title:'Inventory',sub:'Stand-by-stand count sheets & print report',action:"mgrV10OpenTool('inv')"},
-    {key:'reports',icon:'📊',title:'Records',sub:'Feedback, checklist & food-safety history',action:"mgrV10OpenTool('reports')"},
+    {key:'inv',icon:'📋',title:'Inventory',sub:'Count sheets · print & download report',action:"mgrV10OpenTool('inv')"},
+    {key:'reports',icon:'⭐',title:'Feedback & Records',sub:'Worker feedback · download PDF/CSV · checklists',action:"mgrV10OpenTool('reports')"},
+    {key:'times',icon:'🕐',title:'Break Time Sheets',sub:'Break log · tip distribution CSV',action:"mgrV10OpenTool('times')"},
     {key:'transfers',icon:'🔁',title:'Transfer Management',sub:'Plan and review stock transfers',action:"mgrV10OpenTool('transfers')"},
     {key:'refunds',icon:'💵',title:'Refunds',sub:'Review refund assistance activity',action:"mgrV10OpenTool('refunds')"},
-    {key:'times',icon:'🕐',title:'Times & Records',sub:'Break time sheet · tip distribution CSV',action:"mgrV10OpenTool('times')"},
     {key:'admin',icon:'⚙️',title:'Admin Control',sub:'Access · game info · coverage · setup',action:"mgrV10OpenTool('admin')"}
   ]
 };
@@ -8688,10 +8954,26 @@ function renderSupervisorStyleExtraAccess(role){
   const items=SUPERVISOR_STYLE_EXTRA_ACCESS[role]||[];
   if(!items.length){wrap.style.display='none';list.innerHTML='';return;}
   wrap.style.display='';
-  list.innerHTML=items.map(it=>`<button class="big-action" onclick="${it.action}">
+  // Tools stay collapsed under the "Manager Tools" button until tapped —
+  // keeps the home screen clean, and the menu itself is a responsive grid
+  // (1 column on phones, 2 on desktop).
+  list.style.display=state._mgrToolsOpen?'grid':'none';
+  const toggle=document.getElementById('mgr-tools-toggle');
+  const chev=document.getElementById('mgr-tools-chevron');
+  if(toggle)toggle.classList.toggle('open',!!state._mgrToolsOpen);
+  if(chev)chev.textContent='▾';
+  list.innerHTML=items.map(it=>`<button class="big-action" style="border-left:4px solid var(--asu-gold)" onclick="${it.action}">
     <span class="icon">${it.icon}</span>
     <span class="text"><div>${escapeHtml(it.title)}</div><div class="sub">${escapeHtml(it.sub)}</div></span>
   </button>`).join('');
+}
+// Show/hide the Manager Tools menu.
+function toggleManagerToolsMenu(){
+  state._mgrToolsOpen=!state._mgrToolsOpen;
+  const list=document.getElementById('mgr-simple-extra-tools-list');
+  const toggle=document.getElementById('mgr-tools-toggle');
+  if(list)list.style.display=state._mgrToolsOpen?'grid':'none';
+  if(toggle)toggle.classList.toggle('open',!!state._mgrToolsOpen);
 }
 async function loadManagerGameDayInfo(){
   if(!isManagerOpsSession())return null;
@@ -8788,6 +9070,10 @@ async function setupMgrSimpleHome(){
   const allTitle=document.getElementById('mgr-simple-allstands-title');
   if(allTitle)allTitle.textContent=(role==='support_manager'?'Support Manager':role==='admin'?'Admin':'Manager')+' — All Stands';
   renderSupervisorStyleExtraAccess(role);
+  // Support Managers don't collect game-day feedback — hide that button
+  // for them specifically (supervisors and managers keep it).
+  const fbBtn=document.getElementById('mgr-simple-feedback-btn');
+  if(fbBtn)fbBtn.style.display=(role==='support_manager')?'none':'';
   const teamTile=document.querySelector('#mgr-simple-lead-actions .action-tile:last-child .tile-sub');
   if(teamTile)teamTile.textContent=['support_manager','manager','admin'].includes(role)
     ? 'Active · Present/Absent · Breaks · all stands'
@@ -8845,8 +9131,6 @@ function requestHubRoleLabel(){
 function prepareRequestHub(){
   const more=document.getElementById('stand-request-more'); if(more)more.open=false;
   const leadership=!!(state.staffAccount&&state.staffAccount.group==='manager'&&['support_manager','manager','admin'].includes(state.staffAccount.role));
-  const monitorBtn=document.getElementById('leadership-request-monitor-btn');
-  if(monitorBtn)monitorBtn.style.display=leadership?'flex':'none';
   const who=getRequesterIdentity();
   const stand=getOperationalStand(who)||state.activeStand||who.homeStand||'';
   const sub=document.getElementById('request-hub-context');
@@ -9503,6 +9787,10 @@ function mgrV10View(view,preserve){
   if(home)home.style.display=view==='home'?'':'none';
   if(req)req.style.display=view==='requests'?'':'none';
   if(manage)manage.style.display=view==='manage'?'':'none';
+  // Coverage Today bar shows only on the Home tab — it's useful at-a-glance
+  // info but was cluttering the top of every other tab.
+  const cov=document.getElementById('mgr-coverage-profile');
+  if(cov)cov.style.display=view==='home'?'':'none';
 
   if(view==='home'){
     mgrV10RefreshHome();
@@ -9610,7 +9898,7 @@ function mgrV10OpenTool(tab){
   if(tab==='carts')loadMgrCarts();
   if(tab==='maint')loadMgrMaint('open');
   if(tab==='admin'){
-    adminLoadNpo();adminLoadDrivers();saLoadStands();
+    adminLoadNpo();adminLoadDrivers();saLoadStands();populateRollStandSelect();
     const gd=document.getElementById('gdc-date');if(gd&&!gd.value)gd.value=localISODate();
     const sd=document.getElementById('sla-date');if(sd&&!sd.value)sd.value=localISODate();
     adminPopulateGameContentVenues().then(adminLoadGameContent);adminLoadAreaLeadPeople();coverageAdminInit();
@@ -10021,7 +10309,7 @@ function mgrTab(el, tab) {
   if (tab === 'transfers') { loadMgrTransfers(); }
   if (tab === 'refunds') { loadMgrRefunds(); }
   if (tab === 'times') { loadTimesheet(); }
-  if (tab === 'admin') { adminLoadNpo(); adminLoadDrivers(); saLoadStands(); adminAccessLoad(); coverageAdminInit(); }
+  if (tab === 'admin') { adminLoadNpo(); adminLoadDrivers(); saLoadStands(); adminAccessLoad(); coverageAdminInit(); populateRollStandSelect(); }
 }
 
 
@@ -10462,6 +10750,9 @@ async function mtUploadCSV() {
 }
 
 async function loadMgrTransfers() {
+  // Real guard — Support Manager's menu router already blocks this tab,
+  // but this function had no check of its own.
+  if (isSupportManagerSession()) return;
   const el = document.getElementById('mgr-transfers-list');
   if (!el) return;
   const today = localISODate();
@@ -10475,8 +10766,8 @@ async function loadMgrTransfers() {
     const canConfirm = t.status === 'verified';
     return `<div class="fs-unit-card">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <div><div style="font-weight:700">${t.stand}</div>
-        <div style="font-size:12px;color:var(--text-2)"><span style="color:${st.color};font-weight:700">${st.label}</span>${t.delivered_by?' · '+t.delivered_by:''}${t.verified_by?' · ✍️'+t.verified_by:''}</div></div>
+        <div><div style="font-weight:700">${escapeHtml(t.stand)}</div>
+        <div style="font-size:12px;color:var(--text-2)"><span style="color:${st.color};font-weight:700">${st.label}</span>${t.delivered_by?' · '+escapeHtml(t.delivered_by):''}${t.verified_by?' · ✍️'+escapeHtml(t.verified_by):''}</div></div>
         <button class="btn btn-ghost" style="width:auto;padding:6px 10px;font-size:12px" onclick="mtViewTransfer('${t.id}','${t.stand.replace(/'/g,"\\'")}')">View</button>
       </div>
       ${canConfirm ? '<button class="btn btn-primary" onclick="mtConfirmTransfer('+t.id+')" style="margin-top:10px">✅ Confirm receipt (final)</button>' : ''}
@@ -10698,7 +10989,7 @@ function renderMgrInventory() {
     html += '<div style="font-size:11px;color:var(--text-2)">' + s.countedItems + '/' + s.totalItems + ' items counted (' + pct + '%)' + (gaps ? ' · <span style="color:#DC2626;font-weight:700">⚠ ' + gaps + ' transfer gap' + (gaps>1?'s':'') + '</span>' : '') + '</div></div>';
     html += '<div style="font-size:18px;color:var(--text-3)" id="stand-toggle-' + idx + '">▸</div></div>';
     html += '<div id="stand-detail-' + idx + '" style="display:none;margin-top:10px;overflow-x:auto">';
-    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px">';
+    html += '<table class="responsive-table" style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px">';
     html += '<thead><tr style="background:var(--bg-elevated);text-align:left">';
     html += '<th style="padding:6px;font-weight:600">Item</th>';
     html += '<th style="padding:6px;font-weight:600;text-align:right">Exp Start</th>';
@@ -10713,16 +11004,16 @@ function renderMgrInventory() {
     s.items.forEach(function(it) {
       const counted = it.counted ? '' : ';color:var(--text-3);font-style:italic';
       html += '<tr style="border-bottom:1px solid var(--border)' + counted + '">';
-      html += '<td style="padding:6px">' + it.itemName + '<div style="font-size:10px;color:var(--text-3)">' + it.unit + ' · ' + it.pack + '</div></td>';
-      html += '<td style="padding:6px;text-align:right">' + it.expStart + '</td>';
-      html += '<td style="padding:6px;text-align:right;font-weight:600">' + (it.countIn || '—') + '</td>';
-      html += '<td style="padding:6px;text-align:right">' + (it.transferIn || '') + '</td>';
+      html += '<td data-label="Item" style="padding:6px">' + escapeHtml(it.itemName) + '<div style="font-size:10px;color:var(--text-3)">' + escapeHtml(it.unit) + ' · ' + escapeHtml(it.pack) + '</div></td>';
+      html += '<td data-label="Exp Start" style="padding:6px;text-align:right">' + escapeHtml(it.expStart) + '</td>';
+      html += '<td data-label="Count In" style="padding:6px;text-align:right;font-weight:600">' + (it.countIn || '—') + '</td>';
+      html += '<td data-label="+In" style="padding:6px;text-align:right">' + (it.transferIn || '') + '</td>';
       var gapWarn = it.transferGap ? ' title="Gap: delivered ' + it.delivered + ' but Transfer IN says ' + (it.transferIn || 0) + '" style="padding:6px;text-align:right;color:#DC2626;font-weight:700"' : ' style="padding:6px;text-align:right;color:#2563EB"';
-      html += '<td' + gapWarn + '>' + (it.delivered || '') + (it.transferGap ? ' ⚠' : '') + '</td>';
-      html += '<td style="padding:6px;text-align:right">' + (it.transferOut || '') + '</td>';
-      html += '<td style="padding:6px;text-align:right">' + (it.waste || '') + '</td>';
-      html += '<td style="padding:6px;text-align:right;font-weight:600">' + (it.countOut || '—') + '</td>';
-      html += '<td style="padding:6px;text-align:right;color:var(--aramark-red);font-weight:600">' + (it.sold !== undefined ? it.sold : '') + '</td>';
+      html += '<td data-label="Delivered"' + gapWarn + '>' + (it.delivered || '') + (it.transferGap ? ' ⚠' : '') + '</td>';
+      html += '<td data-label="−Out" style="padding:6px;text-align:right">' + (it.transferOut || '') + '</td>';
+      html += '<td data-label="Waste" style="padding:6px;text-align:right">' + (it.waste || '') + '</td>';
+      html += '<td data-label="Count Out" style="padding:6px;text-align:right;font-weight:600">' + (it.countOut || '—') + '</td>';
+      html += '<td data-label="Sold" style="padding:6px;text-align:right;color:var(--aramark-red);font-weight:600">' + (it.sold !== undefined ? it.sold : '') + '</td>';
       html += '</tr>';
     });
     html += '</tbody></table></div></div>';
@@ -10742,7 +11033,17 @@ function exportInvCSV() {
   if (!data || !data.stands) return toast('Load inventory first', 'error');
   let csv = 'Stand,Item,Unit,Pack,Exp Start,Count In,Transfer In,Delivered (Stock Req),Transfer Gap,Transfer Out,Waste,Count Out,Sold,Variance\n';
   data.stands.forEach(function(s) {
+    let addonHeaderShown = false;
     s.items.forEach(function(it) {
+      // Real, explicit marker — not a guess based on category or position.
+      // A manager uploading this straight into Yellow Dog needs an
+      // unmistakable line telling them "everything below this was added
+      // after the real printed sheet, don't treat it as part of the
+      // official numbered items."
+      if (it.isAddon && !addonHeaderShown) {
+        csv += '"— ADDED AFTER ORIGINAL SHEET — not part of the official numbered items below —"\n';
+        addonHeaderShown = true;
+      }
       const row = [s.stand, it.itemName, it.unit, it.pack, it.expStart, it.countIn, it.transferIn, (it.delivered || ''), (it.transferGap || ''), it.transferOut, it.waste, it.countOut, (it.sold !== undefined ? it.sold : ''), (it.variance !== undefined ? it.variance : '')];
       csv += row.map(function(v) { 
         const s = String(v == null ? '' : v); 
@@ -10802,6 +11103,14 @@ function printInvReportBuild(w, data) {
   let html = '<html><head><title>Stand Sheet ' + data.date + '</title>';
   html += '<style>' +
     '@page{size:letter portrait;margin:0.34in}' +
+    // Real bug fixed here: browsers strip background colors/shading on
+    // print and PDF-export by default (to save ink) unless explicitly
+    // told not to — this is why every gray row and the dark Exp Start
+    // box were coming out pure white on the actual printed sheet, even
+    // though they looked correct in the on-screen preview. This is the
+    // standard property (plus the older -webkit- name some engines still
+    // need) that tells the browser to print colors exactly as styled.
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}' +
     'body{font-family:Arial,Helvetica,sans-serif;font-size:10px;margin:0;color:#111}' +
     '.page{page-break-before:always}' +
     '.page:first-of-type{page-break-before:auto}' +
@@ -10812,14 +11121,25 @@ function printInvReportBuild(w, data) {
     '.hdr-cell{flex:1;padding:5px 7px;border-right:1px solid #777;font-size:12px;font-weight:700}' +
     '.hdr-cell:last-child{border-right:none}' +
     '.hdr-cell .lbl{font-size:10px;font-weight:400;text-transform:uppercase;color:#555;display:block;margin-bottom:2px}' +
-    'table{width:100%;border-collapse:collapse;font-size:8.4px;margin-bottom:4px;table-layout:fixed}' +
+    'table{width:100%;border-collapse:collapse;font-size:8.2px;margin-bottom:4px;table-layout:fixed}' +
     'th{border:1px solid #666;padding:2px 1px;background:#eee;font-weight:700;text-align:center;font-size:7.4px;line-height:1.1}' +
-    'td{border:1px solid #777;padding:3px 1px;text-align:center;height:33px;box-sizing:border-box}' +
+    // Real fix for pages only half-filling: the old fixed height (33px)
+    // was tall enough that a row with a long, wrapping item name could
+    // occasionally overflow it slightly — and a browser's print engine
+    // responds to a row not fitting in the remaining page space by
+    // pushing that WHOLE row to the next page rather than splitting it,
+    // leaving a large blank gap at the bottom of the page it left. Using
+    // a slightly shorter, tighter row height removes that margin for
+    // error, and page-break-inside:avoid on each row makes the intended
+    // behavior explicit rather than left to each browser's default.
+    'td{border:1px solid #777;padding:2px 1px;text-align:center;height:29px;box-sizing:border-box}' +
+    'tr{page-break-inside:avoid;break-inside:avoid}' +
     'td.item{text-align:left;font-weight:700;width:31%}' +
-    'td.item .sub{font-weight:400;font-size:6.8px;color:#555;display:block;margin-top:2px}' +
+    'td.item .sub{font-weight:400;font-size:6.6px;color:#555;display:block;margin-top:1px}' +
     'tr.odd td{background:#ececec}' +
-    'td.expstart{background:#333;color:#fff;font-weight:800}' +
+    'td.expstart{background:#333 !important;color:#fff !important;font-weight:800}' +
     'td.gap{color:#000;font-weight:800;text-decoration:underline}' +
+    'tr.addon-divider td{background:#FFF3CD !important;color:#7A5C00;font-weight:800;font-size:8px;text-align:center;padding:5px;border-top:2px solid #7A5C00;border-bottom:2px solid #7A5C00}' +
     '.operator-row{display:grid;grid-template-columns:1fr 1.55fr;min-height:40px}.operator-cell{padding:5px 7px;border-right:1px solid #777;font-size:9px}.operator-cell:last-child{border-right:none}.writebox{display:inline-block;border:1px solid #999;min-height:22px;margin-left:5px;padding:3px 5px;box-sizing:border-box;font-size:9px}.notesbox{display:block;border:1px solid #999;min-height:28px;margin-top:2px;padding:3px 5px;font-size:8px;line-height:1.2;white-space:pre-wrap}.pagefoot{font-size:7px;color:#666;display:flex;justify-content:space-between;margin-top:3px}' +
     '@media print{.page{page-break-before:always}.page:first-of-type{page-break-before:auto}}' +
     '</style></head><body>';
@@ -10839,6 +11159,11 @@ function printInvReportBuild(w, data) {
         '<div style="padding:20px;text-align:center;color:#900">This stand has 0 items — check its stand_sheets catalog.</div></div>';
       return;
     }
+    // Tracks whether the "added after original sheet" divider has
+    // already printed for this stand — needs to persist across pages,
+    // since with 76 items on a 12-per-page layout the addon items don't
+    // necessarily start at a page boundary.
+    let addonDividerShown = false;
     // Real form: exactly 12 items per page, header box repeats on every
     // single page (not just once per stand) — matches the printed
     // reference exactly instead of letting the browser auto-flow the
@@ -10890,6 +11215,15 @@ function printInvReportBuild(w, data) {
       pageItems.forEach(function(it, i) {
         const seq = (it.paperRow !== undefined && it.paperRow !== '') ? it.paperRow : (p * ROWS_PER_PAGE + i + 1);
         const rowCls = i % 2 === 1 ? ' class="odd"' : '';
+        // Real, explicit marker — not inferred from category or position.
+        // A manager scanning this printed sheet needs an unmistakable
+        // line telling them everything below it was added after the real
+        // form was printed, so they don't try to reconcile it against
+        // Yellow Dog's official numbered items.
+        if (it.isAddon && !addonDividerShown) {
+          html += '<tr class="addon-divider"><td colspan="14">— ADDED AFTER ORIGINAL SHEET — not part of the official numbered items above —</td></tr>';
+          addonDividerShown = true;
+        }
         // Print only a physically submitted Count Out. Never synthesize one.
         const countOutCell=(it.countOut!=null&&it.countOut!=='')?it.countOut:'';
         html += '<tr' + rowCls + '>' +
@@ -11081,16 +11415,45 @@ async function adminUploadSchedule() {
       return String(h).padStart(2,'0') + ':' + m[2];
     };
 
-    const deriveOperationalArea = (eventName) => {
+    const deriveOperationalArea = (eventName, site) => {
       let s = cleanCell(eventName).replace(/^Concession\s+/i,'');
       // ReadyOn sometimes leaves labels such as East Portables / North
       // Sundeck with no stand Area. Preserve those as operational areas.
-      s = s.replace(/\s+9\/\d{1,2}\b.*$/i,'');
+      //
+      // Bug fixed here: this used to strip only "9/xx" dates — hardcoded
+      // to September. An October event ("111 Basketball 10/4") would keep
+      // the date in its name, never match a real stand, and silently break
+      // exactly like the SOCCER mismatch did.
+      s = s.replace(/\s+\d{1,2}\/\d{1,2}(\/\d{2,4})?\b.*$/,'');
       s = s.replace(/\s*\([^)]*ASU VS[^)]*\)\s*$/i,'');
-      return s.trim();
+      s = s.trim();
+
+      // Desert Financial Arena: ReadyOn names each event after the sport
+      // ("111 Volleyball", "111 Basketball"), but the stand itself is
+      // sport-neutral — the same physical stand runs every sport, and staff
+      // call it "DFA 111". Without this, each sport would create its own
+      // orphan location that matches no stand, splitting one stand's
+      // history across many names and breaking Inventory/Checks/Stock for
+      // everyone working there.
+      const siteCode = cleanCell(site).toUpperCase();
+      const numMatch = s.match(/^(\d{1,4})\b/);
+      if (siteCode === 'DFA' && numMatch) return 'DFA ' + numMatch[1];
+
+      return s;
     };
 
-    const currentStandSet = new Set(mountainAmericaStandNames2026());
+    // Real bug fixed here: this used to check every uploaded Area against
+    // mountainAmericaStandNames2026() — a hardcoded, football-only list.
+    // Any genuinely correct stand from a different venue (Soccer, DFA)
+    // got rejected as "unknown," blocking the whole upload even when the
+    // CSV had the exact right stand name. Now checks against every real
+    // stand currently in the database, across every venue, so this
+    // validation actually matches what "known stand" should mean.
+    let currentStandSet = new Set(mountainAmericaStandNames2026());
+    const liveStands = await sb('stands?select=stand_name').catch(()=>({_err:true}));
+    if (!liveStands._err && Array.isArray(liveStands)) {
+      liveStands.forEach(s => { if (s.stand_name) currentStandSet.add(canonicalStandName2026(s.stand_name)); });
+    }
     const allowedNonStandAreas = new Set(['Kitchen Runner']);
 
     const out = [];
@@ -11124,7 +11487,7 @@ async function adminUploadSchedule() {
           continue;
         }
       } else {
-        scheduleLocation = deriveOperationalArea(eventName);
+        scheduleLocation = deriveOperationalArea(eventName, cleanCell(get(r, col.site)));
         blankAreaFallback++;
       }
 
@@ -11247,7 +11610,72 @@ async function adminUploadSchedule() {
   });
 }
 
+// Populate the stand dropdown for the roll-forward feature whenever the
+// admin tab opens, so it shows real stands, not a stale hardcoded list.
+async function populateRollStandSelect(){
+  const sel=document.getElementById('roll-stand-select');
+  if(!sel)return;
+  const res=await api('getStandsList',{}).catch(()=>({ok:false,stands:[]}));
+  const stands=(res.stands||[]).map(s=>s.stand_name).sort();
+  sel.innerHTML='<option value="__all__">All stands with a recent Count Out</option>'+
+    stands.map(s=>'<option value="'+escapeAttr(s)+'">'+escapeHtml(s)+'</option>').join('');
+}
+// Deliberate, admin-pressed roll-forward — the SAFE version of the old
+// auto carry-forward that caused the On-Hand bug. That one fired
+// automatically on every Count Out and silently made a stand's own
+// closing count appear as that same night's opening. This one only runs
+// when an admin explicitly presses the button between games, only for
+// stands that genuinely submitted a Count Out, and tells you exactly
+// what it changed.
+async function adminRollCountOut(){
+  const st=document.getElementById('roll-status');
+  const sel=document.getElementById('roll-stand-select');
+  const confirmed=document.getElementById('roll-confirm').checked;
+  if(!confirmed){ st.style.color='#DC2626'; st.textContent='⚠️ Tick the confirm box first — this overwrites Exp Start / On-Hand.'; return; }
+  const target=sel.value;
+  await withLock(document.getElementById('roll-btn'),'Rolling…',async()=>{
+    st.style.color=''; st.textContent='Reading latest Count Outs…';
+    // Pull the most recent Count Out per stand. order by created_at desc
+    // then take the first one seen per stand = its latest.
+    let q='inventory_entries?phase=eq.Count%20Out&order=created_at.desc&select=stand,counts,created_at';
+    if(target!=='__all__') q='inventory_entries?phase=eq.Count%20Out&stand=eq.'+encodeURIComponent(target)+'&order=created_at.desc&select=stand,counts,created_at';
+    const rows=await sb(q).catch(()=>({_err:true}));
+    if(rows._err||!Array.isArray(rows)){ st.style.color='#DC2626'; st.textContent='⚠️ Could not read inventory entries.'; return; }
+    const latestByStand={};
+    rows.forEach(r=>{ if(!latestByStand[r.stand]) latestByStand[r.stand]=r; });
+    const standNames=Object.keys(latestByStand);
+    if(!standNames.length){ st.style.color='#DC2626'; st.textContent='⚠️ No Count Out found'+(target!=='__all__'?' for '+target:'')+' — nothing to roll.'; return; }
+
+    let standsDone=0, itemsUpdated=0, itemsSkipped=0;
+    for(const stand of standNames){
+      const counts=latestByStand[stand].counts||{};
+      for(const itemName of Object.keys(counts)){
+        const co=counts[itemName] && counts[itemName].countOut;
+        // Only roll a REAL submitted number. Blank/undefined Count Out
+        // leaves that item's baseline exactly as it was — never guessed.
+        if(co===undefined||co===null||co===''){ itemsSkipped++; continue; }
+        const val=Number(co);
+        if(isNaN(val)){ itemsSkipped++; continue; }
+        const r=await sb('stand_sheets?stand=eq.'+encodeURIComponent(stand)+'&item_name=eq.'+encodeURIComponent(itemName),
+          { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ on_hand: val, exp_start: val }) }
+        ).catch(()=>({_err:true}));
+        if(r && r._err){ itemsSkipped++; } else { itemsUpdated++; }
+      }
+      standsDone++;
+      st.textContent='Rolling… '+standsDone+'/'+standNames.length+' stands';
+    }
+    st.style.color='var(--success)';
+    st.innerHTML='✅ <b>Rolled '+itemsUpdated+' items across '+standsDone+' stand'+(standsDone===1?'':'s')+'</b>'+
+      (itemsSkipped?' · '+itemsSkipped+' skipped (no real count)':'')+
+      '<div style="margin-top:4px;color:var(--text-2)">Each stand\'s last Count Out is now its Exp Start / On-Hand. Reload an inventory sheet to see it.</div>';
+    toast('✅ Counts rolled forward');
+  });
+}
 async function adminUploadInventory() {
+  // Real guard — this can delete and bulk-replace the entire stand_sheets
+  // table (every stand's item catalog). Previously only gated by the
+  // surrounding Admin-only menu, not by this function itself.
+  if(!isAdminSession())return toast('Admin access required','error');
   const f = document.getElementById('up-inv-file').files[0];
   const st = document.getElementById('up-inv-status');
   if (!f) return toast('Pick the inventory CSV first', 'error');
@@ -11278,7 +11706,7 @@ async function adminUploadInventory() {
     }
     if (!out.length) { st.style.color = '#DC2626'; st.textContent = '⚠️ No valid rows found.'; return; }
     if (document.getElementById('up-inv-replace').checked) {
-      if (!confirm('Replace the ENTIRE inventory sheet with ' + out.length + ' items from this file?')) { st.textContent = ''; return; }
+      if (!(await confirmAction('This deletes every stand’s current item list and replaces it with the ' + out.length + ' items in this file. Stands not in this file will end up with an empty sheet.', {title:'Replace the entire inventory sheet?', confirmLabel:'Replace all items', danger:true}))) { st.textContent = ''; return; }
       st.textContent = 'Clearing old inventory sheet…';
       const del = await sb('stand_sheets?stand=neq.___none___', { method:'DELETE', headers:{Prefer:'return=minimal'} });
       if (del._err) { st.style.color = '#DC2626'; st.textContent = '⚠️ Could not clear old sheet — upload cancelled.'; return; }
@@ -11472,8 +11900,8 @@ async function adminToggleDriver(id, active) {
 // ---- New game reset ----
 async function adminNewGame() {
   const st = document.getElementById('newgame-status');
-  if (!confirm('Start a new game?\n\nThis permanently clears:\n• attendance (time sheet source!)\n• stock requests\n• IT tickets\n\nHave you downloaded the Time sheet, Stock and IT reports?')) return;
-  if (!confirm('Last check — this cannot be undone. Clear now?')) return;
+  if (!(await confirmAction('This permanently clears:\n• Attendance (time sheet source!)\n• Stock requests\n• IT tickets\n\nHave you downloaded the Time sheet, Stock and IT reports first?', {title:'Start a new game?', confirmLabel:'Yes, I downloaded them', danger:true}))) return;
+  if (!(await confirmAction('This cannot be undone.', {title:'Last check — clear now?', confirmLabel:'Clear everything', danger:true}))) return;
   await withLock(document.getElementById('newgame-btn'), 'Clearing…', async () => {
     st.style.color = ''; st.textContent = 'Clearing attendance…';
     const r1 = await sb('attendance?employee_id=neq.___none___', { method:'DELETE', headers:{Prefer:'return=minimal'} });
@@ -11489,6 +11917,9 @@ async function adminNewGame() {
 
 // ============ MANAGER: CHECKLIST COMPLIANCE VIEW ============
 async function loadMgrChecklists() {
+  // Real guard — Support Manager's menu router already blocks this tab,
+  // but this function had no check of its own.
+  if (isSupportManagerSession()) return;
   const el = document.getElementById('mgr-cl-list');
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   const res = await api('getChecklistsByDate', { date: '' });
@@ -11555,6 +11986,9 @@ function tsFmt(t) { return t ? new Date(t).toLocaleTimeString('en-US',{hour:'num
 function tsFmtList(arr) { return (arr || []).map(tsFmt).join(' / '); }
 
 async function loadTimesheet() {
+  // Real guard — Support Manager's menu router already blocks this tab,
+  // but this function had no check of its own.
+  if (isSupportManagerSession()) return;
   const el = document.getElementById('mgr-ts-list');
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Building time sheet...</div>';
   const res = await api('getTimesheet', { date: document.getElementById('mgr-ts-date').value.trim() });
@@ -11578,20 +12012,20 @@ async function loadTimesheet() {
     list.forEach(st => {
       h += '<div class="card" style="padding:12px 14px;margin-bottom:10px">';
       h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
-      h += '<div style="font-weight:700;font-size:13px">' + st.stand + '</div>';
+      h += '<div style="font-weight:700;font-size:13px">' + escapeHtml(st.stand) + '</div>';
       h += '<div style="font-size:11px;color:var(--text-2)">' + st.workers.length + ' people · <b>' + st.totalHours + ' hrs</b></div></div>';
-      h += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:620px">';
+      h += '<div style="overflow-x:auto"><table class="responsive-table" style="width:100%;border-collapse:collapse;font-size:11px;min-width:620px">';
       h += '<thead><tr style="background:var(--bg-elevated);text-align:left"><th style="padding:5px">Name</th><th style="padding:5px">ID</th><th style="padding:5px">Role</th><th style="padding:5px">Time-In</th><th style="padding:5px">Break In</th><th style="padding:5px">Break Out</th><th style="padding:5px">Time-Out</th><th style="padding:5px;text-align:right">Hrs</th></tr></thead><tbody>';
       st.workers.forEach(w => {
         h += '<tr style="border-bottom:1px solid var(--border)">';
-        h += '<td style="padding:5px;font-weight:600">' + (w.name || '') + '</td>';
-        h += '<td style="padding:5px">' + w.empId + '</td>';
-        h += '<td style="padding:5px">' + (w.role || '') + '</td>';
-        h += '<td style="padding:5px">' + tsFmt(w.timeIn) + '</td>';
-        h += '<td style="padding:5px">' + tsFmtList(w.breakIns) + '</td>';
-        h += '<td style="padding:5px">' + tsFmtList(w.breakOuts) + '</td>';
-        h += '<td style="padding:5px">' + (w.stillWorking ? '<span style="color:var(--warning);font-weight:700">still on</span>' : tsFmt(w.timeOut)) + '</td>';
-        h += '<td style="padding:5px;text-align:right;font-weight:700">' + w.hours + '</td></tr>';
+        h += '<td data-label="Name" style="padding:5px;font-weight:600">' + escapeHtml(w.name || '') + '</td>';
+        h += '<td data-label="ID" style="padding:5px">' + escapeHtml(w.empId) + '</td>';
+        h += '<td data-label="Role" style="padding:5px">' + escapeHtml(w.role || '') + '</td>';
+        h += '<td data-label="Time-In" style="padding:5px">' + tsFmt(w.timeIn) + '</td>';
+        h += '<td data-label="Break In" style="padding:5px">' + tsFmtList(w.breakIns) + '</td>';
+        h += '<td data-label="Break Out" style="padding:5px">' + tsFmtList(w.breakOuts) + '</td>';
+        h += '<td data-label="Time-Out" style="padding:5px">' + (w.stillWorking ? '<span style="color:var(--warning);font-weight:700">still on</span>' : tsFmt(w.timeOut)) + '</td>';
+        h += '<td data-label="Hrs" style="padding:5px;text-align:right;font-weight:700">' + w.hours + '</td></tr>';
       });
       h += '</tbody></table></div></div>';
     });
@@ -11644,6 +12078,10 @@ function printTimesheet() {
 
 // ============ MANAGER: WORKER FEEDBACK ============
 async function loadMgrFeedback() {
+  // Real guard — Support Manager doesn't collect/see game-day feedback
+  // (also hidden from their menu per the 2026-09-11 changelog entry), but
+  // this function had no check of its own.
+  if (isSupportManagerSession()) return;
   const el = document.getElementById('mgr-feedback-list');
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   const res = await api('getFeedback', {});
@@ -11651,18 +12089,65 @@ async function loadMgrFeedback() {
   const rows = res.feedback || [];
   state._feedback = rows;
   document.getElementById('fb-csv-btn').style.display = rows.length ? '' : 'none';
+  const fbPdfBtn = document.getElementById('fb-pdf-btn');
+  if (fbPdfBtn) fbPdfBtn.style.display = rows.length ? '' : 'none';
   if (!rows.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">⭐</div><p>No feedback yet</p></div>'; return; }
   const good = rows.filter(r => r.rating === 'good').length;
   el.innerHTML = '<div style="display:flex;gap:10px;margin-bottom:10px"><div class="stat-pill">👍 <b>' + good + '</b></div><div class="stat-pill">👎 <b>' + (rows.length - good) + '</b></div><div class="stat-pill">Total: <b>' + rows.length + '</b></div></div>' +
     rows.map(r => {
       const isGood = r.rating === 'good';
       return '<div class="card" style="margin-bottom:8px;padding:10px 12px;border-left:4px solid ' + (isGood ? '#00A651' : '#DC2626') + '">' +
-        '<div style="display:flex;justify-content:space-between;gap:8px"><div style="font-weight:600;font-size:13px">' + (isGood ? '👍' : '👎') + ' ' + r.worker_name + '</div>' +
+        '<div style="display:flex;justify-content:space-between;gap:8px"><div style="font-weight:600;font-size:13px">' + (isGood ? '👍' : '👎') + ' ' + escapeHtml(r.worker_name) + '</div>' +
         '<div style="font-size:11px;color:var(--text-3)">' + new Date(r.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + '</div></div>' +
-        '<div style="font-size:11px;color:var(--text-2);margin-top:2px">ID ' + r.employee_id + ' · ' + r.stand + ' · by ' + r.given_by + (r.given_by_role ? ' (' + r.given_by_role + ')' : '') + '</div>' +
-        (r.note ? '<div style="font-size:12px;margin-top:6px">"' + r.note + '"</div>' : '') +
+        '<div style="font-size:11px;color:var(--text-2);margin-top:2px">ID ' + escapeHtml(r.employee_id) + ' · ' + escapeHtml(r.stand) + ' · by ' + escapeHtml(r.given_by) + (r.given_by_role ? ' (' + escapeHtml(r.given_by_role) + ')' : '') + '</div>' +
+        (r.note ? '<div style="font-size:12px;margin-top:6px">"' + escapeHtml(r.note) + '"</div>' : '') +
       '</div>';
     }).join('');
+}
+
+// Clean, printable PDF of worker feedback — opens a formatted report in
+// a new window and triggers the browser's print/save-as-PDF. Same
+// approach as the inventory report, so no external PDF library needed.
+function exportFeedbackPDF() {
+  const rows = state._feedback || [];
+  if (!rows.length) return toast('Load feedback first', 'error');
+  const good = rows.filter(r => r.rating === 'good').length;
+  const bad = rows.length - good;
+  const w = window.open('', '_blank');
+  if (!w) return toast('Allow pop-ups to download the PDF', 'error', 6000);
+  const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const rowsHtml = rows.map(r => {
+    const isGood = r.rating === 'good';
+    return '<tr>' +
+      '<td style="white-space:nowrap">' + esc(new Date(r.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})) + '</td>' +
+      '<td><b>' + esc(r.worker_name) + '</b><br><span style="color:#666;font-size:10px">ID ' + esc(r.employee_id) + '</span></td>' +
+      '<td>' + esc(r.stand) + '</td>' +
+      '<td style="text-align:center;font-weight:800;color:' + (isGood ? '#00A651' : '#DC2626') + '">' + (isGood ? '👍 Good' : '👎 Needs work') + '</td>' +
+      '<td>' + (r.note ? esc(r.note) : '<span style="color:#bbb">—</span>') + '</td>' +
+      '<td>' + esc(r.given_by) + (r.given_by_role ? '<br><span style="color:#666;font-size:10px">' + esc(r.given_by_role) + '</span>' : '') + '</td>' +
+    '</tr>';
+  }).join('');
+  w.document.write(
+    '<html><head><title>Worker Feedback ' + localISODate() + '</title><style>' +
+    'body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#111}' +
+    'h1{font-size:20px;margin:0 0 2px}.sub{color:#666;font-size:12px;margin-bottom:16px}' +
+    '.pills{margin-bottom:16px}.pill{display:inline-block;padding:6px 14px;border-radius:20px;font-weight:700;font-size:13px;margin-right:8px}' +
+    '.pill.g{background:#DCFCE7;color:#15803D}.pill.b{background:#FEE2E2;color:#B91C1C}.pill.t{background:#F1F5F9;color:#334155}' +
+    'table{width:100%;border-collapse:collapse;font-size:12px}' +
+    'th{background:#E4002B;color:#fff;text-align:left;padding:8px;font-size:11px}' +
+    'td{padding:8px;border-bottom:1px solid #eee;vertical-align:top}' +
+    'tr:nth-child(even) td{background:#fafafa}' +
+    '@media print{body{margin:12px}}' +
+    '</style></head><body>' +
+    '<h1>🗣️ Worker Feedback Report</h1>' +
+    '<div class="sub">Aramark Sports + Entertainment · Generated ' + new Date().toLocaleString() + '</div>' +
+    '<div class="pills"><span class="pill t">Total: ' + rows.length + '</span><span class="pill g">👍 ' + good + '</span><span class="pill b">👎 ' + bad + '</span></div>' +
+    '<table><thead><tr><th>Date</th><th>Worker</th><th>Stand</th><th>Rating</th><th>Note</th><th>Given By</th></tr></thead><tbody>' +
+    rowsHtml + '</tbody></table></body></html>'
+  );
+  w.document.close();
+  setTimeout(() => { try { w.print(); } catch(e){} }, 400);
+  toast('📄 Feedback PDF ready — use your browser\'s Save as PDF');
 }
 
 function exportFeedbackCSV() {
@@ -11765,7 +12250,7 @@ function loadScript(src){
 async function clearCheckins() {
   const rows = state._checkins || [];
   if (!rows.length) return toast('Nothing to clear', 'error');
-  if (!confirm('Delete ALL ' + rows.length + ' check-ins and their photos from the cloud?\n\nMake sure you have downloaded the photos + CSV first. This cannot be undone.')) return;
+  if (!(await confirmAction('Make sure you have downloaded the photos + CSV first. This cannot be undone.', {title:'Delete all ' + rows.length + ' check-ins?', confirmLabel:'Delete all', danger:true}))) return;
   await withLock(document.getElementById('ci-clear-btn'), 'Clearing…', async () => {
     // delete photos from storage
     const paths = rows.filter(r=>r.photo_url).map(r=>r.photo_url);
@@ -12609,8 +13094,17 @@ async function submitKitchenRequest(){
   if(holdWrapDone){holdWrapDone.style.display='none';holdWrapDone.innerHTML='';}
   document.getElementById('kitchen-req-preview-notice').style.display=_kitchenPreview?'':'none';
   if(!_kitchenPreview){
-    // Smart routing: Food Managers coordinate new orders; runners are notified
-    // only when they are assigned or when their assigned food becomes Ready.
+    // Smart routing: Food Managers coordinate new orders and formally
+    // assign a runner (that assignment step is what actually sends it to
+    // the runner's My Jobs and is left untouched here — a manager still
+    // needs to load-balance across runners, not have this auto-claim for
+    // them). But the runner covering this stand's area (Food Manager's
+    // "Runner Areas" assignment) previously heard nothing until a manager
+    // got around to picking them from a dropdown — on a busy night that
+    // could be several minutes of the runner having no idea a request
+    // for their own area even came in. This adds an immediate, separate
+    // heads-up push straight to that runner, alongside the existing
+    // Food Manager alert — informational only, doesn't assign the job.
     const foodMgrs=await sb('staff_accounts?role=in.(food_manager,kitchen_coordinator)&is_active=eq.true&select=employee_id').catch(()=>({_err:true}));
     if(!foodMgrs._err&&Array.isArray(foodMgrs)&&foodMgrs.length){
       foodMgrs.forEach(x=>sendPushTo(x.employee_id,'🍽️ New food request · '+stand,row.items.slice(0,90)+' · '+kitchenEtaText(row)));
@@ -12618,6 +13112,9 @@ async function submitKitchenRequest(){
       // Safety fallback if no active Food Manager account exists.
       const foodTeam=await sb('staff_accounts?role=in.(food_runner,kitchen_runner)&is_active=eq.true&select=employee_id').catch(()=>({_err:true}));
       if(!foodTeam._err&&Array.isArray(foodTeam))foodTeam.forEach(x=>sendPushTo(x.employee_id,'🍽️ New food delivery request',stand+' · '+row.items.slice(0,75)));
+    }
+    if(suggested&&suggested.employee_id&&!String(suggested.employee_id).startsWith('preview-')){
+      sendPushTo(suggested.employee_id,'📍 New request in your area — '+stand,row.items.slice(0,90)+' · a Food Manager will confirm shortly');
     }
   }
   toast(made._queued?'📤 Food request queued — will send when WiFi returns':('🍔 Food request sent'+(suggested?' · suggested '+suggested.name:'')));
@@ -13327,6 +13824,12 @@ function adminAccessRefresh(){
 }
 
 async function adminAccessLoad(force){
+  // Real guard: the Admin Access Center panel is only ever opened via
+  // mgrV10OpenTool('admin'), which checks role — but this function reads
+  // every staff account's role/PIN directly from Supabase and had no check
+  // of its own, so it was callable (e.g. from devtools) by any signed-in
+  // manager-tier session, not just Admin.
+  if(!isAdminSession())return;
   const el=document.getElementById('admin-access-list');if(!el)return;
   const seq=++_adminAccessLoadSeq;
   if(force)el.innerHTML='<div class="loading"><div class="spinner"></div>Refreshing staff access…</div>';
@@ -13429,6 +13932,11 @@ async function adminAccessVerify(employee_id,expected){
   return {ok:String(r.name||'')===String(expected.name||'')&&String(r.role||'')===String(expected.role||'')&&(r.is_active!==false)===(expected.is_active!==false),row:r};
 }
 async function adminAccessSave(){
+  // Real guard — this writes directly to staff_accounts (creates/edits
+  // logins and roles for every tier including warehouse_manager, manager,
+  // etc.). It was previously reachable by any manager-tier session with no
+  // check of its own; only the surrounding menu was Admin-gated.
+  if(!isAdminSession())return toast('Admin access required','error');
   const name=document.getElementById('aa-name').value.trim(),employee_id=document.getElementById('aa-employee-id').value.trim(),role=document.getElementById('aa-role').value,pin=document.getElementById('aa-pin').value.trim(),is_active=document.getElementById('aa-active').checked;
   if(!name)return toast('Enter the person’s name','error');
   if(!employee_id||employee_id.length<5)return toast('Enter a valid employee ID','error');
@@ -14587,12 +15095,18 @@ async function loadMgrMaint(filter) {
 }
 
 async function updateMaint(id, status) {
-  const note = status === 'resolved' ? (prompt('Resolution note (optional):') || '') : '';
-  const r = await sb('maintenance_reports?id=eq.'+id, { method:'PATCH', headers:{Prefer:'return=minimal'},
-    body: JSON.stringify({ status, reviewed_by: state.managerName||'Manager', resolution_note:note, updated_at:new Date().toISOString() }) });
-  if (r._err) return toast('Could not update', 'error');
-  toast(status === 'resolved' ? '✅ Marked resolved' : '🟡 Marked in progress');
-  loadMgrMaint(state._maintFilter || 'open');
+  // Wrapped in withLock so a double-tap can't fire the resolution-note
+  // prompt() twice and PATCH the same report twice — the second PATCH
+  // could otherwise overwrite a real note with an empty one if the second
+  // prompt was accidentally cancelled.
+  await withLock(evtBtn(), 'Saving…', async () => {
+    const note = status === 'resolved' ? (prompt('Resolution note (optional):') || '') : '';
+    const r = await sb('maintenance_reports?id=eq.'+id, { method:'PATCH', headers:{Prefer:'return=minimal'},
+      body: JSON.stringify({ status, reviewed_by: state.managerName||'Manager', resolution_note:note, updated_at:new Date().toISOString() }) });
+    if (r._err) return toast('Could not update', 'error');
+    toast(status === 'resolved' ? '✅ Marked resolved' : '🟡 Marked in progress');
+    loadMgrMaint(state._maintFilter || 'open');
+  });
 }
 
 function filterMaint(filter) { loadMgrMaint(filter); }
@@ -14641,20 +15155,37 @@ function renderBedCheck() {
   }
   
   c.innerHTML = stands.map(s => {
-    let dotColor = '#DC2626';
-    if (s.here === s.total && s.total > 0) dotColor = 'var(--success)';
-    else if (s.here > 0) dotColor = 'var(--warning)';
-    
-    return `<div class="card" style="padding:14px 16px;cursor:pointer" onclick="leadershipOpenStandAttendance('${escapeAttr(s.stand)}')">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-        <div style="flex:1;display:flex;align-items:center;gap:10px">
-          <span style="width:12px;height:12px;border-radius:50%;background:${dotColor};display:inline-block;flex-shrink:0"></span>
-          <div>
-            <div style="font-weight:600;font-size:14px">${s.stand}</div>
-            <div style="font-size:11px;color:var(--text-2);margin-top:2px">${s.hasNpo?'🤝 NPO · ':''}${s.here}/${s.total} here${s.onBreak > 0 ? ' · <span style="color:var(--info)">☕ '+s.onBreak+'</span>' : ''}${s.absent > 0 ? ' · <span style="color:#DC2626">❌ '+s.absent+'</span>' : ''}${s.left > 0 ? ' · <span style="color:var(--text-3)">⏹ '+s.left+' left</span>' : ''}${s.pending > 0 ? ' · ⏳ '+s.pending : ''}</div>
+    // Bigger, phone-first card design. The old version crammed status into
+    // one 11px line of slashes and icons ("3/5 here · ☕2 · ❌1") that's
+    // genuinely hard to read fast on a phone mid-shift. This makes the
+    // headline number big, gives each status its own clear chip with a
+    // word (not just an icon), and colour-codes the whole left edge so a
+    // supervisor can tell a fully-staffed stand from a problem one at a
+    // glance without reading anything.
+    let edge = '#DC2626', statusWord = 'None here', statusBg = 'rgba(220,38,38,0.1)', statusColor = '#DC2626';
+    if (s.here === s.total && s.total > 0) { edge = 'var(--success)'; statusWord = 'Fully staffed'; statusBg = 'rgba(0,166,81,0.12)'; statusColor = 'var(--success)'; }
+    else if (s.here > 0) { edge = 'var(--warning)'; statusWord = 'Partial'; statusBg = 'rgba(245,158,11,0.14)'; statusColor = '#B45309'; }
+
+    const chips = [];
+    if (s.onBreak > 0) chips.push(`<span style="background:rgba(37,99,235,0.12);color:var(--info);padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600">☕ ${s.onBreak} on break</span>`);
+    if (s.absent > 0) chips.push(`<span style="background:rgba(220,38,38,0.12);color:#DC2626;padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600">❌ ${s.absent} absent</span>`);
+    if (s.pending > 0) chips.push(`<span style="background:rgba(245,158,11,0.14);color:#B45309;padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600">⏳ ${s.pending} not in yet</span>`);
+    if (s.left > 0) chips.push(`<span style="background:var(--bg-elevated);color:var(--text-3);padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600">⏹ ${s.left} left</span>`);
+
+    return `<div class="card" style="padding:0;cursor:pointer;overflow:hidden;margin-bottom:10px" onclick="leadershipOpenStandAttendance('${escapeAttr(s.stand)}')">
+      <div style="display:flex;align-items:stretch">
+        <div style="width:6px;background:${edge};flex-shrink:0"></div>
+        <div style="flex:1;padding:14px 14px 14px 12px;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+            <div style="font-weight:750;font-size:16px;line-height:1.25;min-width:0">${s.hasNpo?'🤝 ':''}${escapeHtml(s.stand)}</div>
+            <div style="font-size:22px;color:var(--text-3);flex-shrink:0;line-height:1">›</div>
           </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <span style="font-size:20px;font-weight:800;color:${statusColor}">${s.here}<span style="font-size:14px;font-weight:600;color:var(--text-3)">/${s.total}</span></span>
+            <span style="background:${statusBg};color:${statusColor};padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700">${statusWord}</span>
+          </div>
+          ${chips.length ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">${chips.join('')}</div>` : ''}
         </div>
-        <div style="font-size:18px;color:var(--text-3)">›</div>
       </div>
     </div>`;
   }).join('');
@@ -14939,9 +15470,15 @@ function renderInvItems() {
   const catIcon = {ALCOHOL:'🍺',BEVERAGE:'🥤',FOOD:'🍔',SUPPLIES:'📦',OTHER:'📋'};
   let html = '';
   let lastCat = null;
-  // Items already arrive sorted by category (getStandSheet orders category.asc,
-  // item_name.asc), so a straight pass with a "category changed" check gives
-  // clean section headers without needing to re-sort or re-group client-side.
+  // Items arrive in the exact order of the real paper form (getStandSheet
+  // orders by id — insertion order — not alphabetically), so a straight
+  // pass with a "category changed" check gives clean section headers
+  // without needing to re-sort client-side. If a stand has extra items
+  // added after its main sheet, they land at the true end of the list
+  // rather than tucked into wherever their category happens to be, and
+  // may show that category's header a second time near the bottom —
+  // which is correct, since it honestly signals they're a later addition
+  // rather than part of the original numbered sheet.
   state.invItems.forEach(function(item, i) {
     const cat = (item.category || 'OTHER').toUpperCase();
     if (cat !== lastCat) {
@@ -15075,6 +15612,11 @@ async function selectInvPhase(btn, phase) {
   document.querySelectorAll('#inv-phase-row .chip').forEach(function(c) { c.classList.remove('selected'); });
   btn.classList.add('selected');
   state.invPhase = phase;
+  // Clear any partial-entry edit target when the phase changes — a
+  // Count Out must never inherit the Count In entry id from a previous
+  // "fill in the rest" session (root cause of the DFA 143 cross-phase
+  // merge). Each phase submits against its own entry, or a fresh one.
+  state._invEditingEntryId = null;
   state._lastInvPhaseByStand = state._lastInvPhaseByStand || {};
   state._lastInvPhaseByStand[stand] = phase;
   state._invLedgerTotals = null;
@@ -15085,15 +15627,28 @@ async function selectInvPhase(btn, phase) {
   // editable form. A stand lead and their supervisor independently doing
   // the same count was the actual problem being fixed here.
   const today = stadiumDay();
-  const already = await sb('inventory_entries?stand=eq.'+encodeURIComponent(stand)+'&phase=eq.'+encodeURIComponent(phase)+'&entry_date=eq.'+today+'&select=submitted_by,created_at').catch(()=>({_err:true}));
+  const already = await sb('inventory_entries?stand=eq.'+encodeURIComponent(stand)+'&phase=eq.'+encodeURIComponent(phase)+'&entry_date=eq.'+today+'&select=id,submitted_by,created_at,counts,notes').catch(()=>({_err:true}));
   if (!already._err && Array.isArray(already) && already.length) {
     const prior = already[0];
     invDraftClear(stand, phase); // this phase is genuinely done (possibly from another device) — no reason to keep a local draft around for it
     document.getElementById('inv-active-warning').innerHTML = '';
+    const submittedCount = Object.keys(prior.counts||{}).length;
+    const totalCount = (state.invItems||[]).length;
+    const isPartial = totalCount > 0 && submittedCount < totalCount;
+    // Real fix for the dead-end this used to be: this screen only ever
+    // said "Already completed" with no way to see what was actually
+    // submitted, or to fill in the rest of a genuinely partial entry
+    // (e.g. a transcribed paper sheet where only some items had a real
+    // handwritten number). Now it shows exactly how many items are
+    // recorded, and — if it's partial — a real way back in to add the
+    // remaining ones without creating a duplicate, conflicting entry.
     document.getElementById('inv-items-list').innerHTML =
-      '<div class="empty" style="padding:30px"><div class="empty-icon">✅</div>' +
-      '<p style="font-weight:700">Already completed</p>' +
-      '<p style="color:var(--text-2)">' + escapeHtml(prior.submitted_by||'Someone') + ' finished ' + phase + ' at ' + new Date(prior.created_at).toLocaleTimeString() + '.</p></div>';
+      '<div class="empty" style="padding:30px"><div class="empty-icon">' + (isPartial ? '⚠️' : '✅') + '</div>' +
+      '<p style="font-weight:700">' + (isPartial ? submittedCount + ' of ' + totalCount + ' items recorded — partial' : 'Already completed') + '</p>' +
+      '<p style="color:var(--text-2)">' + escapeHtml(prior.submitted_by||'Someone') + (isPartial ? ' recorded' : ' finished') + ' ' + phase + ' at ' + new Date(prior.created_at).toLocaleTimeString() + '.</p>' +
+      (prior.notes ? '<p style="color:var(--text-2);font-size:12px;margin-top:6px">' + escapeHtml(prior.notes) + '</p>' : '') +
+      '<button class="btn btn-primary" style="margin-top:14px" onclick="invContinuePartialEntry(\''+escapeAttr(stand)+'\',\''+escapeAttr(phase)+'\','+prior.id+')">' + (isPartial ? '✏️ View & fill in the rest' : '✏️ View / correct this') + '</button>' +
+      '</div>';
     const submitBtn = document.getElementById('inv-submit-btn');
     if (submitBtn) submitBtn.style.display = 'none';
     return;
@@ -15286,6 +15841,40 @@ function invDraftClear(stand, phase) {
   });
 })();
 
+// Real fix for the "shows done, no way in" dead end. Reopens the full
+// item list — same screen used for a fresh count — pre-filled with
+// whatever was already submitted, and tags the session so the eventual
+// resubmit UPDATES this same entry (merging in the newly-filled items)
+// instead of colliding with the duplicate-block that protects against a
+// second, unrelated submission.
+async function invContinuePartialEntry(stand, phase, entryId){
+  state.invPhase = phase;
+  state._invEditingEntryId = entryId;
+  document.querySelectorAll('#inv-phase-row .chip').forEach(function(c){ c.classList.remove('selected'); });
+  const btn = Array.from(document.querySelectorAll('#inv-phase-row .chip')).find(function(b){
+    return b.getAttribute('onclick') === "selectInvPhase(this,'" + phase + "')";
+  });
+  if (btn) btn.classList.add('selected');
+  renderInvItems();
+  const res = await sb('inventory_entries?id=eq.'+entryId+'&select=counts').catch(()=>({_err:true}));
+  if (!res._err && Array.isArray(res) && res.length) {
+    const counts = res[0].counts || {};
+    Object.keys(counts).forEach(function(itemName){
+      const idx = (state.invItems||[]).findIndex(function(it){ return it.itemName === itemName; });
+      if (idx < 0) return;
+      const c = counts[itemName];
+      ['countIn','transferIn','transferOut','waste','countOut'].forEach(function(field){
+        if (c[field] === undefined) return;
+        const inp = document.querySelector('#inv-items-list input[data-inv-idx="'+idx+'"][data-field="'+field+'"]');
+        if (inp) inp.value = c[field];
+      });
+    });
+  }
+  const submitBtn = document.getElementById('inv-submit-btn');
+  if (submitBtn) submitBtn.style.display = '';
+  toast('Filled-in items are shown — add the rest and submit');
+}
+
 async function submitInventory() {
   const stand = getInventoryTargetStand();
   if (!stand) return toast('Pick a stand first', 'error');
@@ -15330,6 +15919,28 @@ async function submitInventory() {
   const counts = {};
   entries.forEach(function(e){ counts[e.itemName] = e; });
 
+  // Safeguard against the field/phase mismatch that put real Count In
+  // numbers under a "countOut" key (making them invisible on the Count In
+  // screen and nearly a lost-data incident). Whatever the phase is, the
+  // primary number must live in that phase's own field. This normalizes
+  // every entry right before saving so a stray field name can never again
+  // hide a real count.
+  const phaseField = state.invPhase === 'Count In' ? 'countIn'
+    : state.invPhase === 'Count Out' ? 'countOut'
+    : null; // Transfer uses transferIn/transferOut and is left as-is
+  if (phaseField) {
+    Object.keys(counts).forEach(function(name){
+      const e = counts[name];
+      const wrongField = phaseField === 'countIn' ? 'countOut' : 'countIn';
+      // If the value landed in the wrong field but the right one is empty,
+      // move it. If both somehow exist, the phase's own field wins.
+      if ((e[phaseField] === undefined || e[phaseField] === '') && e[wrongField] !== undefined && e[wrongField] !== '') {
+        e[phaseField] = e[wrongField];
+      }
+      if (wrongField in e) delete e[wrongField];
+    });
+  }
+
   await withLock(evtBtn(), 'Saving…', async () => {
     // Manually-added items are recorded in the notes automatically, so
     // a Manager reviewing this later can see exactly which items weren't
@@ -15346,12 +15957,14 @@ async function submitInventory() {
       empId: getFieldOpsActor().empId,
       phase: state.invPhase,
       counts: counts,
-      notes: manualNote + document.getElementById('inv-notes').value
+      notes: manualNote + document.getElementById('inv-notes').value,
+      updateEntryId: state._invEditingEntryId || undefined
     });
     if (res.ok) {
       toast('✅ Saved ' + entries.length + ' items (' + state.invPhase + ')');
       invDraftClear(stand, state.invPhase);
       state._invManuallyAdded = [];
+      state._invEditingEntryId = null;
       sb('active_sessions?stand=eq.'+encodeURIComponent(stand)+'&phase=eq.'+encodeURIComponent(state.invPhase)+'&kind=eq.inventory', { method:'DELETE', headers:{Prefer:'return=minimal'} }).catch(()=>{});
       returnAfterStandTaskOrHome();
     } else if (res.alreadyDone) {
@@ -15895,6 +16508,10 @@ function goStockForOther() {
   document.querySelectorAll('#other-urgency .chip').forEach(function(c) { c.classList.remove('selected'); });
   document.querySelector('#other-urgency .chip').classList.add('selected'); // Normal default
   state.otherUrgency = 'Normal';
+  // Generated once per form-open (not per tap) so a retry on flaky WiFi
+  // reuses the same id and the server's duplicate-merge can catch it —
+  // same pattern as goStock()/submitStock().
+  state._otherStockUuid = genUUID();
   showScreen('screen-stock-other');
 }
 
@@ -15923,20 +16540,28 @@ async function submitOtherStock() {
     : isManagerCaller
       ? (state.managerName || state.staffAccount.name || 'Manager') + ' (Manager — for ' + stand + ')'
       : state.user.name + ' (Supervisor — for ' + stand + ')';
-  const res = await api('submitStockRequest', {
-    stand: stand,
-    items: items,
-    qty: qty,
-    urgency: state.otherUrgency || 'Normal',
-    requestedBy: requesterLabel,
-    empId: isManagerCaller ? (state.staffAccount.empId||'') : (state.user ? state.user.empId : '')
+  // Wrapped in withLock (button disabled while sending) and a client uuid
+  // generated once when the form opened (goStockForOther), not per tap —
+  // this was previously unprotected against duplicate-tap on flaky WiFi.
+  await withLock(evtBtn(), 'Sending…', async () => {
+    const requestClientUuid = state._otherStockUuid || (state._otherStockUuid = genUUID());
+    const res = await api('submitStockRequest', {
+      clientUuid: requestClientUuid,
+      stand: stand,
+      items: items,
+      qty: qty,
+      urgency: state.otherUrgency || 'Normal',
+      requestedBy: requesterLabel,
+      empId: isManagerCaller ? (state.staffAccount.empId||'') : (state.user ? state.user.empId : '')
+    });
+    if (res.ok) {
+      toast(res.queued ? '📤 Queued — will send when WiFi returns' : ('✅ Sent to warehouse for ' + stand));
+      state._otherStockUuid = null; // went through — next request gets its own fresh id
+      if (isWarehouse) { state._whRequestMode = false; showScreen('screen-warehouse'); }
+      else if (isManagerCaller) { showScreen('screen-bedcheck'); restoreMgrSidebarState(); }
+      else showScreen('screen-home');
+    } else toast('Failed', 'error');
   });
-  if (res.ok) {
-    toast(res.queued ? '📤 Queued — will send when WiFi returns' : ('✅ Sent to warehouse for ' + stand));
-    if (isWarehouse) { state._whRequestMode = false; showScreen('screen-warehouse'); }
-    else if (isManagerCaller) { showScreen('screen-bedcheck'); restoreMgrSidebarState(); }
-    else showScreen('screen-home');
-  } else toast('Failed', 'error');
 }
 
 // ============ IT ISSUE (stand lead) ============
@@ -15980,15 +16605,36 @@ async function checkITCategoryHold(){
   state._itHoldOverrideReason='';
   const stand=state.itTargetStand||(getRequesterIdentity().homeStand);
   if(!stand||!state.itCategory){notice.style.display='none';notice.innerHTML='';return;}
-  const rows=await sb('it_issues?stand=eq.'+encodeURIComponent(stand)+'&category=eq.'+encodeURIComponent(state.itCategory)+'&status=eq.open&order=created_at.desc&limit=1&select=requested_by,created_at').catch(()=>({_err:true}));
+  // TWO real bugs fixed here:
+  // 1) This selected a column called "requested_by" — it_issues' real
+  //    column is "reported_by" (confirmed against the live schema and
+  //    mapIT()'s own mapping below). PostgREST rejects an unknown column
+  //    in `select=` with an HTTP 400, which the .catch() below silently
+  //    swallowed — meaning this entire "you already reported this" check
+  //    has been failing on every single call and never actually worked.
+  // 2) It only matched status=eq.open — the moment a tech tapped "On the
+  //    way" the status flips to 'claimed' and this hold would have
+  //    stopped seeing the ticket at all, so a POS claimed-but-not-fixed
+  //    gave zero warning and could be re-reported endlessly. Matches the
+  //    resolve-guard's own status=neq.resolved used elsewhere in this
+  //    flow — a ticket should only stop counting once actually resolved.
+  const rows=await sb('it_issues?stand=eq.'+encodeURIComponent(stand)+'&category=eq.'+encodeURIComponent(state.itCategory)+'&status=neq.resolved&order=created_at.desc&limit=1&select=reported_by,created_at,status,claimed_by').catch(()=>({_err:true}));
   if(rows._err||!Array.isArray(rows)||!rows.length){notice.style.display='none';notice.innerHTML='';state._itHoldActive=false;return;}
   state._itHoldActive=true;
-  const mins=Math.max(0,Math.round((Date.now()-new Date(rows[0].created_at))/60000));
+  const row=rows[0];
+  const mins=Math.max(0,Math.round((Date.now()-new Date(row.created_at))/60000));
   const elapsed=mins<1?'just now':mins===1?'1 minute ago':mins+' minutes ago';
+  // Tell the person the REAL status, not just "already knows" — someone
+  // waiting with no idea if help is coming is exactly why people
+  // re-report instead of waiting. Being told "X is already on it" is a
+  // very different, more reassuring message than "already knows about it."
+  const statusLine = row.status==='claimed'
+    ? `🚶 ${escapeHtml(row.claimed_by||'IT')} is already on this — claimed it, working the ticket now.`
+    : `⏳ Reported by ${escapeHtml(row.reported_by||'someone')} ${elapsed} — still waiting for IT to claim it.`;
   notice.style.display='block';
   notice.innerHTML=`<div class="notice warning" style="padding:12px 14px;font-size:12px;margin:10px 0">
     <b style="font-size:13px">🔒 Already an open ${escapeHtml(state.itCategory)} ticket for this stand</b>
-    <div style="margin-top:4px">Reported by ${escapeHtml(rows[0].requested_by||'someone')} ${elapsed} — IT already knows about this.</div>
+    <div style="margin-top:4px">${statusLine}</div>
     <div style="margin-top:8px;font-weight:600">Only send another if this is a genuinely DIFFERENT problem or unit — explain why below to send it anyway:</div>
     <input class="form-input" id="it-hold-override-reason" placeholder="e.g. This is a different POS unit than what was reported" style="margin-top:6px" oninput="state._itHoldOverrideReason=this.value">
   </div>`;
@@ -16106,14 +16752,14 @@ async function loadMyIT() {
     const pillClass = r.status === 'Resolved' ? 'fulfilled' : r.status === 'On the way' ? 'claimed' : (r.urgency === 'URGENT' ? 'urgent' : 'pending');
     let statusLine = '';
     if (r.status === 'Pending') statusLine = '<div style="font-size:13px;color:var(--warning);font-weight:600;margin-top:8px">⏳ Waiting for IT support...</div>';
-    else if (r.status === 'On the way') statusLine = '<div style="font-size:13px;color:var(--info);font-weight:600;margin-top:8px">🔧 ' + (r.claimedBy || 'IT') + ' is on the way!</div>';
-    else if (r.status === 'Resolved') statusLine = '<div style="font-size:13px;color:var(--success);font-weight:600;margin-top:8px">✅ Resolved' + (r.claimedBy ? ' by ' + r.claimedBy : '') + '</div>';
-    const subPart = r.subCategory ? ' — ' + r.subCategory : '';
+    else if (r.status === 'On the way') statusLine = '<div style="font-size:13px;color:var(--info);font-weight:600;margin-top:8px">🔧 ' + escapeHtml(r.claimedBy || 'IT') + ' is on the way!</div>';
+    else if (r.status === 'Resolved') statusLine = '<div style="font-size:13px;color:var(--success);font-weight:600;margin-top:8px">✅ Resolved' + (r.claimedBy ? ' by ' + escapeHtml(r.claimedBy) : '') + '</div>';
+    const subPart = r.subCategory ? ' — ' + escapeHtml(r.subCategory) : '';
     return '<div class="req-card ' + cardClass + '">' +
-      '<div class="req-header"><div><div class="req-stand">' + r.category + subPart + '</div><div class="req-time">' + timeAgo(r.timestamp) + ' · ' + r.urgency + '</div></div><span class="status-pill ' + pillClass + '">' + (r.status === 'Pending' ? r.urgency : r.status) + '</span></div>' +
-      (r.details ? '<div class="req-qty">"' + r.details + '"</div>' : '') +
-      (r.techMessage ? '<div class="req-wh-msg">💬 IT: ' + r.techMessage + '</div>' : '') +
-      (r.resolutionNote ? '<div class="req-wh-msg" style="border-left-color:var(--success);background:rgba(0,166,81,0.08);color:var(--success)">📝 ' + r.resolutionNote + '</div>' : '') +
+      '<div class="req-header"><div><div class="req-stand">' + escapeHtml(r.category) + subPart + '</div><div class="req-time">' + timeAgo(r.timestamp) + ' · ' + escapeHtml(r.urgency) + '</div></div><span class="status-pill ' + pillClass + '">' + (r.status === 'Pending' ? escapeHtml(r.urgency) : escapeHtml(r.status)) + '</span></div>' +
+      (r.details ? '<div class="req-qty">"' + escapeHtml(r.details) + '"</div>' : '') +
+      (r.techMessage ? '<div class="req-wh-msg">💬 IT: ' + escapeHtml(r.techMessage) + '</div>' : '') +
+      (r.resolutionNote ? '<div class="req-wh-msg" style="border-left-color:var(--success);background:rgba(0,166,81,0.08);color:var(--success)">📝 ' + escapeHtml(r.resolutionNote) + '</div>' : '') +
       statusLine +
     '</div>';
   }).join('');
@@ -16538,7 +17184,7 @@ async function zaSaveAssignment() {
 async function zaClearAssignment() {
   const empId = document.getElementById('za-person').value;
   if (!empId) return;
-  if (!confirm('Remove this assignment? They\'ll go back to seeing every stand.')) return;
+  if (!(await confirmAction('They\'ll go back to seeing every stand.', {title:'Remove this assignment?', confirmLabel:'Remove'}))) return;
   const res = await api('deleteZoneAssignment', { employeeId: empId });
   if (res.ok) { toast('Assignment removed'); _zaSelectedStands = []; zaRenderStands(); zaLoadCurrent(); }
   else toast(res.error || 'Could not remove', 'error');
@@ -16769,17 +17415,18 @@ async function loadWhToDeliver() {
   el.innerHTML = list.map(s => {
     const pending = s.requests.filter(r => r.status === 'Pending').length;
     const mine = s.requests.find(r => r.status === 'On the way' && r.claimedBy === myName);
+    const urgentBadge = (s.urgent && !mine) ? '<div class="delivery-urgent-badge">🔴 URGENT</div>' : '';
     const sub = mine
       ? '🚚 You’re on the way' + (s.requests.length > 1 ? ' · '+s.requests.length+' requests' : '')
       : s.urgent
-        ? '🔴 URGENT · Tap to claim + start delivery'
+        ? 'Tap to claim + start delivery'
         : pending
           ? '📥 Stock requested · Tap to claim + start delivery'
           : '🚚 Planned transfer · Tap to open';
     const etaRow=s.eta?stockEtaHtml({etaDeadline:new Date(s.eta).toISOString(),status:'Pending'}):'';
     return `<div class="delivery-card${s.urgent?' urgent':''}${s.mine?' mine':''}" onclick="whStartDeliveryForStand('${escapeAttr(s.stand)}',${s.transferId || 'null'})">
       <span style="font-size:28px">📦</span>
-      <div style="flex:1;min-width:0"><div style="font-weight:750;font-size:14px">${escapeHtml(s.stand)}</div><div class="delivery-status">${sub}</div>${etaRow}</div>
+      <div style="flex:1;min-width:0">${urgentBadge}<div style="font-weight:750;font-size:14px">${escapeHtml(s.stand)}</div><div class="delivery-status">${sub}</div>${etaRow}</div>
       <span style="font-size:22px;color:var(--text-2)">›</span>
     </div>`;
   }).join('');
@@ -16894,11 +17541,54 @@ const TRANSFER_STATUS = {
   confirmed:  { label:'Confirmed',  color:'#00A651', step:5 },
 };
 
+// Filter toggle for the warehouse transfers list. Instant — just re-runs
+// the client-side filter against already-loaded data.
+function whSetTransferFilter(mode, btn){
+  state._whTransferFilter = mode;
+  document.querySelectorAll('.wh-tf-filter-btn').forEach(b=>{
+    const on = b === btn;
+    b.style.background = on ? 'var(--aramark-red)' : 'var(--bg-card)';
+    b.style.color = on ? '#fff' : 'var(--text)';
+  });
+  loadWhTransfers();
+}
+// Which venue(s) are actually running today, from today's schedule —
+// same approach getStandsList uses so the two always agree.
+async function whGetTodayVenues(){
+  if (state._whTodayVenues && state._whTodayVenuesAt && (Date.now()-state._whTodayVenuesAt < 300000)) return state._whTodayVenues;
+  const set = new Set();
+  const today = localISODate();
+  const sched = await sb('schedule?is_test=neq.true&event_date=eq.'+today+'&select=location').catch(()=>({_err:true}));
+  if (!sched._err && Array.isArray(sched) && sched.length) {
+    const locs = [...new Set(sched.map(r=>r.location).filter(Boolean))];
+    if (locs.length) {
+      const map = await whGetStandVenueMap();
+      locs.forEach(l => { if (map[l]) set.add(map[l]); });
+    }
+  }
+  state._whTodayVenues = set; state._whTodayVenuesAt = Date.now();
+  return set;
+}
+// stand_name -> venue lookup, cached for 5 min. Used to decide which
+// transfers belong to tonight's venue.
+async function whGetStandVenueMap(){
+  if (state._whStandVenueMap && state._whStandVenueMapAt && (Date.now()-state._whStandVenueMapAt < 300000)) return state._whStandVenueMap;
+  const rows = await sb('stands?select=stand_name,venue').catch(()=>({_err:true}));
+  const map = {};
+  if (!rows._err && Array.isArray(rows)) rows.forEach(r => { map[r.stand_name] = r.venue; });
+  state._whStandVenueMap = map; state._whStandVenueMapAt = Date.now();
+  return map;
+}
 async function loadWhTransfers() {
   const el = document.getElementById('wh-transfers-list');
   if (!el) return;
   const role = (state.staffAccount && state.staffAccount.role) || 'warehouse_employee';
   const myId = state.staffAccount && state.staffAccount.empId;
+  // Filter mode toggle (Today's venue / Last 2 days / All open). Default
+  // is today's venue — the common case is "what do I deliver for
+  // tonight's event" — but old open work is one tap away, and never
+  // silently hidden forever.
+  const tfFilter = state._whTransferFilter || 'today';
   // Broadened beyond "today" — tasks are ongoing day-to-day work, not just a
   // game-day burst, so this shows everything still open regardless of which
   // day it was created, until it's actually confirmed done.
@@ -16906,6 +17596,23 @@ async function loadWhTransfers() {
   const rows = await sb(query).catch(()=>({_err:true}));
   const badge = document.getElementById('wh-transfer-count');
   if (rows._err) { el.innerHTML = '<div class="notice" style="background:rgba(220,38,38,0.08);color:#DC2626;font-size:12px">Could not load transfers. Run transfers.sql in Supabase.</div>'; return; }
+  // Apply the venue/day filter to whatever the query returned. This is
+  // done client-side so switching filters is instant and doesn't refetch.
+  let filtered = rows;
+  if (tfFilter === 'recent') {
+    const cutoff = Date.now() - 2*24*60*60*1000;
+    filtered = rows.filter(t => new Date(t.created_at).getTime() >= cutoff);
+  } else if (tfFilter === 'today') {
+    const todayVenues = await whGetTodayVenues();
+    if (todayVenues.size) {
+      const standVenue = await whGetStandVenueMap();
+      filtered = rows.filter(t => todayVenues.has(standVenue[t.stand] || '__none__'));
+      // If nothing matches today's venue, don't show a confusingly empty
+      // list — fall back to recent so there's still something actionable.
+      if (!filtered.length) filtered = rows.filter(t => new Date(t.created_at).getTime() >= Date.now() - 2*24*60*60*1000);
+    }
+  }
+  const workingRows = filtered;
   // Employees only see their own assigned tasks. Supervisors and managers see
   // everyone's — that's the whole point of the supervisor's physical-check
   // step and the manager's aggregate view.
@@ -16916,8 +17623,8 @@ async function loadWhTransfers() {
   // someone had already claimed it. Now also shows unassigned pending work
   // so there's actually something to discover and claim.
   const visible = role === 'warehouse_employee'
-    ? rows.filter(t => t.assigned_to_id === myId || t.delivered_by === state.whName || (!t.assigned_to_id && t.status === 'pending'))
-    : rows;
+    ? workingRows.filter(t => t.assigned_to_id === myId || t.delivered_by === state.whName || (!t.assigned_to_id && t.status === 'pending'))
+    : workingRows;
 
   // Alerts on newly-assigned work. This is NOT a true push notification —
   // that would need a backend function calling the Web Push API with the
@@ -17208,13 +17915,44 @@ function renderTsQuickPicker() {
     if(!force){
       return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><button class="btn btn-ghost" onclick="tsPickSelfItem('${safe}')" style="flex:1;text-align:left;margin:0;padding:9px 10px">${escapeHtml(n)}</button><button class="btn btn-primary" onclick="tsQuickAddOne('${safe}',this)" style="width:auto;margin:0;padding:9px 12px">+1</button></div>`;
     }
-    return `<div style="display:flex;align-items:stretch;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <button class="btn btn-ghost" onclick="tsPickSelfItem('${safe}')" style="flex:1;text-align:left;margin:0;padding:16px 14px;font-size:15px;font-weight:650;line-height:1.3">
-        ${escapeHtml(n)}${have?`<span style="display:block;margin-top:4px;font-size:13px;font-weight:800;color:#00A651">✓ ${have} added</span>`:''}
-      </button>
-      <button class="btn btn-primary" onclick="tsQuickAddOne('${safe}',this)" style="width:auto;margin:0;padding:0 24px;font-size:20px;font-weight:900;min-width:78px">+1</button>
+    return `<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1;min-width:0;font-size:15px;font-weight:650;line-height:1.3">
+        ${escapeHtml(n)}${have?`<span style="display:block;margin-top:3px;font-size:13px;font-weight:800;color:#00A651">✓ ${have} added</span>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:0;flex-shrink:0">
+        <button class="btn btn-ghost" onclick="tsQtyStep('${safe}',-1)" style="width:auto;margin:0;padding:0;width:42px;height:48px;font-size:22px;font-weight:900;border-radius:10px 0 0 10px">−</button>
+        <input type="tel" inputmode="numeric" id="tsqty-${safe}" value="1" onfocus="try{this.select()}catch(e){}" style="width:56px;height:48px;text-align:center;font-size:18px;font-weight:800;border:1px solid var(--border);border-left:none;border-right:none;margin:0;padding:0">
+        <button class="btn btn-ghost" onclick="tsQtyStep('${safe}',1)" style="width:auto;margin:0;padding:0;width:42px;height:48px;font-size:22px;font-weight:900;border-radius:0 10px 10px 0">+</button>
+        <button class="btn btn-primary" onclick="tsQuickAddQty('${safe}',this)" style="width:auto;margin:0 0 0 8px;padding:0 18px;height:48px;font-size:15px;font-weight:800">Add</button>
+      </div>
     </div>`;
   }).join('');
+}
+// Stepper +/- on the quick-picker quantity box, so someone can nudge a
+// count without a keyboard. Clamps at 0.
+function tsQtyStep(safeName, delta){
+  const inp=document.getElementById('tsqty-'+safeName);
+  if(!inp)return;
+  let v=parseInt(inp.value,10); if(isNaN(v))v=0;
+  v=Math.max(0,v+delta);
+  inp.value=v;
+}
+// Real fix for "30 cases = 30 taps": adds the typed quantity in ONE
+// action instead of forcing +1 repeatedly. Reads the per-item box, drops
+// that amount in, resets the box to 1 for next time.
+async function tsQuickAddQty(safeName, btn){
+  const inp=document.getElementById('tsqty-'+safeName);
+  const item=document.getElementById('ts-add-item');
+  const qty=document.getElementById('ts-add-qty');
+  if(!inp||!item||!qty)return;
+  const n=parseInt(inp.value,10);
+  if(isNaN(n)||n<=0){toast('Enter a quantity first','error');return;}
+  // Recover the real item name from the safe attr version.
+  const realName=(_tsSheetItems||[]).find(x=>escapeAttr(x)===safeName)||inp.getAttribute('data-name')||safeName;
+  item.value=realName;
+  qty.value=String(n);
+  await withLock(btn,'Adding…',async()=>{ await tsAddItem(); });
+  inp.value='1';
 }
 function tsPickSelfItem(name){const item=document.getElementById('ts-add-item'),qty=document.getElementById('ts-add-qty');if(item)item.value=name;if(qty){qty.value=qty.value||'1';qty.focus();try{qty.select();}catch(e){}}}
 async function tsQuickAddOne(name,btn){const item=document.getElementById('ts-add-item'),qty=document.getElementById('ts-add-qty');if(!item||!qty)return;item.value=name;qty.value='1';await withLock(btn,'Adding…',async()=>{await tsAddItem();});}
@@ -17336,15 +18074,18 @@ function renderTsStatus() {
   if (_tsTransfer.status === 'verified') {
     const b = document.getElementById('ts-confirmed-badge');
     b.style.display = 'block';
-    b.innerHTML = '✍️ Verified by ' + (_tsTransfer.verified_by||'supervisor') + '<br><span style="font-size:12px;font-weight:400">Waiting for warehouse manager confirmation</span>';
+    b.innerHTML = '✍️ Verified by ' + escapeHtml(_tsTransfer.verified_by||'supervisor') + '<br><span style="font-size:12px;font-weight:400">Waiting for warehouse manager confirmation</span>';
   }
 }
 
 function renderTsItems() {
   const el = document.getElementById('ts-items');
   if (isFieldForceStockSource(_tsSource)) {
-    if(!_tsItems.length){el.innerHTML='<div class="notice info" style="font-size:12px">Choose an item below. Every +1 or quantity is saved to this stand immediately.</div>';return;}
-    el.innerHTML=_tsItems.map(it=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:10px 12px;margin-bottom:7px"><div style="min-width:0"><div style="font-size:13px;font-weight:750">${escapeHtml(it.item_name)}</div><div style="font-size:10px;color:#15803D;font-weight:800;margin-top:2px">✓ ADDED TO STAND COUNT</div></div><div style="font-size:18px;font-weight:900;color:#15803D">${Number(it.qty_delivered||it.qty_requested||0)}</div></div>`).join('');
+    if(!_tsItems.length){el.innerHTML='<div class="notice info" style="font-size:12px">Choose an item below. Every quantity you add is saved to this stand immediately.</div>';return;}
+    // Force-mode added items now have a clear Remove button — previously
+    // these were read-only, so a mistaken add (wrong item or wrong
+    // quantity) had no way to be undone on this screen.
+    el.innerHTML=_tsItems.map(it=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:10px 12px;margin-bottom:7px"><div style="min-width:0"><div style="font-size:14px;font-weight:750">${escapeHtml(it.item_name)}</div><div style="font-size:10px;color:#15803D;font-weight:800;margin-top:2px">✓ ADDED TO STAND COUNT</div></div><div style="display:flex;align-items:center;gap:10px;flex-shrink:0"><div style="font-size:20px;font-weight:900;color:#15803D">${Number(it.qty_delivered||it.qty_requested||0)}</div><button class="btn btn-ghost" onclick="tsRemoveItem(${it.id})" style="width:auto;margin:0;padding:8px 12px;font-size:13px;font-weight:700;border-color:#DC2626;color:#DC2626">Remove</button></div></div>`).join('');
     return;
   }
   if (!_tsItems.length) {
@@ -17422,9 +18163,18 @@ async function tsRemoveItem(id) {
   if (!confirm('Remove ' + it.item_name + ' from this list?')) return;
   const r = await sb('transfer_items?id=eq.'+id, { method:'DELETE', headers:{Prefer:'return=minimal'} });
   if (r._err) return toast('Could not remove — try again', 'error');
-  // Removing an item from an unfinished delivery is an edit to the task,
-  // not a physical stock movement. Do not pollute stock_ledger with a
-  // phantom Transfer OUT before anything has actually been delivered.
+  // Force-logged items already wrote a real "IN" stock movement the moment
+  // they were added (unlike a normal unfinished transfer, which hasn't
+  // physically moved anything yet). So removing one must post a
+  // compensating "OUT" movement, or the stand's counted stock stays
+  // inflated by a quantity that was never really there. A normal
+  // transfer_item removal still writes nothing to the ledger.
+  if (it.source === 'force_logged') {
+    const qty = Number(it.qty_delivered || it.qty_requested || 0);
+    if (qty > 0) {
+      await logMovement({ uuid:genUUID(), stand:_tsTransfer.stand, item:it.item_name, qty:qty, type:'force_stock_undo', direction:'out', refTable:'transfers', refId:_tsTransfer.id, note:'Force Restock removed — reversing the added stock' }).catch(()=>{});
+    }
+  }
   _tsItems = _tsItems.filter(i => i.id !== id);
   renderTsItems();
   renderTsStatus();
@@ -17892,6 +18642,11 @@ function showQuickDropSuccess(stand){
 }
 
 async function tsVerifySign() {
+  // Real guard — this step is documented as "gated to warehouse_supervisor
+  // only" (the sign-off button is hidden for other roles via CSS), but the
+  // function itself had no check, so it was directly callable by any
+  // signed-in warehouse session.
+  if (!isWarehouseSupervisorSession()) return toast('Supervisor sign-off required', 'error');
   const name = document.getElementById('ts-sign-name').value.trim();
   if (!name) return toast('Enter supervisor name to sign', 'error');
 
@@ -17966,6 +18721,11 @@ async function tsRevertDelivery() {
 // point in the lifecycle: after verification, before the stand manager's
 // own separate final confirm.
 async function whFinalApprove() {
+  // Real guard — this final approval step is documented as "only visible
+  // to warehouse_manager" (hidden for other roles via CSS), but the
+  // function itself had no check, so it was directly callable by any
+  // signed-in warehouse session.
+  if (!isWarehouseManagerSession()) return toast('Warehouse Manager approval required', 'error');
   const who = state.staffAccount ? state.staffAccount.name : 'Warehouse Manager';
   const whoId = state.staffAccount ? state.staffAccount.empId : '';
   const res = await sb('transfers?id=eq.'+_tsTransfer.id+'&status=eq.verified', { method:'PATCH', headers:{Prefer:'return=representation'}, body: JSON.stringify({ wh_confirmed_by_id: whoId, wh_confirmed_by_name: who, wh_confirmed_at: new Date().toISOString() }) });
@@ -18216,11 +18976,11 @@ async function fulfillReq(id) {
 function supTab(el, tab) {
   document.querySelectorAll('#screen-supervisor .tab-item').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  ['live','moves','requests'].forEach(t => document.getElementById('sup-'+t).style.display = (t === tab ? 'block' : 'none'));
+  ['live','requests'].forEach(t => document.getElementById('sup-'+t).style.display = (t === tab ? 'block' : 'none'));
   loadSupervisor();
 }
 
-async function loadSupervisor() { loadSupLive(); loadSupMoves(); loadSupRequests(); }
+async function loadSupervisor() { loadSupLive(); loadSupRequests(); }
 
 async function loadSupLive() {
   const res = await api('getLiveStatus', {});
@@ -18230,39 +18990,9 @@ async function loadSupLive() {
   if (entries.length === 0) { c.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>No one is logged in yet</p></div>'; return; }
   c.innerHTML = '<div class="section-title" style="margin-top:0">Live workers by stand</div>' + entries.map(([stand, workers]) => `
     <div class="live-stand">
-      <div class="live-stand-name">${stand} <span style="color:var(--text-3);font-weight:400">(${workers.length})</span></div>
-      ${workers.map(w => `<div class="live-worker"><div><div>${w.name}</div><div style="font-size:11px;color:var(--text-3)">Since ${fmtTime(w.since)}</div></div>${w.onBreak ? '<span class="break-tag">On break</span>' : ''}</div>`).join('')}
+      <div class="live-stand-name">${escapeHtml(stand)} <span style="color:var(--text-3);font-weight:400">(${workers.length})</span></div>
+      ${workers.map(w => `<div class="live-worker"><div><div>${escapeHtml(w.name)}</div><div style="font-size:11px;color:var(--text-3)">Since ${fmtTime(w.since)}</div></div>${w.onBreak ? '<span class="break-tag">On break</span>' : ''}</div>`).join('')}
     </div>`).join('');
-}
-
-async function loadSupMoves() {
-  const res = await api('getMoveRequests', {});
-  const moves = res.moves || [];
-  const pending = moves.filter(m => m.status === 'Pending');
-  document.getElementById('sup-moves-count').textContent = pending.length;
-  const c = document.getElementById('sup-moves');
-  if (moves.length === 0) { c.innerHTML = '<div class="empty"><div class="empty-icon">🔄</div><p>No move requests</p></div>'; return; }
-  c.innerHTML = moves.map(m => {
-    let actions = '';
-    if (m.status === 'Pending') actions = `<div class="req-actions"><button class="btn-claim" onclick="approveMv('${m.id}')">✓ Approve</button><button style="background:#DC2626" onclick="denyMv('${m.id}')">✗ Deny</button></div>`;
-    return `<div class="req-card ${m.status === 'Pending' ? 'soon' : m.status === 'Approved' ? 'normal' : 'done'}">
-      <div class="req-header"><div><div class="req-stand">${m.name}</div><div class="req-time">${timeAgo(m.timestamp)} · by ${m.requestedBy}</div></div><span class="status-pill ${m.status === 'Pending' ? 'pending' : m.status === 'Approved' ? 'fulfilled' : 'urgent'}">${m.status}</span></div>
-      <div class="req-items">${m.fromStand} → ${m.toStand}</div>
-      ${m.reason ? `<div class="req-qty">"${m.reason}"</div>` : ''}
-      ${actions}
-    </div>`;
-  }).join('');
-}
-
-async function approveMv(id) {
-  const who = prompt('Your name:'); if (!who) return;
-  const res = await api('approveMove', { moveId: id, approvedBy: who });
-  if (res.ok || res.simulated) { toast('✓ Approved'); loadSupervisor(); }
-}
-async function denyMv(id) {
-  const who = prompt('Your name:'); if (!who) return;
-  const res = await api('denyMove', { moveId: id, deniedBy: who });
-  if (res.ok || res.simulated) { toast('✗ Denied'); loadSupervisor(); }
 }
 
 async function loadSupRequests() {
@@ -18272,17 +19002,55 @@ async function loadSupRequests() {
   if (reqs.length === 0) { c.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>No stock requests yet</p></div>'; return; }
   c.innerHTML = reqs.map(r => `
     <div class="req-card ${r.status === 'Fulfilled' ? 'done' : r.urgency === 'URGENT' ? 'urgent' : r.urgency === 'Soon' ? 'soon' : 'normal'}">
-      <div class="req-header"><div><div class="req-stand">${r.stand}</div><div class="req-time">${timeAgo(r.timestamp)} · ${r.requestedBy}</div></div><span class="status-pill ${r.status === 'Fulfilled' ? 'fulfilled' : r.urgency === 'URGENT' ? 'urgent' : 'pending'}">${r.status === 'Pending' ? r.urgency : r.status}</span></div>
-      <div class="req-items">${r.items}</div>
-      ${r.quantity ? `<div class="req-qty">"${r.quantity}"</div>` : ''}
-      ${r.warehouseMessage ? `<div class="req-wh-msg">💬 ${r.warehouseMessage}</div>` : ''}
+      <div class="req-header"><div><div class="req-stand">${escapeHtml(r.stand)}</div><div class="req-time">${timeAgo(r.timestamp)} · ${escapeHtml(r.requestedBy)}</div></div><span class="status-pill ${r.status === 'Fulfilled' ? 'fulfilled' : r.urgency === 'URGENT' ? 'urgent' : 'pending'}">${r.status === 'Pending' ? escapeHtml(r.urgency) : escapeHtml(r.status)}</span></div>
+      <div class="req-items">${escapeHtml(r.items)}</div>
+      ${r.quantity ? `<div class="req-qty">"${escapeHtml(r.quantity)}"</div>` : ''}
+      ${r.warehouseMessage ? `<div class="req-wh-msg">💬 ${escapeHtml(r.warehouseMessage)}</div>` : ''}
     </div>`).join('');
+}
+
+// ============ ACCESSIBILITY: keyboard/screen-reader access for tappable cards ============
+// Most "buttons" in this app are actually <div onclick="..."> cards (stand
+// cards, request cards, worker rows) built from ~200 different template
+// strings across the file — real <button>/<a> elements are already
+// keyboard-accessible on their own, but a plain clickable div is invisible
+// to keyboard and screen-reader users (can't be tabbed to, has no
+// announced role). Rather than hand-edit every render function, this
+// scans for onclick elements missing that semantics and patches them in
+// generically, then re-runs after any screen re-render since most content
+// here is injected via innerHTML rather than created once.
+function enhanceClickableA11y(root) {
+  const els = (root || document).querySelectorAll('[onclick]');
+  els.forEach(el => {
+    const tag = el.tagName;
+    if (tag === 'BUTTON' || tag === 'A' || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    if (el.hasAttribute('data-a11y-enhanced') || el.hasAttribute('data-a11y-skip')) return;
+    el.setAttribute('data-a11y-enhanced', '1');
+    if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    el.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        el.click();
+      }
+    });
+  });
+}
+function startA11yEnhancer() {
+  enhanceClickableA11y(document);
+  let pending = false;
+  new MutationObserver(() => {
+    if (pending) return;
+    pending = true;
+    setTimeout(() => { pending = false; enhanceClickableA11y(document); }, 150);
+  }).observe(document.body, { childList: true, subtree: true });
 }
 
 // ============ INIT ============
 async function init() {
   initTheme();
   startQueueSystem();
+  startA11yEnhancer();
   // Visible on the login screen footer — this is how you confirm a
   // deploy actually went live, without guessing or opening dev tools.
   const buildTagEl = document.getElementById('build-tag');
@@ -18593,6 +19361,11 @@ function handleAppBack() {
   // Close any open popup first
   const popup = document.getElementById('contact-popup-overlay');
   if (popup) { popup.remove(); return; }
+  // Same for the shared confirm/alert dialog — a phone back-gesture while
+  // it's open should dismiss the dialog (as Cancel), not navigate the
+  // screen underneath while it's still showing.
+  const confirmModal = document.getElementById('app-confirm-modal');
+  if (confirmModal && confirmModal.style.display !== 'none') { _appDialogClose(false); return; }
 
   // screen-transfer-stand (force-stock) is reachable two genuinely
   // different ways: warehouse staff via their own screen, or a
