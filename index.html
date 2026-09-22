@@ -2912,6 +2912,8 @@
             <option value="food_manager">Food Managers</option>
             <option value="food_runner">Food Runners</option>
             <option value="tech">IT</option>
+            <option value="premium_employee">Premium Employees</option>
+            <option value="premium_manager">Premium Managers</option>
           </select>
           <button class="btn btn-primary" onclick="adminAccessNew()" style="margin:0">＋ Add login</button>
           <button class="btn btn-ghost" onclick="adminAccessRefresh()" style="margin:0">↻ Refresh staff</button>
@@ -2922,7 +2924,7 @@
             <div><label class="form-label" style="margin-top:0">Name</label><input class="form-input" id="aa-name" placeholder="Full name" style="margin:0"></div>
             <div><label class="form-label" style="margin-top:0">Employee ID</label><input class="form-input" id="aa-employee-id" inputmode="numeric" placeholder="Employee ID" style="margin:0"></div>
             <div><label class="form-label" style="margin-top:0">Access</label><select class="form-input" id="aa-role" style="margin:0">
-              <option value="manager">Manager</option><option value="support_manager">Support Manager</option><option value="warehouse_employee">Warehouse Employee</option><option value="warehouse_supervisor">Warehouse Supervisor</option><option value="warehouse_manager">Warehouse Manager</option><option value="food_manager">Food Manager</option><option value="food_runner">Food Runner</option><option value="tech">IT</option>
+              <option value="manager">Manager</option><option value="support_manager">Support Manager</option><option value="warehouse_employee">Warehouse Employee</option><option value="warehouse_supervisor">Warehouse Supervisor</option><option value="warehouse_manager">Warehouse Manager</option><option value="food_manager">Food Manager</option><option value="food_runner">Food Runner</option><option value="tech">IT</option><option value="premium_employee">Premium Employee</option><option value="premium_manager">Premium Manager</option>
             </select></div>
             <div><label class="form-label" style="margin-top:0">PIN</label><input class="form-input" id="aa-pin" inputmode="numeric" maxlength="4" placeholder="4 digits" style="margin:0"></div>
           </div>
@@ -3629,6 +3631,65 @@
         <button class="btn btn-primary" id="wh-count-save-btn" onclick="whSaveCount()" style="margin-top:12px">💾 Save count for this stand</button>
         <div id="wh-count-status" style="text-align:center;font-size:12px;color:var(--text-2);margin-top:10px"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PREMIUM DEPARTMENT ============ -->
+<div class="screen" id="screen-premium">
+  <div class="brand-header">
+    <div class="brand-block">
+      <div>
+        <div class="brand-logo"><span class="a-text">aramark</span><span class="a-figure"></span></div>
+        <div class="brand-sub" style="color:var(--aramark-red)" id="prem-role-label">PREMIUM</div>
+        <div class="brand-venue" id="prem-name">Premium department</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme">🌗</button>
+      <button class="back-btn" aria-label="Log out" title="Log out" onclick="staffLogout()">×</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="role-profile-strip" id="prem-role-summary">
+      <div class="role-profile-title" id="prem-role-summary-title">Premium</div>
+      <div class="role-profile-meta" id="prem-role-summary-meta">Loading access…</div>
+    </div>
+
+    <!-- Premium Manager only: create/manage locations and assign people -->
+    <div id="prem-manager-tools" style="display:none">
+      <div class="card" style="padding:14px;margin-bottom:12px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">⭐ Premium locations</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Add the suite/club/location names your Premium team covers.</div>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" type="text" id="prem-loc-name" placeholder="Location name" style="flex:1;margin:0">
+          <button class="btn btn-primary" onclick="premiumAddLocation()" style="width:auto;padding:0 16px">Add</button>
+        </div>
+        <div id="prem-loc-list" style="margin-top:10px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+      </div>
+
+      <div class="card" style="padding:14px;margin-bottom:12px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">👥 Assign people to locations</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Only Premium logins (Access Center → Premium Employee / Premium Manager) show up here.</div>
+        <label class="form-label" style="margin-top:0">Person</label>
+        <select class="form-input" id="prem-assign-person" onchange="premiumLoadPersonAssignment()"><option value="">— Select person —</option></select>
+        <label class="form-label">Locations</label>
+        <div id="prem-assign-locations" style="max-height:240px;overflow-y:auto"></div>
+        <button class="btn btn-primary" onclick="premiumSaveAssignment()" style="margin-top:10px">Save assignment</button>
+        <button class="btn btn-ghost" onclick="premiumClearAssignment()" style="margin-top:6px">Remove assignment</button>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:6px">Current assignments</div>
+        <div id="prem-assign-current" style="font-size:12px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- Roster — Manager sees every Premium location; Employee sees only
+         their own assigned location(s), same "own stand only" pattern as
+         a regular worker. -->
+    <div class="card" style="padding:14px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:4px" id="prem-roster-title">📋 Premium roster</div>
+      <div style="font-size:11px;color:var(--text-2);margin-bottom:10px" id="prem-roster-sub">Who's assigned where.</div>
+      <div id="prem-roster-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
     </div>
   </div>
 </div>
@@ -4355,7 +4416,7 @@ async function api(action, data) {
         return {ok:false,error:'Warehouse login not recognized — contact your manager'};
       }
 
-      const opsRoles='manager,support_manager,warehouse_employee,warehouse_supervisor,warehouse_manager,tech,food_runner,food_manager,kitchen_runner,kitchen_coordinator';
+      const opsRoles='manager,support_manager,warehouse_employee,warehouse_supervisor,warehouse_manager,tech,food_runner,food_manager,kitchen_runner,kitchen_coordinator,premium_employee,premium_manager';
       const staffRows=await sb('staff_accounts?employee_id=like.*'+encodeURIComponent(idInput)+'&role=in.('+opsRoles+')&is_active=eq.true&select=employee_id,name,role,pin').catch(()=>({_err:true}));
       if(!staffRows._err&&Array.isArray(staffRows)&&staffRows.length){
         const roleGroup=role=>{
@@ -4363,6 +4424,7 @@ async function api(action, data) {
           if(['manager','support_manager','admin'].includes(role))return 'manager';
           if(role==='tech')return 'tech';
           if(['food_runner','food_manager','kitchen_runner','kitchen_coordinator'].includes(role))return 'food';
+          if(String(role).startsWith('premium'))return 'premium';
           return '';
         };
         let acct=null;
@@ -4735,6 +4797,55 @@ async function api(action, data) {
       const rows = await sb('zone_assignments?employee_id=eq.'+encodeURIComponent(data.employeeId)+'&select=stands').catch(()=>({_err:true}));
       if (rows._err || !Array.isArray(rows) || !rows.length) return {ok:true, stands:null};
       return { ok:true, stands: rows[0].stands || [] };
+    }
+
+    // ---------- PREMIUM DEPARTMENT ----------
+    // Own tables end to end (premium_locations / premium_assignments) —
+    // never reads/writes stands, inventory_entries, schedule or any other
+    // concession table, so a Premium session structurally cannot surface
+    // concession data, same isolation model as Warehouse/NPO.
+    case 'getPremiumLocations': {
+      const rows = await sb('premium_locations?order=name.asc&select=*').catch(()=>({_err:true}));
+      if (rows._err) return {ok:false,error:'Network — has 18_premium_department.sql been run?'};
+      return { ok:true, locations: rows };
+    }
+    case 'savePremiumLocation': {
+      const name = (data.name||'').trim();
+      if (!name) return {ok:false,error:'Enter a location name'};
+      const r = await sb('premium_locations?on_conflict=name', { method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify({ name, is_active: data.isActive!==false }) });
+      return r._err ? {ok:false,error:'Could not save location'} : {ok:true};
+    }
+    case 'deletePremiumLocation': {
+      if (!data.id) return {ok:false,error:'Missing location'};
+      const r = await sb('premium_locations?id=eq.'+encodeURIComponent(data.id), { method:'DELETE', headers:{Prefer:'return=minimal'} });
+      return r._err ? {ok:false,error:'Could not remove location'} : {ok:true};
+    }
+    case 'getPremiumAssignments': {
+      const rows = await sb('premium_assignments?order=role.asc,name.asc&select=*').catch(()=>({_err:true}));
+      if (rows._err) return {ok:false,error:'Network — has 18_premium_department.sql been run?'};
+      return { ok:true, assignments: rows };
+    }
+    case 'setPremiumAssignment': {
+      // Delete-then-reinsert — matches the zone_assignments pattern already
+      // established in this app (ON CONFLICT with a changed key creates
+      // duplicates rather than replacing).
+      if (!data.employeeId) return {ok:false,error:'Missing employee ID'};
+      await sb('premium_assignments?employee_id=eq.'+encodeURIComponent(data.employeeId), { method:'DELETE', headers:{Prefer:'return=minimal'} }).catch(()=>{});
+      const body = { employee_id:data.employeeId, name:data.name||'', role:data.role||'premium_employee', locations: data.locations||[] };
+      const r = await sb('premium_assignments', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
+      if (r && r._queued) return {ok:true, queued:true};
+      return r._err ? {ok:false,error:'Could not save assignment'} : {ok:true};
+    }
+    case 'deletePremiumAssignment': {
+      if (!data.employeeId) return {ok:false,error:'Missing employee ID'};
+      const r = await sb('premium_assignments?employee_id=eq.'+encodeURIComponent(data.employeeId), { method:'DELETE', headers:{Prefer:'return=minimal'} });
+      return r._err ? {ok:false,error:'Could not remove assignment'} : {ok:true};
+    }
+    case 'getMyPremiumLocations': {
+      if (!data.employeeId) return {ok:true, locations:[]};
+      const rows = await sb('premium_assignments?employee_id=eq.'+encodeURIComponent(data.employeeId)+'&select=locations').catch(()=>({_err:true}));
+      if (rows._err || !Array.isArray(rows) || !rows.length) return {ok:true, locations:[]};
+      return { ok:true, locations: rows[0].locations || [] };
     }
     case 'getAllChecksStatus': {
       // The actual missing feature — supervisor could see who's working
@@ -5849,7 +5960,8 @@ function openSmartLogin(target){
       warehouse:'📦 Warehouse sign-in — use your assigned game-day credentials',
       manager:'🎯 Manager sign-in — use your last 5 ID + last name. If your last name is shared, enter your full name.',
       tech:'🔧 IT sign-in — use your last 5 ID + personal PIN',
-      food:'🍽️ Food Delivery — use your last 5 ID + last name'
+      food:'🍽️ Food Delivery — use your last 5 ID + last name',
+      premium:'⭐ Premium sign-in — use your last 5 ID + personal PIN'
     };
     hint.textContent=labels[target]||'';
     hint.classList.toggle('show',!!labels[target]);
@@ -5885,6 +5997,8 @@ async function doLogin() {
         renderKitchenForRole();showScreen('screen-kitchen');
       }else if(state.staffAccount.group==='tech'){
         showScreen('screen-tech');
+      }else if(state.staffAccount.group==='premium'){
+        renderPremiumForRole();showScreen('screen-premium');
       }else{
         state.managerName=state.staffAccount.name;
         if(!resumePendingQrAfterLogin()){showScreen('screen-bedcheck');restoreMgrSidebarState();}
@@ -6355,6 +6469,7 @@ function roleHomeScreen(){
     if(state.staffAccount.group==='manager')return 'screen-bedcheck';
     if(state.staffAccount.group==='food')return 'screen-kitchen';
     if(state.staffAccount.group==='tech')return 'screen-tech';
+    if(state.staffAccount.group==='premium')return 'screen-premium';
   }
   return 'screen-home';
 }
@@ -6364,7 +6479,11 @@ function goRoleHome(){
   if(dest==='screen-warehouse')renderWarehouseForRole();
   if(dest==='screen-bedcheck')restoreMgrSidebarState();
   if(dest==='screen-kitchen')renderKitchenForRole();
+  if(dest==='screen-premium')renderPremiumForRole();
   showScreen(dest);
+}
+function isPremiumManagerSession() {
+  return !!(state.staffAccount && state.staffAccount.role === 'premium_manager');
 }
 function isLimitedAreaLead(){
   return !!(state.user && state.user.role==='lead' && state.user.limitedSupervisorAccess &&
@@ -13791,7 +13910,7 @@ let _adminAccessEditId='';
 let _adminAccessLoadSeq=0;
 const ADMIN_ACCESS_SUPABASE_SYNC=true;
 
-function adminAccessRoleLabel(role){return ({manager:'Manager',support_manager:'Support Manager',warehouse_employee:'Warehouse Employee',warehouse_supervisor:'Warehouse Supervisor',warehouse_manager:'Warehouse Manager',food_manager:'Food Manager',food_runner:'Food Runner',kitchen_coordinator:'Food Manager',kitchen_runner:'Food Runner',tech:'IT',admin:'Admin'})[role]||String(role||'').replaceAll('_',' ');}
+function adminAccessRoleLabel(role){return ({manager:'Manager',support_manager:'Support Manager',warehouse_employee:'Warehouse Employee',warehouse_supervisor:'Warehouse Supervisor',warehouse_manager:'Warehouse Manager',food_manager:'Food Manager',food_runner:'Food Runner',kitchen_coordinator:'Food Manager',kitchen_runner:'Food Runner',tech:'IT',admin:'Admin',premium_employee:'Premium Employee',premium_manager:'Premium Manager'})[role]||String(role||'').replaceAll('_',' ');}
 function adminAccessPreviewOverrides(){try{return JSON.parse(localStorage.getItem('v11_8_7_access_overrides')||'{}')}catch(_){return {}}}
 function adminAccessSavePreviewOverrides(x){localStorage.setItem('v11_8_7_access_overrides',JSON.stringify(x));}
 function adminAccessLiveSync(){
@@ -17204,6 +17323,162 @@ async function zaLoadCurrent() {
   }).join('');
 }
 
+// ── PREMIUM DEPARTMENT ──
+let _premLocations = [], _premPeople = [], _premSelectedLocations = [];
+
+function premiumRoleLabel(role) {
+  return role === 'premium_manager' ? 'Premium Manager' : 'Premium Employee';
+}
+
+async function renderPremiumForRole() {
+  const role = state.staffAccount ? state.staffAccount.role : 'premium_employee';
+  const isMgr = role === 'premium_manager';
+  const label = premiumRoleLabel(role).toUpperCase();
+  const headerLabel = document.getElementById('prem-role-label');
+  if (headerLabel) headerLabel.textContent = label;
+  const nameEl = document.getElementById('prem-name');
+  if (nameEl) nameEl.textContent = (state.staffAccount && state.staffAccount.name) || 'Premium department';
+  const title = document.getElementById('prem-role-summary-title');
+  const meta = document.getElementById('prem-role-summary-meta');
+  if (title) title.textContent = (state.staffAccount && state.staffAccount.name) || label;
+  if (meta) meta.textContent = isMgr
+    ? 'Premium locations · assignments · roster'
+    : 'Your Premium location(s) and teammates';
+
+  const tools = document.getElementById('prem-manager-tools');
+  if (tools) tools.style.display = isMgr ? 'block' : 'none';
+
+  if (isMgr) {
+    await premiumLoadLocations();
+    await premiumLoadPeople();
+    await premiumRenderCurrentAssignments();
+  }
+  await premiumRenderRoster(isMgr);
+}
+
+// -- Locations (Premium Manager only) --
+async function premiumLoadLocations() {
+  const res = await api('getPremiumLocations', {});
+  const el = document.getElementById('prem-loc-list');
+  if (!res.ok) { if (el) el.innerHTML = '<div class="notice" style="font-size:11px">Could not load — run 18_premium_department.sql in Supabase.</div>'; return; }
+  _premLocations = res.locations || [];
+  if (!el) return;
+  if (!_premLocations.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text-3)">No Premium locations yet — add one above.</div>'; return; }
+  el.innerHTML = _premLocations.map(l =>
+    '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">' +
+      '<span style="font-size:13px">' + escapeHtml(l.name) + (l.is_active === false ? ' <small style="color:var(--text-3)">(inactive)</small>' : '') + '</span>' +
+      '<button class="btn btn-ghost" onclick="premiumDeleteLocation(' + l.id + ')" style="width:auto;padding:4px 10px;font-size:11px;margin:0">Remove</button>' +
+    '</div>'
+  ).join('');
+  premiumRenderLocationChecks();
+}
+async function premiumAddLocation() {
+  if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
+  const input = document.getElementById('prem-loc-name');
+  const name = (input.value || '').trim();
+  if (!name) return toast('Enter a location name', 'error');
+  const res = await api('savePremiumLocation', { name, isActive: true });
+  if (res.ok) { toast('✅ Location added'); input.value = ''; premiumLoadLocations(); }
+  else toast(res.error || 'Could not add location', 'error');
+}
+async function premiumDeleteLocation(id) {
+  if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
+  if (!(await confirmAction('This removes the location from Premium.', { title: 'Remove this location?', confirmLabel: 'Remove' }))) return;
+  const res = await api('deletePremiumLocation', { id });
+  if (res.ok) { toast('Location removed'); premiumLoadLocations(); premiumRenderCurrentAssignments(); }
+  else toast(res.error || 'Could not remove', 'error');
+}
+
+// -- Assignments (Premium Manager only) --
+async function premiumLoadPeople() {
+  const sel = document.getElementById('prem-assign-person');
+  if (sel) sel.innerHTML = '<option value="">Loading…</option>';
+  const rows = await sb('staff_accounts?role=in.(premium_employee,premium_manager)&is_active=eq.true&select=employee_id,name,role&order=name.asc').catch(() => ({ _err: true }));
+  _premPeople = (!rows._err && Array.isArray(rows)) ? rows : [];
+  if (sel) sel.innerHTML = '<option value="">— Select person —</option>' + _premPeople.map(p =>
+    '<option value="' + escapeAttr(p.employee_id) + '">' + escapeHtml(p.name) + ' · ' + escapeHtml(premiumRoleLabel(p.role)) + '</option>'
+  ).join('');
+}
+function premiumRenderLocationChecks() {
+  const el = document.getElementById('prem-assign-locations');
+  if (!el) return;
+  if (!_premLocations.length) { el.innerHTML = '<div class="notice info" style="font-size:12px">Add a Premium location first.</div>'; return; }
+  el.innerHTML = _premLocations.map(l => {
+    const checked = _premSelectedLocations.includes(l.name) ? 'checked' : '';
+    return '<label style="display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--border);cursor:pointer">' +
+      '<input type="checkbox" ' + checked + ' onchange="premiumToggleLocation(this,\'' + l.name.replace(/'/g, "\\'") + '\')">' +
+      '<span style="font-size:13px">' + escapeHtml(l.name) + '</span></label>';
+  }).join('');
+}
+function premiumToggleLocation(cb, name) {
+  if (cb.checked) { if (!_premSelectedLocations.includes(name)) _premSelectedLocations.push(name); }
+  else { _premSelectedLocations = _premSelectedLocations.filter(x => x !== name); }
+}
+async function premiumLoadPersonAssignment() {
+  _premSelectedLocations = [];
+  const empId = document.getElementById('prem-assign-person').value;
+  if (empId) {
+    const res = await api('getMyPremiumLocations', { employeeId: empId });
+    if (res.ok) _premSelectedLocations = (res.locations || []).slice();
+  }
+  premiumRenderLocationChecks();
+}
+async function premiumSaveAssignment() {
+  if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
+  const empId = document.getElementById('prem-assign-person').value;
+  if (!empId) return toast('Pick a person first', 'error');
+  const person = _premPeople.find(p => p.employee_id === empId);
+  const res = await api('setPremiumAssignment', { employeeId: empId, name: person ? person.name : '', role: person ? person.role : 'premium_employee', locations: _premSelectedLocations });
+  if (res.ok) { toast('✅ Assignment saved'); premiumRenderCurrentAssignments(); premiumRenderRoster(true); }
+  else toast(res.error || 'Could not save', 'error');
+}
+async function premiumClearAssignment() {
+  if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
+  const empId = document.getElementById('prem-assign-person').value;
+  if (!empId) return;
+  if (!(await confirmAction('They will have no Premium location assigned.', { title: 'Remove this assignment?', confirmLabel: 'Remove' }))) return;
+  const res = await api('deletePremiumAssignment', { employeeId: empId });
+  if (res.ok) { toast('Assignment removed'); _premSelectedLocations = []; premiumRenderLocationChecks(); premiumRenderCurrentAssignments(); premiumRenderRoster(true); }
+  else toast(res.error || 'Could not remove', 'error');
+}
+async function premiumRenderCurrentAssignments() {
+  const el = document.getElementById('prem-assign-current');
+  if (!el) return;
+  const res = await api('getPremiumAssignments', {});
+  if (!res.ok) { el.innerHTML = '<div class="notice" style="font-size:11px">Could not load — run 18_premium_department.sql in Supabase.</div>'; return; }
+  const rows = res.assignments || [];
+  if (!rows.length) { el.innerHTML = '<div style="color:var(--text-2)">No one assigned yet.</div>'; return; }
+  el.innerHTML = rows.map(r =>
+    '<div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>' + escapeHtml(r.name || r.employee_id) + '</b> <span style="color:var(--text-2)">· ' + escapeHtml(premiumRoleLabel(r.role)) + '</span><br><span style="color:var(--text-2)">' + escapeHtml((r.locations || []).join(', ') || '(no location)') + '</span></div>'
+  ).join('');
+}
+
+// -- Roster (both roles; employee view is scoped to their own location) --
+async function premiumRenderRoster(isMgr) {
+  const el = document.getElementById('prem-roster-list');
+  const titleEl = document.getElementById('prem-roster-title');
+  const subEl = document.getElementById('prem-roster-sub');
+  if (!el) return;
+  const res = await api('getPremiumAssignments', {});
+  if (!res.ok) { el.innerHTML = '<div class="notice" style="font-size:11px">Could not load — run 18_premium_department.sql in Supabase.</div>'; return; }
+  let rows = res.assignments || [];
+  const myId = state.staffAccount ? state.staffAccount.empId : '';
+  if (isMgr) {
+    if (titleEl) titleEl.textContent = '📋 Premium roster — all locations';
+    if (subEl) subEl.textContent = 'Every Premium person and the location(s) they cover.';
+  } else {
+    const mine = rows.find(r => String(r.employee_id) === String(myId));
+    const myLocations = mine ? (mine.locations || []) : [];
+    if (titleEl) titleEl.textContent = '📋 My Premium location' + (myLocations.length === 1 ? '' : 's');
+    if (subEl) subEl.textContent = myLocations.length ? myLocations.join(', ') : 'No location assigned yet — ask your Premium Manager.';
+    rows = myLocations.length ? rows.filter(r => (r.locations || []).some(l => myLocations.includes(l))) : [];
+  }
+  if (!rows.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text-3)">' + (isMgr ? 'No one assigned yet.' : 'Nothing to show yet.') + '</div>'; return; }
+  el.innerHTML = rows.map(r =>
+    '<div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>' + escapeHtml(r.name || r.employee_id) + '</b> <span style="color:var(--text-2)">· ' + escapeHtml(premiumRoleLabel(r.role)) + '</span><br><span style="color:var(--text-2)">' + escapeHtml((r.locations || []).join(', ') || '(no location)') + '</span></div>'
+  ).join('');
+}
+
 // ── PORTABLE STAND ACCESS (warehouse manager admin) ──
 let _saStandsData = [];
 
@@ -19178,6 +19453,11 @@ async function init() {
     openSmartLogin('tech');
     return;
   }
+  if (path === '/premium' || path === '/premium/index.html') {
+    if (state.staffAccount && state.staffAccount.group === 'premium') { renderPremiumForRole(); showScreen('screen-premium'); return; }
+    openSmartLogin('premium');
+    return;
+  }
   
   // Bare "/" — this is where an installed PWA icon always lands, no matter
   // which URL (/manager, /warehouse, /tech) you were using when you
@@ -19203,6 +19483,7 @@ async function init() {
     if (state.staffAccount && state.staffAccount.group === 'manager') { showScreen('screen-bedcheck'); restoreMgrSidebarState(); return; }
     if (state.staffAccount && state.staffAccount.group === 'food') { renderKitchenForRole(); showScreen('screen-kitchen'); return; }
     if (state.staffAccount && state.staffAccount.group === 'tech') { showScreen('screen-tech'); return; }
+    if (state.staffAccount && state.staffAccount.group === 'premium') { renderPremiumForRole(); showScreen('screen-premium'); return; }
   }
 
   const saved = localStorage.getItem('stadium_user');
@@ -19309,6 +19590,7 @@ const BACK_MAP = {
   'screen-qr-codes': 'screen-warehouse',
   'screen-warehouse': null,
   'screen-kitchen': null,
+  'screen-premium': null,
   'screen-kitchen-request': 'screen-submenu-requests',
   'screen-my-kitchen': 'screen-submenu-requests',
   'screen-stand-requests': 'screen-submenu-requests',
@@ -19433,6 +19715,7 @@ function handleAppBack() {
     else if (state.staffAccount && state.staffAccount.group === 'manager') showScreen('screen-bedcheck');
     else if (state.staffAccount && state.staffAccount.group === 'food') showScreen('screen-kitchen');
     else if (state.staffAccount && state.staffAccount.group === 'tech') showScreen('screen-tech');
+    else if (state.staffAccount && state.staffAccount.group === 'premium') showScreen('screen-premium');
     else showScreen('screen-home');
   } else if(dest==='__ROLE_HOME__'){
     goRoleHome();

@@ -21,6 +21,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the build history.
 | **Warehouse** | Delivery queue, QR-scan-to-open, force restock, transfer sign-off chain |
 | **Checklists** | Opening / during-event / closing, food safety temps |
 | **NPO groups** | Separate login and roster for non-profit volunteer groups |
+| **Premium department** | Own logins, admin-defined location names, and a manager who sees only Premium's roster — fully separate from concession/warehouse/NPO |
 | **Records** | Break time sheet, tip-distribution CSV, feedback and food-safety history |
 
 ---

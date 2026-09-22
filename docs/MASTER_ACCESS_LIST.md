@@ -27,6 +27,8 @@
 | **NPO Group Leader** | Group name + PIN | Roster present/absent, stock requests, checklists — no clock in/out. Multi-stand groups get a picker at login. |
 | **Tech** | PIN | IT ticket resolution |
 | **Golf cart driver** | Own last-5 ID (separate `cart_drivers` list, not role-based) | Check out a key, daily pre-use inspection |
+| **Premium Employee** | PIN (last-5 + 4-digit PIN) | Sees only their own assigned Premium location(s) and who else covers them. No concession/warehouse/NPO data at all. |
+| **Premium Manager** | Same | Creates Premium location names, assigns Premium Employees/Managers to locations, sees the full Premium roster across every Premium location. Still no visibility into concession, warehouse, food or NPO data — Premium is a fully separate department, same as Warehouse. |
 
 **Correction to keep in mind**: the Portable Stand Access toggle was originally built under Warehouse Manager, then moved to Admin because it's a genuine access-granting tool and belongs restricted to Admin only. Warehouse Manager still has Zone Assignments and Cart driver admin — just not that specific toggle anymore.
 
