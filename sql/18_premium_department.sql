@@ -33,3 +33,21 @@ alter table premium_assignments enable row level security;
 drop policy if exists "premium_assignments_all" on premium_assignments;
 create policy "premium_assignments_all" on premium_assignments
   for all using (true) with check (true);
+
+-- What's currently filled at each Premium location. Deliberately NOT a
+-- ledger/history — one row per location, overwritten on every save, same
+-- "current state, not a log" shape as premium_assignments. Own table;
+-- never touches concession's inventory_entries.
+create table if not exists premium_stock (
+  id bigint generated always as identity primary key,
+  location_name text not null unique,
+  items jsonb not null default '[]'::jsonb,   -- [{name, qty}]
+  notes text not null default '',
+  filled_by text not null default '',
+  updated_at timestamptz not null default now()
+);
+
+alter table premium_stock enable row level security;
+drop policy if exists "premium_stock_all" on premium_stock;
+create policy "premium_stock_all" on premium_stock
+  for all using (true) with check (true);

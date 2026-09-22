@@ -3656,41 +3656,83 @@
       <div class="role-profile-meta" id="prem-role-summary-meta">Loading access…</div>
     </div>
 
-    <!-- Premium Manager only: create/manage locations and assign people -->
-    <div id="prem-manager-tools" style="display:none">
-      <div class="card" style="padding:14px;margin-bottom:12px">
-        <div style="font-weight:700;font-size:14px;margin-bottom:4px">⭐ Premium locations</div>
-        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Add the suite/club/location names your Premium team covers.</div>
-        <div style="display:flex;gap:8px">
-          <input class="form-input" type="text" id="prem-loc-name" placeholder="Location name" style="flex:1;margin:0">
-          <button class="btn btn-primary" onclick="premiumAddLocation()" style="width:auto;padding:0 16px">Add</button>
-        </div>
-        <div id="prem-loc-list" style="margin-top:10px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
-      </div>
-
-      <div class="card" style="padding:14px;margin-bottom:12px">
-        <div style="font-weight:700;font-size:14px;margin-bottom:4px">👥 Assign people to locations</div>
-        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Only Premium logins (Access Center → Premium Employee / Premium Manager) show up here.</div>
-        <label class="form-label" style="margin-top:0">Person</label>
-        <select class="form-input" id="prem-assign-person" onchange="premiumLoadPersonAssignment()"><option value="">— Select person —</option></select>
-        <label class="form-label">Locations</label>
-        <div id="prem-assign-locations" style="max-height:240px;overflow-y:auto"></div>
-        <button class="btn btn-primary" onclick="premiumSaveAssignment()" style="margin-top:10px">Save assignment</button>
-        <button class="btn btn-ghost" onclick="premiumClearAssignment()" style="margin-top:6px">Remove assignment</button>
-        <div style="height:1px;background:var(--border);margin:14px 0"></div>
-        <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:6px">Current assignments</div>
-        <div id="prem-assign-current" style="font-size:12px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
-      </div>
-    </div>
-
-    <!-- Roster — Manager sees every Premium location; Employee sees only
-         their own assigned location(s), same "own stand only" pattern as
-         a regular worker. -->
-    <div class="card" style="padding:14px">
+    <!-- Roster is what a Premium Manager sees FIRST — everything else is
+         setup/admin work and stays tucked into the tools drawer below,
+         same "overview first, tools collapsed" layout as Warehouse
+         Manager's screen. Employee sees only their own assigned
+         location(s), same "own stand only" pattern as a regular worker. -->
+    <div class="card" style="padding:14px;margin-bottom:12px">
       <div style="font-weight:700;font-size:14px;margin-bottom:4px" id="prem-roster-title">📋 Premium roster</div>
       <div style="font-size:11px;color:var(--text-2);margin-bottom:10px" id="prem-roster-sub">Who's assigned where.</div>
       <div id="prem-roster-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
     </div>
+
+    <!-- Premium Manager only: locations, assignments, and the stock-filled
+         log, all collapsed into one tools drawer — mirrors Warehouse
+         Manager's "🧰 Planning & setup tools" drawer exactly, so this
+         doesn't crowd the roster with setup work you only touch
+         occasionally. -->
+    <details id="prem-manager-tools" class="wh-tools-details" style="display:none">
+      <summary><span>🧰 Premium tools</span><span style="font-size:11px;color:var(--text-2);font-weight:500">Locations · Assign · Stock</span></summary>
+      <div class="wh-tools-inner">
+
+        <div class="card" style="padding:14px;margin-bottom:12px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px">⭐ Premium locations</div>
+          <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Add the suite/club/location names your Premium team covers.</div>
+          <div style="display:flex;gap:8px">
+            <input class="form-input" type="text" id="prem-loc-name" placeholder="Location name" style="flex:1;margin:0">
+            <button class="btn btn-primary" onclick="premiumAddLocation()" style="width:auto;padding:0 16px">Add</button>
+          </div>
+          <div id="prem-loc-list" style="margin-top:10px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+        </div>
+
+        <div class="card" style="padding:14px;margin-bottom:12px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px">👥 Assign people to locations</div>
+          <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Only Premium logins (Access Center → Premium Employee / Premium Manager) show up here.</div>
+          <label class="form-label" style="margin-top:0">1. Person</label>
+          <select class="form-input" id="prem-assign-person" onchange="premiumLoadPersonAssignment()"><option value="">— Select person —</option></select>
+          <div id="prem-assign-locations-area" style="display:none">
+            <label class="form-label">2. Which location(s)</label>
+            <input class="form-input" type="text" id="prem-assign-search" placeholder="🔍 Search locations…" oninput="premiumRenderLocationChecks()" style="margin-bottom:6px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
+              <div id="prem-assign-count" style="font-size:11px;font-weight:800;color:var(--text-2)">0 selected</div>
+              <button class="btn btn-ghost" onclick="premiumClearLocationChecks()" style="padding:5px 8px;font-size:10px;margin:0;width:auto">Clear</button>
+            </div>
+            <div id="prem-assign-locations" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:0 8px"></div>
+            <button class="btn btn-primary" onclick="premiumSaveAssignment()" style="margin-top:10px">Save assignment →</button>
+            <button class="btn btn-ghost" onclick="premiumClearAssignment()" style="margin-top:6px">Remove assignment (unassign this person)</button>
+          </div>
+          <div style="height:1px;background:var(--border);margin:14px 0"></div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:6px">Current assignments</div>
+          <div id="prem-assign-current" style="font-size:12px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+        </div>
+
+        <div class="card" style="padding:14px;margin-bottom:12px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px">🧾 Stock filled at a location</div>
+          <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Not a running ledger — this is simply what's there right now at each Premium location. Saving replaces the previous list for that location. Print a clean copy to hand out or post.</div>
+          <label class="form-label" style="margin-top:0">Location</label>
+          <select class="form-input" id="prem-stock-location" onchange="premiumLoadStockForLocation()"><option value="">Select location…</option></select>
+          <div id="prem-stock-form" style="display:none;margin-top:10px">
+            <label class="form-label">Items</label>
+            <div id="prem-stock-items"></div>
+            <button class="btn btn-ghost" onclick="premiumAddStockRow()" style="margin-top:6px">➕ Add item</button>
+            <label class="form-label">Filled by</label>
+            <input class="form-input" type="text" id="prem-stock-filledby" placeholder="Name">
+            <label class="form-label">Notes</label>
+            <textarea class="form-input" id="prem-stock-notes" rows="2" placeholder="Optional — condition, shortages, anything worth flagging"></textarea>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="premiumSaveStock()" style="flex:1;min-width:140px">💾 Save</button>
+              <button class="btn btn-ghost" onclick="premiumPrintStock()" style="flex:1;min-width:140px">🖨️ Print</button>
+            </div>
+            <div id="prem-stock-status" style="font-size:10px;color:var(--text-2);margin-top:6px"></div>
+          </div>
+          <div style="height:1px;background:var(--border);margin:14px 0"></div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:6px">Every location — last filled</div>
+          <div id="prem-stock-current" style="font-size:12px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+        </div>
+
+      </div>
+    </details>
   </div>
 </div>
 
@@ -3784,7 +3826,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-22-premium-department-1';
+const BUILD_TAG = '2026-09-22-premium-department-2';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4846,6 +4888,28 @@ async function api(action, data) {
       const rows = await sb('premium_assignments?employee_id=eq.'+encodeURIComponent(data.employeeId)+'&select=locations').catch(()=>({_err:true}));
       if (rows._err || !Array.isArray(rows) || !rows.length) return {ok:true, locations:[]};
       return { ok:true, locations: rows[0].locations || [] };
+    }
+    case 'getPremiumStock': {
+      if (!data.location) return {ok:true, stock:null};
+      const rows = await sb('premium_stock?location_name=eq.'+encodeURIComponent(data.location)+'&select=*').catch(()=>({_err:true}));
+      if (rows._err) return {ok:false,error:'Network — has 18_premium_department.sql been run?'};
+      return { ok:true, stock: (Array.isArray(rows) && rows[0]) ? rows[0] : null };
+    }
+    case 'getPremiumStockAll': {
+      const rows = await sb('premium_stock?order=location_name.asc&select=*').catch(()=>({_err:true}));
+      if (rows._err) return {ok:false,error:'Network — has 18_premium_department.sql been run?'};
+      return { ok:true, stock: rows };
+    }
+    case 'savePremiumStock': {
+      // Delete-then-reinsert — same pattern as zone_assignments/
+      // premium_assignments. This is "what's there right now," so a save
+      // replaces the previous list for that location rather than appending.
+      if (!data.location) return {ok:false,error:'Missing location'};
+      await sb('premium_stock?location_name=eq.'+encodeURIComponent(data.location), { method:'DELETE', headers:{Prefer:'return=minimal'} }).catch(()=>{});
+      const body = { location_name:data.location, items:data.items||[], notes:data.notes||'', filled_by:data.filledBy||'', updated_at:new Date().toISOString() };
+      const r = await sb('premium_stock', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
+      if (r && r._queued) return {ok:true, queued:true};
+      return r._err ? {ok:false,error:'Could not save stock'} : {ok:true};
     }
     case 'getAllChecksStatus': {
       // The actual missing feature — supervisor could see who's working
@@ -17352,6 +17416,8 @@ async function renderPremiumForRole() {
     await premiumLoadLocations();
     await premiumLoadPeople();
     await premiumRenderCurrentAssignments();
+    await premiumLoadStockLocationOptions();
+    await premiumRenderStockCurrent();
   }
   await premiumRenderRoster(isMgr);
 }
@@ -17371,6 +17437,7 @@ async function premiumLoadLocations() {
     '</div>'
   ).join('');
   premiumRenderLocationChecks();
+  premiumLoadStockLocationOptions();
 }
 async function premiumAddLocation() {
   if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
@@ -17401,11 +17468,16 @@ async function premiumLoadPeople() {
 }
 function premiumRenderLocationChecks() {
   const el = document.getElementById('prem-assign-locations');
+  const count = document.getElementById('prem-assign-count');
+  if (count) count.textContent = _premSelectedLocations.length + ' selected';
   if (!el) return;
   if (!_premLocations.length) { el.innerHTML = '<div class="notice info" style="font-size:12px">Add a Premium location first.</div>'; return; }
-  el.innerHTML = _premLocations.map(l => {
+  const q = (document.getElementById('prem-assign-search') || { value: '' }).value.toLowerCase().trim();
+  const list = _premLocations.filter(l => !q || l.name.toLowerCase().includes(q));
+  if (!list.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text-3);padding:8px 0">No locations match "' + escapeHtml(q) + '".</div>'; return; }
+  el.innerHTML = list.map(l => {
     const checked = _premSelectedLocations.includes(l.name) ? 'checked' : '';
-    return '<label style="display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--border);cursor:pointer">' +
+    return '<label style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);cursor:pointer">' +
       '<input type="checkbox" ' + checked + ' onchange="premiumToggleLocation(this,\'' + l.name.replace(/'/g, "\\'") + '\')">' +
       '<span style="font-size:13px">' + escapeHtml(l.name) + '</span></label>';
   }).join('');
@@ -17413,10 +17485,18 @@ function premiumRenderLocationChecks() {
 function premiumToggleLocation(cb, name) {
   if (cb.checked) { if (!_premSelectedLocations.includes(name)) _premSelectedLocations.push(name); }
   else { _premSelectedLocations = _premSelectedLocations.filter(x => x !== name); }
+  const count = document.getElementById('prem-assign-count');
+  if (count) count.textContent = _premSelectedLocations.length + ' selected';
+}
+function premiumClearLocationChecks() {
+  _premSelectedLocations = [];
+  premiumRenderLocationChecks();
 }
 async function premiumLoadPersonAssignment() {
   _premSelectedLocations = [];
   const empId = document.getElementById('prem-assign-person').value;
+  const area = document.getElementById('prem-assign-locations-area');
+  if (area) area.style.display = empId ? 'block' : 'none';
   if (empId) {
     const res = await api('getMyPremiumLocations', { employeeId: empId });
     if (res.ok) _premSelectedLocations = (res.locations || []).slice();
@@ -17451,6 +17531,136 @@ async function premiumRenderCurrentAssignments() {
   el.innerHTML = rows.map(r =>
     '<div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>' + escapeHtml(r.name || r.employee_id) + '</b> <span style="color:var(--text-2)">· ' + escapeHtml(premiumRoleLabel(r.role)) + '</span><br><span style="color:var(--text-2)">' + escapeHtml((r.locations || []).join(', ') || '(no location)') + '</span></div>'
   ).join('');
+}
+
+// -- Stock filled at a location (Premium Manager only) --
+// Deliberately "what's there right now," not a ledger — saving a location
+// replaces its previous list entirely, same one-row-per-location model as
+// premium_assignments. Its own table (premium_stock); never touches
+// concession's inventory_entries.
+let _premStockRows = [], _premStockItems = [];
+async function premiumLoadStockLocationOptions() {
+  const sel = document.getElementById('prem-stock-location');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Select location…</option>' + _premLocations.map(l =>
+    '<option value="' + escapeAttr(l.name) + '">' + escapeHtml(l.name) + '</option>'
+  ).join('');
+  if (current && _premLocations.some(l => l.name === current)) sel.value = current;
+}
+function premiumBlankStockRow() { return { name: '', qty: '' }; }
+async function premiumLoadStockForLocation() {
+  const loc = document.getElementById('prem-stock-location').value;
+  const form = document.getElementById('prem-stock-form');
+  if (form) form.style.display = loc ? 'block' : 'none';
+  if (!loc) return;
+  const res = await api('getPremiumStock', { location: loc });
+  const row = res.ok ? res.stock : null;
+  _premStockItems = (row && row.items && row.items.length) ? row.items.map(i => ({ name: i.name || '', qty: i.qty || '' })) : [premiumBlankStockRow()];
+  document.getElementById('prem-stock-notes').value = row ? (row.notes || '') : '';
+  document.getElementById('prem-stock-filledby').value = row ? (row.filled_by || '') : ((state.staffAccount && state.staffAccount.name) || '');
+  document.getElementById('prem-stock-status').textContent = row ? 'Last saved ' + new Date(row.updated_at).toLocaleString() : 'Not filled yet — add items below.';
+  premiumRenderStockItems();
+}
+function premiumRenderStockItems() {
+  const el = document.getElementById('prem-stock-items');
+  if (!el) return;
+  el.innerHTML = _premStockItems.map((it, i) =>
+    '<div style="display:flex;gap:8px;margin-bottom:6px">' +
+      '<input class="form-input" type="text" placeholder="Item name" value="' + escapeAttr(it.name) + '" oninput="premiumStockItemChanged(' + i + ',\'name\',this.value)" style="flex:2;margin:0">' +
+      '<input class="form-input" type="text" placeholder="Qty" value="' + escapeAttr(it.qty) + '" oninput="premiumStockItemChanged(' + i + ',\'qty\',this.value)" style="flex:1;margin:0">' +
+      '<button class="btn btn-ghost" onclick="premiumRemoveStockRow(' + i + ')" style="width:auto;padding:0 12px;margin:0">✕</button>' +
+    '</div>'
+  ).join('');
+}
+function premiumStockItemChanged(i, field, val) { if (_premStockItems[i]) _premStockItems[i][field] = val; }
+function premiumAddStockRow() { _premStockItems.push(premiumBlankStockRow()); premiumRenderStockItems(); }
+function premiumRemoveStockRow(i) { _premStockItems.splice(i, 1); if (!_premStockItems.length) _premStockItems.push(premiumBlankStockRow()); premiumRenderStockItems(); }
+async function premiumSaveStock() {
+  if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
+  const loc = document.getElementById('prem-stock-location').value;
+  if (!loc) return toast('Select a location first', 'error');
+  const items = _premStockItems.map(i => ({ name: (i.name || '').trim(), qty: (i.qty || '').trim() })).filter(i => i.name);
+  if (!items.length) return toast('Add at least one item', 'error');
+  const notes = document.getElementById('prem-stock-notes').value.trim();
+  const filledBy = document.getElementById('prem-stock-filledby').value.trim();
+  const res = await api('savePremiumStock', { location: loc, items, notes, filledBy });
+  if (res.ok) { toast('✅ Stock saved for ' + loc); document.getElementById('prem-stock-status').textContent = 'Saved just now'; premiumRenderStockCurrent(); }
+  else toast(res.error || 'Could not save', 'error');
+}
+async function premiumRenderStockCurrent() {
+  const el = document.getElementById('prem-stock-current');
+  if (!el) return;
+  const res = await api('getPremiumStockAll', {});
+  if (!res.ok) { el.innerHTML = '<div class="notice" style="font-size:11px">Could not load — run 18_premium_department.sql in Supabase.</div>'; return; }
+  _premStockRows = res.stock || [];
+  if (!_premStockRows.length) { el.innerHTML = '<div style="color:var(--text-2)">Nothing filled in yet.</div>'; return; }
+  el.innerHTML = _premStockRows.map(r => {
+    const itemsTxt = (r.items || []).map(i => i.name + (i.qty ? ' (' + i.qty + ')' : '')).join(', ');
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+        '<b>' + escapeHtml(r.location_name) + '</b>' +
+        '<button class="btn btn-ghost" onclick="premiumPrintStock(\'' + r.location_name.replace(/'/g, "\\'") + '\')" style="width:auto;padding:4px 10px;font-size:11px;margin:0">🖨️ Print</button>' +
+      '</div>' +
+      '<span style="color:var(--text-2)">' + escapeHtml(itemsTxt || '(no items)') + '</span>' +
+      (r.filled_by ? '<br><span style="color:var(--text-3);font-size:10px">Filled by ' + escapeHtml(r.filled_by) + '</span>' : '') +
+    '</div>';
+  }).join('');
+}
+
+// Print — landscape by default (a full item list usually runs wider than
+// tall), portrait still works fine if the browser's print dialog is
+// switched. Deliberately simple: one location, its item list, a notes
+// box and a filled-by line — not the dense multi-column concession
+// Stand Sheet ledger (printInvReportBuild above), because Premium's
+// day-to-day items and the "what's there right now" question this answers
+// are genuinely different from concession's restock/waste/comp ledger.
+async function premiumPrintStock(locationArg) {
+  const loc = locationArg || document.getElementById('prem-stock-location').value;
+  if (!loc) return toast('Select a location first', 'error');
+  let row = _premStockRows.find(r => r.location_name === loc);
+  if (!row) {
+    const res = await api('getPremiumStock', { location: loc });
+    row = res.ok ? res.stock : null;
+  }
+  const w = window.open('', '_blank');
+  if (!w) return toast('⚠️ Popup blocked — allow popups for this site and try again', 'error');
+  const items = (row && row.items) || [];
+  const notes = (row && row.notes) || '';
+  const filledBy = (row && row.filled_by) || '';
+  const updated = row && row.updated_at ? new Date(row.updated_at).toLocaleString() : '';
+  let html = '<html><head><title>Premium Stock — ' + escapeHtml(loc) + '</title><style>' +
+    '@page{size:letter landscape;margin:0.5in}' +
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}' +
+    'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0}' +
+    '.hdr{border:1.4px solid #555;margin-bottom:14px}' +
+    '.hdr-title{text-align:center;font-size:22px;font-weight:800;padding:10px;border-bottom:1.4px solid #555;background:#f7f7f7}' +
+    '.hdr-row{display:flex;border-top:1px solid #777}' +
+    '.hdr-cell{flex:1;padding:8px 12px;border-right:1px solid #777;font-size:13px}' +
+    '.hdr-cell:last-child{border-right:none}' +
+    '.hdr-cell .lbl{font-size:10px;text-transform:uppercase;color:#555;display:block;margin-bottom:2px}' +
+    'table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px}' +
+    'th{border:1px solid #666;padding:8px;background:#eee;font-weight:800;text-align:left}' +
+    'td{border:1px solid #777;padding:8px}' +
+    'tr:nth-child(even) td{background:#f4f4f4}' +
+    '.notesbox{border:1px solid #999;min-height:60px;padding:8px;font-size:12px;white-space:pre-wrap}' +
+    '.foot{font-size:10px;color:#666;display:flex;justify-content:space-between;margin-top:8px}' +
+    '</style></head><body>' +
+    '<div class="hdr"><div class="hdr-title">⭐ Premium — ' + escapeHtml(loc) + '</div>' +
+    '<div class="hdr-row">' +
+      '<div class="hdr-cell"><span class="lbl">Filled by</span>' + escapeHtml(filledBy || '—') + '</div>' +
+      '<div class="hdr-cell"><span class="lbl">Last updated</span>' + escapeHtml(updated || '—') + '</div>' +
+      '<div class="hdr-cell"><span class="lbl">Printed</span>' + escapeHtml(new Date().toLocaleString()) + '</div>' +
+    '</div></div>' +
+    '<table><thead><tr><th style="width:60px">#</th><th>Item</th><th style="width:200px">Quantity</th></tr></thead><tbody>' +
+    (items.length ? items.map((it, i) => '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(it.name) + '</td><td>' + escapeHtml(it.qty || '') + '</td></tr>').join('') : '<tr><td colspan="3" style="text-align:center;color:#900">No items filled in yet</td></tr>') +
+    '</tbody></table>' +
+    '<div style="font-size:11px;font-weight:700;margin-bottom:4px">Notes</div>' +
+    '<div class="notesbox">' + (notes ? escapeHtml(notes) : '&nbsp;') + '</div>' +
+    '<div class="foot"><span>Generated from Stadium Ops · Premium</span><span>' + escapeHtml(loc) + '</span></div>' +
+    '<scr' + 'ipt>window.print()<\/scr' + 'ipt></body></html>';
+  w.document.write(html);
+  w.document.close();
 }
 
 // -- Roster (both roles; employee view is scoped to their own location) --
