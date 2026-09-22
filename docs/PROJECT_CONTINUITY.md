@@ -1,4 +1,14 @@
 # Stadium Ops Platform — Continuity Doc
+
+> ⚠️ **STALE as of 2026-09-22 — this doc's own advice below was correct, and
+> this is exactly what it predicted.** The `97531` manager login code and
+> `2026-08-26` build referenced below are both outdated — the real code
+> (root-level `index.html`) has moved on since (currently
+> `2026-09-20-food-runner-area-notify-1`, manager code is `90000`). **Use
+> the root `README.md` and `CHANGELOG.md` instead** — those are kept
+> current. This file is left for historical reference on how things worked
+> as of late August only.
+
 **Current build: `2026-08-26-restore-locked-state-and-deliver-btn`** (check this against the login screen footer or `grep BUILD_TAG index.html` before trusting anything below — if they don't match, this doc is stale)
 
 ## ⚠️ How to use this doc

@@ -1,5 +1,18 @@
 # Stadium Ops Platform — Full Project Handbook
 
+> ⚠️ **STALE — do not use this file for current setup.** As of 2026-09-22 this
+> describes an abandoned lineage (`app/index.html`, BUILD_TAG ~2026-08-30).
+> The real, live app is the **root-level `index.html`**, not `app/index.html`
+> — `app/` has no commits since `2026-09-03` and Netlify serves from the repo
+> root (that's where `_headers`/`_redirects` actually live). **`README.md`
+> and `CHANGELOG.md` at the repo root are the current source of truth** —
+> read those instead. This file is kept only for historical reference on
+> how the app's roles/systems worked as of late August; verify anything
+> below against the actual code before trusting it, including login codes
+> (e.g. the manager shared code below may not match what's in the code today).
+
+---
+
 **Read this first.** Then check `index.html`'s `BUILD_TAG` constant (near the top of the `<script>` block) to confirm the exact version — should read `2026-08-30-fix-print-num-undefined-1` or later.
 
 ---
