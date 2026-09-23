@@ -86,16 +86,19 @@
   .form-input::placeholder{color:var(--text-3)}
   textarea.form-input{resize:none;min-height:80px}
   
-  /* BUTTONS */
-  .btn{width:100%;padding:14px;border-radius:8px;border:none;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px;font-family:inherit;transition:transform 0.05s,opacity 0.15s}
-  .btn-primary{background:var(--aramark-red);color:#fff}
-  .btn-primary:hover{background:var(--aramark-red-dark)}
-  .btn-success{background:var(--success);color:#fff}
-  .btn-warning{background:var(--warning);color:#fff}
-  .btn-danger{background:#DC2626;color:#fff}
+  /* BUTTONS — a little depth (shadow + hover/press lift) so primary
+     actions read as physically pressable, not flat colored rectangles. */
+  .btn{width:100%;padding:14px;border-radius:8px;border:none;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px;font-family:inherit;transition:transform 0.12s ease,box-shadow 0.12s ease,opacity 0.15s,background 0.12s ease}
+  .btn-primary{background:var(--aramark-red);color:#fff;box-shadow:0 2px 6px rgba(228,0,43,0.28)}
+  .btn-primary:hover{background:var(--aramark-red-dark);box-shadow:0 4px 12px rgba(228,0,43,0.34);transform:translateY(-1px)}
+  .btn-success{background:var(--success);color:#fff;box-shadow:0 2px 6px rgba(0,166,81,0.28)}
+  .btn-success:hover{box-shadow:0 4px 12px rgba(0,166,81,0.34);transform:translateY(-1px)}
+  .btn-warning{background:var(--warning);color:#fff;box-shadow:0 2px 6px rgba(217,119,6,0.28)}
+  .btn-danger{background:#DC2626;color:#fff;box-shadow:0 2px 6px rgba(220,38,38,0.28)}
   .btn-outline{background:transparent;border:1px solid var(--border-strong);color:var(--text)}
-  .btn:active{transform:scale(0.98)}
-  .btn:disabled{opacity:0.4;cursor:not-allowed}
+  .btn-ghost:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+  .btn:active{transform:scale(0.98) translateY(0);box-shadow:none}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;box-shadow:none;transform:none}
 
   /* LOGIN HERO */
   .login-hero{padding:28px 20px 16px;text-align:center}
@@ -177,7 +180,7 @@
   .pin-digit:focus{outline:none;border-color:var(--aramark-red)}
 
   /* CARDS */
-  .card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
+  .card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow-lg);transition:box-shadow 0.15s ease}
   .req-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;border-left:4px solid var(--text-3);box-shadow:var(--shadow)}
   .req-card.urgent{border-left-color:#DC2626;animation:pulse 1.5s ease-in-out infinite}
   .req-card.soon{border-left-color:var(--warning)}
@@ -3656,7 +3659,30 @@
       <div class="role-profile-meta" id="prem-role-summary-meta">Loading access…</div>
     </div>
 
-    <!-- Roster is what a Premium Manager sees FIRST — everything else is
+    <!-- Premium Manager only: today's roster/check-ins — present/absent,
+         move, add walk-in. This is the actual daily tool, so it's the
+         very first thing on the page. -->
+    <div class="card" id="prem-checkin-card" style="padding:14px;margin-bottom:12px;display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="font-weight:700;font-size:14px">✅ Today's check-ins</div>
+        <div id="prem-checkin-summary" style="font-size:11px;color:var(--text-2);white-space:nowrap"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Present / Absent / Move — Premium locations only, never mixed with concession.</div>
+      <button class="btn btn-ghost" onclick="premiumOpenWalkin()" style="margin-bottom:6px">➕ Add walk-in</button>
+      <div id="prem-walkin-form" style="display:none;margin-bottom:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
+        <input class="form-input" type="text" id="prem-walkin-name" placeholder="Name" style="margin:0 0 8px">
+        <input class="form-input" type="text" id="prem-walkin-role" placeholder="Role (optional)" style="margin:0 0 8px">
+        <select class="form-input" id="prem-walkin-location" style="margin:0 0 8px"></select>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="premiumSaveWalkin()" style="margin:0;flex:1">Add</button>
+          <button class="btn btn-ghost" onclick="premiumCloseWalkin()" style="margin:0;flex:1">Cancel</button>
+        </div>
+      </div>
+      <div id="prem-checkin-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+    </div>
+
+    <!-- Login/access roster (who can sign into the app as Premium) —
+         secondary to the check-ins card above. Everything else is
          setup/admin work and stays tucked into the tools drawer below,
          same "overview first, tools collapsed" layout as Warehouse
          Manager's screen. Employee sees only their own assigned
@@ -3826,7 +3852,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-22-premium-department-2';
+const BUILD_TAG = '2026-09-23-premium-checkins-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4910,6 +4936,52 @@ async function api(action, data) {
       const r = await sb('premium_stock', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
       if (r && r._queued) return {ok:true, queued:true};
       return r._err ? {ok:false,error:'Could not save stock'} : {ok:true};
+    }
+
+    // ---------- PREMIUM ROSTER / CHECK-INS ----------
+    // Own table (premium_schedule) — never reads/writes concession's
+    // `schedule`, so Premium's Field Box bartenders and concession's stand
+    // workers never appear in each other's roster.
+    case 'getPremiumSchedule': {
+      const date = data.date || localISODate();
+      const rows = await sb('premium_schedule?event_date=eq.'+encodeURIComponent(date)+'&order=location_name.asc,worker_name.asc&select=*').catch(()=>({_err:true}));
+      if (rows._err) return {ok:false,error:'Network — has 20_premium_schedule.sql been run?'};
+      return { ok:true, rows };
+    }
+    case 'setPremiumCheckin': {
+      if (!data.id || !data.status) return {ok:false,error:'Missing id/status'};
+      const patch = { status:data.status, updated_at:new Date().toISOString() };
+      if (data.status === 'present') patch.checked_in_at = new Date().toISOString();
+      if (data.status === 'checked_out') patch.checked_out_at = new Date().toISOString();
+      const r = await sb('premium_schedule?id=eq.'+encodeURIComponent(data.id), { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify(patch) });
+      return r._err ? {ok:false,error:'Could not update status'} : {ok:true};
+    }
+    case 'movePremiumWorker': {
+      if (!data.id || !data.location) return {ok:false,error:'Missing id/location'};
+      const r = await sb('premium_schedule?id=eq.'+encodeURIComponent(data.id), { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ location_name:data.location, updated_at:new Date().toISOString() }) });
+      return r._err ? {ok:false,error:'Could not move'} : {ok:true};
+    }
+    case 'addPremiumWalkin': {
+      const name = (data.name||'').trim();
+      if (!name || !data.location) return {ok:false,error:'Enter a name and pick a location'};
+      const date = data.date || localISODate();
+      const body = {
+        event_date: date,
+        employee_id: 'WALKIN-' + Date.now(),
+        worker_name: name,
+        role_title: data.roleTitle || 'Walk-in',
+        location_name: data.location,
+        status: 'present',
+        is_walkin: true,
+        checked_in_at: new Date().toISOString()
+      };
+      const r = await sb('premium_schedule', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
+      return r._err ? {ok:false,error:'Could not add walk-in'} : {ok:true};
+    }
+    case 'removePremiumScheduleRow': {
+      if (!data.id) return {ok:false,error:'Missing id'};
+      const r = await sb('premium_schedule?id=eq.'+encodeURIComponent(data.id), { method:'DELETE', headers:{Prefer:'return=minimal'} });
+      return r._err ? {ok:false,error:'Could not remove'} : {ok:true};
     }
     case 'getAllChecksStatus': {
       // The actual missing feature — supervisor could see who's working
@@ -17412,12 +17484,16 @@ async function renderPremiumForRole() {
   const tools = document.getElementById('prem-manager-tools');
   if (tools) tools.style.display = isMgr ? 'block' : 'none';
 
+  const checkinCard = document.getElementById('prem-checkin-card');
+  if (checkinCard) checkinCard.style.display = isMgr ? 'block' : 'none';
+
   if (isMgr) {
     await premiumLoadLocations();
     await premiumLoadPeople();
     await premiumRenderCurrentAssignments();
     await premiumLoadStockLocationOptions();
     await premiumRenderStockCurrent();
+    await premiumRenderCheckins();
   }
   await premiumRenderRoster(isMgr);
 }
@@ -17661,6 +17737,88 @@ async function premiumPrintStock(locationArg) {
     '<scr' + 'ipt>window.print()<\/scr' + 'ipt></body></html>';
   w.document.write(html);
   w.document.close();
+}
+
+// -- Today's check-ins (Premium Manager only) --
+// Own table (premium_schedule) — this is the day-of-game roster of
+// Premium workers (bartenders, suite attendants, etc.), separate from the
+// premium_employee/premium_manager login accounts tracked above.
+let _premScheduleRows = [];
+async function premiumRenderCheckins() {
+  const list = document.getElementById('prem-checkin-list');
+  const summary = document.getElementById('prem-checkin-summary');
+  if (!list) return;
+  const res = await api('getPremiumSchedule', { date: localISODate() });
+  if (!res.ok) { list.innerHTML = '<div class="notice" style="font-size:11px">Could not load — run 20_premium_schedule.sql (and the seed) in Supabase.</div>'; return; }
+  _premScheduleRows = res.rows || [];
+  const present = _premScheduleRows.filter(r => r.status === 'present').length;
+  if (summary) summary.textContent = present + ' present · ' + _premScheduleRows.length + ' total';
+  if (!_premScheduleRows.length) { list.innerHTML = '<div style="font-size:11px;color:var(--text-3)">No one scheduled today yet.</div>'; return; }
+
+  const byLoc = {};
+  _premScheduleRows.forEach(r => { (byLoc[r.location_name] = byLoc[r.location_name] || []).push(r); });
+  const locNames = Object.keys(byLoc).sort();
+  const locOptions = _premLocations.map(l => '<option value="' + escapeAttr(l.name) + '">' + escapeHtml(l.name) + '</option>').join('');
+
+  list.innerHTML = locNames.map(loc => {
+    const rows = byLoc[loc];
+    const presentCount = rows.filter(r => r.status === 'present').length;
+    const rowsHtml = rows.map(r => {
+      const statusColor = r.status === 'present' ? 'var(--success)' : r.status === 'absent' ? '#DC2626' : 'var(--text-3)';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:140px">' +
+          '<div style="font-size:13px;font-weight:700">' + escapeHtml(r.worker_name) + (r.is_walkin ? ' <span style="font-size:9px;color:var(--aramark-red);font-weight:800">WALK-IN</span>' : '') + '</div>' +
+          '<div style="font-size:10px;color:var(--text-2)">' + escapeHtml(r.role_title || '') + (r.start_time ? ' · ' + escapeHtml(r.start_time) + '–' + escapeHtml(r.end_time || '') : '') + '</div>' +
+        '</div>' +
+        '<span style="font-size:9px;font-weight:800;color:' + statusColor + ';text-transform:uppercase">' + escapeHtml(r.status) + '</span>' +
+        '<button class="btn btn-success" onclick="premiumSetCheckin(' + r.id + ',\'present\')" style="width:auto;padding:6px 10px;font-size:10px;margin:0">Present</button>' +
+        '<button class="btn btn-danger" onclick="premiumSetCheckin(' + r.id + ',\'absent\')" style="width:auto;padding:6px 10px;font-size:10px;margin:0">Absent</button>' +
+        '<select class="form-input" onchange="premiumMoveWorker(' + r.id + ',this.value)" style="width:auto;margin:0;padding:6px 8px;font-size:10px">' +
+          '<option value="">Move…</option>' + locOptions +
+        '</select>' +
+      '</div>';
+    }).join('');
+    return '<details style="margin-bottom:8px" open>' +
+      '<summary style="cursor:pointer;font-size:12px;font-weight:800;padding:6px 0;list-style:none">' + escapeHtml(loc) + ' <span style="color:var(--text-2);font-weight:600">(' + presentCount + '/' + rows.length + ')</span></summary>' +
+      rowsHtml +
+    '</details>';
+  }).join('');
+}
+async function premiumSetCheckin(id, status) {
+  if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
+  const res = await api('setPremiumCheckin', { id, status });
+  if (res.ok) premiumRenderCheckins();
+  else toast(res.error || 'Could not update', 'error');
+}
+async function premiumMoveWorker(id, location) {
+  if (!location) return;
+  if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
+  const res = await api('movePremiumWorker', { id, location });
+  if (res.ok) { toast('✅ Moved'); premiumRenderCheckins(); }
+  else toast(res.error || 'Could not move', 'error');
+}
+function premiumOpenWalkin() {
+  const form = document.getElementById('prem-walkin-form');
+  const sel = document.getElementById('prem-walkin-location');
+  if (sel) sel.innerHTML = '<option value="">Select location…</option>' + _premLocations.map(l => '<option value="' + escapeAttr(l.name) + '">' + escapeHtml(l.name) + '</option>').join('');
+  if (form) form.style.display = 'block';
+}
+function premiumCloseWalkin() {
+  const form = document.getElementById('prem-walkin-form');
+  if (form) form.style.display = 'none';
+  document.getElementById('prem-walkin-name').value = '';
+  document.getElementById('prem-walkin-role').value = '';
+}
+async function premiumSaveWalkin() {
+  if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
+  const name = document.getElementById('prem-walkin-name').value.trim();
+  const roleTitle = document.getElementById('prem-walkin-role').value.trim();
+  const location = document.getElementById('prem-walkin-location').value;
+  if (!name) return toast('Enter a name', 'error');
+  if (!location) return toast('Select a location', 'error');
+  const res = await api('addPremiumWalkin', { date: localISODate(), name, roleTitle, location });
+  if (res.ok) { toast('✅ Walk-in added'); premiumCloseWalkin(); premiumRenderCheckins(); }
+  else toast(res.error || 'Could not add', 'error');
 }
 
 // -- Roster (both roles; employee view is scoped to their own location) --
