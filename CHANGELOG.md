@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-24-premium-polish-2
+- Removed "Stock filled at a location" — not needed for Premium, cut entirely (UI, backend, and the `premium_stock` table).
+- Added a pulse animation on a row and a bounce on the status button when you mark someone present/absent, plus real press feedback on every check-in button (Present/Absent/Move) — the screen felt flat before, this makes every tap register visually, not just after a network round trip.
+- Added ⬇️ CSV and 🖨️ PDF export for today's check-ins, grouped by location with a present/total header — the PDF is the same "styled page → browser Print → Save as PDF" trick already used elsewhere in this app (Stand Sheet, timesheets), not a new dependency.
+- Walk-in search now also checks a new `premium_positions` table (seeded from today's real roster — Catering Services Supervisor, Expo Captain, Suite Attendant, Bartender, etc.) before falling back to the generic employee directory, so Role auto-fills correctly for anyone already in today's game instead of needing to be typed by hand.
+
 ## 2026-09-24-premium-walkin-redesign-1
 - Rebuilt Add Walk-in for Premium, taking inspiration from the Supervisor/Manager "Add Walk-in Worker" flow: same live search-as-you-type against the employee directory (tap a result to fill name + real ID instantly), the same 8-digit employee ID field with a 5-digit fallback, and a big colorful trigger tile instead of a plain "Add walk-in" text button.
 - The panel itself got a real design pass — gradient header, icon badge, and a smooth open/close transition instead of a flat gray box that just appeared.

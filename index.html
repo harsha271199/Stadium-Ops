@@ -298,6 +298,9 @@
   .prem-progress{height:8px;border-radius:5px;background:var(--bg-elevated);overflow:hidden;margin-top:10px}
   .prem-progress-bar{height:100%;background:linear-gradient(90deg,#00A651,#00C46A);border-radius:5px;transition:width .2s ease}
   .prem-progress-label{font-size:11px;font-weight:800;color:var(--text-2);margin-top:5px}
+  .prem-export-btn{padding:6px 12px;border-radius:20px;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text-2);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;transition:transform .1s ease,box-shadow .1s ease}
+  .prem-export-btn:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+  .prem-export-btn:active{transform:scale(0.94)}
   .prem-loc-group{margin-bottom:10px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:var(--shadow)}
   .prem-loc-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px;background:var(--bg-elevated);cursor:pointer;font-weight:800;font-size:13px;border-bottom:1px solid var(--border)}
   .prem-loc-head .prem-loc-count{font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;background:var(--bg-card);color:var(--text-2);border:1px solid var(--border-strong)}
@@ -306,22 +309,30 @@
   .prem-loc-group.open .prem-loc-body{display:block}
   .prem-loc-head:after{content:'›';font-size:20px;color:var(--text-2);transform:rotate(90deg);transition:transform .15s ease;flex-shrink:0}
   .prem-loc-group.open .prem-loc-head:after{transform:rotate(-90deg)}
-  .prem-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);border-left:4px solid var(--border-strong)}
+  .prem-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);border-left:4px solid var(--border-strong);transition:background .2s ease,border-color .2s ease}
   .prem-row:last-child{border-bottom:none}
   .prem-row.present{border-left-color:#00A651;background:rgba(0,166,81,0.06)}
   .prem-row.absent{border-left-color:#DC2626;background:rgba(220,38,38,0.06)}
+  @keyframes premRowPulse{0%{box-shadow:inset 0 0 0 30px rgba(0,166,81,0.22)}100%{box-shadow:inset 0 0 0 30px rgba(0,166,81,0)}}
+  @keyframes premRowPulseA{0%{box-shadow:inset 0 0 0 30px rgba(220,38,38,0.22)}100%{box-shadow:inset 0 0 0 30px rgba(220,38,38,0)}}
+  .prem-row.just-present{animation:premRowPulse .5s ease-out}
+  .prem-row.just-absent{animation:premRowPulseA .5s ease-out}
   .prem-row-info{flex:1;min-width:0}
   .prem-row-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .prem-row-meta{font-size:10.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .prem-row-actions{display:flex;align-items:center;gap:5px;flex-shrink:0}
-  .prem-status-btn{width:40px;height:40px;border-radius:10px;border:none;font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--shadow)}
+  .prem-status-btn{width:40px;height:40px;border-radius:10px;border:none;font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--shadow);transition:transform .12s ease,box-shadow .12s ease,background .12s ease}
+  .prem-status-btn:active{transform:scale(0.82)}
   .prem-status-btn.p{background:var(--bg-elevated);color:#00A651}
-  .prem-status-btn.p.on{background:#00A651;color:#fff;box-shadow:0 2px 8px rgba(0,166,81,0.4)}
+  .prem-status-btn.p.on{background:#00A651;color:#fff;box-shadow:0 3px 10px rgba(0,166,81,0.45);transform:scale(1.08)}
+  .prem-status-btn.p.on:active{transform:scale(0.9)}
   .prem-status-btn.a{background:var(--bg-elevated);color:#DC2626}
-  .prem-status-btn.a.on{background:#DC2626;color:#fff;box-shadow:0 2px 8px rgba(220,38,38,0.4)}
-  .prem-move-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text-2);font-size:16px;cursor:pointer;flex-shrink:0}
-  .prem-move-row{display:none;padding:8px 12px 10px;border-bottom:1px solid var(--border)}
-  .prem-move-row.open{display:block}
+  .prem-status-btn.a.on{background:#DC2626;color:#fff;box-shadow:0 3px 10px rgba(220,38,38,0.45);transform:scale(1.08)}
+  .prem-status-btn.a.on:active{transform:scale(0.9)}
+  .prem-move-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text-2);font-size:16px;cursor:pointer;flex-shrink:0;transition:transform .12s ease}
+  .prem-move-btn:active{transform:scale(0.85) rotate(90deg)}
+  .prem-move-row{max-height:0;overflow:hidden;transition:max-height .2s ease;padding:0 12px;border-bottom:1px solid var(--border)}
+  .prem-move-row.open{max-height:80px;padding:8px 12px 10px}
 
   /* Walk-in panel — a colorful, obviously-tappable trigger (matches the
      Supervisor/Manager "Add Walk-in Worker" tile), then a panel that
@@ -3723,7 +3734,13 @@
         <input class="form-input" type="date" id="prem-checkin-date" onchange="premiumRenderCheckins()" style="margin:0;width:auto;padding:8px 10px;font-size:13px">
       </div>
       <div id="prem-checkin-progress" class="prem-progress"><div id="prem-checkin-progress-bar" class="prem-progress-bar" style="width:0%"></div></div>
-      <div id="prem-checkin-summary" class="prem-progress-label">0 present · 0 total</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div id="prem-checkin-summary" class="prem-progress-label">0 present · 0 total</div>
+        <div style="display:flex;gap:6px">
+          <button class="prem-export-btn" onclick="premiumExportCheckinsCSV()">⬇️ CSV</button>
+          <button class="prem-export-btn" onclick="premiumExportCheckinsPDF()">🖨️ PDF</button>
+        </div>
+      </div>
 
       <input class="form-input" type="text" id="prem-checkin-search" placeholder="🔍 Find a person…" oninput="premiumRenderCheckinsList()" style="margin:10px 0 8px">
       <div class="chip-row" id="prem-checkin-filters" style="margin-bottom:10px">
@@ -3781,7 +3798,7 @@
          doesn't crowd the roster with setup work you only touch
          occasionally. -->
     <details id="prem-manager-tools" class="wh-tools-details" style="display:none">
-      <summary><span>🧰 Premium tools</span><span style="font-size:11px;color:var(--text-2);font-weight:500">Locations · Assign · Stock</span></summary>
+      <summary><span>🧰 Premium tools</span><span style="font-size:11px;color:var(--text-2);font-weight:500">Locations · Assign</span></summary>
       <div class="wh-tools-inner">
 
         <div class="card" style="padding:14px;margin-bottom:12px">
@@ -3813,30 +3830,6 @@
           <div style="height:1px;background:var(--border);margin:14px 0"></div>
           <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:6px">Current assignments</div>
           <div id="prem-assign-current" style="font-size:12px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
-        </div>
-
-        <div class="card" style="padding:14px;margin-bottom:12px">
-          <div style="font-weight:700;font-size:14px;margin-bottom:4px">🧾 Stock filled at a location</div>
-          <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Not a running ledger — this is simply what's there right now at each Premium location. Saving replaces the previous list for that location. Print a clean copy to hand out or post.</div>
-          <label class="form-label" style="margin-top:0">Location</label>
-          <select class="form-input" id="prem-stock-location" onchange="premiumLoadStockForLocation()"><option value="">Select location…</option></select>
-          <div id="prem-stock-form" style="display:none;margin-top:10px">
-            <label class="form-label">Items</label>
-            <div id="prem-stock-items"></div>
-            <button class="btn btn-ghost" onclick="premiumAddStockRow()" style="margin-top:6px">➕ Add item</button>
-            <label class="form-label">Filled by</label>
-            <input class="form-input" type="text" id="prem-stock-filledby" placeholder="Name">
-            <label class="form-label">Notes</label>
-            <textarea class="form-input" id="prem-stock-notes" rows="2" placeholder="Optional — condition, shortages, anything worth flagging"></textarea>
-            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-              <button class="btn btn-primary" onclick="premiumSaveStock()" style="flex:1;min-width:140px">💾 Save</button>
-              <button class="btn btn-ghost" onclick="premiumPrintStock()" style="flex:1;min-width:140px">🖨️ Print</button>
-            </div>
-            <div id="prem-stock-status" style="font-size:10px;color:var(--text-2);margin-top:6px"></div>
-          </div>
-          <div style="height:1px;background:var(--border);margin:14px 0"></div>
-          <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:6px">Every location — last filled</div>
-          <div id="prem-stock-current" style="font-size:12px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
         </div>
 
       </div>
@@ -3934,7 +3927,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-premium-walkin-redesign-1';
+const BUILD_TAG = '2026-09-24-premium-polish-2';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5032,28 +5025,6 @@ async function api(action, data) {
       const rows = await sb('premium_assignments?employee_id=eq.'+encodeURIComponent(data.employeeId)+'&select=locations').catch(()=>({_err:true}));
       if (rows._err || !Array.isArray(rows) || !rows.length) return {ok:true, locations:[]};
       return { ok:true, locations: rows[0].locations || [] };
-    }
-    case 'getPremiumStock': {
-      if (!data.location) return {ok:true, stock:null};
-      const rows = await sb('premium_stock?location_name=eq.'+encodeURIComponent(data.location)+'&select=*').catch(()=>({_err:true}));
-      if (rows._err) return {ok:false,error:'Network — has 18_premium_department.sql been run?'};
-      return { ok:true, stock: (Array.isArray(rows) && rows[0]) ? rows[0] : null };
-    }
-    case 'getPremiumStockAll': {
-      const rows = await sb('premium_stock?order=location_name.asc&select=*').catch(()=>({_err:true}));
-      if (rows._err) return {ok:false,error:'Network — has 18_premium_department.sql been run?'};
-      return { ok:true, stock: rows };
-    }
-    case 'savePremiumStock': {
-      // Delete-then-reinsert — same pattern as zone_assignments/
-      // premium_assignments. This is "what's there right now," so a save
-      // replaces the previous list for that location rather than appending.
-      if (!data.location) return {ok:false,error:'Missing location'};
-      await sb('premium_stock?location_name=eq.'+encodeURIComponent(data.location), { method:'DELETE', headers:{Prefer:'return=minimal'} }).catch(()=>{});
-      const body = { location_name:data.location, items:data.items||[], notes:data.notes||'', filled_by:data.filledBy||'', updated_at:new Date().toISOString() };
-      const r = await sb('premium_stock', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
-      if (r && r._queued) return {ok:true, queued:true};
-      return r._err ? {ok:false,error:'Could not save stock'} : {ok:true};
     }
 
     // ---------- PREMIUM ROSTER / CHECK-INS ----------
@@ -17693,8 +17664,6 @@ async function renderPremiumForRole() {
     await premiumLoadLocations();
     await premiumLoadPeople();
     await premiumRenderCurrentAssignments();
-    await premiumLoadStockLocationOptions();
-    await premiumRenderStockCurrent();
     await premiumRenderCheckins();
   }
   await premiumRenderRoster(isMgr);
@@ -17715,7 +17684,6 @@ async function premiumLoadLocations() {
     '</div>'
   ).join('');
   premiumRenderLocationChecks();
-  premiumLoadStockLocationOptions();
 }
 async function premiumAddLocation() {
   if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
@@ -17811,136 +17779,6 @@ async function premiumRenderCurrentAssignments() {
   ).join('');
 }
 
-// -- Stock filled at a location (Premium Manager only) --
-// Deliberately "what's there right now," not a ledger — saving a location
-// replaces its previous list entirely, same one-row-per-location model as
-// premium_assignments. Its own table (premium_stock); never touches
-// concession's inventory_entries.
-let _premStockRows = [], _premStockItems = [];
-async function premiumLoadStockLocationOptions() {
-  const sel = document.getElementById('prem-stock-location');
-  if (!sel) return;
-  const current = sel.value;
-  sel.innerHTML = '<option value="">Select location…</option>' + _premLocations.map(l =>
-    '<option value="' + escapeAttr(l.name) + '">' + escapeHtml(l.name) + '</option>'
-  ).join('');
-  if (current && _premLocations.some(l => l.name === current)) sel.value = current;
-}
-function premiumBlankStockRow() { return { name: '', qty: '' }; }
-async function premiumLoadStockForLocation() {
-  const loc = document.getElementById('prem-stock-location').value;
-  const form = document.getElementById('prem-stock-form');
-  if (form) form.style.display = loc ? 'block' : 'none';
-  if (!loc) return;
-  const res = await api('getPremiumStock', { location: loc });
-  const row = res.ok ? res.stock : null;
-  _premStockItems = (row && row.items && row.items.length) ? row.items.map(i => ({ name: i.name || '', qty: i.qty || '' })) : [premiumBlankStockRow()];
-  document.getElementById('prem-stock-notes').value = row ? (row.notes || '') : '';
-  document.getElementById('prem-stock-filledby').value = row ? (row.filled_by || '') : ((state.staffAccount && state.staffAccount.name) || '');
-  document.getElementById('prem-stock-status').textContent = row ? 'Last saved ' + new Date(row.updated_at).toLocaleString() : 'Not filled yet — add items below.';
-  premiumRenderStockItems();
-}
-function premiumRenderStockItems() {
-  const el = document.getElementById('prem-stock-items');
-  if (!el) return;
-  el.innerHTML = _premStockItems.map((it, i) =>
-    '<div style="display:flex;gap:8px;margin-bottom:6px">' +
-      '<input class="form-input" type="text" placeholder="Item name" value="' + escapeAttr(it.name) + '" oninput="premiumStockItemChanged(' + i + ',\'name\',this.value)" style="flex:2;margin:0">' +
-      '<input class="form-input" type="text" placeholder="Qty" value="' + escapeAttr(it.qty) + '" oninput="premiumStockItemChanged(' + i + ',\'qty\',this.value)" style="flex:1;margin:0">' +
-      '<button class="btn btn-ghost" onclick="premiumRemoveStockRow(' + i + ')" style="width:auto;padding:0 12px;margin:0">✕</button>' +
-    '</div>'
-  ).join('');
-}
-function premiumStockItemChanged(i, field, val) { if (_premStockItems[i]) _premStockItems[i][field] = val; }
-function premiumAddStockRow() { _premStockItems.push(premiumBlankStockRow()); premiumRenderStockItems(); }
-function premiumRemoveStockRow(i) { _premStockItems.splice(i, 1); if (!_premStockItems.length) _premStockItems.push(premiumBlankStockRow()); premiumRenderStockItems(); }
-async function premiumSaveStock() {
-  if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
-  const loc = document.getElementById('prem-stock-location').value;
-  if (!loc) return toast('Select a location first', 'error');
-  const items = _premStockItems.map(i => ({ name: (i.name || '').trim(), qty: (i.qty || '').trim() })).filter(i => i.name);
-  if (!items.length) return toast('Add at least one item', 'error');
-  const notes = document.getElementById('prem-stock-notes').value.trim();
-  const filledBy = document.getElementById('prem-stock-filledby').value.trim();
-  const res = await api('savePremiumStock', { location: loc, items, notes, filledBy });
-  if (res.ok) { toast('✅ Stock saved for ' + loc); document.getElementById('prem-stock-status').textContent = 'Saved just now'; premiumRenderStockCurrent(); }
-  else toast(res.error || 'Could not save', 'error');
-}
-async function premiumRenderStockCurrent() {
-  const el = document.getElementById('prem-stock-current');
-  if (!el) return;
-  const res = await api('getPremiumStockAll', {});
-  if (!res.ok) { el.innerHTML = '<div class="notice" style="font-size:11px">Could not load — run 18_premium_department.sql in Supabase.</div>'; return; }
-  _premStockRows = res.stock || [];
-  if (!_premStockRows.length) { el.innerHTML = '<div style="color:var(--text-2)">Nothing filled in yet.</div>'; return; }
-  el.innerHTML = _premStockRows.map(r => {
-    const itemsTxt = (r.items || []).map(i => i.name + (i.qty ? ' (' + i.qty + ')' : '')).join(', ');
-    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
-        '<b>' + escapeHtml(r.location_name) + '</b>' +
-        '<button class="btn btn-ghost" onclick="premiumPrintStock(\'' + r.location_name.replace(/'/g, "\\'") + '\')" style="width:auto;padding:4px 10px;font-size:11px;margin:0">🖨️ Print</button>' +
-      '</div>' +
-      '<span style="color:var(--text-2)">' + escapeHtml(itemsTxt || '(no items)') + '</span>' +
-      (r.filled_by ? '<br><span style="color:var(--text-3);font-size:10px">Filled by ' + escapeHtml(r.filled_by) + '</span>' : '') +
-    '</div>';
-  }).join('');
-}
-
-// Print — landscape by default (a full item list usually runs wider than
-// tall), portrait still works fine if the browser's print dialog is
-// switched. Deliberately simple: one location, its item list, a notes
-// box and a filled-by line — not the dense multi-column concession
-// Stand Sheet ledger (printInvReportBuild above), because Premium's
-// day-to-day items and the "what's there right now" question this answers
-// are genuinely different from concession's restock/waste/comp ledger.
-async function premiumPrintStock(locationArg) {
-  const loc = locationArg || document.getElementById('prem-stock-location').value;
-  if (!loc) return toast('Select a location first', 'error');
-  let row = _premStockRows.find(r => r.location_name === loc);
-  if (!row) {
-    const res = await api('getPremiumStock', { location: loc });
-    row = res.ok ? res.stock : null;
-  }
-  const w = window.open('', '_blank');
-  if (!w) return toast('⚠️ Popup blocked — allow popups for this site and try again', 'error');
-  const items = (row && row.items) || [];
-  const notes = (row && row.notes) || '';
-  const filledBy = (row && row.filled_by) || '';
-  const updated = row && row.updated_at ? new Date(row.updated_at).toLocaleString() : '';
-  let html = '<html><head><title>Premium Stock — ' + escapeHtml(loc) + '</title><style>' +
-    '@page{size:letter landscape;margin:0.5in}' +
-    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}' +
-    'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0}' +
-    '.hdr{border:1.4px solid #555;margin-bottom:14px}' +
-    '.hdr-title{text-align:center;font-size:22px;font-weight:800;padding:10px;border-bottom:1.4px solid #555;background:#f7f7f7}' +
-    '.hdr-row{display:flex;border-top:1px solid #777}' +
-    '.hdr-cell{flex:1;padding:8px 12px;border-right:1px solid #777;font-size:13px}' +
-    '.hdr-cell:last-child{border-right:none}' +
-    '.hdr-cell .lbl{font-size:10px;text-transform:uppercase;color:#555;display:block;margin-bottom:2px}' +
-    'table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px}' +
-    'th{border:1px solid #666;padding:8px;background:#eee;font-weight:800;text-align:left}' +
-    'td{border:1px solid #777;padding:8px}' +
-    'tr:nth-child(even) td{background:#f4f4f4}' +
-    '.notesbox{border:1px solid #999;min-height:60px;padding:8px;font-size:12px;white-space:pre-wrap}' +
-    '.foot{font-size:10px;color:#666;display:flex;justify-content:space-between;margin-top:8px}' +
-    '</style></head><body>' +
-    '<div class="hdr"><div class="hdr-title">⭐ Premium — ' + escapeHtml(loc) + '</div>' +
-    '<div class="hdr-row">' +
-      '<div class="hdr-cell"><span class="lbl">Filled by</span>' + escapeHtml(filledBy || '—') + '</div>' +
-      '<div class="hdr-cell"><span class="lbl">Last updated</span>' + escapeHtml(updated || '—') + '</div>' +
-      '<div class="hdr-cell"><span class="lbl">Printed</span>' + escapeHtml(new Date().toLocaleString()) + '</div>' +
-    '</div></div>' +
-    '<table><thead><tr><th style="width:60px">#</th><th>Item</th><th style="width:200px">Quantity</th></tr></thead><tbody>' +
-    (items.length ? items.map((it, i) => '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(it.name) + '</td><td>' + escapeHtml(it.qty || '') + '</td></tr>').join('') : '<tr><td colspan="3" style="text-align:center;color:#900">No items filled in yet</td></tr>') +
-    '</tbody></table>' +
-    '<div style="font-size:11px;font-weight:700;margin-bottom:4px">Notes</div>' +
-    '<div class="notesbox">' + (notes ? escapeHtml(notes) : '&nbsp;') + '</div>' +
-    '<div class="foot"><span>Generated from Stadium Ops · Premium</span><span>' + escapeHtml(loc) + '</span></div>' +
-    '<scr' + 'ipt>window.print()<\/scr' + 'ipt></body></html>';
-  w.document.write(html);
-  w.document.close();
-}
-
 // -- Today's check-ins (Premium Manager only) --
 // Own table (premium_schedule) — this is the day-of-game roster of
 // Premium workers (bartenders, suite attendants, etc.), separate from the
@@ -18007,7 +17845,7 @@ function premiumRenderCheckinsList() {
     const isOpen = searching || _premOpenGroups.has(loc);
     const rowsHtml = rows.map(r => {
       const cls = r.status === 'present' ? 'present' : r.status === 'absent' ? 'absent' : '';
-      return '<div class="prem-row ' + cls + '">' +
+      return '<div class="prem-row ' + cls + '" id="prem-row-' + r.id + '">' +
         '<div class="prem-row-info">' +
           '<div class="prem-row-name">' + escapeHtml(r.worker_name) + (r.is_walkin ? ' <span style="font-size:9px;color:var(--aramark-red);font-weight:800">WALK-IN</span>' : '') + '</div>' +
           '<div class="prem-row-meta">' + escapeHtml(r.role_title || '') + (r.start_time ? ' · ' + escapeHtml(r.start_time) + '–' + escapeHtml(r.end_time || '') : '') + '</div>' +
@@ -18033,6 +17871,66 @@ function premiumRenderCheckinsList() {
 
   if (!list.innerHTML) list.innerHTML = '<div style="font-size:11px;color:var(--text-3);padding:10px 0">No one matches — clear the search or filter.</div>';
 }
+// -- Export today's check-ins (CSV + printable "PDF") --
+function premiumExportCheckinsCSV() {
+  if (!_premScheduleRows.length) return toast('Nothing to export', 'error');
+  const esc = v => { const t = String(v == null ? '' : v); return (t.indexOf(',') >= 0 || t.indexOf('"') >= 0) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  let csv = 'Location,Name,Role,Start,End,Status,Walk-in\n';
+  [..._premScheduleRows].sort((a, b) => a.location_name.localeCompare(b.location_name) || a.worker_name.localeCompare(b.worker_name)).forEach(r => {
+    csv += [r.location_name, r.worker_name, r.role_title || '', r.start_time || '', r.end_time || '', r.status, r.is_walkin ? 'Yes' : ''].map(esc).join(',') + '\n';
+  });
+  downloadCSV(csv, 'premium_checkins_' + premiumCheckinDate() + '.csv');
+  toast('⬇️ Check-ins CSV downloaded');
+}
+// "PDF" the same way the rest of this app produces one — a styled print
+// page the browser's own Print dialog saves as PDF (Destination: Save as
+// PDF), same trick as printInvReportBuild/printTimesheet elsewhere. No
+// PDF library needed, and it matches how every other export in this app
+// already works.
+function premiumExportCheckinsPDF() {
+  if (!_premScheduleRows.length) return toast('Nothing to export', 'error');
+  const w = window.open('', '_blank');
+  if (!w) return toast('⚠️ Popup blocked — allow popups for this site and try again', 'error');
+  const date = premiumCheckinDate();
+  const byLoc = {};
+  _premScheduleRows.forEach(r => { (byLoc[r.location_name] = byLoc[r.location_name] || []).push(r); });
+  const locNames = Object.keys(byLoc).sort();
+  const present = _premScheduleRows.filter(r => r.status === 'present').length;
+  let html = '<html><head><title>Premium Check-ins — ' + escapeHtml(date) + '</title><style>' +
+    '@page{size:letter portrait;margin:0.5in}' +
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}' +
+    'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0}' +
+    '.hdr{border:1.4px solid #555;margin-bottom:14px;border-radius:6px;overflow:hidden}' +
+    '.hdr-title{text-align:center;font-size:20px;font-weight:800;padding:10px;background:#f7f7f7;border-bottom:1.4px solid #555}' +
+    '.hdr-row{display:flex;border-top:1px solid #777}' +
+    '.hdr-cell{flex:1;padding:8px 12px;border-right:1px solid #777;font-size:12px}' +
+    '.hdr-cell:last-child{border-right:none}' +
+    '.hdr-cell .lbl{font-size:9px;text-transform:uppercase;color:#555;display:block;margin-bottom:2px}' +
+    '.loc{font-size:13px;font-weight:800;margin:14px 0 4px;padding-bottom:3px;border-bottom:2px solid #E4002B}' +
+    'table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px}' +
+    'th{border:1px solid #666;padding:5px 6px;background:#eee;font-weight:800;text-align:left}' +
+    'td{border:1px solid #999;padding:5px 6px}' +
+    'tr:nth-child(even) td{background:#f6f6f6}' +
+    '.st{font-weight:800;font-size:9px;text-transform:uppercase}' +
+    '.st.present{color:#00A651}.st.absent{color:#DC2626}' +
+    '</style></head><body>' +
+    '<div class="hdr"><div class="hdr-title">⭐ Premium — Check-ins</div><div class="hdr-row">' +
+      '<div class="hdr-cell"><span class="lbl">Date</span>' + escapeHtml(date) + '</div>' +
+      '<div class="hdr-cell"><span class="lbl">Present</span>' + present + ' / ' + _premScheduleRows.length + '</div>' +
+      '<div class="hdr-cell"><span class="lbl">Printed</span>' + escapeHtml(new Date().toLocaleString()) + '</div>' +
+    '</div></div>' +
+    locNames.map(loc => {
+      const rows = byLoc[loc].slice().sort((a, b) => a.worker_name.localeCompare(b.worker_name));
+      return '<div class="loc">' + escapeHtml(loc) + ' (' + rows.filter(r => r.status === 'present').length + '/' + rows.length + ')</div>' +
+        '<table><thead><tr><th>Name</th><th>Role</th><th>Time</th><th style="width:70px">Status</th></tr></thead><tbody>' +
+        rows.map(r => '<tr><td>' + escapeHtml(r.worker_name) + (r.is_walkin ? ' <small>(walk-in)</small>' : '') + '</td><td>' + escapeHtml(r.role_title || '') + '</td><td>' + escapeHtml(r.start_time || '') + '–' + escapeHtml(r.end_time || '') + '</td><td class="st ' + r.status + '">' + escapeHtml(r.status) + '</td></tr>').join('') +
+        '</tbody></table>';
+    }).join('') +
+    '<scr' + 'ipt>window.print()<\/scr' + 'ipt></body></html>';
+  w.document.write(html);
+  w.document.close();
+}
+
 function premiumToggleGroup(loc) {
   if (_premOpenGroups.has(loc)) _premOpenGroups.delete(loc); else _premOpenGroups.add(loc);
   const el = document.getElementById('prem-group-' + loc.replace(/[^a-zA-Z0-9]/g,'_'));
@@ -18048,6 +17946,8 @@ async function premiumSetCheckin(id, status) {
   const prevStatus = row ? row.status : null;
   if (row) row.status = status; // optimistic — instant visual feedback, no waiting on the network mid-gameday
   premiumRenderCheckinsList();
+  const rowEl = document.getElementById('prem-row-' + id);
+  if (rowEl) rowEl.classList.add(status === 'present' ? 'just-present' : 'just-absent');
   const res = await api('setPremiumCheckin', { id, status });
   if (!res.ok) {
     toast(res.error || 'Could not update — try again', 'error');
@@ -18100,22 +18000,33 @@ function premiumWalkinSearch(term) {
   box.innerHTML = '<div style="font-size:11px;color:var(--text-2);padding:6px 0">Searching…</div>';
   _premWalkinSearchTimer = setTimeout(async () => {
     const safe = encodeURIComponent('*' + q.replace(/[*,()]/g, '') + '*');
-    const rows = await sb('employee_directory?full_name=ilike.' + safe + '&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(() => ({ _err: true }));
-    if (rows._err) { box.innerHTML = '<div class="notice" style="font-size:11px">Could not search — type the name and ID manually below.</div>'; return; }
-    if (!Array.isArray(rows) || !rows.length) { box.innerHTML = '<div class="notice info" style="font-size:11px;padding:8px 10px">No match — type their name and ID manually below.</div>'; return; }
-    box.innerHTML = rows.map(r => {
-      const nm = escapeAttr(r.full_name || ''), id = escapeAttr(r.employee_id || '');
-      return '<div class="prem-walkin-result" onclick="premiumWalkinPickPerson(\'' + nm + '\',\'' + id + '\')">' +
-        '<div class="name">' + escapeHtml(r.full_name || '') + '</div>' +
-        '<div class="meta">ID ' + escapeHtml(r.employee_id || '') + (r.role ? ' · ' + escapeHtml(r.role) : '') + '</div>' +
+    // premium_positions first (real Premium job titles — Catering
+    // Services Supervisor, Expo Captain, Suite Attendant, etc., seeded
+    // from the actual roster) so Role auto-fills correctly; the generic
+    // employee_directory fills in anyone not in that list yet.
+    const [posRows, dirRows] = await Promise.all([
+      sb('premium_positions?full_name=ilike.' + safe + '&order=full_name.asc&limit=8&select=employee_id,full_name,position').catch(() => ({ _err: true })),
+      sb('employee_directory?full_name=ilike.' + safe + '&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(() => ({ _err: true }))
+    ]);
+    const seen = new Set();
+    const results = [];
+    if (!posRows._err && Array.isArray(posRows)) posRows.forEach(r => { if (!seen.has(r.employee_id)) { seen.add(r.employee_id); results.push({ id: r.employee_id, name: r.full_name, role: r.position, source: 'Premium roster' }); } });
+    if (!dirRows._err && Array.isArray(dirRows)) dirRows.forEach(r => { if (!seen.has(r.employee_id)) { seen.add(r.employee_id); results.push({ id: r.employee_id, name: r.full_name, role: r.role, source: '' }); } });
+    if (!results.length) { box.innerHTML = '<div class="notice info" style="font-size:11px;padding:8px 10px">No match — type their name, ID and role manually below.</div>'; return; }
+    box.innerHTML = results.map(r => {
+      const nm = escapeAttr(r.name || ''), id = escapeAttr(r.id || ''), role = escapeAttr(r.role || '');
+      return '<div class="prem-walkin-result" onclick="premiumWalkinPickPerson(\'' + nm + '\',\'' + id + '\',\'' + role + '\')">' +
+        '<div class="name">' + escapeHtml(r.name || '') + '</div>' +
+        '<div class="meta">ID ' + escapeHtml(r.id || '') + (r.role ? ' · ' + escapeHtml(r.role) : '') + (r.source ? ' · ' + r.source : '') + '</div>' +
       '</div>';
     }).join('');
   }, 300);
 }
-function premiumWalkinPickPerson(name, empId) {
+function premiumWalkinPickPerson(name, empId, role) {
   document.getElementById('prem-walkin-name').value = name;
   document.getElementById('prem-walkin-empid').value = empId;
-  document.getElementById('prem-walkin-search-results').innerHTML = '<div class="notice info" style="font-size:11px;padding:8px 10px">✅ Selected <b>' + escapeHtml(name) + '</b> · ID ' + escapeHtml(empId) + '</div>';
+  if (role) document.getElementById('prem-walkin-role').value = role;
+  document.getElementById('prem-walkin-search-results').innerHTML = '<div class="notice info" style="font-size:11px;padding:8px 10px">✅ Selected <b>' + escapeHtml(name) + '</b> · ID ' + escapeHtml(empId) + (role ? ' · ' + escapeHtml(role) : '') + '</div>';
   document.getElementById('prem-walkin-search').value = '';
 }
 async function premiumSaveWalkin() {
