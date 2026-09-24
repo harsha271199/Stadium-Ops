@@ -3854,7 +3854,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-premium-common-login-1';
+const BUILD_TAG = '2026-09-24-warehouse-big-buttons-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10746,6 +10746,22 @@ async function mgrClockOut(idx) {
 // same names so Create Transfer's item list populates normally.
 const WAREHOUSE_TRANSFER_HUBS = ['DFA Warehouse', 'MAS Warehouse'];
 
+// One-tap shortcut for warehouse-to-warehouse transfers — opens the tools
+// drawer, pre-selects the destination stand, and loads its items, instead
+// of making a manager dig through a collapsed drawer's plain dropdown to
+// find "MAS Warehouse" buried alongside every concession stand.
+async function whQuickHubTransfer(fromStand, toStand) {
+  const drawer = document.getElementById('wh-manager-tools');
+  if (drawer && !drawer.open) drawer.open = true;
+  await mtLoadStands();
+  const sel = document.getElementById('mt-stand');
+  if (sel) sel.value = toStand;
+  await mtLoadStandItems();
+  toast('🔁 Sending to ' + toStand + ' — from ' + fromStand);
+  const target = document.getElementById('mt-items-area') || drawer;
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function mtLoadStands() {
   const sel = document.getElementById('mt-stand');
   if (!sel || sel.options.length > 1) return;
@@ -17244,6 +17260,8 @@ function renderWarehouseForRole() {
   if (existingQr) existingQr.remove();
   const existingCoverage = document.getElementById('wh-coverage-card');
   if (existingCoverage) existingCoverage.remove();
+  const existingQuick = document.getElementById('wh-quick-actions');
+  if (existingQuick) existingQuick.remove();
 
   if (!isWhMgr) return;
 
@@ -17260,6 +17278,28 @@ function renderWarehouseForRole() {
     '<div id="wh-manager-stats" style="font-size:13px;color:var(--text-2)">Loading…</div>';
   list.parentNode.insertBefore(summary, list);
   refreshWarehouseManagerStats();
+
+  // Big, obvious, one-tap actions — same "large tappable row" pattern
+  // used everywhere else in the app (sub-menu-btn: icon + label + sub,
+  // full width, thumb-friendly), not the dense form-and-dropdown layout
+  // the rest of this screen still uses. This is what was missing:
+  // warehouse-to-warehouse transfer existed but was buried three steps
+  // deep inside a collapsed drawer's stand dropdown.
+  const quick = document.createElement('div');
+  quick.id = 'wh-quick-actions';
+  quick.style.cssText = 'margin-bottom:12px';
+  quick.innerHTML =
+    '<button class="big-action" style="border-left:4px solid #00A651" onclick="whQuickHubTransfer(\'DFA Warehouse\',\'MAS Warehouse\')">' +
+      '<span class="icon">🔁</span><span class="text"><div>DFA Warehouse → MAS Warehouse</div><div class="sub">Send common stock to the MAS warehouse</div></span>' +
+    '</button>' +
+    '<button class="big-action" style="border-left:4px solid #00A651" onclick="whQuickHubTransfer(\'MAS Warehouse\',\'DFA Warehouse\')">' +
+      '<span class="icon">🔁</span><span class="text"><div>MAS Warehouse → DFA Warehouse</div><div class="sub">Send common stock to the DFA warehouse</div></span>' +
+    '</button>' +
+    '<button class="big-action" style="border-left:4px solid #7C3AED" onclick="exportWhTransfersCSV()">' +
+      '<span class="icon">⬇️</span><span class="text"><div>Download all transfers</div><div class="sub">Every open transfer + items, as a CSV</div></span>' +
+    '</button>';
+  list.parentNode.insertBefore(quick, list);
+
   const whCoverage=document.createElement('div');whCoverage.id='wh-coverage-card';whCoverage.className='card wh-coverage-card';
   whCoverage.innerHTML='<div style="font-weight:850;font-size:13px">🗺️ Warehouse game-day coverage</div>'+
     '<div style="font-size:9px;color:var(--text-2);margin:3px 0 8px">Assign Warehouse employees/supervisors to delivery areas. Admin controls every team; Warehouse Manager controls Warehouse only.</div>'+
@@ -18329,7 +18369,12 @@ async function loadWhTransfers() {
     const todayVenues = await whGetTodayVenues();
     if (todayVenues.size) {
       const standVenue = await whGetStandVenueMap();
-      filtered = rows.filter(t => todayVenues.has(standVenue[t.stand] || '__none__'));
+      // Warehouse-to-warehouse transfers (DFA Warehouse / MAS Warehouse)
+      // always show under "Today's venue" regardless of which venue has a
+      // game today — a transfer sent to the OTHER venue's warehouse ahead
+      // of an upcoming game was getting silently hidden here, which is
+      // exactly what looked like "the transfer disappeared."
+      filtered = rows.filter(t => WAREHOUSE_TRANSFER_HUBS.includes(t.stand) || todayVenues.has(standVenue[t.stand] || '__none__'));
       // If nothing matches today's venue, don't show a confusingly empty
       // list — fall back to recent so there's still something actionable.
       if (!filtered.length) filtered = rows.filter(t => new Date(t.created_at).getTime() >= Date.now() - 2*24*60*60*1000);
