@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-24-warehouse-mgr-tiles-only-1
+- Fixed the tile restructure being incomplete: the manager was seeing the old tab-bar slider (Transfers/Requests/Stock Report/Golf Cart) *and* the new tile grid at the same time, stacked on top of each other. The tab-bar is now hidden entirely for Warehouse Manager — tiles only. Employee/Supervisor are unaffected; they still get the original tab-bar exactly as before.
+- Expanded the manager's tile grid from 4 to 7: **Create Transfer**, **All Transfers**, **Approvals**, **Requests**, **Stock Report**, **Golf Cart**, **Assign & Team** — nothing that used to live under the old tabs was dropped.
+- All Transfers / Requests / Stock Report / Golf Cart now open the exact same underlying panes Employee/Supervisor use (no duplicated markup or data-loading logic), just with a "← Back to menu" button above them — the thing that was completely missing before ("i dont have that back option at all"). Phone/hardware back does the same thing while one of these is open.
+- Create Transfer: replaced the two separate "MAS → DFA" / "DFA → MAS" buttons with a single "Warehouse ↔ Warehouse" tile that reveals one dropdown (From → To) and one "Start transfer" button.
+- Create Transfer: removed the separate "Upload CSV" tile — it just scrolled to the CSV card already sitting on the same screen, which read as the same thing twice. The CSV card itself is unchanged and still reachable by scrolling.
+- Approvals: removed the "Download all transfers (CSV)" button — it was a duplicate of the Download CSV button that already lives in the Transfers pane, and had no distinct purpose.
+- Stock Report: added a "🖨️ Download as PDF" button next to the existing CSV export, using the same print-to-PDF pattern (browser Print dialog → Save as PDF) as Premium's check-ins export — no new library needed.
+
 ## 2026-09-24-warehouse-stock-report-1
 - Renamed "Inventory" to "📊 Stock Report" (tab, tile, and its own notice text) — the naming right next to "Transfers" made it sound like a second task you create/assign, when it's actually just a read-only summary of what completed Transfers already delivered. No self/assign concept needed there because there's nothing to do — it's derived automatically.
 

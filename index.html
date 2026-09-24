@@ -3636,16 +3636,31 @@
     <div class="first-game-help" id="wh-first-game-help">Tap the next job and follow the screen. You can always go back if you open the wrong stand.</div>
     <div id="warehouse-alert-status" style="margin-bottom:9px"></div>
 
-    <!-- Main mode tabs -->
-    <div class="tab-bar" style="margin-bottom:14px">
-      <div class="tab-item" id="wh-tab-todeliver" style="display:none" onclick="whMode(this,'todeliver')">📥 Available Jobs <span class="badge-count" id="wh-todeliver-count">0</span></div>
-      <div class="tab-item active" id="wh-tab-transfers" onclick="whMode(this,'transfers')">🚚 Transfers <span class="badge-count" id="wh-transfer-count">0</span></div>
-      <div class="tab-item" id="wh-tab-requests" onclick="whMode(this,'requests')">📥 Requests <span class="badge-count" id="wh-open-count">0</span></div>
-      <div class="tab-item" id="wh-tab-inventory" style="display:none" onclick="whMode(this,'inventory')">📊 Stock Report</div>
-      <div class="tab-item" id="wh-tab-cart" style="display:none" onclick="whMode(this,'cart')">🛺 Golf Cart</div>
-      <div class="tab-item" id="wh-tab-mycart" style="display:none" onclick="goGolfCart()">🛺 Cart</div>
+    <!-- Main mode tabs — only shown for Employee/Supervisor. Warehouse
+         Manager gets a tile menu instead (built in renderWarehouseForRole),
+         with this whole tab-bar hidden, so there's never a slider AND a
+         box grid on screen at once. -->
+    <div id="wh-tabbar-wrap">
+      <div class="tab-bar" style="margin-bottom:14px">
+        <div class="tab-item" id="wh-tab-todeliver" style="display:none" onclick="whMode(this,'todeliver')">📥 Available Jobs <span class="badge-count" id="wh-todeliver-count">0</span></div>
+        <div class="tab-item active" id="wh-tab-transfers" onclick="whMode(this,'transfers')">🚚 Transfers <span class="badge-count" id="wh-transfer-count">0</span></div>
+        <div class="tab-item" id="wh-tab-requests" onclick="whMode(this,'requests')">📥 Requests <span class="badge-count" id="wh-open-count">0</span></div>
+        <div class="tab-item" id="wh-tab-inventory" style="display:none" onclick="whMode(this,'inventory')">📊 Stock Report</div>
+        <div class="tab-item" id="wh-tab-cart" style="display:none" onclick="whMode(this,'cart')">🛺 Golf Cart</div>
+        <div class="tab-item" id="wh-tab-mycart" style="display:none" onclick="goGolfCart()">🛺 Cart</div>
+      </div>
     </div>
 
+    <!-- Warehouse Manager tile menu — populated in renderWarehouseForRole().
+         Empty/hidden for Employee/Supervisor. -->
+    <div id="wh-mgr-tiles-slot" style="display:none"></div>
+
+    <!-- Shown only when a manager has tapped into one of the shared panes
+         below via a tile — gives them the back button they were missing,
+         without duplicating the pane markup/logic per role. -->
+    <button class="btn btn-ghost" id="wh-mgr-backbar" onclick="whMgrBackToMenu()" style="display:none;margin-bottom:12px">← Back to menu</button>
+
+    <div id="wh-panes-wrap">
     <!-- MODE X: TO DELIVER (Employee only) — merges Transfers + Requests
          into one list, since both are "go deliver stock to a stand,"
          just created two different ways. Old Transfers/Requests tabs
@@ -3712,6 +3727,7 @@
         <button class="btn btn-primary" id="wh-count-save-btn" onclick="whSaveCount()" style="margin-top:12px">💾 Save count for this stand</button>
         <div id="wh-count-status" style="text-align:center;font-size:12px;color:var(--text-2);margin-top:10px"></div>
       </div>
+    </div>
     </div>
   </div>
 </div>
@@ -3845,21 +3861,21 @@
         <div class="tile-label">Self Transfer</div>
         <div class="tile-sub">Any stand — you deliver it</div>
       </div>
-      <div class="action-tile" onclick="whQuickHubTransfer('MAS Warehouse','DFA Warehouse')">
+      <div class="action-tile" onclick="whToggleHubPicker()">
         <span class="tile-icon">🔁</span>
-        <div class="tile-label">MAS → DFA</div>
-        <div class="tile-sub">Warehouse to warehouse</div>
+        <div class="tile-label">Warehouse ↔ Warehouse</div>
+        <div class="tile-sub">MAS ⇄ DFA</div>
       </div>
-      <div class="action-tile" onclick="whQuickHubTransfer('DFA Warehouse','MAS Warehouse')">
-        <span class="tile-icon">🔁</span>
-        <div class="tile-label">DFA → MAS</div>
-        <div class="tile-sub">Warehouse to warehouse</div>
-      </div>
-      <div class="action-tile" onclick="document.getElementById('wh-ct-csv-card').scrollIntoView({behavior:'smooth'})">
-        <span class="tile-icon">📤</span>
-        <div class="tile-label">Upload CSV</div>
-        <div class="tile-sub">Bulk-create from a sheet</div>
-      </div>
+    </div>
+
+    <div class="card" id="wh-hub-picker" style="display:none;padding:14px;margin-top:6px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:8px">Warehouse ↔ Warehouse transfer</div>
+      <label class="form-label" style="margin-top:0">From → To</label>
+      <select class="form-input" id="wh-hub-direction">
+        <option value="MAS Warehouse|DFA Warehouse">MAS Warehouse → DFA Warehouse</option>
+        <option value="DFA Warehouse|MAS Warehouse">DFA Warehouse → MAS Warehouse</option>
+      </select>
+      <button class="btn btn-primary" onclick="whHubTransferGo()" style="margin-top:8px">Start transfer →</button>
     </div>
 
     <div class="card" style="padding:14px;margin-top:6px" id="wh-ct-form-card">
@@ -3904,7 +3920,6 @@
   <div class="content">
     <div class="card" style="padding:14px;margin-bottom:12px">
       <div id="wh-appr-stats"><div class="loading"><div class="spinner"></div>Loading…</div></div>
-      <button class="btn btn-ghost" onclick="exportWhTransfersCSV()" style="margin-top:10px">⬇️ Download all transfers (CSV)</button>
     </div>
     <div id="wh-appr-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
   </div>
@@ -4026,7 +4041,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-warehouse-stock-report-1';
+const BUILD_TAG = '2026-09-24-warehouse-mgr-tiles-only-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10941,11 +10956,41 @@ async function whGoSelfTransfer() {
   const target = document.getElementById('wh-ct-form-card');
   if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-// Switches to the Inventory tab from the tile grid — Inventory already
-// has its own solid tab, no need for a duplicate dedicated screen.
-function whGoInventoryTab() {
-  const tab = document.getElementById('wh-tab-inventory');
-  if (tab) whMode(tab, 'inventory');
+// Single tile + dropdown for warehouse-to-warehouse transfers, replacing
+// the old two separate MAS→DFA / DFA→MAS buttons.
+function whToggleHubPicker() {
+  const el = document.getElementById('wh-hub-picker');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function whHubTransferGo() {
+  const sel = document.getElementById('wh-hub-direction');
+  const parts = (sel && sel.value || '').split('|');
+  if (parts.length !== 2) return;
+  whQuickHubTransfer(parts[0], parts[1]);
+}
+
+// Opens one of the shared tab-bar panes (Transfers/Requests/Stock
+// Report/Golf Cart) from the manager's tile menu — reuses the exact same
+// panes and load functions the Employee/Supervisor tab-bar uses, just
+// with a "back to menu" affordance instead of a visible tab strip, since
+// the manager's tab-bar is hidden entirely (see renderWarehouseForRole).
+function whMgrOpenPane(mode) {
+  const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
+  const panesWrap = document.getElementById('wh-panes-wrap');
+  const backbar = document.getElementById('wh-mgr-backbar');
+  if (tilesSlot) tilesSlot.style.display = 'none';
+  if (panesWrap) panesWrap.style.display = 'block';
+  if (backbar) backbar.style.display = 'block';
+  const tab = document.getElementById('wh-tab-' + mode);
+  if (tab) whMode(tab, mode);
+}
+function whMgrBackToMenu() {
+  const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
+  const panesWrap = document.getElementById('wh-panes-wrap');
+  const backbar = document.getElementById('wh-mgr-backbar');
+  if (tilesSlot) tilesSlot.style.display = '';
+  if (panesWrap) panesWrap.style.display = 'none';
+  if (backbar) backbar.style.display = 'none';
 }
 
 async function mtLoadStands() {
@@ -11492,6 +11537,51 @@ function exportWarehouseCountsCSV() {
   a.download = 'warehouse_counts_' + (rows[0].entry_date || 'export') + '.csv';
   a.click();
   toast('✅ Warehouse counts exported');
+}
+
+// Same print-to-PDF pattern used across the app (window.open + styled
+// HTML + window.print(), letting the browser's own Print dialog "Save as
+// PDF" — no PDF library needed) — matches Premium's check-ins PDF export
+// so this doesn't need a new mechanism.
+function printWarehouseCountsPDF() {
+  const rows = state._whCounts;
+  if (!rows || !rows.length) { toast('Load warehouse counts first', 'error'); return; }
+  const w = window.open('', '_blank');
+  if (!w) return toast('⚠️ Popup blocked — allow popups for this site and try again', 'error');
+  const date = rows[0].entry_date || localISODate();
+  let html = '<html><head><title>Warehouse Counts — ' + escapeHtml(date) + '</title><style>' +
+    '@page{size:letter portrait;margin:0.5in}' +
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}' +
+    'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0}' +
+    '.hdr{border:1.4px solid #555;margin-bottom:14px;border-radius:6px;overflow:hidden}' +
+    '.hdr-title{text-align:center;font-size:20px;font-weight:800;padding:10px;background:#f7f7f7;border-bottom:1.4px solid #555}' +
+    '.hdr-row{display:flex;border-top:1px solid #777}' +
+    '.hdr-cell{flex:1;padding:8px 12px;border-right:1px solid #777;font-size:12px}' +
+    '.hdr-cell:last-child{border-right:none}' +
+    '.hdr-cell .lbl{font-size:9px;text-transform:uppercase;color:#555;display:block;margin-bottom:2px}' +
+    '.stand{font-size:13px;font-weight:800;margin:14px 0 4px;padding-bottom:3px;border-bottom:2px solid #E4002B}' +
+    'table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px}' +
+    'th{border:1px solid #666;padding:5px 6px;background:#eee;font-weight:800;text-align:left}' +
+    'td{border:1px solid #999;padding:5px 6px}' +
+    'tr:nth-child(even) td{background:#f6f6f6}' +
+    '</style></head><body>' +
+    '<div class="hdr"><div class="hdr-title">📊 Warehouse Counts</div><div class="hdr-row">' +
+      '<div class="hdr-cell"><span class="lbl">Date</span>' + escapeHtml(date) + '</div>' +
+      '<div class="hdr-cell"><span class="lbl">Stands counted</span>' + rows.length + '</div>' +
+      '<div class="hdr-cell"><span class="lbl">Printed</span>' + escapeHtml(new Date().toLocaleString()) + '</div>' +
+    '</div></div>' +
+    rows.map(r => {
+      const items = r.counts || {};
+      const entries = Object.entries(items);
+      return '<div class="stand">' + escapeHtml(r.stand) + ' — ' + entries.length + ' item(s), by ' + escapeHtml(r.submitted_by || '?') + '</div>' +
+        '<table><thead><tr><th>Item</th><th style="width:90px">Cases</th></tr></thead><tbody>' +
+        entries.map(([name, qty]) => '<tr><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(String(qty)) + '</td></tr>').join('') +
+        '</tbody></table>' +
+        (r.notes ? '<div style="font-size:11px;color:#555;margin-bottom:8px">📝 ' + escapeHtml(r.notes) + '</div>' : '');
+    }).join('') +
+    '<scr' + 'ipt>window.print()<\/scr' + 'ipt></body></html>';
+  w.document.write(html);
+  w.document.close();
 }
 
 async function loadMgrInventory() {
@@ -17436,11 +17526,29 @@ function renderWarehouseForRole() {
   }
 
   // Manager-only tabs — hidden entirely for employee/supervisor, since
-  // they have no use for Inventory or Golf Cart management.
+  // they have no use for Inventory or Golf Cart management. Irrelevant
+  // for the manager too now since the whole tab-bar is hidden for that
+  // role below, but harmless to leave set.
   const invTab = document.getElementById('wh-tab-inventory');
   const cartTab = document.getElementById('wh-tab-cart');
   if (invTab) invTab.style.display = isWhMgr ? 'block' : 'none';
   if (cartTab) cartTab.style.display = isWhMgr ? 'block' : 'none';
+
+  // Manager sees a tile menu only — no slider. Employee/Supervisor keep
+  // the original tab-bar untouched, panes always visible as before.
+  const tabbarWrap = document.getElementById('wh-tabbar-wrap');
+  const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
+  const panesWrap = document.getElementById('wh-panes-wrap');
+  const backbar = document.getElementById('wh-mgr-backbar');
+  if (tabbarWrap) tabbarWrap.style.display = isWhMgr ? 'none' : '';
+  if (backbar) backbar.style.display = 'none';
+  if (isWhMgr) {
+    if (tilesSlot) tilesSlot.style.display = '';
+    if (panesWrap) panesWrap.style.display = 'none';
+  } else {
+    if (tilesSlot) { tilesSlot.style.display = 'none'; tilesSlot.innerHTML = ''; }
+    if (panesWrap) panesWrap.style.display = '';
+  }
 
   // Cleanup for the old dynamically-injected cards from before this
   // screen was restructured into tiles + dedicated screens. wh-coverage-card
@@ -17458,36 +17566,40 @@ function renderWarehouseForRole() {
   if (existingQr) existingQr.remove();
   const existingQuick = document.getElementById('wh-quick-actions');
   if (existingQuick) existingQuick.remove();
-  const existingTiles = document.getElementById('wh-mgr-tiles');
-  if (existingTiles) existingTiles.remove();
-
   if (!isWhMgr) return;
-
-  const list = document.getElementById('wh-transfers-list');
-  if (!list || !list.parentNode) return;
+  if (!tilesSlot) return;
 
   // One entry point per job, same tile-then-dedicated-screen pattern as
-  // the worker home's Checks/Requests/Team tiles — not four different
-  // cards and a collapsed drawer stacked on the same page. Each tile
-  // owns one focused screen; nothing else lives here.
-  const tiles = document.createElement('div');
-  tiles.id = 'wh-mgr-tiles';
-  tiles.className = 'action-tiles';
-  tiles.style.cssText = 'margin-bottom:4px';
-  tiles.innerHTML =
+  // the worker home's Checks/Requests/Team tiles — not stacked cards and
+  // a collapsed drawer on the same page. Create Transfer / Approvals /
+  // Assign & Team each own a dedicated screen; All Transfers / Requests /
+  // Stock Report / Golf Cart open the same shared panes the Employee and
+  // Supervisor tab-bar uses (via whMgrOpenPane), just with a back button
+  // instead of a visible tab strip.
+  tilesSlot.className = 'action-tiles';
+  tilesSlot.style.cssText = 'display:block;margin-bottom:4px';
+  tilesSlot.innerHTML =
     '<div class="action-tile tile-red" onclick="showScreen(\'screen-wh-create-transfer\')">' +
       '<span class="tile-icon">🚚</span><div class="tile-label">Create Transfer</div><div class="tile-sub">Send stock — self or assign</div>' +
+    '</div>' +
+    '<div class="action-tile" onclick="whMgrOpenPane(\'transfers\')">' +
+      '<span class="tile-icon">📦</span><div class="tile-label">All Transfers</div><div class="tile-sub">Deliveries in progress</div>' +
     '</div>' +
     '<div class="action-tile" id="wh-tile-approvals" onclick="showScreen(\'screen-wh-approvals\')">' +
       '<span class="tile-icon">✅</span><div class="tile-label">Approvals</div><div class="tile-sub" id="wh-tile-approvals-sub">Loading…</div>' +
     '</div>' +
-    '<div class="action-tile" onclick="whGoInventoryTab()">' +
-      '<span class="tile-icon">📊</span><div class="tile-label">Stock Report</div><div class="tile-sub">A summary — nothing to do here</div>' +
+    '<div class="action-tile" onclick="whMgrOpenPane(\'requests\')">' +
+      '<span class="tile-icon">📥</span><div class="tile-label">Requests</div><div class="tile-sub">Stock requests from stands</div>' +
+    '</div>' +
+    '<div class="action-tile" onclick="whMgrOpenPane(\'inventory\')">' +
+      '<span class="tile-icon">📊</span><div class="tile-label">Stock Report</div><div class="tile-sub">Counts — CSV or PDF</div>' +
+    '</div>' +
+    '<div class="action-tile" onclick="whMgrOpenPane(\'cart\')">' +
+      '<span class="tile-icon">🛺</span><div class="tile-label">Golf Cart</div><div class="tile-sub">Drivers & returns</div>' +
     '</div>' +
     '<div class="action-tile" onclick="showScreen(\'screen-wh-team\')">' +
       '<span class="tile-icon">👥</span><div class="tile-label">Assign & Team</div><div class="tile-sub">Who covers what today</div>' +
     '</div>';
-  list.parentNode.insertBefore(tiles, list);
   whUpdateApprovalsTile();
 
   // Inventory — now its own dedicated tab instead of stacked above the
@@ -17504,6 +17616,7 @@ function renderWarehouseForRole() {
         '</div>' +
         '<button class="btn btn-primary" onclick="loadWarehouseCounts()" style="margin-top:8px">📦 View warehouse counts</button>' +
         '<button class="btn btn-ghost" onclick="exportWarehouseCountsCSV()" style="margin-top:8px">⬇️ Export warehouse counts (CSV)</button>' +
+        '<button class="btn btn-ghost" onclick="printWarehouseCountsPDF()" style="margin-top:8px">🖨️ Download as PDF</button>' +
       '</div>' +
       '<div id="wh-mgr-whcounts-list" style="margin-top:12px"></div>';
   }
@@ -20318,6 +20431,15 @@ function handleAppBack() {
   // screen underneath while it's still showing.
   const confirmModal = document.getElementById('app-confirm-modal');
   if (confirmModal && confirmModal.style.display !== 'none') { _appDialogClose(false); return; }
+
+  // Warehouse Manager's tile menu opens shared panes (Transfers/Requests/
+  // Stock Report/Golf Cart) in place rather than navigating to a new
+  // screen — a phone back-gesture while one is open should return to the
+  // tile menu, not fall through to the "Exit app?" prompt below.
+  if (cur === 'screen-warehouse') {
+    const backbar = document.getElementById('wh-mgr-backbar');
+    if (backbar && backbar.style.display !== 'none') { whMgrBackToMenu(); return; }
+  }
 
   // screen-transfer-stand (force-stock) is reachable two genuinely
   // different ways: warehouse staff via their own screen, or a
