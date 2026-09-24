@@ -1,17 +1,12 @@
--- Demo seed for the Premium department: 2 Premium Manager logins + today's
--- roster (matched from the 09/05/2026 ASU vs Morgan State Catering
--- Services Supervisor CSV, dated to today so it shows up in the demo).
--- Run 18_premium_department.sql, 19_premium_locations_seed.sql and
--- 20_premium_schedule.sql first. Safe to re-run.
-
--- ── 2 Premium Managers ──────────────────────────────────────────────
--- Both were Catering Services Supervisors on the source roster — pulled
--- out here as the demo's 2 Premium Managers rather than left as regular
--- scheduled workers. Login: last 5 of employee_id + this PIN.
-insert into staff_accounts (employee_id, name, role, pin, is_active) values
-  ('32448921', 'Larson, Amy', 'premium_manager', '4001', true),
-  ('32310785', 'Pouessel, Emma', 'premium_manager', '4002', true)
-on conflict (employee_id) do update set role = excluded.role, is_active = true;
+-- Demo seed for the Premium department: today's roster (matched from the
+-- 09/05/2026 ASU vs Morgan State Catering Services Supervisor CSV, dated
+-- to today so it shows up in the demo). Run 18_premium_department.sql,
+-- 19_premium_locations_seed.sql and 20_premium_schedule.sql first. Safe
+-- to re-run.
+--
+-- The only 2 Premium Managers are Hernandez, Nestor and Crnjac, Natasha
+-- (sql/24_premium_managers_common_id.sql) — everyone from the source
+-- CSV, Larson and Pouessel included, is a regular scheduled worker below.
 
 -- ── Today's Premium roster ──────────────────────────────────────────
 -- 3 roster rows had no Area/location at all (a floating lead and a
