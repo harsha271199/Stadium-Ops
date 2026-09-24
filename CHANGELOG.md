@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-24-premium-common-login-1
+- Added a Premium shared-ID login (`70000` + last name), same convenience as Warehouse's shared `60000` ID — no per-person ID to memorize.
+- Granted Premium Manager access to Hernandez, Nestor (`170000` / PIN `7001`) and Crnjac, Natasha (`270000` / PIN `7002`), both usable via the shared 70000 ID.
+- Added a date picker to the Check-ins card — it was hardcoded to today with no way to look back. Now defaults to today but can view any date, including the new yesterday demo seed.
+- Seeded yesterday's Premium roster (`sql/23_premium_schedule_yesterday.sql`) — same people/locations as today's seed, shift times normalized to a clean 12:00 PM–10:00 PM block.
+
 ## 2026-09-24-warehouse-transfer-hubs-2
 - Fixed a real defect in the warehouse item catalog seed: it used the concession sheet's Chargeable/Non-Chargeable/Supplies categories, but Create Transfer's item list only groups by ALCOHOL/BEVERAGE/FOOD/SUPPLIES — every item would have silently landed in a catch-all "OTHER" bucket instead of grouping properly. Recategorized correctly, and added "CUP SOUVENIR SODA 32OZ CHURCHIL" (32oz souvenir cup) to the catalog.
 - Polished Create Transfer's item picker: each item is now its own card with a shadow, a highlighted border once you've set a quantity, and a deeper +/− stepper, instead of flat divider-separated rows.

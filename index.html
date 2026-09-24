@@ -3664,11 +3664,12 @@
          move, add walk-in. This is the actual daily tool, so it's the
          very first thing on the page. -->
     <div class="card" id="prem-checkin-card" style="padding:14px;margin-bottom:12px;display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px">
-        <div style="font-weight:700;font-size:14px">✅ Today's check-ins</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+        <div style="font-weight:700;font-size:14px">✅ Check-ins</div>
+        <input class="form-input" type="date" id="prem-checkin-date" onchange="premiumRenderCheckins()" style="margin:0;width:auto;padding:8px 10px">
         <div id="prem-checkin-summary" style="font-size:11px;color:var(--text-2);white-space:nowrap"></div>
       </div>
-      <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Present / Absent / Move — Premium locations only, never mixed with concession.</div>
+      <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Present / Absent / Move — Premium locations only, never mixed with concession. Pick a date to look back at a past game.</div>
       <button class="btn btn-ghost" onclick="premiumOpenWalkin()" style="margin-bottom:6px">➕ Add walk-in</button>
       <div id="prem-walkin-form" style="display:none;margin-bottom:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
         <input class="form-input" type="text" id="prem-walkin-name" placeholder="Name" style="margin:0 0 8px">
@@ -3853,7 +3854,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-warehouse-transfer-hubs-2';
+const BUILD_TAG = '2026-09-24-premium-common-login-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4483,6 +4484,42 @@ async function api(action, data) {
         }
         if(matches.length>1)return {ok:false,error:'More than one warehouse employee has that last name — enter your full name'};
         return {ok:false,error:'Warehouse login not recognized — contact your manager'};
+      }
+
+      // PREMIUM COMMON LOGIN — same shape as the Warehouse shared-ID login
+      // above. Shared ID 70000 is restricted to Premium roles only. The
+      // second field is the person's last name (full name for duplicates).
+      if(idInput==='70000'){
+        if(!secret)return {ok:false,error:'Enter your assigned Premium sign-in credential'};
+        const rows=await sb('staff_accounts?role=in.(premium_employee,premium_manager)&is_active=eq.true&select=employee_id,name,role').catch(()=>({_err:true}));
+        if(rows._err)return {ok:false,error:'Premium login unavailable — try again'};
+        if(!Array.isArray(rows)||!rows.length)return {ok:false,error:'Premium accounts are not available — contact Admin'};
+        const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+        const entered=norm(secret);
+        const aliases=(Array.isArray(rows)?rows:[]).filter(r=>String(r.employee_id||'').endsWith('70000'));
+        if(!aliases.length)return {ok:false,error:'Premium login is unavailable — contact Admin'};
+        const matches=aliases.filter(r=>{
+          const nm=String(r.name||'').trim();
+          const parts=nm.includes(',')?nm.split(',').map(x=>x.trim()):[];
+          const last=norm(parts.length?parts[0]:nm.split(/\s+/).pop());
+          const first=norm(parts.length?parts.slice(1).join(' '):nm.split(/\s+/).slice(0,-1).join(' '));
+          const natural=norm((first+' '+last).trim());
+          const comma=norm(nm);
+          return entered===last||entered===natural||entered===comma||
+            (entered.length>=3&&last.startsWith(entered));
+        });
+        if(matches.length===1){
+          const acct=matches[0];
+          return {ok:true,isStaffSmart:true,staffAccount:{
+            empId:acct.employee_id,
+            name:acct.name,
+            role:acct.role,
+            group:'premium',
+            sharedPremiumLogin:true
+          }};
+        }
+        if(matches.length>1)return {ok:false,error:'More than one Premium account has that last name — enter your full name'};
+        return {ok:false,error:'Premium login not recognized — contact your manager'};
       }
 
       const opsRoles='manager,support_manager,warehouse_employee,warehouse_supervisor,warehouse_manager,tech,food_runner,food_manager,kitchen_runner,kitchen_coordinator,premium_employee,premium_manager';
@@ -6098,7 +6135,7 @@ function openSmartLogin(target){
       manager:'🎯 Manager sign-in — use your last 5 ID + last name. If your last name is shared, enter your full name.',
       tech:'🔧 IT sign-in — use your last 5 ID + personal PIN',
       food:'🍽️ Food Delivery — use your last 5 ID + last name',
-      premium:'⭐ Premium sign-in — use your last 5 ID + personal PIN'
+      premium:'⭐ Premium sign-in — use 70000 + your last name, or your assigned ID + PIN'
     };
     hint.textContent=labels[target]||'';
     hint.classList.toggle('show',!!labels[target]);
@@ -17781,16 +17818,22 @@ async function premiumPrintStock(locationArg) {
 // Premium workers (bartenders, suite attendants, etc.), separate from the
 // premium_employee/premium_manager login accounts tracked above.
 let _premScheduleRows = [];
+function premiumCheckinDate() {
+  const el = document.getElementById('prem-checkin-date');
+  if (el && !el.value) el.value = localISODate();
+  return el ? el.value : localISODate();
+}
 async function premiumRenderCheckins() {
   const list = document.getElementById('prem-checkin-list');
   const summary = document.getElementById('prem-checkin-summary');
   if (!list) return;
-  const res = await api('getPremiumSchedule', { date: localISODate() });
+  const date = premiumCheckinDate();
+  const res = await api('getPremiumSchedule', { date });
   if (!res.ok) { list.innerHTML = '<div class="notice" style="font-size:11px">Could not load — run 20_premium_schedule.sql (and the seed) in Supabase.</div>'; return; }
   _premScheduleRows = res.rows || [];
   const present = _premScheduleRows.filter(r => r.status === 'present').length;
   if (summary) summary.textContent = present + ' present · ' + _premScheduleRows.length + ' total';
-  if (!_premScheduleRows.length) { list.innerHTML = '<div style="font-size:11px;color:var(--text-3)">No one scheduled today yet.</div>'; return; }
+  if (!_premScheduleRows.length) { list.innerHTML = '<div style="font-size:11px;color:var(--text-3)">No one scheduled ' + (date === localISODate() ? 'today' : 'on ' + date) + '.</div>'; return; }
 
   const byLoc = {};
   _premScheduleRows.forEach(r => { (byLoc[r.location_name] = byLoc[r.location_name] || []).push(r); });
@@ -17853,7 +17896,7 @@ async function premiumSaveWalkin() {
   const location = document.getElementById('prem-walkin-location').value;
   if (!name) return toast('Enter a name', 'error');
   if (!location) return toast('Select a location', 'error');
-  const res = await api('addPremiumWalkin', { date: localISODate(), name, roleTitle, location });
+  const res = await api('addPremiumWalkin', { date: premiumCheckinDate(), name, roleTitle, location });
   if (res.ok) { toast('✅ Walk-in added'); premiumCloseWalkin(); premiumRenderCheckins(); }
   else toast(res.error || 'Could not add', 'error');
 }
