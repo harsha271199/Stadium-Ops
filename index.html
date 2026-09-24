@@ -301,6 +301,18 @@
   .prem-export-btn{padding:6px 12px;border-radius:20px;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text-2);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;transition:transform .1s ease,box-shadow .1s ease}
   .prem-export-btn:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
   .prem-export-btn:active{transform:scale(0.94)}
+
+  /* WAREHOUSE MANAGER — status stat chips (Needs your attention row) */
+  .wh-stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:7px}
+  .wh-stat-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 6px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border);text-align:center}
+  .wh-stat-chip b{font-size:19px;font-weight:800;color:var(--text)}
+  .wh-stat-chip span{font-size:9.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.02em}
+  .wh-stat-chip.info{border-color:rgba(0,102,179,0.35);background:rgba(0,102,179,0.08)}
+  .wh-stat-chip.info b{color:#0066B3}
+  .wh-stat-chip.warn{border-color:rgba(217,119,6,0.4);background:rgba(217,119,6,0.08)}
+  .wh-stat-chip.warn b{color:#D97706}
+  .wh-stat-chip.urgent{border-color:rgba(220,38,38,0.4);background:rgba(220,38,38,0.09)}
+  .wh-stat-chip.urgent b{color:#DC2626}
   .prem-loc-group{margin-bottom:10px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:var(--shadow)}
   .prem-loc-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px;background:var(--bg-elevated);cursor:pointer;font-weight:800;font-size:13px;border-bottom:1px solid var(--border)}
   .prem-loc-head .prem-loc-count{font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;background:var(--bg-card);color:var(--text-2);border:1px solid var(--border-strong)}
@@ -3786,7 +3798,7 @@
          same "overview first, tools collapsed" layout as Warehouse
          Manager's screen. Employee sees only their own assigned
          location(s), same "own stand only" pattern as a regular worker. -->
-    <div class="card" style="padding:14px;margin-bottom:12px">
+    <div class="card" id="prem-roster-card" style="padding:14px;margin-bottom:12px">
       <div style="font-weight:700;font-size:14px;margin-bottom:4px" id="prem-roster-title">📋 Premium roster</div>
       <div style="font-size:11px;color:var(--text-2);margin-bottom:10px" id="prem-roster-sub">Who's assigned where.</div>
       <div id="prem-roster-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
@@ -3809,27 +3821,6 @@
             <button class="btn btn-primary" onclick="premiumAddLocation()" style="width:auto;padding:0 16px">Add</button>
           </div>
           <div id="prem-loc-list" style="margin-top:10px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
-        </div>
-
-        <div class="card" style="padding:14px;margin-bottom:12px">
-          <div style="font-weight:700;font-size:14px;margin-bottom:4px">👥 Assign people to locations</div>
-          <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Only Premium logins (Access Center → Premium Employee / Premium Manager) show up here.</div>
-          <label class="form-label" style="margin-top:0">1. Person</label>
-          <select class="form-input" id="prem-assign-person" onchange="premiumLoadPersonAssignment()"><option value="">— Select person —</option></select>
-          <div id="prem-assign-locations-area" style="display:none">
-            <label class="form-label">2. Which location(s)</label>
-            <input class="form-input" type="text" id="prem-assign-search" placeholder="🔍 Search locations…" oninput="premiumRenderLocationChecks()" style="margin-bottom:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
-              <div id="prem-assign-count" style="font-size:11px;font-weight:800;color:var(--text-2)">0 selected</div>
-              <button class="btn btn-ghost" onclick="premiumClearLocationChecks()" style="padding:5px 8px;font-size:10px;margin:0;width:auto">Clear</button>
-            </div>
-            <div id="prem-assign-locations" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:0 8px"></div>
-            <button class="btn btn-primary" onclick="premiumSaveAssignment()" style="margin-top:10px">Save assignment →</button>
-            <button class="btn btn-ghost" onclick="premiumClearAssignment()" style="margin-top:6px">Remove assignment (unassign this person)</button>
-          </div>
-          <div style="height:1px;background:var(--border);margin:14px 0"></div>
-          <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:6px">Current assignments</div>
-          <div id="prem-assign-current" style="font-size:12px"><div class="loading"><div class="spinner"></div>Loading…</div></div>
         </div>
 
       </div>
@@ -3927,7 +3918,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-premium-polish-2';
+const BUILD_TAG = '2026-09-24-warehouse-mgr-overhaul-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10813,12 +10804,43 @@ async function whQuickHubTransfer(fromStand, toStand) {
   const drawer = document.getElementById('wh-manager-tools');
   if (drawer && !drawer.open) drawer.open = true;
   await mtLoadStands();
+  await mtLoadAssignees();
   const sel = document.getElementById('mt-stand');
   if (sel) sel.value = toStand;
+  // Defaults to himself — warehouse-to-warehouse is usually the manager
+  // doing it in person, not assigning it out. Still changeable below.
+  const assignSel = document.getElementById('mt-assign-to');
+  const me = state.staffAccount;
+  if (assignSel && me) assignSel.value = me.empId + '|' + me.name;
   await mtLoadStandItems();
   toast('🔁 Sending to ' + toStand + ' — from ' + fromStand);
   const target = document.getElementById('mt-items-area') || drawer;
   if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+// "He keeps the transfer himself" — any stand, not just the warehouse
+// hubs, with the assignee pre-set to the manager so nothing extra needs
+// picking before he starts choosing items.
+async function whGoSelfTransfer() {
+  const drawer = document.getElementById('wh-manager-tools');
+  if (drawer && !drawer.open) drawer.open = true;
+  await mtLoadStands();
+  await mtLoadAssignees();
+  const assignSel = document.getElementById('mt-assign-to');
+  const me = state.staffAccount;
+  if (assignSel && me) assignSel.value = me.empId + '|' + me.name;
+  toast('🙋 Pick a stand below — assigned to you to deliver');
+  const target = document.getElementById('mt-stand');
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+// Jumps straight to the Transfers tab, switched to "All open" so a
+// verified delivery awaiting his approval never gets hidden by the
+// default today's-venue filter.
+function whGoNeedsApproval() {
+  const tab = document.getElementById('wh-tab-transfers');
+  if (tab) whMode(tab, 'transfers');
+  const allBtn = document.querySelector('.wh-tf-filter-btn[data-tf="all"]');
+  if (allBtn) whSetTransferFilter('all', allBtn);
+  toast('Look for ✅ Approve and ⚠️ Partial in the list');
 }
 
 async function mtLoadStands() {
@@ -10883,7 +10905,13 @@ async function mtLoadAssignees() {
   if (!openRows._err && Array.isArray(openRows)) {
     openRows.forEach(t => { counts[t.assigned_to_id] = (counts[t.assigned_to_id] || 0) + 1; });
   }
-  sel.innerHTML = '<option value="">Leave unassigned (self-serve claim)</option>' +
+  // Self-transfer — the Warehouse Manager doing the delivery himself is
+  // the common case, not the exception, but he was never selectable in
+  // his own "assign to" list (only warehouse_employee_directory rows
+  // show up there). Listed first so it's the fast, obvious choice.
+  const me = state.staffAccount;
+  const meOption = me ? '<option value="'+escapeAttr(me.empId)+'|'+escapeAttr(me.name)+'">🙋 Myself ('+escapeHtml(me.name)+') — deliver it yourself</option>' : '';
+  sel.innerHTML = '<option value="">Leave unassigned (self-serve claim)</option>' + meOption +
     rows.map(r => {
       const n = counts[r.employee_id] || 0;
       const load = n === 0 ? 'no open tasks' : n + ' open task' + (n === 1 ? '' : 's');
@@ -17327,32 +17355,44 @@ function renderWarehouseForRole() {
   const list = document.getElementById('wh-transfers-list');
   if (!list || !list.parentNode) return;
 
-  // Team Overview — pure stats now, no unrelated action button mixed in.
+  // Needs Your Attention — replaces the old plain-text "Team Overview".
+  // Real numbers now (the awaiting-approval count had the wrong status
+  // check before and never matched what was actually approvable), and
+  // partial/short deliveries — "did they only do half" — get their own
+  // count instead of being invisible until you opened each transfer.
   const summary = document.createElement('div');
   summary.id = 'wh-manager-summary';
   summary.className = 'card';
   summary.style.cssText = 'padding:14px;margin-bottom:12px';
   summary.innerHTML =
-    '<div style="font-size:12px;font-weight:800;letter-spacing:1px;color:var(--text-2);margin-bottom:8px">TEAM OVERVIEW</div>' +
+    '<div style="font-size:12px;font-weight:800;letter-spacing:1px;color:var(--text-2);margin-bottom:8px">⚠️ NEEDS YOUR ATTENTION</div>' +
     '<div id="wh-manager-stats" style="font-size:13px;color:var(--text-2)">Loading…</div>';
   list.parentNode.insertBefore(summary, list);
   refreshWarehouseManagerStats();
 
-  // Big, obvious, one-tap actions — same "large tappable row" pattern
-  // used everywhere else in the app (sub-menu-btn: icon + label + sub,
-  // full width, thumb-friendly), not the dense form-and-dropdown layout
-  // the rest of this screen still uses. This is what was missing:
-  // warehouse-to-warehouse transfer existed but was buried three steps
-  // deep inside a collapsed drawer's stand dropdown.
+  // Big, obvious, one-tap actions in a 2-column grid on anything wider
+  // than a phone (same .mgr-tools-grid + .big-action pattern already
+  // used for the Manager home screen's Supervisor tools) instead of the
+  // old stacked full-width buttons. Self Transfer covers the "he does it
+  // himself, stand to stand" case that had no direct entry point before
+  // — Create Transfer existed, but nothing pre-picked him as the
+  // assignee, so it took extra steps every single time.
   const quick = document.createElement('div');
   quick.id = 'wh-quick-actions';
+  quick.className = 'mgr-tools-grid';
   quick.style.cssText = 'margin-bottom:12px';
   quick.innerHTML =
+    '<button class="big-action" style="border-left:4px solid var(--aramark-red)" onclick="whGoSelfTransfer()">' +
+      '<span class="icon">🙋</span><span class="text"><div>Self Transfer</div><div class="sub">Any stand — you deliver it yourself</div></span>' +
+    '</button>' +
+    '<button class="big-action" style="border-left:4px solid #DC2626" onclick="whGoNeedsApproval()">' +
+      '<span class="icon">✅</span><span class="text"><div>Needs Approval</div><div class="sub">Verified deliveries waiting on you</div></span>' +
+    '</button>' +
     '<button class="big-action" style="border-left:4px solid #00A651" onclick="whQuickHubTransfer(\'DFA Warehouse\',\'MAS Warehouse\')">' +
-      '<span class="icon">🔁</span><span class="text"><div>DFA Warehouse → MAS Warehouse</div><div class="sub">Send common stock to the MAS warehouse</div></span>' +
+      '<span class="icon">🔁</span><span class="text"><div>DFA → MAS Warehouse</div><div class="sub">Send common stock between warehouses</div></span>' +
     '</button>' +
     '<button class="big-action" style="border-left:4px solid #00A651" onclick="whQuickHubTransfer(\'MAS Warehouse\',\'DFA Warehouse\')">' +
-      '<span class="icon">🔁</span><span class="text"><div>MAS Warehouse → DFA Warehouse</div><div class="sub">Send common stock to the DFA warehouse</div></span>' +
+      '<span class="icon">🔁</span><span class="text"><div>MAS → DFA Warehouse</div><div class="sub">Send common stock between warehouses</div></span>' +
     '</button>' +
     '<button class="big-action" style="border-left:4px solid #7C3AED" onclick="exportWhTransfersCSV()">' +
       '<span class="icon">⬇️</span><span class="text"><div>Download all transfers</div><div class="sub">Every open transfer + items, as a CSV</div></span>' +
@@ -17633,7 +17673,7 @@ async function zaLoadCurrent() {
 }
 
 // ── PREMIUM DEPARTMENT ──
-let _premLocations = [], _premPeople = [], _premSelectedLocations = [];
+let _premLocations = [];
 
 function premiumRoleLabel(role) {
   return role === 'premium_manager' ? 'Premium Manager' : 'Premium Employee';
@@ -17651,7 +17691,7 @@ async function renderPremiumForRole() {
   const meta = document.getElementById('prem-role-summary-meta');
   if (title) title.textContent = (state.staffAccount && state.staffAccount.name) || label;
   if (meta) meta.textContent = isMgr
-    ? 'Premium locations · assignments · roster'
+    ? 'Premium locations · roster · check-ins'
     : 'Your Premium location(s) and teammates';
 
   const tools = document.getElementById('prem-manager-tools');
@@ -17662,8 +17702,6 @@ async function renderPremiumForRole() {
 
   if (isMgr) {
     await premiumLoadLocations();
-    await premiumLoadPeople();
-    await premiumRenderCurrentAssignments();
     await premiumRenderCheckins();
   }
   await premiumRenderRoster(isMgr);
@@ -17683,7 +17721,6 @@ async function premiumLoadLocations() {
       '<button class="btn btn-ghost" onclick="premiumDeleteLocation(' + l.id + ')" style="width:auto;padding:4px 10px;font-size:11px;margin:0">Remove</button>' +
     '</div>'
   ).join('');
-  premiumRenderLocationChecks();
 }
 async function premiumAddLocation() {
   if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
@@ -17698,85 +17735,8 @@ async function premiumDeleteLocation(id) {
   if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
   if (!(await confirmAction('This removes the location from Premium.', { title: 'Remove this location?', confirmLabel: 'Remove' }))) return;
   const res = await api('deletePremiumLocation', { id });
-  if (res.ok) { toast('Location removed'); premiumLoadLocations(); premiumRenderCurrentAssignments(); }
+  if (res.ok) { toast('Location removed'); premiumLoadLocations(); }
   else toast(res.error || 'Could not remove', 'error');
-}
-
-// -- Assignments (Premium Manager only) --
-async function premiumLoadPeople() {
-  const sel = document.getElementById('prem-assign-person');
-  if (sel) sel.innerHTML = '<option value="">Loading…</option>';
-  const rows = await sb('staff_accounts?role=in.(premium_employee,premium_manager)&is_active=eq.true&select=employee_id,name,role&order=name.asc').catch(() => ({ _err: true }));
-  _premPeople = (!rows._err && Array.isArray(rows)) ? rows : [];
-  if (sel) sel.innerHTML = '<option value="">— Select person —</option>' + _premPeople.map(p =>
-    '<option value="' + escapeAttr(p.employee_id) + '">' + escapeHtml(p.name) + ' · ' + escapeHtml(premiumRoleLabel(p.role)) + '</option>'
-  ).join('');
-}
-function premiumRenderLocationChecks() {
-  const el = document.getElementById('prem-assign-locations');
-  const count = document.getElementById('prem-assign-count');
-  if (count) count.textContent = _premSelectedLocations.length + ' selected';
-  if (!el) return;
-  if (!_premLocations.length) { el.innerHTML = '<div class="notice info" style="font-size:12px">Add a Premium location first.</div>'; return; }
-  const q = (document.getElementById('prem-assign-search') || { value: '' }).value.toLowerCase().trim();
-  const list = _premLocations.filter(l => !q || l.name.toLowerCase().includes(q));
-  if (!list.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text-3);padding:8px 0">No locations match "' + escapeHtml(q) + '".</div>'; return; }
-  el.innerHTML = list.map(l => {
-    const checked = _premSelectedLocations.includes(l.name) ? 'checked' : '';
-    return '<label style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);cursor:pointer">' +
-      '<input type="checkbox" ' + checked + ' onchange="premiumToggleLocation(this,\'' + l.name.replace(/'/g, "\\'") + '\')">' +
-      '<span style="font-size:13px">' + escapeHtml(l.name) + '</span></label>';
-  }).join('');
-}
-function premiumToggleLocation(cb, name) {
-  if (cb.checked) { if (!_premSelectedLocations.includes(name)) _premSelectedLocations.push(name); }
-  else { _premSelectedLocations = _premSelectedLocations.filter(x => x !== name); }
-  const count = document.getElementById('prem-assign-count');
-  if (count) count.textContent = _premSelectedLocations.length + ' selected';
-}
-function premiumClearLocationChecks() {
-  _premSelectedLocations = [];
-  premiumRenderLocationChecks();
-}
-async function premiumLoadPersonAssignment() {
-  _premSelectedLocations = [];
-  const empId = document.getElementById('prem-assign-person').value;
-  const area = document.getElementById('prem-assign-locations-area');
-  if (area) area.style.display = empId ? 'block' : 'none';
-  if (empId) {
-    const res = await api('getMyPremiumLocations', { employeeId: empId });
-    if (res.ok) _premSelectedLocations = (res.locations || []).slice();
-  }
-  premiumRenderLocationChecks();
-}
-async function premiumSaveAssignment() {
-  if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
-  const empId = document.getElementById('prem-assign-person').value;
-  if (!empId) return toast('Pick a person first', 'error');
-  const person = _premPeople.find(p => p.employee_id === empId);
-  const res = await api('setPremiumAssignment', { employeeId: empId, name: person ? person.name : '', role: person ? person.role : 'premium_employee', locations: _premSelectedLocations });
-  if (res.ok) { toast('✅ Assignment saved'); premiumRenderCurrentAssignments(); premiumRenderRoster(true); }
-  else toast(res.error || 'Could not save', 'error');
-}
-async function premiumClearAssignment() {
-  if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
-  const empId = document.getElementById('prem-assign-person').value;
-  if (!empId) return;
-  if (!(await confirmAction('They will have no Premium location assigned.', { title: 'Remove this assignment?', confirmLabel: 'Remove' }))) return;
-  const res = await api('deletePremiumAssignment', { employeeId: empId });
-  if (res.ok) { toast('Assignment removed'); _premSelectedLocations = []; premiumRenderLocationChecks(); premiumRenderCurrentAssignments(); premiumRenderRoster(true); }
-  else toast(res.error || 'Could not remove', 'error');
-}
-async function premiumRenderCurrentAssignments() {
-  const el = document.getElementById('prem-assign-current');
-  if (!el) return;
-  const res = await api('getPremiumAssignments', {});
-  if (!res.ok) { el.innerHTML = '<div class="notice" style="font-size:11px">Could not load — run 18_premium_department.sql in Supabase.</div>'; return; }
-  const rows = res.assignments || [];
-  if (!rows.length) { el.innerHTML = '<div style="color:var(--text-2)">No one assigned yet.</div>'; return; }
-  el.innerHTML = rows.map(r =>
-    '<div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>' + escapeHtml(r.name || r.employee_id) + '</b> <span style="color:var(--text-2)">· ' + escapeHtml(premiumRoleLabel(r.role)) + '</span><br><span style="color:var(--text-2)">' + escapeHtml((r.locations || []).join(', ') || '(no location)') + '</span></div>'
-  ).join('');
 }
 
 // -- Today's check-ins (Premium Manager only) --
@@ -18045,6 +18005,12 @@ async function premiumSaveWalkin() {
 
 // -- Roster (both roles; employee view is scoped to their own location) --
 async function premiumRenderRoster(isMgr) {
+  const card = document.getElementById('prem-roster-card');
+  // Managers get this for free from the Check-ins card above — this
+  // legacy "who's assigned where" view only still matters for an
+  // employee session checking their own location.
+  if (card) card.style.display = isMgr ? 'none' : 'block';
+  if (isMgr) return;
   const el = document.getElementById('prem-roster-list');
   const titleEl = document.getElementById('prem-roster-title');
   const subEl = document.getElementById('prem-roster-sub');
@@ -18053,17 +18019,12 @@ async function premiumRenderRoster(isMgr) {
   if (!res.ok) { el.innerHTML = '<div class="notice" style="font-size:11px">Could not load — run 18_premium_department.sql in Supabase.</div>'; return; }
   let rows = res.assignments || [];
   const myId = state.staffAccount ? state.staffAccount.empId : '';
-  if (isMgr) {
-    if (titleEl) titleEl.textContent = '📋 Premium roster — all locations';
-    if (subEl) subEl.textContent = 'Every Premium person and the location(s) they cover.';
-  } else {
-    const mine = rows.find(r => String(r.employee_id) === String(myId));
-    const myLocations = mine ? (mine.locations || []) : [];
-    if (titleEl) titleEl.textContent = '📋 My Premium location' + (myLocations.length === 1 ? '' : 's');
-    if (subEl) subEl.textContent = myLocations.length ? myLocations.join(', ') : 'No location assigned yet — ask your Premium Manager.';
-    rows = myLocations.length ? rows.filter(r => (r.locations || []).some(l => myLocations.includes(l))) : [];
-  }
-  if (!rows.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text-3)">' + (isMgr ? 'No one assigned yet.' : 'Nothing to show yet.') + '</div>'; return; }
+  const mine = rows.find(r => String(r.employee_id) === String(myId));
+  const myLocations = mine ? (mine.locations || []) : [];
+  if (titleEl) titleEl.textContent = '📋 My Premium location' + (myLocations.length === 1 ? '' : 's');
+  if (subEl) subEl.textContent = myLocations.length ? myLocations.join(', ') : 'No location assigned yet — ask your Premium Manager.';
+  rows = myLocations.length ? rows.filter(r => (r.locations || []).some(l => myLocations.includes(l))) : [];
+  if (!rows.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text-3)">Nothing to show yet.</div>'; return; }
   el.innerHTML = rows.map(r =>
     '<div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>' + escapeHtml(r.name || r.employee_id) + '</b> <span style="color:var(--text-2)">· ' + escapeHtml(premiumRoleLabel(r.role)) + '</span><br><span style="color:var(--text-2)">' + escapeHtml((r.locations || []).join(', ') || '(no location)') + '</span></div>'
   ).join('');
@@ -18114,15 +18075,46 @@ async function saToggleStand(standName, enabled, btn) {
 async function refreshWarehouseManagerStats() {
   const el = document.getElementById('wh-manager-stats');
   if (!el) return;
-  const rows = await sb('transfers?status=neq.confirmed&select=status,assigned_to_name,wh_confirmed_at&limit=200').catch(()=>({_err:true}));
+  const rows = await sb('transfers?status=neq.confirmed&select=id,status,assigned_to_name,wh_confirmed_at&limit=200').catch(()=>({_err:true}));
   if (rows._err || !Array.isArray(rows)) { el.textContent = 'Could not load.'; return; }
   const total = rows.length;
   const unassigned = rows.filter(r => !r.assigned_to_name).length;
-  const awaitingConfirm = rows.filter(r => r.status === 'delivered' && !r.wh_confirmed_at).length;
+  // Real fix: this used to check status==='delivered', but 'delivered'
+  // is the stage BEFORE a supervisor verifies it — the manager's own
+  // confirm step (canConfirm elsewhere) only ever applies once status
+  // is 'verified'. The old count was checking the wrong stage entirely,
+  // so "awaiting your confirm" never matched what the Transfers tab
+  // actually showed him as approvable.
+  const awaitingConfirm = rows.filter(r => r.status === 'verified' && !r.wh_confirmed_at).length;
+  const awaitingSupervisor = rows.filter(r => r.status === 'delivered').length;
   const byPerson = {};
   rows.forEach(r => { if (r.assigned_to_name) byPerson[r.assigned_to_name] = (byPerson[r.assigned_to_name]||0) + 1; });
   const perPersonHtml = Object.keys(byPerson).sort().map(n => escapeHtml(n) + ': ' + byPerson[n]).join(' · ') || 'No one has open tasks assigned right now.';
-  el.innerHTML = total + ' open · ' + unassigned + ' unassigned · ' + awaitingConfirm + ' awaiting your supervisor\'s confirm<br><span style="font-size:12px">' + perPersonHtml + '</span>';
+
+  // Partial fulfillment — a transfer marked delivered/verified where at
+  // least one item's qty_delivered came in under what was requested.
+  // This is exactly the "did they only do half" case that used to be
+  // invisible — nothing distinguished a partial delivery from a full one
+  // anywhere in the manager's view.
+  let partialCount = 0;
+  const inProgress = rows.filter(r => ['delivered', 'verified'].includes(r.status)).map(r => r.id);
+  if (inProgress.length) {
+    const items = await sb('transfer_items?transfer_id=in.(' + inProgress.join(',') + ')&select=transfer_id,qty_requested,qty_delivered').catch(() => ({ _err: true }));
+    if (!items._err && Array.isArray(items)) {
+      const partialIds = new Set(items.filter(it => it.qty_delivered != null && Number(it.qty_delivered) < Number(it.qty_requested || 0)).map(it => it.transfer_id));
+      partialCount = partialIds.size;
+    }
+  }
+
+  el.innerHTML =
+    '<div class="wh-stat-row">' +
+      '<div class="wh-stat-chip"><b>' + total + '</b><span>Open</span></div>' +
+      '<div class="wh-stat-chip' + (unassigned ? ' warn' : '') + '"><b>' + unassigned + '</b><span>Unassigned</span></div>' +
+      '<div class="wh-stat-chip' + (awaitingSupervisor ? ' info' : '') + '"><b>' + awaitingSupervisor + '</b><span>Awaiting supervisor</span></div>' +
+      '<div class="wh-stat-chip' + (awaitingConfirm ? ' urgent' : '') + '"><b>' + awaitingConfirm + '</b><span>Needs your approval</span></div>' +
+      '<div class="wh-stat-chip' + (partialCount ? ' urgent' : '') + '"><b>' + partialCount + '</b><span>Partial / short</span></div>' +
+    '</div>' +
+    '<div style="font-size:11px;color:var(--text-2);margin-top:6px">' + perPersonHtml + '</div>';
 }
 
 async function loadWarehouse() {
@@ -18524,8 +18516,17 @@ async function loadWhTransfers() {
       (role === 'warehouse_employee' ? 'Nothing assigned to you, and nothing open to claim right now.' : 'No open transfers right now.') + '</p></div>';
     return;
   }
+  // Flag partial deliveries right on the list — "only did half" used to
+  // be invisible until you opened the transfer and read every item.
+  const partialIds = new Set();
+  const checkIds = visible.filter(t => ['delivered', 'verified'].includes(t.status)).map(t => t.id);
+  if (checkIds.length) {
+    const items = await sb('transfer_items?transfer_id=in.(' + checkIds.join(',') + ')&select=transfer_id,qty_requested,qty_delivered').catch(() => ({ _err: true }));
+    if (!items._err && Array.isArray(items)) items.forEach(it => { if (it.qty_delivered != null && Number(it.qty_delivered) < Number(it.qty_requested || 0)) partialIds.add(it.transfer_id); });
+  }
   el.innerHTML = visible.map(t => {
     const st = TRANSFER_STATUS[t.status] || TRANSFER_STATUS.pending;
+    const partialBadge = partialIds.has(t.id) ? ' <span style="color:#DC2626;font-weight:800">⚠️ Partial</span>' : '';
     const isMine = t.assigned_to_id === myId;
     // Warehouse manager's approval now correctly fires after the supervisor
     // has already verified (e-signed) — previously this fired for both
@@ -18556,7 +18557,7 @@ async function loadWhTransfers() {
       <span class="smb-icon" onclick="openTransferStand('${t.stand.replace(/'/g,"\\'")}','list',${t.id})">📦</span>
       <div style="flex:1" onclick="openTransferStand('${t.stand.replace(/'/g,"\\'")}','list',${t.id})">
         <div class="smb-label">${escapeHtml(t.stand)}</div>
-        <div class="smb-sub">${assignedLine} · <span style="color:${st.color};font-weight:700">${st.label}</span></div>
+        <div class="smb-sub">${assignedLine} · <span style="color:${st.color};font-weight:700">${st.label}</span>${partialBadge}</div>
       </div>
       ${rightSide}
     </div>`;

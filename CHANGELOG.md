@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-24-warehouse-mgr-overhaul-1
+- Removed "Assign people to locations" from Premium — the Check-ins roster already covers who's where; the old "who's assigned where" card only still shows for a Premium Employee session checking their own spot.
+- Warehouse Manager: added himself as a selectable "🙋 Myself" option in every transfer's Assign-to dropdown — he could never actually assign a transfer to himself before, only to a warehouse_employee.
+- Fixed a real bug in the manager's stats: "awaiting your approval" was checking the wrong transfer status (`delivered` instead of `verified`) and never matched what the Transfers tab actually let him approve. Rebuilt as clear stat chips: Open / Unassigned / Awaiting supervisor / Needs your approval / Partial-short.
+- Added partial/short-delivery detection — a transfer where any item came in under the requested quantity now shows a "⚠️ Partial" flag right in the list, instead of only being discoverable by opening it and checking every item.
+- Added a 2-column "Needs Your Attention" action grid (same layout as the Manager home's Supervisor tools): Self Transfer (any stand, pre-assigned to himself), Needs Approval (jumps to Transfers, switched to All so nothing's hidden by the venue filter), DFA↔MAS quick transfer (now also pre-assigns to himself, since that's the common case), and Download CSV.
+
 ## 2026-09-24-premium-polish-2
 - Removed "Stock filled at a location" — not needed for Premium, cut entirely (UI, backend, and the `premium_stock` table).
 - Added a pulse animation on a row and a bounce on the status button when you mark someone present/absent, plus real press feedback on every check-in button (Present/Absent/Move) — the screen felt flat before, this makes every tap register visually, not just after a network round trip.
