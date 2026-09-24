@@ -322,6 +322,27 @@
   .prem-move-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text-2);font-size:16px;cursor:pointer;flex-shrink:0}
   .prem-move-row{display:none;padding:8px 12px 10px;border-bottom:1px solid var(--border)}
   .prem-move-row.open{display:block}
+
+  /* Walk-in panel — a colorful, obviously-tappable trigger (matches the
+     Supervisor/Manager "Add Walk-in Worker" tile), then a panel that
+     actually looks designed instead of a plain gray box: gradient
+     header, a real open/close transition, and search-as-you-type
+     against the employee directory so most of the time nobody has to
+     type an 8-digit ID by hand at all. */
+  .prem-walkin-panel{max-height:0;overflow:hidden;opacity:0;transition:max-height .28s ease,opacity .2s ease;border-radius:14px;margin-bottom:10px}
+  .prem-walkin-panel.open{max-height:900px;opacity:1;box-shadow:var(--shadow-lg)}
+  .prem-walkin-head{display:flex;align-items:center;gap:12px;padding:16px;background:linear-gradient(120deg,var(--aramark-red),#ff5470);border-radius:14px 14px 0 0}
+  .prem-walkin-head-icon{font-size:22px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .prem-walkin-head-title{font-size:15px;font-weight:800;color:#fff}
+  .prem-walkin-head-sub{font-size:11px;color:rgba(255,255,255,0.85);margin-top:1px}
+  .prem-walkin-body{padding:14px 16px 16px;background:var(--bg-card);border:1px solid var(--border);border-top:none;border-radius:0 0 14px 14px}
+  .prem-walkin-hint{font-size:10.5px;color:var(--text-2);margin:-6px 0 4px}
+  .prem-walkin-actions{display:flex;gap:8px;margin-top:14px}
+  .prem-walkin-actions .btn{margin:0;flex:1}
+  .prem-walkin-result{padding:10px 12px;margin-bottom:6px;border-radius:10px;border:1px solid var(--border);background:var(--bg-elevated);cursor:pointer;transition:transform .1s ease,box-shadow .1s ease}
+  .prem-walkin-result:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+  .prem-walkin-result .name{font-weight:700;font-size:13px}
+  .prem-walkin-result .meta{font-size:11px;color:var(--text-2);margin-top:1px}
   .delivery-card{display:flex;align-items:center;gap:12px;padding:14px;margin-bottom:9px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;cursor:pointer;min-height:72px}
   .delivery-card:active{transform:scale(.99)}
   .delivery-card.urgent{border:1.5px solid #DC2626;border-left:5px solid #DC2626;background:rgba(220,38,38,0.06)}
@@ -3711,14 +3732,32 @@
         <button class="chip" data-f="present" onclick="premiumSetCheckinFilter('present',this)">Present</button>
         <button class="chip" data-f="absent" onclick="premiumSetCheckinFilter('absent',this)">Absent</button>
       </div>
-      <button class="btn btn-ghost" onclick="premiumOpenWalkin()" style="margin-bottom:10px">➕ Add walk-in</button>
-      <div id="prem-walkin-form" style="display:none;margin-bottom:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
-        <input class="form-input" type="text" id="prem-walkin-name" placeholder="Name" style="margin:0 0 8px">
-        <input class="form-input" type="text" id="prem-walkin-role" placeholder="Role (optional)" style="margin:0 0 8px">
-        <select class="form-input" id="prem-walkin-location" style="margin:0 0 8px"></select>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-primary" onclick="premiumSaveWalkin()" style="margin:0;flex:1">Add</button>
-          <button class="btn btn-ghost" onclick="premiumCloseWalkin()" style="margin:0;flex:1">Cancel</button>
+      <button class="sub-menu-btn smb-green" id="prem-walkin-trigger" onclick="premiumOpenWalkin()">
+        <span class="smb-icon">➕</span>
+        <div><div class="smb-label">Add Walk-in Worker</div><div class="smb-sub">Someone here but not on today's schedule</div></div>
+      </button>
+      <div id="prem-walkin-form" class="prem-walkin-panel">
+        <div class="prem-walkin-head">
+          <span class="prem-walkin-head-icon">➕</span>
+          <div><div class="prem-walkin-head-title">Add walk-in worker</div><div class="prem-walkin-head-sub">They'll show up on the roster instantly, checked in as Present.</div></div>
+        </div>
+        <div class="prem-walkin-body">
+          <label class="form-label" style="margin-top:0">Search for the person</label>
+          <input class="form-input" type="text" id="prem-walkin-search" placeholder="🔍 Start typing their name…" oninput="premiumWalkinSearch(this.value)" autocomplete="off">
+          <div id="prem-walkin-search-results"></div>
+          <label class="form-label">Name (Last, First)</label>
+          <input class="form-input" type="text" id="prem-walkin-name" placeholder="e.g. Smith, John">
+          <label class="form-label">Employee ID — full 8 digits if you have it</label>
+          <input class="form-input" type="tel" inputmode="numeric" maxlength="8" id="prem-walkin-empid" placeholder="e.g. 32445678">
+          <div class="prem-walkin-hint">A 5-digit ID still works, but the full 8 digits matter later for payroll matching.</div>
+          <label class="form-label">Location</label>
+          <select class="form-input" id="prem-walkin-location"></select>
+          <label class="form-label">Role (optional)</label>
+          <input class="form-input" type="text" id="prem-walkin-role" placeholder="e.g. Bartender">
+          <div class="prem-walkin-actions">
+            <button class="btn btn-primary" onclick="premiumSaveWalkin()">✓ Add walk-in</button>
+            <button class="btn btn-ghost" onclick="premiumCloseWalkin()">Cancel</button>
+          </div>
         </div>
       </div>
       <div id="prem-checkin-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
@@ -3895,7 +3934,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-premium-checkins-redesign-1';
+const BUILD_TAG = '2026-09-24-premium-walkin-redesign-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5043,10 +5082,14 @@ async function api(action, data) {
     case 'addPremiumWalkin': {
       const name = (data.name||'').trim();
       if (!name || !data.location) return {ok:false,error:'Enter a name and pick a location'};
+      // Real employee ID when picked from the directory or typed in
+      // (matters for payroll later, same reasoning as the Supervisor/
+      // Manager walk-in flow) — synthetic fallback only if somehow empty.
+      const employeeId = /^\d{5,8}$/.test(data.empId||'') ? data.empId : ('WALKIN-' + Date.now());
       const date = data.date || localISODate();
       const body = {
         event_date: date,
-        employee_id: 'WALKIN-' + Date.now(),
+        employee_id: employeeId,
         worker_name: name,
         role_title: data.roleTitle || 'Walk-in',
         location_name: data.location,
@@ -5054,7 +5097,11 @@ async function api(action, data) {
         is_walkin: true,
         checked_in_at: new Date().toISOString()
       };
-      const r = await sb('premium_schedule', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
+      // Upsert, not a bare insert — this person may already have a
+      // premium_schedule row for today (e.g. picked from the directory
+      // but already on the roster elsewhere), which would otherwise hit
+      // the (event_date, employee_id) unique constraint and fail.
+      const r = await sb('premium_schedule?on_conflict=event_date,employee_id', { method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify(body) });
       return r._err ? {ok:false,error:'Could not add walk-in'} : {ok:true};
     }
     case 'removePremiumScheduleRow': {
@@ -18021,25 +18068,67 @@ async function premiumMoveWorker(id, location) {
 }
 function premiumOpenWalkin() {
   const form = document.getElementById('prem-walkin-form');
+  const trigger = document.getElementById('prem-walkin-trigger');
   const sel = document.getElementById('prem-walkin-location');
   if (sel) sel.innerHTML = '<option value="">Select location…</option>' + _premLocations.map(l => '<option value="' + escapeAttr(l.name) + '">' + escapeHtml(l.name) + '</option>').join('');
-  if (form) form.style.display = 'block';
+  if (form) form.classList.add('open');
+  if (trigger) trigger.style.display = 'none';
+  document.getElementById('prem-walkin-search').focus();
 }
 function premiumCloseWalkin() {
   const form = document.getElementById('prem-walkin-form');
-  if (form) form.style.display = 'none';
+  const trigger = document.getElementById('prem-walkin-trigger');
+  if (form) form.classList.remove('open');
+  if (trigger) trigger.style.display = 'flex';
   document.getElementById('prem-walkin-name').value = '';
+  document.getElementById('prem-walkin-empid').value = '';
   document.getElementById('prem-walkin-role').value = '';
+  document.getElementById('prem-walkin-search').value = '';
+  document.getElementById('prem-walkin-search-results').innerHTML = '';
+}
+// Search-as-you-type against the same employee directory the Supervisor/
+// Manager "Add Walk-in Worker" flow uses — tapping a result fills name +
+// real 8-digit ID instantly, so typing one in by hand is the exception,
+// not the default.
+let _premWalkinSearchTimer = null;
+function premiumWalkinSearch(term) {
+  clearTimeout(_premWalkinSearchTimer);
+  const q = (term || '').trim();
+  const box = document.getElementById('prem-walkin-search-results');
+  if (!box) return;
+  if (q.length < 2) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div style="font-size:11px;color:var(--text-2);padding:6px 0">Searching…</div>';
+  _premWalkinSearchTimer = setTimeout(async () => {
+    const safe = encodeURIComponent('*' + q.replace(/[*,()]/g, '') + '*');
+    const rows = await sb('employee_directory?full_name=ilike.' + safe + '&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(() => ({ _err: true }));
+    if (rows._err) { box.innerHTML = '<div class="notice" style="font-size:11px">Could not search — type the name and ID manually below.</div>'; return; }
+    if (!Array.isArray(rows) || !rows.length) { box.innerHTML = '<div class="notice info" style="font-size:11px;padding:8px 10px">No match — type their name and ID manually below.</div>'; return; }
+    box.innerHTML = rows.map(r => {
+      const nm = escapeAttr(r.full_name || ''), id = escapeAttr(r.employee_id || '');
+      return '<div class="prem-walkin-result" onclick="premiumWalkinPickPerson(\'' + nm + '\',\'' + id + '\')">' +
+        '<div class="name">' + escapeHtml(r.full_name || '') + '</div>' +
+        '<div class="meta">ID ' + escapeHtml(r.employee_id || '') + (r.role ? ' · ' + escapeHtml(r.role) : '') + '</div>' +
+      '</div>';
+    }).join('');
+  }, 300);
+}
+function premiumWalkinPickPerson(name, empId) {
+  document.getElementById('prem-walkin-name').value = name;
+  document.getElementById('prem-walkin-empid').value = empId;
+  document.getElementById('prem-walkin-search-results').innerHTML = '<div class="notice info" style="font-size:11px;padding:8px 10px">✅ Selected <b>' + escapeHtml(name) + '</b> · ID ' + escapeHtml(empId) + '</div>';
+  document.getElementById('prem-walkin-search').value = '';
 }
 async function premiumSaveWalkin() {
   if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
   const name = document.getElementById('prem-walkin-name').value.trim();
+  const empId = document.getElementById('prem-walkin-empid').value.trim();
   const roleTitle = document.getElementById('prem-walkin-role').value.trim();
   const location = document.getElementById('prem-walkin-location').value;
   if (!name) return toast('Enter a name', 'error');
+  if (!/^\d{5}$/.test(empId) && !/^\d{8}$/.test(empId)) return toast('Enter a 5-digit ID or the full 8-digit employee ID', 'error');
   if (!location) return toast('Select a location', 'error');
-  const res = await api('addPremiumWalkin', { date: premiumCheckinDate(), name, roleTitle, location });
-  if (res.ok) { toast('✅ Walk-in added'); premiumCloseWalkin(); premiumRenderCheckins(); }
+  const res = await api('addPremiumWalkin', { date: premiumCheckinDate(), name, empId, roleTitle, location });
+  if (res.ok) { toast('✅ ' + name + ' added to ' + location); premiumCloseWalkin(); premiumRenderCheckins(); }
   else toast(res.error || 'Could not add', 'error');
 }
 

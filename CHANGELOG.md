@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-24-premium-walkin-redesign-1
+- Rebuilt Add Walk-in for Premium, taking inspiration from the Supervisor/Manager "Add Walk-in Worker" flow: same live search-as-you-type against the employee directory (tap a result to fill name + real ID instantly), the same 8-digit employee ID field with a 5-digit fallback, and a big colorful trigger tile instead of a plain "Add walk-in" text button.
+- The panel itself got a real design pass — gradient header, icon badge, and a smooth open/close transition instead of a flat gray box that just appeared.
+- Backend now upserts on (date, employee ID) instead of a bare insert, so picking someone from the directory who's already on today's roster elsewhere updates their row instead of erroring out.
+
 ## 2026-09-24-premium-checkins-redesign-1
 - Rebuilt the Premium Check-ins card for real gameday use on a phone with 80+ people to manage: a progress bar + live present/total count, a search box to jump straight to a name instead of scrolling, and filter chips (All / Not checked in / Present / Absent) to see who's still missing across every location at once.
 - Rows are now compact and color-coded by status (green/red left border + tint) instead of a text label — readable at a glance. Present/Absent are big square icon buttons (✓/✕) sized for a thumb; Move collapsed behind a small toggle instead of a full-width dropdown on every single row, so the list doesn't run twice as long as it needs to.
