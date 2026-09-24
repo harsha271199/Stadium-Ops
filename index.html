@@ -3586,6 +3586,7 @@
         <button class="wh-tf-filter-btn" data-tf="today" onclick="whSetTransferFilter('today',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--aramark-red);color:#fff;font-weight:700">Today's venue</button>
         <button class="wh-tf-filter-btn" data-tf="recent" onclick="whSetTransferFilter('recent',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-weight:700">Last 2 days</button>
         <button class="wh-tf-filter-btn" data-tf="all" onclick="whSetTransferFilter('all',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-weight:700">All open</button>
+        <button class="btn btn-ghost" onclick="exportWhTransfersCSV()" style="flex:1;min-width:90px;margin:0;padding:8px;font-size:12px">⬇️ Download CSV</button>
       </div>
       <div id="wh-transfers-list"><div class="loading"><div class="spinner"></div>Loading transfers…</div></div>
     </div>
@@ -3852,7 +3853,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-23-premium-checkins-1';
+const BUILD_TAG = '2026-09-24-warehouse-transfer-hubs-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10701,6 +10702,13 @@ async function mgrClockOut(idx) {
 // ============================================================
 // MANAGER TRANSFER MANAGEMENT
 // ============================================================
+// Warehouse-to-warehouse transfer endpoints — not concession stands (no
+// roster, no checklists), just the two places Warehouse can send bulk
+// stock between: the Mountain America Stadium warehouse and the Desert
+// Financial Arena warehouse. Real stand_sheets catalog lives under these
+// same names so Create Transfer's item list populates normally.
+const WAREHOUSE_TRANSFER_HUBS = ['DFA Warehouse', 'MAS Warehouse'];
+
 async function mtLoadStands() {
   const sel = document.getElementById('mt-stand');
   if (!sel || sel.options.length > 1) return;
@@ -10738,6 +10746,10 @@ async function mtLoadStands() {
   }
   stands=filterCurrentMountainAmericaStands2026(stands);
   if(!stands.length)stands=mountainAmericaStandNames2026().slice();
+  // Warehouse-to-warehouse transfer hubs (DFA Warehouse / MAS Warehouse)
+  // aren't concession stands, so the canonical 2026 stand-name filter
+  // above would otherwise silently drop them — always shown regardless.
+  WAREHOUSE_TRANSFER_HUBS.forEach(w => { if (!stands.includes(w)) stands.push(w); });
   sel.innerHTML = '<option value="">Select stand…</option>' + stands.sort(standSort).map(s=>'<option value="'+s.replace(/"/g,'&quot;')+'">'+s+'</option>').join('');
   mtLoadAssignees();
 }
@@ -11151,6 +11163,29 @@ function downloadCSV(csv, filename) {
   a.href = URL.createObjectURL(blob);
   a.download = filename;
   a.click();
+}
+
+// Every open transfer (any stand, including the DFA/MAS warehouse hubs)
+// with its items, one row per item — so a manager can hand this off or
+// keep a record outside the app.
+async function exportWhTransfersCSV() {
+  const rows = await sb('transfers?order=created_at.desc&limit=300&select=*').catch(()=>({_err:true}));
+  if (rows._err) return toast('Could not load transfers', 'error');
+  if (!Array.isArray(rows) || !rows.length) return toast('No transfers to export', 'error');
+  const ids = rows.map(r => r.id).join(',');
+  const items = await sb('transfer_items?transfer_id=in.(' + ids + ')&select=*').catch(() => ({ _err: true }));
+  const itemsByTransfer = {};
+  if (!items._err && Array.isArray(items)) items.forEach(it => { (itemsByTransfer[it.transfer_id] = itemsByTransfer[it.transfer_id] || []).push(it); });
+  const esc = v => { const t = String(v == null ? '' : v); return (t.indexOf(',') >= 0 || t.indexOf('"') >= 0) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  let csv = 'Transfer ID,Stand,Status,Created,Initiated By,Assigned To,Item Name,Qty Requested,Qty Delivered\n';
+  rows.forEach(t => {
+    const its = itemsByTransfer[t.id] && itemsByTransfer[t.id].length ? itemsByTransfer[t.id] : [{}];
+    its.forEach(it => {
+      csv += [t.id, t.stand, (TRANSFER_STATUS[t.status] || {}).label || t.status, t.created_at, t.initiated_by || '', t.assigned_to_name || '', it.item_name || '', it.qty_requested != null ? it.qty_requested : '', it.qty_delivered != null ? it.qty_delivered : ''].map(esc).join(',') + '\n';
+    });
+  });
+  downloadCSV(csv, 'warehouse_transfers_' + localISODate() + '.csv');
+  toast('⬇️ Transfers CSV downloaded');
 }
 
 // ============ MANAGER INVENTORY VIEW ============
