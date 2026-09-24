@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## (data-only) Premium roster completed, all 4 managers on shared login
+- `sql/25_premium_roster_complete_today.sql`: added the 4 roster rows that were missing from today's schedule (Pouessel, Larson, Brooks, Renguso — the last 3 had no Area in the source CSV, bucketed under a new "Premium — Floating" location). Normalized Larson's and Pouessel's manager logins onto the shared `70000` + last name scheme, so all 4 Premium Managers (Hernandez, Crnjac, Larson, Pouessel) work identically. No app code changed — data/SQL only, no new BUILD_TAG.
+
 ## 2026-09-24-premium-common-login-1
 - Added a Premium shared-ID login (`70000` + last name), same convenience as Warehouse's shared `60000` ID — no per-person ID to memorize.
 - Granted Premium Manager access to Hernandez, Nestor (`170000` / PIN `7001`) and Crnjac, Natasha (`270000` / PIN `7002`), both usable via the shared 70000 ID.
