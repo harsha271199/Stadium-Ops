@@ -1593,7 +1593,7 @@
     <div class="secondary-access">
       <div class="label">Operations Access</div>
       <div class="links">
-        <button onclick="goGolfCartAnon()"><svg width="16" height="15" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Golf Cart Key</button>
+        <!-- Golf Cart hidden from all access for now — button removed, screen/logic left intact so it's a one-line revert. -->
         <button onclick="goNpoLogin()" style="margin-top:8px">🤝 NPO Group Sign-in</button>
       </div>
     </div>
@@ -2829,7 +2829,6 @@
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('reports')">📝 Reports<span class="sub">Feedback · checklists</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('times')">🕐 Time sheet<span class="sub">Breaks · tip export</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('refunds')">💵 Refunds<span class="sub">Supervisor completions · records</span></button>
-          <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('carts')">🛺 Carts<span class="sub">Keys · drivers</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('maint')">🔨 Maintenance<span class="sub">Open facility issues</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" id="mgr-v10-admin-tool" onclick="mgrV10OpenTool('admin')" style="display:none">⚙️ Admin Setup<span class="sub">Access · assignments · game info · uploads</span></button>
         </div>
@@ -3176,7 +3175,11 @@
         </div>
       </div>
 
-      <div class="card" style="margin-top:12px;padding:14px">
+      <!-- Golf Cart hidden from all access for now — card hidden via
+           display:none rather than removed, since adminLoadDrivers() runs
+           unconditionally whenever the Admin tab opens and still targets
+           these ids; removing the elements outright would throw. -->
+      <div class="card" style="margin-top:12px;padding:14px;display:none">
         <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleAdminSection('drv')">
           <div>
             <div style="font-weight:700;font-size:14px"><svg width="16" height="15" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Golf cart drivers</div>
@@ -3633,7 +3636,10 @@
       <div class="role-action-row" id="wh-role-actions" style="display:none"></div>
     </div>
 
-    <div class="first-game-help" id="wh-first-game-help">Tap the next job and follow the screen. You can always go back if you open the wrong stand.</div>
+    <div class="first-game-help" id="wh-first-game-help" style="position:relative;padding-right:32px">
+      <span id="wh-first-game-help-text">Tap the next job and follow the screen. You can always go back if you open the wrong stand.</span>
+      <span onclick="dismissWhFirstGameHelp()" role="button" tabindex="0" aria-label="Dismiss" style="position:absolute;top:8px;right:10px;cursor:pointer;font-weight:800;color:var(--text-2);font-size:14px;line-height:1;padding:4px">✕</span>
+    </div>
     <div id="warehouse-alert-status" style="margin-bottom:9px"></div>
 
     <!-- Main mode tabs — only shown for Employee/Supervisor. Warehouse
@@ -3658,7 +3664,10 @@
     <!-- Shown only when a manager has tapped into one of the shared panes
          below via a tile — gives them the back button they were missing,
          without duplicating the pane markup/logic per role. -->
-    <button class="btn btn-ghost" id="wh-mgr-backbar" onclick="whMgrBackToMenu()" style="display:none;margin-bottom:12px">← Back to menu</button>
+    <div class="page-header" id="wh-mgr-backbar" style="display:none;margin:0 0 14px;padding:0 0 10px;background:transparent">
+      <div class="back-btn" role="button" tabindex="0" aria-label="Back to menu" onclick="whMgrBackToMenu()">← Back</div>
+      <div><div class="page-title" id="wh-mgr-backbar-title">Menu</div></div>
+    </div>
 
     <div id="wh-panes-wrap">
     <!-- MODE X: TO DELIVER (Employee only) — merges Transfers + Requests
@@ -3993,9 +4002,9 @@
     <div id="ts-waiting-msg" style="display:none;background:var(--bg-elevated);border-radius:12px;padding:14px;margin-top:14px;font-size:13px;color:var(--text-2);text-align:center"></div>
 
     <div id="ts-signoff" style="display:none;background:var(--bg-elevated);border-radius:12px;padding:14px;margin-top:14px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px">✍️ Supervisor verification</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px" id="ts-signoff-title">✍️ Verification</div>
       <div style="font-size:12px;color:var(--text-2);margin-bottom:10px">Confirm items physically arrived, then sign. If something's missing or wrong, send it back instead — it'll return to the warehouse employee to fix.</div>
-      <input class="form-input" type="text" id="ts-sign-name" placeholder="Supervisor name">
+      <input class="form-input" type="text" id="ts-sign-name" placeholder="Your name">
       <button class="btn btn-primary" onclick="tsVerifySign()" style="margin-top:10px">✍️ Verify &amp; e-sign</button>
       <button class="btn btn-ghost" onclick="tsRevertDelivery()" style="margin-top:8px;border-color:#DC2626;color:#DC2626">↩️ Not actually delivered — send back</button>
     </div>
@@ -4041,7 +4050,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-warehouse-mgr-tiles-only-1';
+const BUILD_TAG = '2026-09-24-warehouse-mgr-fixes-2';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -8321,25 +8330,17 @@ async function loadExistingStockRequestsForStand(stand){
   if(!el||!stand){if(el)el.innerHTML='';return;}
   const res=await api('getMyRequests',{stand}).catch(()=>({ok:false,requests:[]}));
   const open=(res.requests||[]).filter(r=>r.status==='Pending'||r.status==='On the way');
+  // Kept in state for stockDuplicateOverlap() to actually check against at
+  // submit time — that's real duplicate protection tied to an action the
+  // person is taking. What used to render here was a different thing: a
+  // banner shown just from OPENING this screen, for ANY open request at
+  // the stand from ANYONE, worded as "this request already went
+  // through" — confusing/wrong when the person hasn't requested anything
+  // themselves yet (reported: seeing it at 142 Inferno with an item they
+  // never asked for). Removed; the submit-time check still catches a
+  // real duplicate when someone actually tries to send one.
   state._existingOpenStockRequests=open;
-  if(!open.length){el.innerHTML='';return;}
-  // Real fix for the "haven't heard back, so I'll just ask again"
-  // pattern from game day — the underlying problem wasn't that people
-  // couldn't see an open request existed, it's that a tiny 10px note
-  // with no sense of elapsed time gives no way to judge "is this
-  // actually stuck, or just normal" — so people re-asked out of
-  // uncertainty, which then looked like a bug to managers even though
-  // the original request was fine the whole time. This is now large,
-  // impossible to miss, and states plainly how long it's actually been
-  // waiting — the concrete answer to the anxiety that was driving the
-  // resubmissions.
-  const rows=open.slice(0,3).map(r=>{
-    const status=r.status==='On the way'?'🚚 '+(r.claimedBy||'Warehouse')+' is on the way':'⏳ Waiting for warehouse';
-    const mins=Math.max(0,Math.round((Date.now()-new Date(r.timestamp||Date.now()))/60000));
-    const elapsed=mins<1?'just now':mins===1?'1 minute ago':mins+' minutes ago';
-    return `<div style="padding:8px 0;border-top:1px solid rgba(0,0,0,0.08)"><b style="font-size:12px">${stockItemsHtml(r)}</b><br><span style="color:var(--text-2);font-size:11px">Sent ${elapsed} by ${escapeHtml(r.requestedBy||'Someone')} · ${status}</span>${stockEtaHtml(r)}</div>`;
-  }).join('');
-  el.innerHTML=`<div class="notice warning" style="padding:12px 14px;font-size:12px"><b style="font-size:13px">✅ This request already went through — it's in the queue</b>${rows}<div style="margin-top:8px;font-weight:600">No need to send it again — sending a duplicate doesn't make it go faster, and it makes it look to your manager like something's broken when it isn't. If it's taking longer than expected, use Report IT Issue or ask your Supervisor directly instead of resubmitting.</div></div>`;
+  el.innerHTML='';
 }
 function stockDuplicateOverlap(newItems){
   const names=(newItems||[]).map(x=>String(x.itemName||'').trim().toLowerCase()).filter(Boolean);
@@ -9375,7 +9376,9 @@ async function submitFb(i) {
 const MGR_SECTIONS = {
   overview:  [['roster','👥 Team',''], ['stock','📦 Stock','mgr-stock-count'], ['kitchen','🍔 Kitchen','mgr-kitchen-count'], ['it','🔧 IT','mgr-it-count']],
   inventory: [['inv','📋 Inventory',''], ['transfers','🚚 Transfers','mgr-transfer-count']],
-  records:   [['reports','📝 Reports',''], ['carts','🛺 Carts',''], ['maint','🔨 Maint',''], ['refunds','💵 Refunds','mgr-refund-count'], ['times','🕐 Times','']],
+  // Golf Cart hidden from all access for now — 'carts' entry removed, its
+  // panel/loadMgrCarts() logic left intact so this is a one-line revert.
+  records:   [['reports','📝 Reports',''], ['maint','🔨 Maint',''], ['refunds','💵 Refunds','mgr-refund-count'], ['times','🕐 Times','']],
   admin:     [['admin','⚙️ Admin','']],
 };
 
@@ -10974,13 +10977,16 @@ function whHubTransferGo() {
 // panes and load functions the Employee/Supervisor tab-bar uses, just
 // with a "back to menu" affordance instead of a visible tab strip, since
 // the manager's tab-bar is hidden entirely (see renderWarehouseForRole).
+const WH_MGR_PANE_TITLES = { transfers: '🚚 All Transfers', requests: '📥 Requests', inventory: '📊 Stock Report', cart: '🛺 Golf Cart' };
 function whMgrOpenPane(mode) {
   const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
   const panesWrap = document.getElementById('wh-panes-wrap');
   const backbar = document.getElementById('wh-mgr-backbar');
+  const backbarTitle = document.getElementById('wh-mgr-backbar-title');
   if (tilesSlot) tilesSlot.style.display = 'none';
   if (panesWrap) panesWrap.style.display = 'block';
-  if (backbar) backbar.style.display = 'block';
+  if (backbar) backbar.style.display = 'flex';
+  if (backbarTitle) backbarTitle.textContent = WH_MGR_PANE_TITLES[mode] || 'Menu';
   const tab = document.getElementById('wh-tab-' + mode);
   if (tab) whMode(tab, mode);
 }
@@ -14820,7 +14826,10 @@ function renderOpsAlertStatus(kind){
     return;
   }
   if(Notification.permission==='granted'){
-    el.innerHTML='<div class="notice success" style="padding:8px 10px"><b>🔔 Game-Day Alerts ON</b> · Assignments, on-the-way updates and delivery alerts can reach this phone.</div>';
+    // Once granted, the header's 🔔 bell already shows this is on (see
+    // updatePushButtonState) — repeating a full-width banner on every visit
+    // just eats screen space for something already confirmed once.
+    el.innerHTML='';
   }else if(Notification.permission==='denied'){
     el.innerHTML='<div class="notice warning"><b>🔕 Notifications blocked.</b> Allow notifications in browser/site settings before game day.</div>';
   }else{
@@ -17496,6 +17505,13 @@ async function resolveIT(id) {
 // (which filters by role); this adds the one thing that's genuinely
 // different for warehouse_manager — an aggregate summary instead of a task
 // list to act on, since a manager's job here is oversight, not doing tasks.
+function dismissWhFirstGameHelp() {
+  const el = document.getElementById('wh-first-game-help');
+  if (el) el.style.display = 'none';
+  const empId = state.staffAccount && state.staffAccount.empId;
+  try { localStorage.setItem('wh_fg_dismissed_' + (empId || 'x'), '1'); } catch (e) {}
+}
+
 function renderWarehouseForRole() {
   const role = state.staffAccount ? state.staffAccount.role : 'warehouse_employee';
   const isWhMgr = role === 'warehouse_manager';
@@ -17508,6 +17524,7 @@ function renderWarehouseForRole() {
   const meta = document.getElementById('wh-role-summary-meta');
   const actions = document.getElementById('wh-role-actions');
   const help = document.getElementById('wh-first-game-help');
+  const helpText = document.getElementById('wh-first-game-help-text');
   if (title) title.textContent = (state.staffAccount && state.staffAccount.name) || roleLabel;
   if (meta) {
     meta.textContent = isWhMgr
@@ -17517,12 +17534,20 @@ function renderWarehouseForRole() {
         : 'Your jobs · deliver items · QR only when convenient';
   }
   if (actions) { actions.innerHTML = ''; actions.style.display = 'none'; }
-  if (help) {
-    help.innerHTML = isWhMgr
+  if (helpText) {
+    helpText.innerHTML = isWhMgr
       ? '<b>First game:</b> watch Transfers and Requests. Planning/assignment tools are collapsed so they stay out of the way.'
       : isWhSup
         ? '<b>First game:</b> Requests opens first. Help anything waiting, and use Transfers when a planned delivery needs verification.'
         : '<b>First game:</b> tap the next stand, deliver what is listed, and finish. The app handles the "on the way" update for you.';
+  }
+  // Takes up real space on a phone screen — once someone's dismissed it,
+  // stay out of the way instead of showing again on every visit.
+  if (help) {
+    const empId = state.staffAccount && state.staffAccount.empId;
+    let dismissed = false;
+    try { dismissed = localStorage.getItem('wh_fg_dismissed_' + (empId || 'x')) === '1'; } catch (e) {}
+    help.style.display = dismissed ? 'none' : '';
   }
 
   // Manager-only tabs — hidden entirely for employee/supervisor, since
@@ -17532,7 +17557,8 @@ function renderWarehouseForRole() {
   const invTab = document.getElementById('wh-tab-inventory');
   const cartTab = document.getElementById('wh-tab-cart');
   if (invTab) invTab.style.display = isWhMgr ? 'block' : 'none';
-  if (cartTab) cartTab.style.display = isWhMgr ? 'block' : 'none';
+  // Golf Cart hidden from all access for now.
+  if (cartTab) cartTab.style.display = 'none';
 
   // Manager sees a tile menu only — no slider. Employee/Supervisor keep
   // the original tab-bar untouched, panes always visible as before.
@@ -17576,8 +17602,12 @@ function renderWarehouseForRole() {
   // Stock Report / Golf Cart open the same shared panes the Employee and
   // Supervisor tab-bar uses (via whMgrOpenPane), just with a back button
   // instead of a visible tab strip.
+  // Real bug: setting cssText to 'display:block' here overrode the
+  // .action-tiles class's display:grid via inline-style specificity,
+  // which is why the tiles rendered as a vertical stack instead of the
+  // intended 2-column grid. Leaving display unset lets the class control it.
   tilesSlot.className = 'action-tiles';
-  tilesSlot.style.cssText = 'display:block;margin-bottom:4px';
+  tilesSlot.style.cssText = 'margin-bottom:4px';
   tilesSlot.innerHTML =
     '<div class="action-tile tile-red" onclick="showScreen(\'screen-wh-create-transfer\')">' +
       '<span class="tile-icon">🚚</span><div class="tile-label">Create Transfer</div><div class="tile-sub">Send stock — self or assign</div>' +
@@ -17594,9 +17624,8 @@ function renderWarehouseForRole() {
     '<div class="action-tile" onclick="whMgrOpenPane(\'inventory\')">' +
       '<span class="tile-icon">📊</span><div class="tile-label">Stock Report</div><div class="tile-sub">Counts — CSV or PDF</div>' +
     '</div>' +
-    '<div class="action-tile" onclick="whMgrOpenPane(\'cart\')">' +
-      '<span class="tile-icon">🛺</span><div class="tile-label">Golf Cart</div><div class="tile-sub">Drivers & returns</div>' +
-    '</div>' +
+    // Golf Cart hidden from all access for now — tile removed here;
+    // whMgrOpenPane('cart') and the wh-mode-cart pane are left intact.
     '<div class="action-tile" onclick="showScreen(\'screen-wh-team\')">' +
       '<span class="tile-icon">👥</span><div class="tile-label">Assign & Team</div><div class="tile-sub">Who covers what today</div>' +
     '</div>';
@@ -18316,7 +18345,8 @@ async function loadWarehouse() {
   if (todeliverTab) todeliverTab.style.display = isEmployee ? '' : 'none';
   if (transfersTab) transfersTab.style.display = isEmployee ? 'none' : '';
   if (requestsTab) requestsTab.style.display = isEmployee ? 'none' : '';
-  if (myCartTab) myCartTab.style.display = (isEmployee || isWhSupervisor) ? '' : 'none';
+  // Golf Cart hidden from all access for now.
+  if (myCartTab) myCartTab.style.display = 'none';
 
   const res = await api('getStockRequests', {});
   state.wRequests = res.requests || [];
@@ -19067,17 +19097,25 @@ function renderTsStatus() {
   // This used to show to ANYONE once status was 'delivered' — including the
   // warehouse employee who just delivered it themselves, which is the exact
   // bug reported (a worker seeing their own supervisor sign-off prompt).
-  // Now gated to warehouse_supervisor only. Employees and everyone else see
-  // a plain waiting message instead.
+  // Gated to warehouse_supervisor AND warehouse_manager — a manager outranks
+  // supervisor, so a transfer he delivered himself shouldn't be stuck
+  // waiting on a supervisor who may not even be the one who saw it happen;
+  // he can verify (and then, below, also give the final approval) himself.
+  // Employees and everyone else see a plain waiting message instead.
   const role = state.staffAccount ? state.staffAccount.role : null;
+  const canVerify = role === 'warehouse_supervisor' || role === 'warehouse_manager';
   const signoffEl = document.getElementById('ts-signoff');
   const waitingEl = document.getElementById('ts-waiting-msg');
   const approvalEl = document.getElementById('ts-manager-approval');
 
-  signoffEl.style.display = (_tsTransfer.status === 'delivered' && role === 'warehouse_supervisor') ? 'block' : 'none';
+  signoffEl.style.display = (_tsTransfer.status === 'delivered' && canVerify) ? 'block' : 'none';
+  const signoffTitle = document.getElementById('ts-signoff-title');
+  if (signoffTitle) signoffTitle.textContent = role === 'warehouse_manager' ? '✍️ Manager verification' : '✍️ Supervisor verification';
+  const signNameEl = document.getElementById('ts-sign-name');
+  if (signNameEl && !signNameEl.value && _tsTransfer.status === 'delivered' && canVerify && state.staffAccount) signNameEl.value = state.staffAccount.name;
 
   if (waitingEl) {
-    if (_tsTransfer.status === 'delivered' && role !== 'warehouse_supervisor') {
+    if (_tsTransfer.status === 'delivered' && !canVerify) {
       waitingEl.style.display = 'block';
       waitingEl.textContent = '✓ Marked delivered — waiting for a warehouse supervisor to check and sign off.';
     } else {
@@ -19698,12 +19736,15 @@ function showQuickDropSuccess(stand){
 
 async function tsVerifySign() {
   // Real guard — this step is documented as "gated to warehouse_supervisor
-  // only" (the sign-off button is hidden for other roles via CSS), but the
-  // function itself had no check, so it was directly callable by any
-  // signed-in warehouse session.
-  if (!isWarehouseSupervisorSession()) return toast('Supervisor sign-off required', 'error');
+  // or warehouse_manager" (the sign-off button is hidden for other roles
+  // via CSS), but the function itself had no check, so it was directly
+  // callable by any signed-in warehouse session. Manager included — he
+  // outranks supervisor, so he can verify his own delivered transfers
+  // instead of waiting on a supervisor to do it for him.
+  const verifierRole = isWarehouseManagerSession() ? 'Warehouse Manager' : 'Warehouse Supervisor';
+  if (!isWarehouseSupervisorSession() && !isWarehouseManagerSession()) return toast('Supervisor or manager sign-off required', 'error');
   const name = document.getElementById('ts-sign-name').value.trim();
-  if (!name) return toast('Enter supervisor name to sign', 'error');
+  if (!name) return toast('Enter your name to sign', 'error');
 
   // Manager-planned transfers are only canonical inventory once this
   // physical verification succeeds. Stable movement UUIDs make a retry
@@ -19718,7 +19759,7 @@ async function tsVerifySign() {
       refTable: 'transfers',
       refId: _tsTransfer.id,
       who: name,
-      role: 'Warehouse Supervisor',
+      role: verifierRole,
       note: 'Verified planned transfer delivery'
     });
     if (lr && lr._err) return toast('Could not record verified inventory movement — try again', 'error');
