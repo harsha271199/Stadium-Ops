@@ -3641,7 +3641,7 @@
       <div class="tab-item" id="wh-tab-todeliver" style="display:none" onclick="whMode(this,'todeliver')">📥 Available Jobs <span class="badge-count" id="wh-todeliver-count">0</span></div>
       <div class="tab-item active" id="wh-tab-transfers" onclick="whMode(this,'transfers')">🚚 Transfers <span class="badge-count" id="wh-transfer-count">0</span></div>
       <div class="tab-item" id="wh-tab-requests" onclick="whMode(this,'requests')">📥 Requests <span class="badge-count" id="wh-open-count">0</span></div>
-      <div class="tab-item" id="wh-tab-inventory" style="display:none" onclick="whMode(this,'inventory')">📦 Inventory</div>
+      <div class="tab-item" id="wh-tab-inventory" style="display:none" onclick="whMode(this,'inventory')">📊 Stock Report</div>
       <div class="tab-item" id="wh-tab-cart" style="display:none" onclick="whMode(this,'cart')">🛺 Golf Cart</div>
       <div class="tab-item" id="wh-tab-mycart" style="display:none" onclick="goGolfCart()">🛺 Cart</div>
     </div>
@@ -4026,7 +4026,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-warehouse-mgr-restructure-1';
+const BUILD_TAG = '2026-09-24-warehouse-stock-report-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -17482,7 +17482,7 @@ function renderWarehouseForRole() {
       '<span class="tile-icon">✅</span><div class="tile-label">Approvals</div><div class="tile-sub" id="wh-tile-approvals-sub">Loading…</div>' +
     '</div>' +
     '<div class="action-tile" onclick="whGoInventoryTab()">' +
-      '<span class="tile-icon">📦</span><div class="tile-label">Inventory</div><div class="tile-sub">Warehouse stock counts</div>' +
+      '<span class="tile-icon">📊</span><div class="tile-label">Stock Report</div><div class="tile-sub">A summary — nothing to do here</div>' +
     '</div>' +
     '<div class="action-tile" onclick="showScreen(\'screen-wh-team\')">' +
       '<span class="tile-icon">👥</span><div class="tile-label">Assign & Team</div><div class="tile-sub">Who covers what today</div>' +
@@ -17496,7 +17496,7 @@ function renderWarehouseForRole() {
   if (invContainer) {
     invContainer.innerHTML =
       '<div style="max-width:480px">' +
-        '<div class="notice info" style="font-size:12px">📦 Warehouse stock counts — what warehouse recorded delivering to each stand. Export for Yellow Dog.</div>' +
+        '<div class="notice info" style="font-size:12px">📊 A read-only summary of what your completed Transfers delivered to each stand — nothing to create or assign here, it just totals up what already happened. Export for Yellow Dog.</div>' +
         '<label class="form-label" style="margin-top:8px">Date</label>' +
         '<div style="display:flex;gap:8px;align-items:center">' +
           '<input class="form-input" type="date" id="wh-mgr-inv-date" style="margin:0;flex:1">' +
