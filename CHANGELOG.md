@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-24-premium-checkins-redesign-1
+- Rebuilt the Premium Check-ins card for real gameday use on a phone with 80+ people to manage: a progress bar + live present/total count, a search box to jump straight to a name instead of scrolling, and filter chips (All / Not checked in / Present / Absent) to see who's still missing across every location at once.
+- Rows are now compact and color-coded by status (green/red left border + tint) instead of a text label — readable at a glance. Present/Absent are big square icon buttons (✓/✕) sized for a thumb; Move collapsed behind a small toggle instead of a full-width dropdown on every single row, so the list doesn't run twice as long as it needs to.
+- Location headers are sticky while scrolling and collapsed by default (tap to open your location) — auto-expand when searching/filtering so results are never hidden inside a closed group.
+- Present/Absent/Move now update the screen instantly (optimistic UI) instead of waiting on a round trip before showing the change, with an automatic revert + error toast if the save actually fails.
+
 ## 2026-09-24-warehouse-big-buttons-1
 - Added big, one-tap shortcuts for warehouse-to-warehouse transfers ("DFA Warehouse → MAS Warehouse" / "MAS Warehouse → DFA Warehouse") using the same large tappable-row style as the Supervisor's "All Stands Live" menu — no more digging through a collapsed drawer's plain stand dropdown to find them. Tapping one opens the tools drawer, pre-selects the destination, and loads its items.
 - Fixed a real bug: the default "Today's venue" filter on the Transfers tab could silently hide a warehouse-to-warehouse transfer if today's scheduled game was at the OTHER venue — it only ever checked one venue. Warehouse hub transfers now always show under that filter regardless.

@@ -289,6 +289,39 @@
   .wh-tools-details>summary:after{content:'›';font-size:20px;color:var(--text-2);transform:rotate(90deg);transition:transform .15s ease}
   .wh-tools-details[open]>summary:after{transform:rotate(-90deg)}
   .wh-tools-details .wh-tools-inner{padding:0 12px 12px}
+
+  /* PREMIUM CHECK-INS — built for a phone, one thumb, mid-gameday: a
+     progress bar you can read from arm's length, a search box because
+     scrolling past 80 names during a live event isn't realistic, and
+     compact rows (color tells you the status, not a text label) so the
+     whole roster fits without endless scrolling. */
+  .prem-progress{height:8px;border-radius:5px;background:var(--bg-elevated);overflow:hidden;margin-top:10px}
+  .prem-progress-bar{height:100%;background:linear-gradient(90deg,#00A651,#00C46A);border-radius:5px;transition:width .2s ease}
+  .prem-progress-label{font-size:11px;font-weight:800;color:var(--text-2);margin-top:5px}
+  .prem-loc-group{margin-bottom:10px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:var(--shadow)}
+  .prem-loc-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px;background:var(--bg-elevated);cursor:pointer;font-weight:800;font-size:13px;border-bottom:1px solid var(--border)}
+  .prem-loc-head .prem-loc-count{font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;background:var(--bg-card);color:var(--text-2);border:1px solid var(--border-strong)}
+  .prem-loc-head .prem-loc-count.done{background:rgba(0,166,81,0.14);color:#00A651;border-color:rgba(0,166,81,0.3)}
+  .prem-loc-body{display:none}
+  .prem-loc-group.open .prem-loc-body{display:block}
+  .prem-loc-head:after{content:'›';font-size:20px;color:var(--text-2);transform:rotate(90deg);transition:transform .15s ease;flex-shrink:0}
+  .prem-loc-group.open .prem-loc-head:after{transform:rotate(-90deg)}
+  .prem-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);border-left:4px solid var(--border-strong)}
+  .prem-row:last-child{border-bottom:none}
+  .prem-row.present{border-left-color:#00A651;background:rgba(0,166,81,0.06)}
+  .prem-row.absent{border-left-color:#DC2626;background:rgba(220,38,38,0.06)}
+  .prem-row-info{flex:1;min-width:0}
+  .prem-row-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prem-row-meta{font-size:10.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prem-row-actions{display:flex;align-items:center;gap:5px;flex-shrink:0}
+  .prem-status-btn{width:40px;height:40px;border-radius:10px;border:none;font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--shadow)}
+  .prem-status-btn.p{background:var(--bg-elevated);color:#00A651}
+  .prem-status-btn.p.on{background:#00A651;color:#fff;box-shadow:0 2px 8px rgba(0,166,81,0.4)}
+  .prem-status-btn.a{background:var(--bg-elevated);color:#DC2626}
+  .prem-status-btn.a.on{background:#DC2626;color:#fff;box-shadow:0 2px 8px rgba(220,38,38,0.4)}
+  .prem-move-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text-2);font-size:16px;cursor:pointer;flex-shrink:0}
+  .prem-move-row{display:none;padding:8px 12px 10px;border-bottom:1px solid var(--border)}
+  .prem-move-row.open{display:block}
   .delivery-card{display:flex;align-items:center;gap:12px;padding:14px;margin-bottom:9px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;cursor:pointer;min-height:72px}
   .delivery-card:active{transform:scale(.99)}
   .delivery-card.urgent{border:1.5px solid #DC2626;border-left:5px solid #DC2626;background:rgba(220,38,38,0.06)}
@@ -3663,14 +3696,22 @@
     <!-- Premium Manager only: today's roster/check-ins — present/absent,
          move, add walk-in. This is the actual daily tool, so it's the
          very first thing on the page. -->
-    <div class="card" id="prem-checkin-card" style="padding:14px;margin-bottom:12px;display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
-        <div style="font-weight:700;font-size:14px">✅ Check-ins</div>
-        <input class="form-input" type="date" id="prem-checkin-date" onchange="premiumRenderCheckins()" style="margin:0;width:auto;padding:8px 10px">
-        <div id="prem-checkin-summary" style="font-size:11px;color:var(--text-2);white-space:nowrap"></div>
+    <div class="card prem-checkin-card" id="prem-checkin-card" style="padding:14px 14px 6px;margin-bottom:12px;display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="font-weight:800;font-size:15px">✅ Check-ins</div>
+        <input class="form-input" type="date" id="prem-checkin-date" onchange="premiumRenderCheckins()" style="margin:0;width:auto;padding:8px 10px;font-size:13px">
       </div>
-      <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Present / Absent / Move — Premium locations only, never mixed with concession. Pick a date to look back at a past game.</div>
-      <button class="btn btn-ghost" onclick="premiumOpenWalkin()" style="margin-bottom:6px">➕ Add walk-in</button>
+      <div id="prem-checkin-progress" class="prem-progress"><div id="prem-checkin-progress-bar" class="prem-progress-bar" style="width:0%"></div></div>
+      <div id="prem-checkin-summary" class="prem-progress-label">0 present · 0 total</div>
+
+      <input class="form-input" type="text" id="prem-checkin-search" placeholder="🔍 Find a person…" oninput="premiumRenderCheckinsList()" style="margin:10px 0 8px">
+      <div class="chip-row" id="prem-checkin-filters" style="margin-bottom:10px">
+        <button class="chip selected" data-f="all" onclick="premiumSetCheckinFilter('all',this)">All</button>
+        <button class="chip" data-f="missing" onclick="premiumSetCheckinFilter('missing',this)">Not checked in</button>
+        <button class="chip" data-f="present" onclick="premiumSetCheckinFilter('present',this)">Present</button>
+        <button class="chip" data-f="absent" onclick="premiumSetCheckinFilter('absent',this)">Absent</button>
+      </div>
+      <button class="btn btn-ghost" onclick="premiumOpenWalkin()" style="margin-bottom:10px">➕ Add walk-in</button>
       <div id="prem-walkin-form" style="display:none;margin-bottom:12px;padding:10px;border:1px solid var(--border);border-radius:8px">
         <input class="form-input" type="text" id="prem-walkin-name" placeholder="Name" style="margin:0 0 8px">
         <input class="form-input" type="text" id="prem-walkin-role" placeholder="Role (optional)" style="margin:0 0 8px">
@@ -3854,7 +3895,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-warehouse-big-buttons-1';
+const BUILD_TAG = '2026-09-24-premium-checkins-redesign-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -17863,59 +17904,120 @@ function premiumCheckinDate() {
   if (el && !el.value) el.value = localISODate();
   return el ? el.value : localISODate();
 }
+let _premCheckinFilter = 'all';
+let _premOpenGroups = new Set();
+function premiumSetCheckinFilter(f, btn) {
+  _premCheckinFilter = f;
+  document.querySelectorAll('#prem-checkin-filters .chip').forEach(c => c.classList.toggle('selected', c === btn));
+  premiumRenderCheckinsList();
+}
+// Fetches fresh, then renders — use on load, date change, or after a
+// server write completes. During a rapid string of taps (checking in a
+// whole location one by one), premiumRenderCheckinsList() below renders
+// straight from local state instead, so a slow network response can't
+// race a later tap and flip a status back on screen.
 async function premiumRenderCheckins() {
   const list = document.getElementById('prem-checkin-list');
-  const summary = document.getElementById('prem-checkin-summary');
   if (!list) return;
   const date = premiumCheckinDate();
   const res = await api('getPremiumSchedule', { date });
   if (!res.ok) { list.innerHTML = '<div class="notice" style="font-size:11px">Could not load — run 20_premium_schedule.sql (and the seed) in Supabase.</div>'; return; }
   _premScheduleRows = res.rows || [];
+  premiumRenderCheckinsList();
+}
+function premiumRenderCheckinsList() {
+  const list = document.getElementById('prem-checkin-list');
+  const bar = document.getElementById('prem-checkin-progress-bar');
+  const summary = document.getElementById('prem-checkin-summary');
+  if (!list) return;
+  const date = premiumCheckinDate();
+  const total = _premScheduleRows.length;
   const present = _premScheduleRows.filter(r => r.status === 'present').length;
-  if (summary) summary.textContent = present + ' present · ' + _premScheduleRows.length + ' total';
-  if (!_premScheduleRows.length) { list.innerHTML = '<div style="font-size:11px;color:var(--text-3)">No one scheduled ' + (date === localISODate() ? 'today' : 'on ' + date) + '.</div>'; return; }
+  if (bar) bar.style.width = (total ? Math.round(present / total * 100) : 0) + '%';
+  if (summary) summary.textContent = present + ' present · ' + total + ' total' + (total ? '' : ' — nothing scheduled ' + (date === localISODate() ? 'today' : 'on ' + date));
+  if (!total) { list.innerHTML = ''; return; }
+
+  const q = (document.getElementById('prem-checkin-search') || { value: '' }).value.toLowerCase().trim();
+  const matches = r => {
+    if (q && !r.worker_name.toLowerCase().includes(q) && !(r.role_title || '').toLowerCase().includes(q)) return false;
+    if (_premCheckinFilter === 'missing') return r.status !== 'present' && r.status !== 'absent';
+    if (_premCheckinFilter === 'present') return r.status === 'present';
+    if (_premCheckinFilter === 'absent') return r.status === 'absent';
+    return true;
+  };
 
   const byLoc = {};
   _premScheduleRows.forEach(r => { (byLoc[r.location_name] = byLoc[r.location_name] || []).push(r); });
   const locNames = Object.keys(byLoc).sort();
   const locOptions = _premLocations.map(l => '<option value="' + escapeAttr(l.name) + '">' + escapeHtml(l.name) + '</option>').join('');
+  const searching = !!(q || _premCheckinFilter !== 'all');
 
   list.innerHTML = locNames.map(loc => {
-    const rows = byLoc[loc];
-    const presentCount = rows.filter(r => r.status === 'present').length;
+    const all = byLoc[loc];
+    const rows = all.filter(matches);
+    if (!rows.length) return '';
+    const presentCount = all.filter(r => r.status === 'present').length;
+    const isOpen = searching || _premOpenGroups.has(loc);
     const rowsHtml = rows.map(r => {
-      const statusColor = r.status === 'present' ? 'var(--success)' : r.status === 'absent' ? '#DC2626' : 'var(--text-3)';
-      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">' +
-        '<div style="flex:1;min-width:140px">' +
-          '<div style="font-size:13px;font-weight:700">' + escapeHtml(r.worker_name) + (r.is_walkin ? ' <span style="font-size:9px;color:var(--aramark-red);font-weight:800">WALK-IN</span>' : '') + '</div>' +
-          '<div style="font-size:10px;color:var(--text-2)">' + escapeHtml(r.role_title || '') + (r.start_time ? ' · ' + escapeHtml(r.start_time) + '–' + escapeHtml(r.end_time || '') : '') + '</div>' +
+      const cls = r.status === 'present' ? 'present' : r.status === 'absent' ? 'absent' : '';
+      return '<div class="prem-row ' + cls + '">' +
+        '<div class="prem-row-info">' +
+          '<div class="prem-row-name">' + escapeHtml(r.worker_name) + (r.is_walkin ? ' <span style="font-size:9px;color:var(--aramark-red);font-weight:800">WALK-IN</span>' : '') + '</div>' +
+          '<div class="prem-row-meta">' + escapeHtml(r.role_title || '') + (r.start_time ? ' · ' + escapeHtml(r.start_time) + '–' + escapeHtml(r.end_time || '') : '') + '</div>' +
         '</div>' +
-        '<span style="font-size:9px;font-weight:800;color:' + statusColor + ';text-transform:uppercase">' + escapeHtml(r.status) + '</span>' +
-        '<button class="btn btn-success" onclick="premiumSetCheckin(' + r.id + ',\'present\')" style="width:auto;padding:6px 10px;font-size:10px;margin:0">Present</button>' +
-        '<button class="btn btn-danger" onclick="premiumSetCheckin(' + r.id + ',\'absent\')" style="width:auto;padding:6px 10px;font-size:10px;margin:0">Absent</button>' +
-        '<select class="form-input" onchange="premiumMoveWorker(' + r.id + ',this.value)" style="width:auto;margin:0;padding:6px 8px;font-size:10px">' +
-          '<option value="">Move…</option>' + locOptions +
-        '</select>' +
+        '<div class="prem-row-actions">' +
+          '<button class="prem-status-btn p' + (r.status === 'present' ? ' on' : '') + '" onclick="premiumSetCheckin(' + r.id + ',\'present\')" aria-label="Present">✓</button>' +
+          '<button class="prem-status-btn a' + (r.status === 'absent' ? ' on' : '') + '" onclick="premiumSetCheckin(' + r.id + ',\'absent\')" aria-label="Absent">✕</button>' +
+          '<button class="prem-move-btn" onclick="premiumToggleMoveRow(' + r.id + ')" aria-label="Move">↔</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="prem-move-row" id="prem-move-' + r.id + '">' +
+        '<select class="form-input" onchange="premiumMoveWorker(' + r.id + ',this.value)" style="margin:0;font-size:13px"><option value="">Move to…</option>' + locOptions + '</select>' +
       '</div>';
     }).join('');
-    return '<details style="margin-bottom:8px" open>' +
-      '<summary style="cursor:pointer;font-size:12px;font-weight:800;padding:6px 0;list-style:none">' + escapeHtml(loc) + ' <span style="color:var(--text-2);font-weight:600">(' + presentCount + '/' + rows.length + ')</span></summary>' +
-      rowsHtml +
-    '</details>';
+    return '<div class="prem-loc-group' + (isOpen ? ' open' : '') + '" id="prem-group-' + escapeAttr(loc).replace(/[^a-zA-Z0-9]/g,'_') + '">' +
+      '<div class="prem-loc-head" onclick="premiumToggleGroup(\'' + loc.replace(/'/g, "\\'") + '\')">' +
+        '<span>' + escapeHtml(loc) + '</span>' +
+        '<span class="prem-loc-count' + (presentCount === all.length ? ' done' : '') + '">' + presentCount + '/' + all.length + '</span>' +
+      '</div>' +
+      '<div class="prem-loc-body">' + rowsHtml + '</div>' +
+    '</div>';
   }).join('');
+
+  if (!list.innerHTML) list.innerHTML = '<div style="font-size:11px;color:var(--text-3);padding:10px 0">No one matches — clear the search or filter.</div>';
+}
+function premiumToggleGroup(loc) {
+  if (_premOpenGroups.has(loc)) _premOpenGroups.delete(loc); else _premOpenGroups.add(loc);
+  const el = document.getElementById('prem-group-' + loc.replace(/[^a-zA-Z0-9]/g,'_'));
+  if (el) el.classList.toggle('open', _premOpenGroups.has(loc));
+}
+function premiumToggleMoveRow(id) {
+  const el = document.getElementById('prem-move-' + id);
+  if (el) el.classList.toggle('open');
 }
 async function premiumSetCheckin(id, status) {
   if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
+  const row = _premScheduleRows.find(r => r.id === id);
+  const prevStatus = row ? row.status : null;
+  if (row) row.status = status; // optimistic — instant visual feedback, no waiting on the network mid-gameday
+  premiumRenderCheckinsList();
   const res = await api('setPremiumCheckin', { id, status });
-  if (res.ok) premiumRenderCheckins();
-  else toast(res.error || 'Could not update', 'error');
+  if (!res.ok) {
+    toast(res.error || 'Could not update — try again', 'error');
+    if (row) row.status = prevStatus;
+    premiumRenderCheckinsList();
+  }
 }
 async function premiumMoveWorker(id, location) {
   if (!location) return;
   if (!isPremiumManagerSession()) return toast('Premium Manager access required', 'error');
+  const row = _premScheduleRows.find(r => r.id === id);
+  const prevLoc = row ? row.location_name : null;
+  if (row) row.location_name = location; // optimistic, same reasoning as premiumSetCheckin
+  premiumRenderCheckinsList();
   const res = await api('movePremiumWorker', { id, location });
-  if (res.ok) { toast('✅ Moved'); premiumRenderCheckins(); }
-  else toast(res.error || 'Could not move', 'error');
+  if (res.ok) { toast('✅ Moved to ' + location); }
+  else { toast(res.error || 'Could not move', 'error'); if (row) row.location_name = prevLoc; premiumRenderCheckinsList(); }
 }
 function premiumOpenWalkin() {
   const form = document.getElementById('prem-walkin-form');
