@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-24-warehouse-mgr-restructure-1
+- Properly restructured the Warehouse Manager's tools, instead of the previous quick patch — everything used to be crammed onto one page (stat cards, quick-action buttons, a coverage form, and a collapsed drawer holding Create Transfer + Upload CSV + a deprecated Stand Assignments form all stacked together). That's gone.
+- New pattern: the same tile-then-dedicated-screen structure the worker home screen already uses for Checks/Requests/Team (a square icon tile that opens one focused screen, not everything visible at once). Four tiles: **🚚 Create Transfer** (Self Transfer, DFA↔MAS, manual build, and CSV upload all live inside this one screen, reached via their own mini tiles), **✅ Approvals** (a live badge shows how many need him before he even taps in; the screen itself only lists what's actually actionable — verified deliveries and partial/short ones — not the full open-transfers list), **📦 Inventory** (shortcut into the existing tab, no duplicate screen needed), **👥 Assign & Team** (the warehouse coverage tool, on its own).
+- Dropped the deprecated "Stand assignments" (`za-*`) form entirely — it had already been superseded by the coverage tool and was hidden via `display:none`, just taking up dead space in the old drawer.
+- Fixed a real bug found while moving this: `wh-coverage-card` used to be recreated fresh on every render; making it static HTML meant the old cleanup code would have deleted it permanently on the very next render if left in place — caught and fixed before shipping.
+
 ## 2026-09-24-warehouse-mgr-overhaul-1
 - Removed "Assign people to locations" from Premium — the Check-ins roster already covers who's where; the old "who's assigned where" card only still shows for a Premium Employee session checking their own spot.
 - Warehouse Manager: added himself as a selectable "🙋 Myself" option in every transfer's Assign-to dropdown — he could never actually assign a transfer to himself before, only to a warehouse_employee.

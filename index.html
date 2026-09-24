@@ -3828,6 +3828,114 @@
   </div>
 </div>
 
+<!-- ============ WAREHOUSE MANAGER — CREATE TRANSFER ============ -->
+<!-- Same tile-and-screen pattern as the worker home's Checks/Requests
+     tiles: a focused screen for one job (sending stock somewhere),
+     reached from its own tile on screen-warehouse, not crammed into a
+     collapsed drawer alongside three unrelated tools. -->
+<div class="screen" id="screen-wh-create-transfer">
+  <div class="page-header">
+    <div class="back-btn" role="button" tabindex="0" aria-label="Back" onclick="goRoleHome()">←</div>
+    <div><div class="page-title">🚚 Create Transfer</div><div class="page-sub">Send stock to a stand or another warehouse</div></div>
+  </div>
+  <div class="content">
+    <div class="action-tiles">
+      <div class="action-tile" onclick="whGoSelfTransfer()">
+        <span class="tile-icon">🙋</span>
+        <div class="tile-label">Self Transfer</div>
+        <div class="tile-sub">Any stand — you deliver it</div>
+      </div>
+      <div class="action-tile" onclick="whQuickHubTransfer('MAS Warehouse','DFA Warehouse')">
+        <span class="tile-icon">🔁</span>
+        <div class="tile-label">MAS → DFA</div>
+        <div class="tile-sub">Warehouse to warehouse</div>
+      </div>
+      <div class="action-tile" onclick="whQuickHubTransfer('DFA Warehouse','MAS Warehouse')">
+        <span class="tile-icon">🔁</span>
+        <div class="tile-label">DFA → MAS</div>
+        <div class="tile-sub">Warehouse to warehouse</div>
+      </div>
+      <div class="action-tile" onclick="document.getElementById('wh-ct-csv-card').scrollIntoView({behavior:'smooth'})">
+        <span class="tile-icon">📤</span>
+        <div class="tile-label">Upload CSV</div>
+        <div class="tile-sub">Bulk-create from a sheet</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:14px;margin-top:6px" id="wh-ct-form-card">
+      <div style="font-weight:700;font-size:14px;margin-bottom:8px">Build a transfer</div>
+      <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Pick a stand, set what it needs, and choose who delivers it — yourself, someone specific, or leave it open to claim.</div>
+      <label class="form-label" style="margin-top:0">1. Pick a stand</label>
+      <select class="form-input" id="mt-stand" onchange="mtLoadStandItems()"><option value="">Select stand…</option></select>
+      <div id="mt-items-area" style="display:none">
+        <div id="mt-duplicate-warning" style="display:none;background:rgba(217,119,6,0.1);border:1px solid #D97706;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#D97706"></div>
+        <label class="form-label">2. Set cases for each item</label>
+        <input class="form-input" type="text" id="mt-item-search" placeholder="🔍 Search items…" oninput="mtRenderItems()" style="margin-bottom:8px">
+        <div id="mt-items-list" style="max-height:340px;overflow-y:auto"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <input class="form-input" type="text" id="mt-custom-item" placeholder="Add other item" style="flex:1;margin:0">
+          <input class="form-input" type="number" id="mt-custom-qty" placeholder="Cases" min="0" style="width:80px;margin:0">
+          <button class="btn btn-ghost" onclick="mtAddCustom()" style="width:auto;padding:0 14px">Add</button>
+        </div>
+        <div id="mt-summary" style="font-size:13px;font-weight:700;margin-top:12px;color:var(--aramark-red)"></div>
+        <label class="form-label">3. Assign to</label>
+        <select class="form-input" id="mt-assign-to"><option value="">Leave unassigned (self-serve claim)</option></select>
+        <div id="mt-route-owner" style="font-size:11px;color:var(--text-2);margin-top:5px"></div>
+        <button class="btn btn-primary" onclick="mtCreateTransfer()" style="margin-top:8px">Create transfer →</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding:14px;margin-top:12px" id="wh-ct-csv-card">
+      <div style="font-weight:700;font-size:14px;margin-bottom:4px">📤 Upload transfers CSV</div>
+      <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Bulk create many transfers at once, from Yellow Dog or your own sheet. Columns: Stand, Item, Cases. Syncs with existing transfers rather than duplicating them.</div>
+      <input type="file" id="mt-csv" accept=".csv" style="font-size:13px">
+      <button class="btn btn-ghost" onclick="mtUploadCSV()" style="margin-top:10px">Upload &amp; create transfers</button>
+      <div id="mt-csv-status" style="font-size:12px;color:var(--text-2);margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ WAREHOUSE MANAGER — APPROVALS ============ -->
+<div class="screen" id="screen-wh-approvals">
+  <div class="page-header">
+    <div class="back-btn" role="button" tabindex="0" aria-label="Back" onclick="goRoleHome()">←</div>
+    <div><div class="page-title">✅ Approvals</div><div class="page-sub">Deliveries waiting on you</div></div>
+  </div>
+  <div class="content">
+    <div class="card" style="padding:14px;margin-bottom:12px">
+      <div id="wh-appr-stats"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+      <button class="btn btn-ghost" onclick="exportWhTransfersCSV()" style="margin-top:10px">⬇️ Download all transfers (CSV)</button>
+    </div>
+    <div id="wh-appr-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+  </div>
+</div>
+
+<!-- ============ WAREHOUSE MANAGER — ASSIGN & TEAM ============ -->
+<div class="screen" id="screen-wh-team">
+  <div class="page-header">
+    <div class="back-btn" role="button" tabindex="0" aria-label="Back" onclick="goRoleHome()">←</div>
+    <div><div class="page-title">👥 Assign & Team</div><div class="page-sub">Coverage — who delivers where today</div></div>
+  </div>
+  <div class="content">
+    <div class="card wh-coverage-card" id="wh-coverage-card" style="padding:14px">
+      <div style="font-weight:850;font-size:13px">🗺️ Warehouse game-day coverage</div>
+      <div style="font-size:9px;color:var(--text-2);margin:3px 0 8px">Assign Warehouse employees/supervisors to delivery areas. Admin controls every team; Warehouse Manager controls Warehouse only.</div>
+      <div class="wh-coverage-grid">
+        <div>
+          <label class="form-label" style="margin-top:0">Warehouse person</label>
+          <select class="form-input" id="whcov-person" onchange="warehouseCoveragePersonChanged()"><option>Loading…</option></select>
+          <div class="coverage-area-chips" id="whcov-areas"></div>
+          <button class="btn btn-primary" onclick="warehouseCoverageSave()" style="margin-top:5px">Save coverage</button>
+        </div>
+        <div>
+          <div style="font-size:9px;font-weight:850;margin-bottom:5px">TODAY'S WAREHOUSE PLAN</div>
+          <div class="coverage-current" id="whcov-current"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ============ TRANSFER STAND (unified stocking/delivery) ============ -->
 <div class="screen" id="screen-transfer-stand">
   <div class="page-header">
@@ -3918,7 +4026,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-warehouse-mgr-overhaul-1';
+const BUILD_TAG = '2026-09-24-warehouse-mgr-restructure-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -3967,6 +4075,9 @@ function showScreen(id) {
   if (id === 'screen-all-stock') { loadAllStockReqs(); state.refreshInterval = setInterval(loadAllStockReqs, 15000); }
   if (id === 'screen-all-checks') { loadAllChecksStatus(); state.refreshInterval = setInterval(loadAllChecksStatus, 15000); }
   if (id === 'screen-transfer-record') { loadStandTransferRecord(); }
+  if (id === 'screen-wh-create-transfer') { mtLoadStands(); mtLoadAssignees(); }
+  if (id === 'screen-wh-approvals') { loadWhApprovals(); state.refreshInterval = setInterval(loadWhApprovals, 15000); }
+  if (id === 'screen-wh-team') { warehouseCoverageInit(); }
   else if (id === 'screen-supervisor') { loadSupervisor(); document.getElementById('sup-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}); state.refreshInterval = setInterval(loadSupervisor, 15000); }
   else if (id === 'screen-my-requests') { loadMyRequests(); state.refreshInterval = setInterval(loadMyRequests, 15000); }
   else if (id === 'screen-stand-requests') { loadStandRequests(); state.refreshInterval = setInterval(loadStandRequests, 12000); }
@@ -10796,13 +10907,12 @@ async function mgrClockOut(idx) {
 // same names so Create Transfer's item list populates normally.
 const WAREHOUSE_TRANSFER_HUBS = ['DFA Warehouse', 'MAS Warehouse'];
 
-// One-tap shortcut for warehouse-to-warehouse transfers — opens the tools
-// drawer, pre-selects the destination stand, and loads its items, instead
-// of making a manager dig through a collapsed drawer's plain dropdown to
-// find "MAS Warehouse" buried alongside every concession stand.
+// One-tap shortcut for warehouse-to-warehouse transfers — jumps straight
+// to the Create Transfer screen with the destination and assignee
+// pre-picked, instead of making a manager dig through a dropdown to find
+// "MAS Warehouse" buried alongside every concession stand.
 async function whQuickHubTransfer(fromStand, toStand) {
-  const drawer = document.getElementById('wh-manager-tools');
-  if (drawer && !drawer.open) drawer.open = true;
+  showScreen('screen-wh-create-transfer');
   await mtLoadStands();
   await mtLoadAssignees();
   const sel = document.getElementById('mt-stand');
@@ -10814,33 +10924,28 @@ async function whQuickHubTransfer(fromStand, toStand) {
   if (assignSel && me) assignSel.value = me.empId + '|' + me.name;
   await mtLoadStandItems();
   toast('🔁 Sending to ' + toStand + ' — from ' + fromStand);
-  const target = document.getElementById('mt-items-area') || drawer;
+  const target = document.getElementById('mt-items-area');
   if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 // "He keeps the transfer himself" — any stand, not just the warehouse
 // hubs, with the assignee pre-set to the manager so nothing extra needs
 // picking before he starts choosing items.
 async function whGoSelfTransfer() {
-  const drawer = document.getElementById('wh-manager-tools');
-  if (drawer && !drawer.open) drawer.open = true;
+  showScreen('screen-wh-create-transfer');
   await mtLoadStands();
   await mtLoadAssignees();
   const assignSel = document.getElementById('mt-assign-to');
   const me = state.staffAccount;
   if (assignSel && me) assignSel.value = me.empId + '|' + me.name;
   toast('🙋 Pick a stand below — assigned to you to deliver');
-  const target = document.getElementById('mt-stand');
+  const target = document.getElementById('wh-ct-form-card');
   if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-// Jumps straight to the Transfers tab, switched to "All open" so a
-// verified delivery awaiting his approval never gets hidden by the
-// default today's-venue filter.
-function whGoNeedsApproval() {
-  const tab = document.getElementById('wh-tab-transfers');
-  if (tab) whMode(tab, 'transfers');
-  const allBtn = document.querySelector('.wh-tf-filter-btn[data-tf="all"]');
-  if (allBtn) whSetTransferFilter('all', allBtn);
-  toast('Look for ✅ Approve and ⚠️ Partial in the list');
+// Switches to the Inventory tab from the tile grid — Inventory already
+// has its own solid tab, no need for a duplicate dedicated screen.
+function whGoInventoryTab() {
+  const tab = document.getElementById('wh-tab-inventory');
+  if (tab) whMode(tab, 'inventory');
 }
 
 async function mtLoadStands() {
@@ -17337,6 +17442,12 @@ function renderWarehouseForRole() {
   if (invTab) invTab.style.display = isWhMgr ? 'block' : 'none';
   if (cartTab) cartTab.style.display = isWhMgr ? 'block' : 'none';
 
+  // Cleanup for the old dynamically-injected cards from before this
+  // screen was restructured into tiles + dedicated screens. wh-coverage-card
+  // is deliberately NOT included here anymore — it's real static HTML
+  // inside screen-wh-team now, not something re-created on every render,
+  // so removing it here would delete it permanently the next time any
+  // warehouse role's screen rendered.
   const existing = document.getElementById('wh-manager-summary');
   if (existing) existing.remove();
   const existingTools = document.getElementById('wh-manager-tools');
@@ -17345,139 +17456,39 @@ function renderWarehouseForRole() {
   if (existingCreate) existingCreate.remove();
   const existingQr = document.getElementById('wh-manager-qr-card');
   if (existingQr) existingQr.remove();
-  const existingCoverage = document.getElementById('wh-coverage-card');
-  if (existingCoverage) existingCoverage.remove();
   const existingQuick = document.getElementById('wh-quick-actions');
   if (existingQuick) existingQuick.remove();
+  const existingTiles = document.getElementById('wh-mgr-tiles');
+  if (existingTiles) existingTiles.remove();
 
   if (!isWhMgr) return;
 
   const list = document.getElementById('wh-transfers-list');
   if (!list || !list.parentNode) return;
 
-  // Needs Your Attention — replaces the old plain-text "Team Overview".
-  // Real numbers now (the awaiting-approval count had the wrong status
-  // check before and never matched what was actually approvable), and
-  // partial/short deliveries — "did they only do half" — get their own
-  // count instead of being invisible until you opened each transfer.
-  const summary = document.createElement('div');
-  summary.id = 'wh-manager-summary';
-  summary.className = 'card';
-  summary.style.cssText = 'padding:14px;margin-bottom:12px';
-  summary.innerHTML =
-    '<div style="font-size:12px;font-weight:800;letter-spacing:1px;color:var(--text-2);margin-bottom:8px">⚠️ NEEDS YOUR ATTENTION</div>' +
-    '<div id="wh-manager-stats" style="font-size:13px;color:var(--text-2)">Loading…</div>';
-  list.parentNode.insertBefore(summary, list);
-  refreshWarehouseManagerStats();
-
-  // Big, obvious, one-tap actions in a 2-column grid on anything wider
-  // than a phone (same .mgr-tools-grid + .big-action pattern already
-  // used for the Manager home screen's Supervisor tools) instead of the
-  // old stacked full-width buttons. Self Transfer covers the "he does it
-  // himself, stand to stand" case that had no direct entry point before
-  // — Create Transfer existed, but nothing pre-picked him as the
-  // assignee, so it took extra steps every single time.
-  const quick = document.createElement('div');
-  quick.id = 'wh-quick-actions';
-  quick.className = 'mgr-tools-grid';
-  quick.style.cssText = 'margin-bottom:12px';
-  quick.innerHTML =
-    '<button class="big-action" style="border-left:4px solid var(--aramark-red)" onclick="whGoSelfTransfer()">' +
-      '<span class="icon">🙋</span><span class="text"><div>Self Transfer</div><div class="sub">Any stand — you deliver it yourself</div></span>' +
-    '</button>' +
-    '<button class="big-action" style="border-left:4px solid #DC2626" onclick="whGoNeedsApproval()">' +
-      '<span class="icon">✅</span><span class="text"><div>Needs Approval</div><div class="sub">Verified deliveries waiting on you</div></span>' +
-    '</button>' +
-    '<button class="big-action" style="border-left:4px solid #00A651" onclick="whQuickHubTransfer(\'DFA Warehouse\',\'MAS Warehouse\')">' +
-      '<span class="icon">🔁</span><span class="text"><div>DFA → MAS Warehouse</div><div class="sub">Send common stock between warehouses</div></span>' +
-    '</button>' +
-    '<button class="big-action" style="border-left:4px solid #00A651" onclick="whQuickHubTransfer(\'MAS Warehouse\',\'DFA Warehouse\')">' +
-      '<span class="icon">🔁</span><span class="text"><div>MAS → DFA Warehouse</div><div class="sub">Send common stock between warehouses</div></span>' +
-    '</button>' +
-    '<button class="big-action" style="border-left:4px solid #7C3AED" onclick="exportWhTransfersCSV()">' +
-      '<span class="icon">⬇️</span><span class="text"><div>Download all transfers</div><div class="sub">Every open transfer + items, as a CSV</div></span>' +
-    '</button>';
-  list.parentNode.insertBefore(quick, list);
-
-  const whCoverage=document.createElement('div');whCoverage.id='wh-coverage-card';whCoverage.className='card wh-coverage-card';
-  whCoverage.innerHTML='<div style="font-weight:850;font-size:13px">🗺️ Warehouse game-day coverage</div>'+
-    '<div style="font-size:9px;color:var(--text-2);margin:3px 0 8px">Assign Warehouse employees/supervisors to delivery areas. Admin controls every team; Warehouse Manager controls Warehouse only.</div>'+
-    '<div class="wh-coverage-grid"><div><label class="form-label" style="margin-top:0">Warehouse person</label><select class="form-input" id="whcov-person" onchange="warehouseCoveragePersonChanged()"><option>Loading…</option></select><div class="coverage-area-chips" id="whcov-areas"></div><button class="btn btn-primary" onclick="warehouseCoverageSave()" style="margin-top:5px">Save coverage</button></div><div><div style="font-size:9px;font-weight:850;margin-bottom:5px">TODAY\'S WAREHOUSE PLAN</div><div class="coverage-current" id="whcov-current"></div></div></div>';
-  list.parentNode.insertBefore(whCoverage,list);warehouseCoverageInit();
-
-  // Create Transfer and Upload CSV are the two real options here. There
-  // used to be a third — "Add stock directly" via a dropdown — but that
-  // did the exact same thing QR scanning already does for every warehouse
-  // role: walk up to a stand, open it, add what's being handed over on
-  // the spot. Two UI paths to the identical outcome was the actual
-  // problem, not something worth keeping as a "faster" option — scanning
-  // the sticker already is the fast, in-person path.
-  const createRow = document.createElement('div');
-  createRow.id = 'wh-manager-create-row';
-  createRow.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-bottom:12px';
-  createRow.innerHTML =
-    '<div class="card" style="padding:14px">' +
-      '<div style="font-weight:700;font-size:14px;margin-bottom:8px">➕ Create transfer</div>' +
-      '<div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Plan ahead — pick a stand, set what it needs, optionally assign it to a specific person to deliver later.</div>' +
-      '<label class="form-label" style="margin-top:0">1. Pick a stand</label>' +
-      '<select class="form-input" id="mt-stand" onchange="mtLoadStandItems()"><option value="">Select stand…</option></select>' +
-      '<div id="mt-items-area" style="display:none">' +
-        '<div id="mt-duplicate-warning" style="display:none;background:rgba(217,119,6,0.1);border:1px solid #D97706;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#D97706"></div>' +
-        '<label class="form-label">2. Set cases for each item</label>' +
-        '<input class="form-input" type="text" id="mt-item-search" placeholder="🔍 Search items…" oninput="mtRenderItems()" style="margin-bottom:8px">' +
-        '<div id="mt-items-list" style="max-height:340px;overflow-y:auto"></div>' +
-        '<div style="display:flex;gap:8px;margin-top:10px">' +
-          '<input class="form-input" type="text" id="mt-custom-item" placeholder="Add other item" style="flex:1;margin:0">' +
-          '<input class="form-input" type="number" id="mt-custom-qty" placeholder="Cases" min="0" style="width:80px;margin:0">' +
-          '<button class="btn btn-ghost" onclick="mtAddCustom()" style="width:auto;padding:0 14px">Add</button>' +
-        '</div>' +
-        '<div id="mt-summary" style="font-size:13px;font-weight:700;margin-top:12px;color:var(--aramark-red)"></div>' +
-        '<label class="form-label">3. Assign to</label>' +
-        '<select class="form-input" id="mt-assign-to"><option value="">Leave unassigned (self-serve claim)</option></select>' +
-        '<div id="mt-route-owner" style="font-size:11px;color:var(--text-2);margin-top:5px"></div>' +
-        '<button class="btn btn-primary" onclick="mtCreateTransfer()" style="margin-top:8px">Create transfer →</button>' +
-      '</div>' +
+  // One entry point per job, same tile-then-dedicated-screen pattern as
+  // the worker home's Checks/Requests/Team tiles — not four different
+  // cards and a collapsed drawer stacked on the same page. Each tile
+  // owns one focused screen; nothing else lives here.
+  const tiles = document.createElement('div');
+  tiles.id = 'wh-mgr-tiles';
+  tiles.className = 'action-tiles';
+  tiles.style.cssText = 'margin-bottom:4px';
+  tiles.innerHTML =
+    '<div class="action-tile tile-red" onclick="showScreen(\'screen-wh-create-transfer\')">' +
+      '<span class="tile-icon">🚚</span><div class="tile-label">Create Transfer</div><div class="tile-sub">Send stock — self or assign</div>' +
     '</div>' +
-    '<div class="card" style="padding:14px">' +
-      '<div style="font-weight:700;font-size:14px;margin-bottom:4px">📤 Upload transfers CSV</div>' +
-      '<div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Bulk create many transfers at once, from Yellow Dog or your own sheet. Columns: Stand, Item, Cases. Syncs with existing transfers rather than duplicating them.</div>' +
-      '<input type="file" id="mt-csv" accept=".csv" style="font-size:13px">' +
-      '<button class="btn btn-ghost" onclick="mtUploadCSV()" style="margin-top:10px">Upload &amp; create transfers</button>' +
-      '<div id="mt-csv-status" style="font-size:12px;color:var(--text-2);margin-top:8px"></div>' +
+    '<div class="action-tile" id="wh-tile-approvals" onclick="showScreen(\'screen-wh-approvals\')">' +
+      '<span class="tile-icon">✅</span><div class="tile-label">Approvals</div><div class="tile-sub" id="wh-tile-approvals-sub">Loading…</div>' +
     '</div>' +
-    '<div class="card" style="padding:14px">' +
-      '<div style="font-weight:700;font-size:14px;margin-bottom:4px">🗺️ Stand assignments</div>' +
-      '<div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Assign a warehouse employee or supervisor to specific stands. New tool — old behavior (everyone sees every stand) is unchanged for anyone left unassigned.</div>' +
-      '<label class="form-label" style="margin-top:0">1. Who</label>' +
-      '<select class="form-input" id="za-role" onchange="zaLoadPeople()"><option value="warehouse">Warehouse Employee</option><option value="supervisor">Supervisor</option></select>' +
-      '<select class="form-input" id="za-person" onchange="zaLoadExisting()"><option value="">Select person…</option></select>' +
-      '<div id="za-stands-area" style="display:none">' +
-        '<label class="form-label">2. Which stands</label>' +
-        '<input class="form-input" type="text" id="za-stand-search" placeholder="🔍 Search stands…" oninput="zaRenderStands()" style="margin-bottom:8px">' +
-        '<div id="za-stands-list" style="max-height:260px;overflow-y:auto"></div>' +
-        '<button class="btn btn-primary" onclick="zaSaveAssignment()" style="margin-top:10px">Save assignment →</button>' +
-        '<button class="btn btn-ghost" onclick="zaClearAssignment()" style="margin-top:6px">Remove assignment (back to seeing everything)</button>' +
-      '</div>' +
-      '<div style="height:1px;background:var(--border);margin:14px 0"></div>' +
-      '<div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:6px">Current assignments</div>' +
-      '<div id="za-current-list" style="font-size:12px"><div class="loading"><div class="spinner"></div>Loading…</div></div>' +
+    '<div class="action-tile" onclick="whGoInventoryTab()">' +
+      '<span class="tile-icon">📦</span><div class="tile-label">Inventory</div><div class="tile-sub">Warehouse stock counts</div>' +
+    '</div>' +
+    '<div class="action-tile" onclick="showScreen(\'screen-wh-team\')">' +
+      '<span class="tile-icon">👥</span><div class="tile-label">Assign & Team</div><div class="tile-sub">Who covers what today</div>' +
     '</div>';
-  const legacyAssignmentCard=[...createRow.querySelectorAll('.card')].find(c=>c.textContent.includes('Stand assignments'));
-  if(legacyAssignmentCard)legacyAssignmentCard.style.display='none';
-  const toolsWrap = document.createElement('details');
-  toolsWrap.id = 'wh-manager-tools';
-  toolsWrap.className = 'wh-tools-details';
-  const toolsSummary = document.createElement('summary');
-  toolsSummary.innerHTML = '<span>🧰 Planning &amp; setup tools</span><span style="font-size:11px;color:var(--text-2);font-weight:500">Create · CSV · Assignments</span>';
-  const toolsInner = document.createElement('div');
-  toolsInner.className = 'wh-tools-inner';
-  toolsInner.appendChild(createRow);
-  toolsWrap.appendChild(toolsSummary);
-  toolsWrap.appendChild(toolsInner);
-  list.parentNode.insertBefore(toolsWrap, list);
-  mtLoadStands();
-  zaLoadPeople();
-  zaLoadCurrent();
+  list.parentNode.insertBefore(tiles, list);
+  whUpdateApprovalsTile();
 
   // Inventory — now its own dedicated tab instead of stacked above the
   // transfers list.
@@ -18072,11 +18083,12 @@ async function saToggleStand(standName, enabled, btn) {
   });
 }
 
-async function refreshWarehouseManagerStats() {
-  const el = document.getElementById('wh-manager-stats');
-  if (!el) return;
-  const rows = await sb('transfers?status=neq.confirmed&select=id,status,assigned_to_name,wh_confirmed_at&limit=200').catch(()=>({_err:true}));
-  if (rows._err || !Array.isArray(rows)) { el.textContent = 'Could not load.'; return; }
+// Shared by the Approvals screen (full detail) and the Create Transfer
+// tile's live badge (short summary) — one source of truth for "what
+// needs the manager's attention right now."
+async function whComputeStats() {
+  const rows = await sb('transfers?status=neq.confirmed&select=id,stand,status,assigned_to_name,wh_confirmed_at&limit=200').catch(()=>({_err:true}));
+  if (rows._err || !Array.isArray(rows)) return null;
   const total = rows.length;
   const unassigned = rows.filter(r => !r.assigned_to_name).length;
   // Real fix: this used to check status==='delivered', but 'delivered'
@@ -18085,36 +18097,95 @@ async function refreshWarehouseManagerStats() {
   // is 'verified'. The old count was checking the wrong stage entirely,
   // so "awaiting your confirm" never matched what the Transfers tab
   // actually showed him as approvable.
-  const awaitingConfirm = rows.filter(r => r.status === 'verified' && !r.wh_confirmed_at).length;
+  const awaitingConfirm = rows.filter(r => r.status === 'verified' && !r.wh_confirmed_at);
   const awaitingSupervisor = rows.filter(r => r.status === 'delivered').length;
   const byPerson = {};
   rows.forEach(r => { if (r.assigned_to_name) byPerson[r.assigned_to_name] = (byPerson[r.assigned_to_name]||0) + 1; });
-  const perPersonHtml = Object.keys(byPerson).sort().map(n => escapeHtml(n) + ': ' + byPerson[n]).join(' · ') || 'No one has open tasks assigned right now.';
 
   // Partial fulfillment — a transfer marked delivered/verified where at
   // least one item's qty_delivered came in under what was requested.
   // This is exactly the "did they only do half" case that used to be
   // invisible — nothing distinguished a partial delivery from a full one
   // anywhere in the manager's view.
-  let partialCount = 0;
-  const inProgress = rows.filter(r => ['delivered', 'verified'].includes(r.status)).map(r => r.id);
+  let partialRows = [];
+  const inProgress = rows.filter(r => ['delivered', 'verified'].includes(r.status));
   if (inProgress.length) {
-    const items = await sb('transfer_items?transfer_id=in.(' + inProgress.join(',') + ')&select=transfer_id,qty_requested,qty_delivered').catch(() => ({ _err: true }));
+    const items = await sb('transfer_items?transfer_id=in.(' + inProgress.map(r=>r.id).join(',') + ')&select=transfer_id,qty_requested,qty_delivered').catch(() => ({ _err: true }));
     if (!items._err && Array.isArray(items)) {
       const partialIds = new Set(items.filter(it => it.qty_delivered != null && Number(it.qty_delivered) < Number(it.qty_requested || 0)).map(it => it.transfer_id));
-      partialCount = partialIds.size;
+      partialRows = inProgress.filter(r => partialIds.has(r.id));
     }
   }
+  return { total, unassigned, awaitingConfirm, awaitingSupervisor, partialRows, byPerson };
+}
 
+async function refreshWarehouseManagerStats() {
+  const el = document.getElementById('wh-appr-stats');
+  if (!el) return;
+  const s = await whComputeStats();
+  if (!s) { el.textContent = 'Could not load.'; return; }
+  const perPersonHtml = Object.keys(s.byPerson).sort().map(n => escapeHtml(n) + ': ' + s.byPerson[n]).join(' · ') || 'No one has open tasks assigned right now.';
   el.innerHTML =
+    '<div style="font-size:12px;font-weight:800;letter-spacing:1px;color:var(--text-2);margin-bottom:8px">TODAY AT A GLANCE</div>' +
     '<div class="wh-stat-row">' +
-      '<div class="wh-stat-chip"><b>' + total + '</b><span>Open</span></div>' +
-      '<div class="wh-stat-chip' + (unassigned ? ' warn' : '') + '"><b>' + unassigned + '</b><span>Unassigned</span></div>' +
-      '<div class="wh-stat-chip' + (awaitingSupervisor ? ' info' : '') + '"><b>' + awaitingSupervisor + '</b><span>Awaiting supervisor</span></div>' +
-      '<div class="wh-stat-chip' + (awaitingConfirm ? ' urgent' : '') + '"><b>' + awaitingConfirm + '</b><span>Needs your approval</span></div>' +
-      '<div class="wh-stat-chip' + (partialCount ? ' urgent' : '') + '"><b>' + partialCount + '</b><span>Partial / short</span></div>' +
+      '<div class="wh-stat-chip"><b>' + s.total + '</b><span>Open</span></div>' +
+      '<div class="wh-stat-chip' + (s.unassigned ? ' warn' : '') + '"><b>' + s.unassigned + '</b><span>Unassigned</span></div>' +
+      '<div class="wh-stat-chip' + (s.awaitingSupervisor ? ' info' : '') + '"><b>' + s.awaitingSupervisor + '</b><span>Awaiting supervisor</span></div>' +
+      '<div class="wh-stat-chip' + (s.awaitingConfirm.length ? ' urgent' : '') + '"><b>' + s.awaitingConfirm.length + '</b><span>Needs your approval</span></div>' +
+      '<div class="wh-stat-chip' + (s.partialRows.length ? ' urgent' : '') + '"><b>' + s.partialRows.length + '</b><span>Partial / short</span></div>' +
     '</div>' +
     '<div style="font-size:11px;color:var(--text-2);margin-top:6px">' + perPersonHtml + '</div>';
+}
+
+// The Approvals tile's own live badge, so a manager glancing at the tile
+// grid already knows whether there's anything waiting before tapping in.
+async function whUpdateApprovalsTile() {
+  const sub = document.getElementById('wh-tile-approvals-sub');
+  const tile = document.getElementById('wh-tile-approvals');
+  if (!sub) return;
+  const s = await whComputeStats();
+  if (!s) { sub.textContent = 'Verified deliveries'; return; }
+  const needs = s.awaitingConfirm.length + s.partialRows.length;
+  if (!needs) { sub.textContent = 'All caught up ✅'; if (tile) tile.classList.remove('tile-red'); }
+  else {
+    sub.textContent = needs + ' waiting' + (s.partialRows.length ? ' · ' + s.partialRows.length + ' partial' : '');
+    if (tile) tile.classList.add('tile-red');
+  }
+}
+
+// The Approvals screen's own list — only what's actually actionable
+// (verified, waiting on him) or flagged (partial/short), not the full
+// open-transfers list. Reuses TRANSFER_STATUS for consistent coloring.
+async function loadWhApprovals() {
+  const el = document.getElementById('wh-appr-list');
+  if (!el) return;
+  refreshWarehouseManagerStats();
+  const s = await whComputeStats();
+  if (!s) { el.innerHTML = '<div class="notice" style="font-size:12px">Could not load.</div>'; return; }
+  const rowsById = {};
+  s.awaitingConfirm.forEach(r => rowsById[r.id] = r);
+  s.partialRows.forEach(r => rowsById[r.id] = r);
+  const rows = Object.values(rowsById);
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty" style="padding:30px"><div class="empty-icon">✅</div><p style="color:var(--text-2)">Nothing waiting on you right now.</p></div>';
+    return;
+  }
+  const partialIds = new Set(s.partialRows.map(r => r.id));
+  el.innerHTML = rows.map(t => {
+    const st = TRANSFER_STATUS[t.status] || TRANSFER_STATUS.pending;
+    const canConfirm = t.status === 'verified' && !t.wh_confirmed_at;
+    const badge = partialIds.has(t.id) ? ' <span style="color:#DC2626;font-weight:800">⚠️ Partial</span>' : '';
+    const right = canConfirm
+      ? '<button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();whConfirmTask(' + t.id + ')">✅ Approve</button>'
+      : '<span style="font-size:11px;color:var(--text-2)">' + escapeHtml(st.label) + '</span>';
+    return '<div class="sub-menu-btn" style="border-left:4px solid ' + st.color + '">' +
+      '<span class="smb-icon" onclick="openTransferStand(\'' + t.stand.replace(/'/g,"\\'") + '\',\'list\',' + t.id + ')">📦</span>' +
+      '<div style="flex:1" onclick="openTransferStand(\'' + t.stand.replace(/'/g,"\\'") + '\',\'list\',' + t.id + ')">' +
+        '<div class="smb-label">' + escapeHtml(t.stand) + '</div>' +
+        '<div class="smb-sub">' + (t.assigned_to_name ? 'Assigned to ' + escapeHtml(t.assigned_to_name) : 'Unassigned') + ' · <span style="color:' + st.color + ';font-weight:700">' + st.label + '</span>' + badge + '</div>' +
+      '</div>' + right +
+    '</div>';
+  }).join('');
 }
 
 async function loadWarehouse() {
@@ -20184,6 +20255,9 @@ const BACK_MAP = {
   'screen-incoming-transfers': 'screen-submenu-requests',
   'screen-transfer-stand': 'screen-warehouse',
   'screen-qr-codes': 'screen-warehouse',
+  'screen-wh-create-transfer': 'screen-warehouse',
+  'screen-wh-approvals': 'screen-warehouse',
+  'screen-wh-team': 'screen-warehouse',
   'screen-warehouse': null,
   'screen-kitchen': null,
   'screen-premium': null,
