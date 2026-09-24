@@ -3853,7 +3853,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-warehouse-transfer-hubs-1';
+const BUILD_TAG = '2026-09-24-warehouse-transfer-hubs-2';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10883,17 +10883,19 @@ function mtRenderItems() {
   filtered.forEach(it => { const c = it.category||'OTHER'; (groups[c]=groups[c]||[]).push(it); });
   const cats = Object.keys(groups).sort((a,b)=>catOrder.indexOf(a)-catOrder.indexOf(b));
   el.innerHTML = cats.map(cat => `
-    <div style="position:sticky;top:0;background:var(--bg-elevated);padding:6px 10px;font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-2);border-radius:6px;margin:8px 0 4px">${catIcon[cat]||''} ${cat} <span style="font-weight:400">(${groups[cat].length})</span></div>` +
+    <div style="position:sticky;top:0;background:var(--bg-elevated);padding:7px 10px;font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-2);border-radius:8px;margin:10px 0 6px;box-shadow:var(--shadow)">${catIcon[cat]||''} ${cat} <span style="font-weight:400">(${groups[cat].length})</span></div>` +
+    '<div style="display:flex;flex-direction:column;gap:6px">' +
     groups[cat].map(it => `
-      <div style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);box-shadow:var(--shadow);transition:box-shadow 0.12s ease${it.qty>0?';border-color:var(--aramark-red)':''}">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600">${it.name}</div>
-          ${it.pack?'<div style="font-size:11px;color:var(--text-2)">'+it.pack+'</div>':''}
+          <div style="font-size:13px;font-weight:700">${it.name}</div>
+          ${it.pack?'<div style="font-size:11px;color:var(--text-2);margin-top:1px">'+it.pack+'</div>':''}
         </div>
-        <button onclick="mtStep(${it.i},-1)" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border-strong);background:var(--bg-card);font-size:17px;font-weight:700;cursor:pointer">−</button>
-        <input type="number" min="0" value="${it.qty}" onchange="mtSetQty(${it.i},this.value)" style="width:48px;text-align:center;font-weight:700;font-size:16px;border:1.5px solid var(--border-strong);border-radius:8px;padding:6px 2px;background:var(--bg-card);color:var(--text)">
-        <button onclick="mtStep(${it.i},1)" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--aramark-red);background:var(--aramark-red);color:#fff;font-size:17px;font-weight:700;cursor:pointer">+</button>
-      </div>`).join('')
+        <button onclick="mtStep(${it.i},-1)" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border-strong);background:var(--bg-elevated);font-size:17px;font-weight:700;cursor:pointer;box-shadow:var(--shadow)">−</button>
+        <input type="number" min="0" value="${it.qty}" onchange="mtSetQty(${it.i},this.value)" style="width:52px;text-align:center;font-weight:800;font-size:16px;border:1.5px solid var(--border-strong);border-radius:8px;padding:7px 2px;background:var(--bg-card);color:var(--text)">
+        <button onclick="mtStep(${it.i},1)" style="width:32px;height:32px;border-radius:8px;border:none;background:var(--aramark-red);color:#fff;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(228,0,43,0.3)">+</button>
+      </div>`).join('') +
+    '</div>'
   ).join('');
   mtUpdateSummary();
 }

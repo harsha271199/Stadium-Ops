@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-24-warehouse-transfer-hubs-2
+- Fixed a real defect in the warehouse item catalog seed: it used the concession sheet's Chargeable/Non-Chargeable/Supplies categories, but Create Transfer's item list only groups by ALCOHOL/BEVERAGE/FOOD/SUPPLIES — every item would have silently landed in a catch-all "OTHER" bucket instead of grouping properly. Recategorized correctly, and added "CUP SOUVENIR SODA 32OZ CHURCHIL" (32oz souvenir cup) to the catalog.
+- Polished Create Transfer's item picker: each item is now its own card with a shadow, a highlighted border once you've set a quantity, and a deeper +/− stepper, instead of flat divider-separated rows.
+
 ## 2026-09-24-warehouse-transfer-hubs-1
 - Added "DFA Warehouse" and "MAS Warehouse" as Warehouse transfer endpoints — both now selectable in Create Transfer regardless of the concession-only stand filter, so Warehouse can move common bulk items (water, beer, chips, buns, gloves, CO2, etc. — 22 exact items, matched to names already used elsewhere in the app) between the two venue warehouses.
 - Added a "⬇️ Download CSV" button on the Transfers tab — exports every open transfer with its items (stand, status, item, qty requested/delivered) so a transfer can be handed off or kept as a record outside the app.
