@@ -4062,7 +4062,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-hub-transfer-confirm-fix-1';
+const BUILD_TAG = '2026-09-27-self-transfer-one-tap-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -19911,7 +19911,20 @@ async function tsCompleteDelivery(opts) {
     // an ad-hoc one from a stand's request or a walk-up force-stock
     // leaves it blank. Empty initiated_by -> the employee's own delivery
     // IS the finish line, straight to confirmed.
-    const finalStatus = !isManagerPlanned ? 'confirmed' : 'delivered';
+    let finalStatus = !isManagerPlanned ? 'confirmed' : 'delivered';
+
+    // A genuine self-transfer (Warehouse Manager assigned it to himself,
+    // and he's the one physically delivering it) has nobody else to sign
+    // off — the sign-off/approval chain exists so a DIFFERENT person can
+    // check the work, which doesn't apply when it's the same person end to
+    // end. Previously this still made him tap through Mark Delivered ->
+    // Verify & e-sign (typing his own name) -> Approve for something he
+    // did entirely himself. Skips straight to verified+approved (and, for
+    // a warehouse hub transfer, all the way to confirmed — see the hub fix
+    // in whFinalApprove/whConfirmTask) in one tap instead.
+    const selfHandled = isManagerPlanned && isWarehouseManagerSession() &&
+      _tsTransfer.assigned_to_id && state.staffAccount &&
+      String(_tsTransfer.assigned_to_id) === String(state.staffAccount.empId);
 
     const confirmNote = opts.scanSkipped
       ? ('⚠️ Delivered — scan skipped (quick option) by ' + (state.whName || 'Warehouse'))
@@ -19919,6 +19932,29 @@ async function tsCompleteDelivery(opts) {
     const deliveredByName = getFieldOpsActor().name || state.whName || 'Warehouse';
     const patchBody = { status: finalStatus, delivered_by: deliveredByName, updated_at: new Date().toISOString() };
     if (confirmNote) patchBody.note = confirmNote;
+
+    if (selfHandled) {
+      // Same physical-inventory ledger write tsVerifySign() would have
+      // made — a manager-planned transfer only becomes canonical stock
+      // once this happens, and skipping the verify screen must not skip it.
+      for (const it of _tsItems) {
+        await logMovement({
+          stand: _tsTransfer.stand, item: it.item_name, qty: Number(it.qty_delivered || it.qty_requested || 0),
+          type: 'transfer_in', direction: 'in', refTable: 'transfers', refId: _tsTransfer.id,
+          who: deliveredByName, role: 'Warehouse Manager', note: 'Self-transfer — delivered, verified and approved by the same person'
+        });
+      }
+      const isHub = WAREHOUSE_TRANSFER_HUBS.includes(_tsTransfer.stand);
+      finalStatus = isHub ? 'confirmed' : 'verified';
+      const sig = deliveredByName + ' @ ' + new Date().toLocaleString();
+      Object.assign(patchBody, {
+        status: finalStatus,
+        verified_by: deliveredByName, verified_signature: sig, verified_at: new Date().toISOString(),
+        wh_confirmed_by_id: state.staffAccount.empId, wh_confirmed_by_name: deliveredByName, wh_confirmed_at: new Date().toISOString()
+      });
+      if (isHub) { patchBody.confirmed_by = deliveredByName; patchBody.confirmed_at = new Date().toISOString(); }
+    }
+
     const finalRes = await patchTransferWithOptionalNote('id=eq.'+_tsTransfer.id, patchBody);
     if (finalRes && finalRes._queued) {
       toast('📤 No signal right now — will finish saving once you\'re back online. Don\'t close the app.');
@@ -19929,11 +19965,19 @@ async function tsCompleteDelivery(opts) {
     }
     _tsTransfer.status = finalStatus;
     _tsTransfer.delivered_by = deliveredByName;
+    if (selfHandled) {
+      _tsTransfer.verified_by = deliveredByName;
+      _tsTransfer.wh_confirmed_at = patchBody.wh_confirmed_at;
+    }
     if(finalStatus==='delivered'){
       sb('staff_accounts?role=eq.warehouse_supervisor&is_active=eq.true&select=employee_id').then(rows=>{if(!rows._err&&Array.isArray(rows))rows.forEach(x=>sendPushTo(x.employee_id,'📦 Delivery ready to verify',_tsTransfer.stand+' · delivered by '+deliveredByName));}).catch(()=>{});
     }
-
-    if (isFieldForceStockSource(_tsSource)) {
+    if (selfHandled) {
+      toast(finalStatus === 'confirmed' ? '✅ Delivered, verified & confirmed — done' : '✅ Delivered & verified — waiting on the stand manager\'s final receipt');
+      renderTsItems();
+      renderTsStatus();
+      setTimeout(() => { showScreen('screen-warehouse'); renderWarehouseForRole(); }, 900);
+    } else if (isFieldForceStockSource(_tsSource)) {
       toast(_tsSource==='camera_restock'?'✅ Force Restock complete — stock count already updated':'✅ Stock logged — added to the stand inventory');
       renderTsItems();
       renderTsStatus();
