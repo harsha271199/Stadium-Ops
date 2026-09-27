@@ -4069,7 +4069,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-employee-supervisor-declutter-1';
+const BUILD_TAG = '2026-09-27-supervisor-tiles-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -17809,6 +17809,19 @@ async function resolveIT(id) {
 // (which filters by role); this adds the one thing that's genuinely
 // different for warehouse_manager — an aggregate summary instead of a task
 // list to act on, since a manager's job here is oversight, not doing tasks.
+// Supervisor's tile sub-labels mirror the same counts the (now hidden)
+// tab-bar badges always tracked — reads directly off those existing spans
+// rather than recomputing anything, so this stays correct for free
+// whenever loadWhTransfers()/renderWarehouse() already refresh them.
+function whSupSyncTileBadges() {
+  const t = document.getElementById('wh-transfer-count');
+  const r = document.getElementById('wh-open-count');
+  const ts = document.getElementById('wh-sup-tile-transfers-sub');
+  const rs = document.getElementById('wh-sup-tile-requests-sub');
+  if (ts && t) ts.textContent = t.textContent + ' open';
+  if (rs && r) rs.textContent = r.textContent + ' open';
+}
+
 function dismissWhFirstGameHelp() {
   const el = document.getElementById('wh-first-game-help');
   if (el) el.style.display = 'none';
@@ -17865,20 +17878,21 @@ function renderWarehouseForRole() {
   // Golf Cart hidden from all access for now.
   if (cartTab) cartTab.style.display = 'none';
 
-  // Manager sees a tile menu only — no slider. Supervisor keeps the
-  // original tab-bar (Transfers + Requests are both real destinations for
-  // that role). Employee's tab-bar only ever had ONE visible tab —
-  // Available Jobs — since every other tab is manager/supervisor-only;
-  // a "tab bar" with a single option is pure decoration, so it's hidden
-  // for Employee too and the list just shows directly, same idea as the
-  // manager cleanup.
+  // Manager AND Supervisor now both get a tile menu instead of the old
+  // tab-bar — Supervisor's two tabs (Transfers/Requests) were real
+  // destinations, but a tab strip is still just a plain list of text
+  // labels; the same tile treatment reads clearer at a glance and matches
+  // every other screen in this app now. Employee's tab-bar only ever had
+  // ONE visible tab (Available Jobs), since every other tab is
+  // manager/supervisor-only — hidden entirely, the list just shows
+  // directly, since a menu of one thing isn't a menu.
   const tabbarWrap = document.getElementById('wh-tabbar-wrap');
   const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
   const panesWrap = document.getElementById('wh-panes-wrap');
   const backbar = document.getElementById('wh-mgr-backbar');
-  if (tabbarWrap) tabbarWrap.style.display = (isWhMgr || isWhEmp) ? 'none' : '';
+  if (tabbarWrap) tabbarWrap.style.display = (isWhMgr || isWhEmp || isWhSup) ? 'none' : '';
   if (backbar) backbar.style.display = 'none';
-  if (isWhMgr) {
+  if (isWhMgr || isWhSup) {
     if (tilesSlot) tilesSlot.style.display = '';
     if (panesWrap) panesWrap.style.display = 'none';
   } else {
@@ -17902,6 +17916,21 @@ function renderWarehouseForRole() {
   if (existingQr) existingQr.remove();
   const existingQuick = document.getElementById('wh-quick-actions');
   if (existingQuick) existingQuick.remove();
+
+  if (isWhSup) {
+    if (!tilesSlot) return;
+    tilesSlot.className = 'action-tiles';
+    tilesSlot.style.cssText = 'margin-bottom:4px';
+    tilesSlot.innerHTML =
+      '<div class="action-tile tile-red" onclick="whMgrOpenPane(\'transfers\')">' +
+        '<span class="tile-icon">🚚</span><div class="tile-label">Transfers</div><div class="tile-sub" id="wh-sup-tile-transfers-sub">Deliveries to verify</div>' +
+      '</div>' +
+      '<div class="action-tile" onclick="whMgrOpenPane(\'requests\')">' +
+        '<span class="tile-icon">📥</span><div class="tile-label">Requests</div><div class="tile-sub" id="wh-sup-tile-requests-sub">Stock requests from stands</div>' +
+      '</div>';
+    whSupSyncTileBadges();
+    return;
+  }
   if (!isWhMgr) return;
   if (!tilesSlot) return;
 
@@ -18960,6 +18989,7 @@ async function loadWhTransfers() {
   }
 
   if (badge) badge.textContent = visible.length;
+  whSupSyncTileBadges();
   if (!visible.length) {
     el.innerHTML = '<div class="empty" style="padding:30px"><div class="empty-icon">🚚</div><p style="color:var(--text-2)">' +
       (role === 'warehouse_employee' ? 'Nothing assigned to you, and nothing open to claim right now.' : 'No open transfers right now.') + '</p></div>';
@@ -20341,6 +20371,7 @@ function renderWarehouse() {
   const claimed = reqs.filter(r => r.status === 'On the way');
   const done = reqs.filter(r => r.status === 'Fulfilled');
   document.getElementById('wh-open-count').textContent = open.length;
+  whSupSyncTileBadges();
   const oc2 = document.getElementById('wh-open-count2');
   if (oc2) oc2.textContent = open.length;
   document.getElementById('wh-claimed-count').textContent = claimed.length;

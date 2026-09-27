@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-27-supervisor-tiles-1
+- Warehouse Supervisor now gets the same tile menu as the Manager instead of the old text tab-bar — two big tiles, 🚚 Transfers (red, since verifying deliveries is their main job) and 📥 Requests, each showing a live open-count the same tab-bar badges always tracked. Employee's single-list screen was left as is — one list plus one full-width Quick Drop button is already the simplest shape for a screen with exactly one job; a tile menu would only add a navigation step for no benefit there.
+
 ## 2026-09-27-employee-supervisor-declutter-1
 Reviewed Warehouse Employee and Warehouse Supervisor's own screens the same way the manager's screen was — Supervisor's tab-bar (Transfers + Requests) was already fine, two real destinations. Two real things found for Employee/Force Restock:
 - Warehouse Employee's tab-bar only ever showed one visible tab — "Available Jobs" — since every other tab is manager/supervisor-only. A tab strip with a single option is pure decoration, so it's hidden for Employee too now, same as the manager cleanup; the list just shows directly.
