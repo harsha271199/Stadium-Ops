@@ -1,0 +1,159 @@
+{
+  "methodology_note": "Live network access to asu-aramark.netlify.app and Supabase's raw REST endpoint is blocked at the sandbox's egress policy level for this session (confirmed via curl, playwright-cli, and WebFetch — all independently hit the same policy denial). Tests marked 'code_trace' were verified by reading the exact source function in index.html. Tests marked 'data_verified' were verified by replaying the app's actual query filters as SQL via the Supabase MCP connector (a separate, working access path) against real or QA-tagged (is_test=true) data. Tests marked BLOCKED require live browser interaction and could not be run from this sandbox.",
+  "tests": [
+    {
+      "test_id": "ROUTE-STOCK-1",
+      "role": "Warehouse / IT / Food",
+      "feature": "Stock request routing exclusivity",
+      "steps": "Trace submitStock() and each role's request-list query; confirm stock_requests, it_issues, kitchen_requests are separate tables with no cross-queries.",
+      "expected": "Only Warehouse (+ leadership filters) ever reads stock_requests.",
+      "actual": "Confirmed structurally separate tables; no code path queries stock_requests from IT or Food screens.",
+      "status": "PASS",
+      "method": "code_trace",
+      "evidence": "index.html submitStock() ~L8420-8497; separate table schemas confirmed via Supabase list_tables"
+    },
+    {
+      "test_id": "NOTIFY-STOCK-FALLBACK-1",
+      "role": "Warehouse Manager / Supervisor",
+      "feature": "Stock request push notification when no coverage assignment exists",
+      "steps": "Trace fallback push path in submitStock() when resolveWarehouseAssigneesForStand() returns no one.",
+      "expected": "Warehouse Manager and Supervisor both get notified, not just Employee.",
+      "actual": "FOUND BUG: fallback only pushed to role=warehouse_employee. FIXED this session (build 2026-09-27-stock-fallback-notify-1) — now includes warehouse_supervisor and warehouse_manager.",
+      "status": "PASS (fixed)",
+      "method": "code_trace",
+      "evidence": "index.html ~L8472, CHANGELOG.md 2026-09-27-stock-fallback-notify-1"
+    },
+    {
+      "test_id": "NOTIFY-DELIVERY-VERIFY-1",
+      "role": "Warehouse Supervisor / Manager",
+      "feature": "Delivery-ready-to-verify push when no supervisor is on shift",
+      "steps": "Trace tsCompleteDelivery() push path when status becomes 'delivered'.",
+      "expected": "Someone gets notified even if no Warehouse Supervisor is scheduled that game.",
+      "actual": "FOUND BUG: push only targeted role=warehouse_supervisor with no fallback — could notify no one. FIXED this session (build 2026-09-27-notify-audit-1) — falls back to warehouse_manager.",
+      "status": "PASS (fixed)",
+      "method": "code_trace",
+      "evidence": "index.html ~L20047, CHANGELOG.md 2026-09-27-notify-audit-1"
+    },
+    {
+      "test_id": "NOTIFY-OVERDUE-1",
+      "role": "Warehouse Manager / Support Manager",
+      "feature": "Overdue stock ETA escalation targets the right person",
+      "steps": "Trace checkOverdueStockRequests().",
+      "expected": "Only the stand's actual covering person + fallback warehouse_manager get pushed, not every manager stadium-wide.",
+      "actual": "Confirmed already fixed (earlier this session) — uses coverageResolveStand + targeted fallback.",
+      "status": "PASS",
+      "method": "code_trace",
+      "evidence": "index.html ~L15256-15292"
+    },
+    {
+      "test_id": "COUNTS-SHIFT-BATCH-1",
+      "role": "Manager / Support Manager / Stand Lead",
+      "feature": "All-stands / My Team counts must show full game roster, not just current shift block",
+      "steps": "Trace getBedCheck() and getMyTeam(); check real schedule data for multi-shift-block stands.",
+      "expected": "207 with 30 scheduled across multiple shift-start times shows 30, not just whoever's shift has started.",
+      "actual": "Verified already fixed in a prior build (in-code comments document the exact '3-vs-8 mismatch' bug and its fix). Both getBedCheck (Team Control) and getMyTeam (Stand Lead roster) dedupe by employee_id with NO shift-time-window filtering. Confirmed via Supabase that a real game's 207 crew spans 4 different start times (11:00/13:00/15:00/15:30) in one crew, exactly the shape that would break a shift-filtered version.",
+      "status": "PASS",
+      "method": "code_trace + data_verified",
+      "evidence": "index.html ~L5439-5482 (getBedCheck), ~L5596-5643 (getMyTeam); Supabase query on schedule for 207 on 2026-09-05"
+    },
+    {
+      "test_id": "MOVE-STAND-UI-1",
+      "role": "Manager / Support Manager / Supervisor",
+      "feature": "Move worker between stands uses a real picker, not a numbered prompt()",
+      "steps": "Trace leadershipMoveTeamWorker() / confirmMoveTeamWorker().",
+      "expected": "A real searchable stand-picker modal, matching the spec's explicit 'DO NOT use a giant numbered JavaScript prompt' requirement.",
+      "actual": "Confirmed already fixed in a prior build — in-code comment documents replacing a 47+-item numbered prompt() with populateStandPicker() modal.",
+      "status": "PASS",
+      "method": "code_trace",
+      "evidence": "index.html ~L9198-9217"
+    },
+    {
+      "test_id": "MOVE-STAND-DATA-1",
+      "role": "Manager / Support Manager / Supervisor",
+      "feature": "Move worker updates both location AND crew/event_name",
+      "steps": "Trace case 'managerMoveWorker' in api().",
+      "expected": "Destination Stand Lead (crew-scoped) sees the worker after move; old Stand Lead does not.",
+      "actual": "Confirmed: PATCH sets both location and, when a matching destination crew is found, event_name. Since getMyTeam filters by event_name for Stand Leads, this correctly moves the worker's crew membership, not just their location label.",
+      "status": "PASS",
+      "method": "code_trace",
+      "evidence": "index.html ~L5708-5726"
+    },
+    {
+      "test_id": "MOVE-STAND-EDGE-1",
+      "role": "Manager / Support Manager / Supervisor",
+      "feature": "Move/walk-in event_name resolution when destination stand has ambiguous crew names",
+      "steps": "Trace the event_name-matching regex fallback in managerMoveWorker and addWalkin.",
+      "expected": "If the '207 Stand'-style regex match fails and multiple distinct event_names exist at the destination stand, the code should not silently guess.",
+      "actual": "MINOR EDGE CASE (not required to fix by spec): when regex match fails, code falls back to whichever event_name is first in the result set rather than flagging ambiguity. Low risk under normal ReadyOn naming (single crew per stand is typical); worth a follow-up if two crews are ever imported under the identical stand name.",
+      "status": "NOTE (not blocking)",
+      "method": "code_trace",
+      "evidence": "index.html ~L5717-5720, ~L5763-5766"
+    },
+    {
+      "test_id": "WALKIN-DEDUP-1",
+      "role": "Manager / Support Manager",
+      "feature": "Walk-in does not create a duplicate person if already scheduled today",
+      "steps": "Trace case 'addWalkin' duplicate check.",
+      "expected": "If employee already has a schedule row today, reject with 'use Move stand' rather than creating a second row.",
+      "actual": "Confirmed: queries schedule for existing row matching the same 5-digit suffix before insert; blocks with explicit message if found.",
+      "status": "PASS",
+      "method": "code_trace",
+      "evidence": "index.html ~L5736-5742"
+    },
+    {
+      "test_id": "WALKIN-ID-FORMAT-1",
+      "role": "Manager / Support Manager",
+      "feature": "Walk-in accepts 5-digit login ID or full 8-digit employee ID",
+      "steps": "Trace rawId length validation in case 'addWalkin'.",
+      "expected": "Accepts exactly 5 or 8 digit IDs; rejects other lengths.",
+      "actual": "Confirmed matches spec exactly.",
+      "status": "PASS",
+      "method": "code_trace",
+      "evidence": "index.html ~L5730-5731"
+    },
+    {
+      "test_id": "SCHEDULE-DATA-1",
+      "role": "All (data prerequisite)",
+      "feature": "Today's game schedule exists in the database",
+      "steps": "Query schedule for event_date = today (2026-09-27).",
+      "expected": "Rows exist if a game is running tonight.",
+      "actual": "CRITICAL FINDING: zero schedule rows exist for 2026-09-27 as of this audit (confirmed not a timezone artifact — checked Phoenix local time directly). Last real game data on file is 2026-09-05. Flagged to user immediately as a separate, urgent, non-QA issue.",
+      "status": "FAIL (data, not code)",
+      "method": "data_verified",
+      "evidence": "Supabase query on schedule table, event_date grouping"
+    },
+    {
+      "test_id": "LOGIN-ALL-ROLES-1",
+      "role": "All 15 named roles",
+      "feature": "Login as each role and verify screen/button visibility",
+      "steps": "Requires live browser session against the deployed app.",
+      "expected": "Each role sees only its permitted tools.",
+      "actual": "BLOCKED — this sandbox cannot reach asu-aramark.netlify.app under any tool (curl/playwright-cli/WebFetch all hit the same egress policy denial).",
+      "status": "BLOCKED",
+      "method": "none — requires live browser",
+      "evidence": "curl exit 56 CONNECT tunnel failed 403; playwright-cli net::ERR_TUNNEL_CONNECTION_FAILED; WebFetch EGRESS_BLOCKED"
+    },
+    {
+      "test_id": "ATTENDANCE-LIVE-1",
+      "role": "Stand Lead / Supervisor / NPO Lead",
+      "feature": "Present/Absent/Break/Clock Out/Resume click-through with visible status update",
+      "steps": "Requires live browser session.",
+      "expected": "Status updates on screen and in Supabase attendance table.",
+      "actual": "BLOCKED — same network constraint. The underlying api() cases (teamMarkPresent/teamMarkAbsent/etc.) were code-traced instead; see QA_PROGRESS.md for what code-trace alone can and cannot confirm.",
+      "status": "BLOCKED",
+      "method": "none — requires live browser",
+      "evidence": "same as LOGIN-ALL-ROLES-1"
+    },
+    {
+      "test_id": "PWA-CACHE-1",
+      "role": "N/A",
+      "feature": "BUILD_TAG / sw.js version match, no-cache headers, no refresh loop",
+      "steps": "Check _headers file and BUILD_TAG/sw.js version constant in source; live verification needs the deployed site.",
+      "expected": "index.html and sw.js are no-cache; BUILD_TAG shown on login footer matches deployed build.",
+      "actual": "Confirmed: _headers sets Cache-Control: no-cache, no-store, must-revalidate for both /index.html and /sw.js, so the CDN and browser never cache either file — that structurally prevents the 'stale saved app version' failure mode regardless of sw.js's own CACHE_VERSION constant (which only affects secondary cached assets like icons, not these two). Live confirmation of the BUILD_TAG shown on the actual login footer still needs a live browser (blocked).",
+      "status": "PASS (source-level; live footer check blocked)",
+      "method": "code_trace",
+      "evidence": "_headers; sw.js CACHE_VERSION handling ~L11-51"
+    }
+  ]
+}
