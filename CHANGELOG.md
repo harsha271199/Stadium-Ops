@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-27-stock-fallback-notify-1
+- **Real bug fix, notification gap:** when a Stock request comes in for a stand with no warehouse coverage assignment set for the day, the fallback push only went to Warehouse Employee accounts — the Warehouse Manager and Warehouse Supervisor got nothing until they happened to open the app. Found while auditing notification routing ahead of tonight's game. Fallback now pushes to all three warehouse roles, matching how Food requests already always alert the Food Manager.
+
 ## 2026-09-27-transfers-date-filter-1
 - **Real bug fix:** the manager's name showed twice on the Warehouse screen — once in the header, once again right below in the role card, word for word. The header now just shows "Auto-refresh 10s"; the role card already has the name.
 - **Real bug fix, the big one:** a transfer the warehouse manager had already approved (wh_confirmed_at set) could still sit in "All Transfers" and every open-count, because its literal `status` column only reaches `verified` until a completely different person — the receiving concession stand's own regular Manager — does their own separate final receipt confirm. So the same row would show "✓ Confirmed" on its own line while still counting as "Open" above it. Every warehouse-side list/count now treats wh_confirmed_at as done, regardless of what the stand's own confirm step still says.

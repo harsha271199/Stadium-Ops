@@ -4073,7 +4073,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-transfers-date-filter-1';
+const BUILD_TAG = '2026-09-27-stock-fallback-notify-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -8469,7 +8469,7 @@ async function submitStock() {
     if (res.ok) {
       const etaLabel = etaMins ? (' · due in '+etaMins+'m') : '';
       if (assignedIds.length) assignedIds.forEach(id => sendPushTo(id,'📥 New request for your stand',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):'')));
-      else sb('staff_accounts?role=eq.warehouse_employee&is_active=eq.true&select=employee_id').then(whs=>{ if(!whs._err&&Array.isArray(whs)) whs.forEach(w=>sendPushTo(w.employee_id,'📥 New stock request',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):''))); }).catch(()=>{});
+      else sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor,warehouse_manager)&is_active=eq.true&select=employee_id').then(whs=>{ if(!whs._err&&Array.isArray(whs)) whs.forEach(w=>sendPushTo(w.employee_id,'📥 New stock request',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):''))); }).catch(()=>{});
       const supportRoute=await coverageNotifyRequest('stock',targetStand,'📦 Stock request in your coverage',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,70):''),false);
       const routeLabel = assignedNames.length ? (' → '+assignedNames.join(', ')) : '';
       const monitorLabel=supportRoute.length?(' · '+supportRoute.length+' coverage manager'+(supportRoute.length===1?'':'s')+' notified'):'';
