@@ -2440,7 +2440,11 @@
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;overflow-x:auto">
       <span style="font-size:11px;font-weight:700;color:var(--text-2);white-space:nowrap">⏱ Need within</span>
       <div class="chip-row" id="stock-eta-row" style="margin:0;flex-wrap:nowrap">
-        <button class="chip" onclick="selectETA(this,10)">10m</button>
+        <!-- 10m removed — it wasn't a real option for a warehouse delivery
+             (walk it over, gather items, walk back) and was the single
+             biggest source of guaranteed-overdue alerts flooding managers.
+             15m is the shortest ETA now offered, for genuinely URGENT asks. -->
+        <button class="chip" onclick="selectETA(this,15)">15m</button>
         <button class="chip" onclick="selectETA(this,20)">20m</button>
         <button class="chip selected" onclick="selectETA(this,30)">30m</button>
         <button class="chip" onclick="selectETA(this,0)">No deadline</button>
@@ -4058,7 +4062,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-warehouse-coverage-unify-1';
+const BUILD_TAG = '2026-09-27-standtransfer-report-eta-fix-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -8155,7 +8159,11 @@ function selectUrgency(btn, val) {
   document.querySelectorAll('#stock-urgency .chip').forEach(c => c.classList.remove('selected'));
   btn.classList.add('selected');
   state.selectedUrgency = val;
-  setStockEta(val === 'URGENT' ? 10 : val === 'Soon' ? 20 : 30);
+  // Was auto-setting URGENT to a 10-minute deadline — impossible to hit for
+  // an actual delivery, and the exact reason overdue alerts were flooding
+  // managers for nearly every urgent request. 15m is still tight but
+  // realistic, and matches the shortest chip now offered above.
+  setStockEta(val === 'URGENT' ? 15 : val === 'Soon' ? 20 : 30);
 }
 function selectETA(btn, mins) { setStockEta(mins); }
 
@@ -11598,6 +11606,122 @@ function printWarehouseCountsPDF() {
   w.document.close();
 }
 
+// ============ STAND TRANSFER REPORT (post-game, per stand) ============
+// One place a warehouse manager can look back after the game at exactly
+// what went to each stand (from the `transfers` table — warehouse-to-stand
+// deliveries, not the separate stand-to-stand `stand_transfers` feature)
+// plus whatever that stand's supervisor/stand lead logged as waste that
+// same day (`wastage_logs`) — the two were never shown together before,
+// so a manager had to cross-reference two different screens by hand.
+async function loadStandTransferReportData(date) {
+  const iso = date || localISODate();
+  const transfers = await sb('transfers?game_date=eq.' + iso + '&order=stand.asc,created_at.asc&select=*').catch(() => ({ _err: true }));
+  if (transfers._err || !Array.isArray(transfers)) return null;
+  let items = [];
+  if (transfers.length) {
+    const ids = transfers.map(t => t.id).join(',');
+    const itemRows = await sb('transfer_items?transfer_id=in.(' + ids + ')&select=*').catch(() => ({ _err: true }));
+    if (!itemRows._err && Array.isArray(itemRows)) items = itemRows;
+  }
+  const itemsByTransfer = {};
+  items.forEach(it => { (itemsByTransfer[it.transfer_id] = itemsByTransfer[it.transfer_id] || []).push(it); });
+  const wasteRows = await sb('wastage_logs?log_date=eq.' + iso + '&order=stand.asc&select=*').catch(() => ({ _err: true }));
+  const waste = (!wasteRows._err && Array.isArray(wasteRows)) ? wasteRows : [];
+  const byStand = {};
+  const get = s => (byStand[s] = byStand[s] || { stand: s, transfers: [], waste: [] });
+  transfers.forEach(t => get(t.stand).transfers.push({ ...t, items: itemsByTransfer[t.id] || [] }));
+  waste.forEach(w => get(w.stand).waste.push(w));
+  return Object.values(byStand).sort((a, b) => a.stand.localeCompare(b.stand));
+}
+
+function standTransferReportDate() {
+  const el = document.getElementById('wh-mgr-inv-date');
+  return (el && el.value.trim()) || localISODate();
+}
+
+async function exportStandTransferReportCSV() {
+  const date = standTransferReportDate();
+  const stands = await loadStandTransferReportData(date);
+  if (!stands) return toast('Could not load — try again', 'error');
+  if (!stands.length) return toast('Nothing recorded for ' + date, 'error');
+  const esc = v => { const t = String(v == null ? '' : v); return (t.indexOf(',') >= 0 || t.indexOf('"') >= 0) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  let csv = 'Stand,Type,Item,Qty,Status/Reason,By,Time\n';
+  stands.forEach(s => {
+    csv += [s.stand, '', '', '', '', '', ''].map(esc).join(',') + '\n';
+    s.transfers.forEach(t => {
+      const items = t.items.length ? t.items : [{}];
+      items.forEach(it => {
+        csv += [s.stand, 'Transfer', it.item_name || '', it.qty_delivered != null ? it.qty_delivered : (it.qty_requested != null ? it.qty_requested : ''), (TRANSFER_STATUS[t.status] || {}).label || t.status, t.delivered_by || t.assigned_to_name || '', t.created_at || ''].map(esc).join(',') + '\n';
+      });
+    });
+    s.waste.forEach(w => {
+      (w.entries || []).forEach(e => {
+        csv += [s.stand, 'Waste', e.item || '', (e.qty || '') + (e.unit ? ' ' + e.unit : ''), e.reason || '', w.submitted_by || '', w.created_at || ''].map(esc).join(',') + '\n';
+      });
+    });
+  });
+  downloadCSV(csv, 'stand_transfer_report_' + date + '.csv');
+  toast('⬇️ Stand transfer report downloaded');
+}
+
+async function printStandTransferReportPDF() {
+  const date = standTransferReportDate();
+  const stands = await loadStandTransferReportData(date);
+  if (!stands) return toast('Could not load — try again', 'error');
+  if (!stands.length) return toast('Nothing recorded for ' + date, 'error');
+  const w = window.open('', '_blank');
+  if (!w) return toast('⚠️ Popup blocked — allow popups for this site and try again', 'error');
+  let html = '<html><head><title>Stand Transfer Report — ' + escapeHtml(date) + '</title><style>' +
+    '@page{size:letter portrait;margin:0.5in}' +
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}' +
+    'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0}' +
+    '.page{page-break-before:always}' +
+    '.page:first-of-type{page-break-before:auto}' +
+    '.hdr{border:1.4px solid #555;margin-bottom:14px;border-radius:6px;overflow:hidden}' +
+    '.hdr-title{text-align:center;font-size:19px;font-weight:800;padding:9px;background:#f7f7f7;border-bottom:1.4px solid #555}' +
+    '.hdr-row{display:flex;border-top:1px solid #777}' +
+    '.hdr-cell{flex:1;padding:7px 10px;border-right:1px solid #777;font-size:11px}' +
+    '.hdr-cell:last-child{border-right:none}' +
+    '.hdr-cell .lbl{font-size:8px;text-transform:uppercase;color:#555;display:block;margin-bottom:2px}' +
+    '.section{font-size:12px;font-weight:800;margin:12px 0 4px;padding-bottom:3px;border-bottom:2px solid #E4002B}' +
+    'table{width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:8px}' +
+    'th{border:1px solid #666;padding:4px 6px;background:#eee;font-weight:800;text-align:left}' +
+    'td{border:1px solid #999;padding:4px 6px}' +
+    'tr:nth-child(even) td{background:#f6f6f6}' +
+    '.empty-note{font-size:10px;color:#777;margin-bottom:8px}' +
+    '</style></head><body>' +
+    stands.map(s => {
+      const totalCases = s.transfers.reduce((sum, t) => sum + t.items.reduce((a, it) => a + Number(it.qty_delivered != null ? it.qty_delivered : (it.qty_requested || 0)), 0), 0);
+      const wasteCount = s.waste.reduce((sum, w) => sum + (w.entries || []).length, 0);
+      return '<div class="page">' +
+        '<div class="hdr"><div class="hdr-title">📦 ' + escapeHtml(s.stand) + '</div><div class="hdr-row">' +
+          '<div class="hdr-cell"><span class="lbl">Date</span>' + escapeHtml(date) + '</div>' +
+          '<div class="hdr-cell"><span class="lbl">Transfers</span>' + s.transfers.length + ' · ' + totalCases + ' case(s)</div>' +
+          '<div class="hdr-cell"><span class="lbl">Waste items</span>' + wasteCount + '</div>' +
+        '</div></div>' +
+        '<div class="section">🚚 Transfers</div>' +
+        (s.transfers.length
+          ? '<table><thead><tr><th>Item</th><th style="width:60px">Qty</th><th style="width:80px">Status</th><th>By</th><th style="width:90px">Time</th></tr></thead><tbody>' +
+            s.transfers.map(t => (t.items.length ? t.items : [{}]).map(it =>
+              '<tr><td>' + escapeHtml(it.item_name || '(no items logged)') + '</td><td>' + escapeHtml(String(it.qty_delivered != null ? it.qty_delivered : (it.qty_requested || ''))) + '</td><td>' + escapeHtml((TRANSFER_STATUS[t.status] || {}).label || t.status) + '</td><td>' + escapeHtml(t.delivered_by || t.assigned_to_name || '') + '</td><td>' + escapeHtml(t.created_at ? new Date(t.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '') + '</td></tr>'
+            ).join('')).join('') +
+            '</tbody></table>'
+          : '<div class="empty-note">No transfers recorded to this stand.</div>') +
+        '<div class="section">🗑️ Waste</div>' +
+        (wasteCount
+          ? '<table><thead><tr><th>Item</th><th style="width:70px">Qty</th><th>Reason</th><th>By</th><th style="width:90px">Time</th></tr></thead><tbody>' +
+            s.waste.map(wRow => (wRow.entries || []).map(e =>
+              '<tr><td>' + escapeHtml(e.item || '') + '</td><td>' + escapeHtml((e.qty || '') + (e.unit ? ' ' + e.unit : '')) + '</td><td>' + escapeHtml(e.reason || '') + '</td><td>' + escapeHtml(wRow.submitted_by || '') + '</td><td>' + escapeHtml(wRow.created_at ? new Date(wRow.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '') + '</td></tr>'
+            ).join('')).join('') +
+            '</tbody></table>'
+          : '<div class="empty-note">No waste logged for this stand.</div>') +
+      '</div>';
+    }).join('') +
+    '<scr' + 'ipt>window.print()<\/scr' + 'ipt></body></html>';
+  w.document.write(html);
+  w.document.close();
+}
+
 async function loadMgrInventory() {
   const date = document.getElementById('mgr-inv-date').value.trim() || localISODate();
   const c = document.getElementById('mgr-inv-list');
@@ -15002,9 +15126,21 @@ async function checkOverdueStockRequests() {
       const title='🚨 Stock ETA missed — '+r.stand;
       const body=minsOver+'m overdue · '+progress+' · '+(r.items||'').slice(0,90);
       showNotificationBanner(title,body,'urgent');
-      const leaders=await sb('staff_accounts?is_active=eq.true&role=in.(manager,admin,warehouse_manager)&select=employee_id').catch(()=>({_err:true}));
-      const recipients=new Set();if(!leaders._err&&Array.isArray(leaders))leaders.forEach(x=>{if(x.employee_id)recipients.add(String(x.employee_id));});
-      const cov=await coverageResolveStand('stock',r.stand).catch(()=>({support:[]}));(cov.support||[]).forEach(x=>{if(x.employee_id)recipients.add(String(x.employee_id));});
+      // Used to blast EVERY manager/admin/warehouse_manager in the building
+      // for every single overdue stand, stadium-wide — with unrealistic
+      // 10-minute ETAs (now removed) getting picked constantly, that meant
+      // a flood of pushes to people with no actual connection to that
+      // stand. Now targets only whoever's actually covering that stand via
+      // the same unified coverage system Assign & Team writes to, falling
+      // back to warehouse managers only (not every manager/admin) when
+      // nobody has been assigned coverage there yet.
+      const recipients=new Set();
+      const cov=await coverageResolveStand('stock',r.stand).catch(()=>({support:[]}));
+      (cov.support||[]).forEach(x=>{if(x.employee_id)recipients.add(String(x.employee_id));});
+      if(!recipients.size){
+        const leaders=await sb('staff_accounts?is_active=eq.true&role=eq.warehouse_manager&select=employee_id').catch(()=>({_err:true}));
+        if(!leaders._err&&Array.isArray(leaders))leaders.forEach(x=>{if(x.employee_id)recipients.add(String(x.employee_id));});
+      }
       recipients.forEach(id=>sendPushTo(id,title,body));
       (r.assignedToIds||[]).forEach(id=>sendPushTo(id,'⏱ Delivery overdue',r.stand+' · '+minsOver+'m past ETA'));
       await markRequestEtaEscalated(raw,new Date().toISOString());
@@ -17678,7 +17814,14 @@ function renderWarehouseForRole() {
         '<button class="btn btn-ghost" onclick="exportWarehouseCountsCSV()" style="margin-top:8px">⬇️ Export warehouse counts (CSV)</button>' +
         '<button class="btn btn-ghost" onclick="printWarehouseCountsPDF()" style="margin-top:8px">🖨️ Download as PDF</button>' +
       '</div>' +
-      '<div id="wh-mgr-whcounts-list" style="margin-top:12px"></div>';
+      '<div id="wh-mgr-whcounts-list" style="margin-top:12px"></div>' +
+      '<div style="height:1px;background:var(--border);margin:18px 0"></div>' +
+      '<div style="max-width:480px">' +
+        '<div style="font-weight:700;font-size:14px;margin-bottom:4px">📄 Stand Transfer Report</div>' +
+        '<div class="notice info" style="font-size:12px">One report, split by stand — everything delivered there plus any waste the stand logged that day. Uses the same date above.</div>' +
+        '<button class="btn btn-ghost" onclick="exportStandTransferReportCSV()" style="margin-top:8px">⬇️ Download report (CSV)</button>' +
+        '<button class="btn btn-ghost" onclick="printStandTransferReportPDF()" style="margin-top:8px">🖨️ Download report (PDF, one page per stand)</button>' +
+      '</div>';
   }
 
   // Golf Cart — same, its own dedicated tab now.
