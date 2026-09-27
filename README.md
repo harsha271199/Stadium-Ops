@@ -3,7 +3,7 @@
 Game-day concessions operations for Aramark Sports + Entertainment at Arizona State University.
 
 **Live:** [asu-aramark.netlify.app](https://asu-aramark.netlify.app)
-**Current build:** `2026-09-27-crew-ambiguity-fix-1` (shown on the login screen footer — check it against the live site after every deploy)
+**Current build:** `2026-09-27-team-checkin-refresh-1` (shown on the login screen footer — check it against the live site after every deploy)
 
 Replaces paper checklists, inventory count sheets, stock requests and break time sheets with a phone app that works in a stadium concourse on bad WiFi.
 

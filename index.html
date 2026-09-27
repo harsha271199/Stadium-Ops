@@ -2576,6 +2576,35 @@
       <select class="form-input" id="my-team-stand-select" onchange="myTeamStandChanged()"></select>
       <div id="my-team-stand-help" style="font-size:11px;color:var(--text-2);margin-top:6px;display:none">Supervisor access · switch between any stand without leaving My Team.</div>
     </div>
+    <div id="my-team-progress" class="prem-progress" style="display:none"><div id="my-team-progress-bar" class="prem-progress-bar" style="width:0%"></div></div>
+    <input class="form-input" type="text" id="my-team-search" placeholder="🔍 Find a person…" oninput="renderMyTeamList()" style="margin:0 0 8px;display:none">
+    <div class="chip-row" id="my-team-filters" style="margin-bottom:10px;display:none">
+      <button class="chip selected" data-f="all" onclick="myTeamSetFilter('all',this)">All</button>
+      <button class="chip" data-f="working" onclick="myTeamSetFilter('working',this)">Working</button>
+      <button class="chip" data-f="break" onclick="myTeamSetFilter('break',this)">On break</button>
+      <button class="chip" data-f="pending" onclick="myTeamSetFilter('pending',this)">Not arrived</button>
+      <button class="chip" data-f="absent" onclick="myTeamSetFilter('absent',this)">Absent</button>
+    </div>
+    <div id="team-walkin-form" class="prem-walkin-panel">
+      <div class="prem-walkin-head">
+        <span class="prem-walkin-head-icon">➕</span>
+        <div><div class="prem-walkin-head-title">Add walk-in worker</div><div class="prem-walkin-head-sub" id="team-walkin-head-sub">They'll show up on this stand's roster instantly.</div></div>
+      </div>
+      <div class="prem-walkin-body">
+        <label class="form-label" style="margin-top:0">Search for the person</label>
+        <input class="form-input" type="text" id="team-walkin-search" placeholder="🔍 Start typing their name…" oninput="teamWalkinSearch(this.value)" autocomplete="off">
+        <div id="team-walkin-search-results"></div>
+        <label class="form-label">Name (Last, First)</label>
+        <input class="form-input" type="text" id="team-walkin-name" placeholder="e.g. Smith, John">
+        <label class="form-label">Employee ID — full 8 digits if you have it</label>
+        <input class="form-input" type="tel" inputmode="numeric" maxlength="8" id="team-walkin-empid" placeholder="e.g. 32445678">
+        <div class="prem-walkin-hint">A 5-digit ID still works, but the full 8 digits matter later for payroll matching.</div>
+        <div class="prem-walkin-actions">
+          <button class="btn btn-primary" onclick="teamSaveWalkin()">✓ Add walk-in</button>
+          <button class="btn btn-ghost" onclick="teamCloseWalkin()">Cancel</button>
+        </div>
+      </div>
+    </div>
     <div id="my-team-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>
   </div>
 </div>
@@ -4073,7 +4102,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-crew-ambiguity-fix-1';
+const BUILD_TAG = '2026-09-27-team-checkin-refresh-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9095,9 +9124,31 @@ async function loadMyTeam() {
   const visibleTeam=team.filter(w=>!actorEmpIdForCount||String(w.empId)!==String(actorEmpIdForCount));
   const displayStand=state.myTeamStand||stand;
   document.getElementById('my-team-sub').textContent = displayStand + ' · ' + visibleTeam.length + ' team members' + (leadershipTeamView ? ' · Leadership attendance' : '');
+  state._team = team;
+  renderMyTeamList();
+}
+
+// Split out of loadMyTeam() so search/filter typing and per-action optimistic
+// updates can re-render instantly from already-fetched state._team, the same
+// pattern Premium Check-ins uses (premiumRenderCheckinsList operating on
+// _premScheduleRows) — no network round-trip needed just to re-draw the list.
+function renderMyTeamList() {
+  // Same guard loadMyTeam() already used — don't blow away an open feedback
+  // form on one row just because a different row's action re-rendered.
+  if (state._fbOpen != null) return;
+  const team = state._team || [];
   const c = document.getElementById('my-team-list');
+  if (!c) return;
+  const actorEmpIdForCount=(state.user&&state.user.empId)||(state.staffAccount&&state.staffAccount.empId)||'';
+  const visibleTeam=team.filter(w=>!actorEmpIdForCount||String(w.empId)!==String(actorEmpIdForCount));
+  const progressWrap=document.getElementById('my-team-progress');
+  const searchEl=document.getElementById('my-team-search');
+  const filtersEl=document.getElementById('my-team-filters');
   if (visibleTeam.length === 0) {
     c.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>No scheduled staff or NPO roster found for this stand</p></div>';
+    if(progressWrap)progressWrap.style.display='none';
+    if(searchEl)searchEl.style.display='none';
+    if(filtersEl)filtersEl.style.display='none';
     return;
   }
   const working = visibleTeam.filter(w => w.status === 'working');
@@ -9105,7 +9156,26 @@ async function loadMyTeam() {
   const active = working.filter(w => !w.onBreak);
   const absent = visibleTeam.filter(w => w.status === 'absent');
   const pending = visibleTeam.filter(w => w.status === 'scheduled');
-  
+
+  if(progressWrap){
+    progressWrap.style.display='';
+    const bar=document.getElementById('my-team-progress-bar');
+    if(bar)bar.style.width=(visibleTeam.length?Math.round((active.length+onBreak.length)/visibleTeam.length*100):0)+'%';
+  }
+  if(searchEl)searchEl.style.display='';
+  if(filtersEl)filtersEl.style.display='';
+  const q=(searchEl&&searchEl.value||'').toLowerCase().trim();
+  const statusFilter=state._myTeamFilter||'all';
+  const matchesFilter=w=>{
+    if(q && !String(w.name||'').toLowerCase().includes(q) && !String(w.role||'').toLowerCase().includes(q))return false;
+    if(statusFilter==='working')return w.status==='working'&&!w.onBreak;
+    if(statusFilter==='break')return w.status==='working'&&w.onBreak;
+    if(statusFilter==='pending')return w.status==='scheduled';
+    if(statusFilter==='absent')return w.status==='absent';
+    return true;
+  };
+
+  const actor = getRequesterIdentity();
   let html = '';
   // Supervisors are responsible for several stands at once (all 3 at
   // Desert Financial Arena, a whole section at football), so moving a
@@ -9134,8 +9204,8 @@ async function loadMyTeam() {
     <div style="flex:1"><div style="font-size:20px;font-weight:700;color:var(--text-3)">${pending.length}</div><div style="font-size:11px;color:var(--text-2)">Pending</div></div>
     <div style="flex:1"><div style="font-size:20px;font-weight:700;color:#DC2626">${absent.length}</div><div style="font-size:11px;color:var(--text-2)">Absent</div></div>
   </div>`;
-  
-  state._team = team;
+
+  let anyRowShown=false;
   team.forEach((w, i) => {
     // Don't show yourself in your own team list — "My Team" means the
     // people you supervise, not yourself. This was the actual cause of the
@@ -9144,6 +9214,8 @@ async function loadMyTeam() {
     // row.
     const actorEmpId = (state.user && state.user.empId) || (state.staffAccount && state.staffAccount.empId) || '';
     if (actorEmpId && String(w.empId) === String(actorEmpId)) return;
+    if (!matchesFilter(w)) return;
+    anyRowShown=true;
     let statusBadge = '';
     if (w.status === 'working' && w.onBreak) statusBadge = '<span class="role-badge" style="background:rgba(0,102,179,0.12);color:var(--info)">☕ ON BREAK</span>';
     else if (w.status === 'working') statusBadge = '<span class="role-badge worker">✓ WORKING</span>';
@@ -9190,7 +9262,13 @@ async function loadMyTeam() {
     </div>`;
   });
 
+  if(!anyRowShown) html += '<div style="font-size:11px;color:var(--text-3);padding:10px 0">No one matches — clear the search or filter.</div>';
   c.innerHTML = html;
+}
+function myTeamSetFilter(f, btn) {
+  state._myTeamFilter = f;
+  document.querySelectorAll('#my-team-filters .chip').forEach(c => c.classList.toggle('selected', c === btn));
+  renderMyTeamList();
 }
 
 // ---- V11.11.38 leadership Team Control: Add + Move without losing attendance actions ----
@@ -9199,17 +9277,78 @@ async function leadershipRefreshCurrentTeam(){
   toast('Team refreshed');
 }
 
-async function leadershipAddWorkerToCurrentStand(){
+function leadershipAddWorkerToCurrentStand(){
   const who=getRequesterIdentity();
   if(!(['support_manager','manager','admin'].includes(who.tier||'')||isSupervisorSession()||(state.user&&state.user.role==='lead')))return toast('Access required','error');
   const stand=state.myTeamStand;
   if(!stand)return toast('Select a stand first','error');
-  // Same bug as Move Stand — two back-to-back prompt() boxes for name
-  // then ID, no validation shown until after submitting, easy to mistype
-  // with nothing to correct against. Routes into the exact same proper
-  // form screen (dropdown + real inputs) already used everywhere else,
-  // pre-selected to this stand.
-  await leadershipOpenWalkin();
+  // Real UX fix, replicating what makes Premium's Add Walk-in "too good" by
+  // comparison: it never leaves the check-in screen at all — search, fill,
+  // save, done, right there. Since My Team already knows the stand, this
+  // slides an inline panel open on top of the roster instead of navigating
+  // to the separate screen-walkin screen (which still exists as-is for the
+  // Home and Team Control entry points, unchanged — this only changes the
+  // in-context My Team entry point).
+  teamOpenWalkin();
+}
+function teamOpenWalkin(){
+  const stand=state.myTeamStand;
+  const sub=document.getElementById('team-walkin-head-sub');
+  if(sub)sub.textContent="They'll show up on "+stand+"'s roster instantly.";
+  document.getElementById('team-walkin-name').value='';
+  document.getElementById('team-walkin-empid').value='';
+  document.getElementById('team-walkin-search').value='';
+  document.getElementById('team-walkin-search-results').innerHTML='';
+  document.getElementById('team-walkin-form').classList.add('open');
+  document.getElementById('team-walkin-search').focus();
+}
+function teamCloseWalkin(){
+  document.getElementById('team-walkin-form').classList.remove('open');
+}
+let _teamWalkinSearchTimer=null;
+function teamWalkinSearch(term){
+  clearTimeout(_teamWalkinSearchTimer);
+  const q=(term||'').trim();
+  const box=document.getElementById('team-walkin-search-results');
+  if(!box)return;
+  if(q.length<2){box.innerHTML='';return;}
+  box.innerHTML='<div style="font-size:11px;color:var(--text-2);padding:6px 0">Searching…</div>';
+  _teamWalkinSearchTimer=setTimeout(async()=>{
+    const safe=encodeURIComponent('*'+q.replace(/[*,()]/g,'')+'*');
+    const rows=await sb('employee_directory?full_name=ilike.'+safe+'&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(()=>({_err:true}));
+    if(rows._err){box.innerHTML='<div class="notice" style="font-size:11px">Could not search right now — type the name and ID manually below.</div>';return;}
+    if(!Array.isArray(rows)||!rows.length){box.innerHTML='<div class="notice info" style="font-size:11px;padding:8px 10px">No match found — type their name and ID manually below. They\'ll still be added.</div>';return;}
+    box.innerHTML=rows.map(r=>{
+      const nm=escapeAttr(r.full_name||''),id=escapeAttr(r.employee_id||''),role=escapeAttr(r.role||'');
+      return '<div class="prem-walkin-result" onclick="teamWalkinPickPerson(\''+nm+'\',\''+id+'\')">'+
+        '<div class="name">'+escapeHtml(r.full_name||'')+'</div>'+
+        '<div class="meta">ID '+escapeHtml(r.employee_id||'')+(r.role?' · '+escapeHtml(r.role):'')+'</div>'+
+      '</div>';
+    }).join('');
+  },300);
+}
+function teamWalkinPickPerson(name,empId){
+  document.getElementById('team-walkin-name').value=name;
+  document.getElementById('team-walkin-empid').value=empId;
+  document.getElementById('team-walkin-search-results').innerHTML='<div class="notice info" style="font-size:11px;padding:8px 10px">✅ Selected <b>'+escapeHtml(name)+'</b> · ID '+escapeHtml(empId)+'</div>';
+  document.getElementById('team-walkin-search').value='';
+}
+async function teamSaveWalkin(){
+  const stand=state.myTeamStand;
+  if(!stand)return toast('Select a stand first','error');
+  const name=document.getElementById('team-walkin-name').value.trim();
+  const empId=document.getElementById('team-walkin-empid').value.trim();
+  if(!name)return toast('Enter a name','error');
+  if(!/^\d{5}$/.test(empId)&&!/^\d{8}$/.test(empId))return toast('Enter a 5-digit ID or the full 8-digit employee ID','error');
+  await withLock(evtBtn(),'Adding…',async()=>{
+    const res=await api('addWalkin',{name,empId,stand});
+    if(res.ok){
+      teamCloseWalkin();
+      if(res.ambiguousCrew) toast('⚠️ '+name+' added · login '+res.loginId+' — this stand has more than one crew name and none could be matched automatically, so they were given their own walk-in crew group. They may not appear in a specific Stand Lead\'s My Team until an admin sorts the crew out.','error',12000);
+      else toast('✅ '+name+' added · login '+res.loginId+' + last name');
+      loadMyTeam();
+    } else toast(res.error||'Could not add worker','error');
+  });
 }
 
 async function leadershipMoveTeamWorker(i){
@@ -9317,46 +9456,53 @@ async function teamResume(i) {
 // supervisor, or manager do it on their behalf, same rank check as
 // clock-out, and every action notes who actually did it — so it's clear
 // later that this was entered on someone's behalf, not self-reported.
+// Real UX fix, matching the Premium Check-ins pattern (premiumSetCheckin):
+// these five actions are all reversible on the spot (Clear Absent undoes
+// Mark Absent, tapping Check In again undoes an accidental Mark Absent,
+// Start/End Break toggle each other) — so like Premium, they update the
+// row instantly and sync in the background instead of blocking on a
+// confirm() dialog AND a full network refetch before the screen updates.
+// Any failure rolls the row back and shows why, same as Premium's version.
+async function teamCheckIn(i) {
+  const w = state._team[i];
+  if (!w) return;
+  const who = getRequesterIdentity();
+  const stand = state.myTeamStand;
+  const prevStatus=w.status, prevBreak=w.onBreak;
+  w.status='working'; w.onBreak=false; renderMyTeamList();
+  const res = await api('photoCheckin', { empId: w.empId, name: w.name, stand: stand, photoBlob: null, gameLabel: GAME_LABEL });
+  if (res.ok) {
+    await sb('attendance', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: stand, status:'working', notes: 'Checked in by ' + who.name }) });
+    toast('✅ ' + w.name + ' checked in');
+  } else { w.status=prevStatus; w.onBreak=prevBreak; renderMyTeamList(); toast(res.error || 'Could not check in — try again', 'error'); }
+}
 async function teamMarkAbsent(i){
   const w=state._team[i];if(!w)return;
   const who=getRequesterIdentity();
   const stand=state.myTeamStand;
-  if(!confirm('Mark '+w.name+' absent at '+stand+'?'))return;
+  const prevStatus=w.status, prevBreak=w.onBreak;
+  w.status='absent'; w.onBreak=false; renderMyTeamList();
   const res=await api('markAbsent',{empId:w.empId,name:w.name,stand:stand,markedBy:who.name});
   if(res.ok||res.simulated){
     await sb('attendance',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({
       employee_id:w.empId,worker_name:w.name,stand:stand,status:'absent',notes:'Marked absent by '+who.name
     })}).catch(()=>{});
     toast('❌ '+w.name+' marked absent');
-    loadMyTeam();
-  }else toast(res.error||'Could not mark absent','error');
+  }else{ w.status=prevStatus; w.onBreak=prevBreak; renderMyTeamList(); toast(res.error||'Could not mark absent','error'); }
 }
 async function teamClearAbsent(i){
   const w=state._team[i];if(!w)return;
   const who=getRequesterIdentity();
   const stand=state.myTeamStand;
+  const prevStatus=w.status;
+  w.status='scheduled'; renderMyTeamList();
   const res=await api('undoAbsent',{empId:w.empId,name:w.name,stand:stand,clearedBy:who.name});
   if(res.ok||res.simulated){
     await sb('attendance',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({
       employee_id:w.empId,worker_name:w.name,stand:stand,status:'scheduled',notes:'Absent cleared by '+who.name
     })}).catch(()=>{});
     toast('↩️ '+w.name+' absent cleared');
-    loadMyTeam();
-  }else toast(res.error||'Could not clear absent','error');
-}
-
-async function teamCheckIn(i) {
-  const w = state._team[i];
-  if (!w) return;
-  const who = getRequesterIdentity();
-  const stand = state.myTeamStand;
-  if (!confirm('Check in ' + w.name + ' at ' + stand + ' now, on their behalf?')) return;
-  const res = await api('photoCheckin', { empId: w.empId, name: w.name, stand: stand, photoBlob: null, gameLabel: GAME_LABEL });
-  if (res.ok) {
-    await sb('attendance', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: stand, status:'working', notes: 'Checked in by ' + who.name }) });
-    toast('✅ ' + w.name + ' checked in');
-    loadMyTeam();
-  } else toast(res.error || 'Could not check in — try again', 'error');
+  }else{ w.status=prevStatus; renderMyTeamList(); toast(res.error||'Could not clear absent','error'); }
 }
 
 async function teamBreakStart(i) {
@@ -9364,12 +9510,13 @@ async function teamBreakStart(i) {
   if (!w) return;
   const who = getRequesterIdentity();
   const stand = state.myTeamStand;
+  const prevBreak=w.onBreak;
+  w.onBreak=true; renderMyTeamList();
   const res = await api('breakStart', { empId: w.empId, name: w.name, stand: stand });
   if (res.ok) {
     await sb('attendance', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: stand, status:'break', notes: 'Break started by ' + who.name }) });
     toast('☕ ' + w.name + ' on break');
-    loadMyTeam();
-  } else toast(res.error || 'Could not update — try again', 'error');
+  } else { w.onBreak=prevBreak; renderMyTeamList(); toast(res.error || 'Could not update — try again', 'error'); }
 }
 
 async function teamBreakEnd(i) {
@@ -9377,12 +9524,13 @@ async function teamBreakEnd(i) {
   if (!w) return;
   const who = getRequesterIdentity();
   const stand = state.myTeamStand;
+  const prevBreak=w.onBreak;
+  w.onBreak=false; renderMyTeamList();
   const res = await api('breakEnd', { empId: w.empId, name: w.name, stand: stand });
   if (res.ok) {
     await sb('attendance', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: stand, status:'working', notes: 'Break ended by ' + who.name }) });
     toast('✅ ' + w.name + ' back from break');
-    loadMyTeam();
-  } else toast(res.error || 'Could not update — try again', 'error');
+  } else { w.onBreak=prevBreak; renderMyTeamList(); toast(res.error || 'Could not update — try again', 'error'); }
 }
 
 // ---- Lead/Supervisor/Manager: feedback on a worker ----
