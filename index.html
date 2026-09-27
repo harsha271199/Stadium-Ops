@@ -4062,7 +4062,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-picklist-delivery-record-1';
+const BUILD_TAG = '2026-09-27-hub-transfer-confirm-fix-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -18533,7 +18533,7 @@ async function loadWhApprovals() {
     const canConfirm = t.status === 'verified' && !t.wh_confirmed_at;
     const badge = partialIds.has(t.id) ? ' <span style="color:#DC2626;font-weight:800">⚠️ Partial</span>' : '';
     const right = canConfirm
-      ? '<button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();whConfirmTask(' + t.id + ')">✅ Approve</button>'
+      ? '<button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();whConfirmTask(' + t.id + ',\'' + t.stand.replace(/'/g,"\\'") + '\')">✅ Approve</button>'
       : '<span style="font-size:11px;color:var(--text-2)">' + escapeHtml(st.label) + '</span>';
     return '<div class="sub-menu-btn" style="border-left:4px solid ' + st.color + '">' +
       '<span class="smb-icon" onclick="openTransferStand(\'' + t.stand.replace(/'/g,"\\'") + '\',\'list\',' + t.id + ')">📦</span>' +
@@ -18974,7 +18974,7 @@ async function loadWhTransfers() {
     if (t.wh_confirmed_at) {
       rightSide = '<span style="font-size:11px;color:#00A651;font-weight:700">✓ Confirmed</span>';
     } else if (canConfirm) {
-      rightSide = '<button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();whConfirmTask(' + t.id + ')">✅ Approve</button>';
+      rightSide = '<button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();whConfirmTask(' + t.id + ',\'' + t.stand.replace(/'/g,"\\'") + '\')">✅ Approve</button>';
     } else if (t.assigned_to_id) {
       rightSide = isMine
         ? '<span style="font-size:11px;color:#00A651;font-weight:700">✓ Assigned to you</span>'
@@ -19018,10 +19018,21 @@ async function loadWhTransfers() {
 // the same action from the transfer-detail screen). Now correctly gated to
 // the 'verified' stage — was 'delivered' before, which fired too early and
 // overlapped with the supervisor's own e-sign step.
-async function whConfirmTask(id) {
+async function whConfirmTask(id, stand) {
   const who = state.staffAccount ? state.staffAccount.name : 'Warehouse Manager';
   const whoId = state.staffAccount ? state.staffAccount.empId : '';
-  const res = await sb('transfers?id=eq.'+id+'&status=eq.verified', { method:'PATCH', headers:{Prefer:'return=representation'}, body: JSON.stringify({ wh_confirmed_by_id: whoId, wh_confirmed_by_name: who, wh_confirmed_at: new Date().toISOString() }) });
+  const body = { wh_confirmed_by_id: whoId, wh_confirmed_by_name: who, wh_confirmed_at: new Date().toISOString() };
+  // Real bug: this only ever set wh_confirmed_at, never the transfer's own
+  // `status` to 'confirmed' — that final status change only ever happened
+  // via mtConfirmTransfer(), a completely different screen only a
+  // concession stand's own regular Manager reaches. A warehouse<->warehouse
+  // hub transfer (MAS/DFA) has no such stand or manager attached to it at
+  // all, so it could NEVER actually reach 'confirmed' and would sit
+  // forever in every "Open" count, piling up permanently over a season.
+  // For a hub transfer specifically, this approval IS the final word —
+  // there's no separate stand-side receipt to wait for.
+  if (WAREHOUSE_TRANSFER_HUBS.includes(stand)) { body.status = 'confirmed'; body.confirmed_by = who; body.confirmed_at = body.wh_confirmed_at; }
+  const res = await sb('transfers?id=eq.'+id+'&status=eq.verified', { method:'PATCH', headers:{Prefer:'return=representation'}, body: JSON.stringify(body) });
   if (res._err || !Array.isArray(res) || !res.length) { toast('Could not approve — try refreshing', 'error'); loadWhTransfers(); return; }
   toast('✅ Approved');
   loadWhTransfers();
@@ -19139,6 +19150,15 @@ async function openTransferStand(stand, source, transferId) {
   document.getElementById('ts-confirmed-badge').style.display = 'none';
   document.getElementById('ts-stock-requests-area').style.display = 'none';
   document.getElementById('ts-signoff').style.display = 'none';
+  // Real bug: opening a specific transfer by id (tapping it from a list)
+  // returns early below, before the quickMode block that normally hides
+  // this picker — so if the same session had a QR/self/force session open
+  // earlier, its item picker (and stale item list) stayed visible on top
+  // of an unrelated, manager-assigned transfer for a different stand.
+  // Reset unconditionally here; the source-specific block below re-shows
+  // it when that's actually what this open call is for.
+  const pickerElReset = document.getElementById('ts-self-picker');
+  if (pickerElReset) pickerElReset.style.display = 'none';
   const deliverBtnEntry=document.getElementById('ts-deliver-btn');
   if(deliverBtnEntry)deliverBtnEntry.textContent=forceMode?'✓ Done — return to app':'✓ Finish delivery';
   showScreen('screen-transfer-stand');
@@ -20056,10 +20076,20 @@ async function whFinalApprove() {
   if (!isWarehouseManagerSession()) return toast('Warehouse Manager approval required', 'error');
   const who = state.staffAccount ? state.staffAccount.name : 'Warehouse Manager';
   const whoId = state.staffAccount ? state.staffAccount.empId : '';
-  const res = await sb('transfers?id=eq.'+_tsTransfer.id+'&status=eq.verified', { method:'PATCH', headers:{Prefer:'return=representation'}, body: JSON.stringify({ wh_confirmed_by_id: whoId, wh_confirmed_by_name: who, wh_confirmed_at: new Date().toISOString() }) });
+  const nowIso = new Date().toISOString();
+  const body = { wh_confirmed_by_id: whoId, wh_confirmed_by_name: who, wh_confirmed_at: nowIso };
+  // Same real bug as whConfirmTask(): this never set `status` to
+  // 'confirmed' itself — only mtConfirmTransfer() (a screen only a
+  // concession stand's regular Manager reaches) ever did. A warehouse hub
+  // transfer has no stand or manager to do that, so it would sit as
+  // "Open" forever. This approval is the final word for a hub transfer.
+  const isHub = WAREHOUSE_TRANSFER_HUBS.includes(_tsTransfer.stand);
+  if (isHub) { body.status = 'confirmed'; body.confirmed_by = who; body.confirmed_at = nowIso; }
+  const res = await sb('transfers?id=eq.'+_tsTransfer.id+'&status=eq.verified', { method:'PATCH', headers:{Prefer:'return=representation'}, body: JSON.stringify(body) });
   if (res._err || !Array.isArray(res) || !res.length) { toast('Could not approve — try refreshing', 'error'); return; }
-  _tsTransfer.wh_confirmed_at = new Date().toISOString();
-  toast('✅ Approved — visible to the stand manager for final confirm');
+  _tsTransfer.wh_confirmed_at = nowIso;
+  if (isHub) _tsTransfer.status = 'confirmed';
+  toast(isHub ? '✅ Approved & confirmed — warehouse transfer complete' : '✅ Approved — visible to the stand manager for final confirm');
   renderTsItems();
   renderTsStatus();
 }
