@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-27-notify-audit-1
+- **Real bug fix, notification gap:** when a warehouse employee marks a delivery "Delivered," the "ready to verify" push only ever went to Warehouse Supervisor accounts — if no supervisor is actually working that game (smaller events sometimes run with just a manager + employees), nobody got notified at all. Now falls back to the Warehouse Manager when no supervisor is active.
+
 ## 2026-09-27-stock-fallback-notify-1
 - **Real bug fix, notification gap:** when a Stock request comes in for a stand with no warehouse coverage assignment set for the day, the fallback push only went to Warehouse Employee accounts — the Warehouse Manager and Warehouse Supervisor got nothing until they happened to open the app. Found while auditing notification routing ahead of tonight's game. Fallback now pushes to all three warehouse roles, matching how Food requests already always alert the Food Manager.
 

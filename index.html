@@ -4073,7 +4073,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-stock-fallback-notify-1';
+const BUILD_TAG = '2026-09-27-notify-audit-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -20045,7 +20045,15 @@ async function tsCompleteDelivery(opts) {
       _tsTransfer.wh_confirmed_at = patchBody.wh_confirmed_at;
     }
     if(finalStatus==='delivered'){
-      sb('staff_accounts?role=eq.warehouse_supervisor&is_active=eq.true&select=employee_id').then(rows=>{if(!rows._err&&Array.isArray(rows))rows.forEach(x=>sendPushTo(x.employee_id,'📦 Delivery ready to verify',_tsTransfer.stand+' · delivered by '+deliveredByName));}).catch(()=>{});
+      sb('staff_accounts?role=eq.warehouse_supervisor&is_active=eq.true&select=employee_id').then(rows=>{
+        if(!rows._err&&Array.isArray(rows)&&rows.length){
+          rows.forEach(x=>sendPushTo(x.employee_id,'📦 Delivery ready to verify',_tsTransfer.stand+' · delivered by '+deliveredByName));
+        }else{
+          // No active supervisor covering this game — the manager is the
+          // only one left who'd otherwise never hear this needs verifying.
+          sb('staff_accounts?role=eq.warehouse_manager&is_active=eq.true&select=employee_id').then(mgrs=>{if(!mgrs._err&&Array.isArray(mgrs))mgrs.forEach(x=>sendPushTo(x.employee_id,'📦 Delivery ready to verify',_tsTransfer.stand+' · delivered by '+deliveredByName+' · no supervisor on shift'));}).catch(()=>{});
+        }
+      }).catch(()=>{});
     }
     if (selfHandled) {
       toast(finalStatus === 'confirmed' ? '✅ Delivered, verified & confirmed — done' : '✅ Delivered & verified — waiting on the stand manager\'s final receipt');
