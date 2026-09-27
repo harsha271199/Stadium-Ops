@@ -3690,11 +3690,15 @@
 
     <!-- MODE 0: TRANSFERS (assigned deliveries) -->
     <div id="wh-mode-transfers">
-      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-        <button class="wh-tf-filter-btn" data-tf="today" onclick="whSetTransferFilter('today',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--aramark-red);color:#fff;font-weight:700">Today's venue</button>
-        <button class="wh-tf-filter-btn" data-tf="recent" onclick="whSetTransferFilter('recent',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-weight:700">Last 2 days</button>
-        <button class="wh-tf-filter-btn" data-tf="all" onclick="whSetTransferFilter('all',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-weight:700">All open</button>
-        <button class="btn btn-ghost" onclick="exportWhTransfersCSV()" style="flex:1;min-width:90px;margin:0;padding:8px;font-size:12px">⬇️ Download CSV</button>
+      <!-- Three buttons (Today's venue / Last 2 days / All open) replaced
+           with an actual date picker + one "All open" toggle — pick any
+           day directly instead of guessing which preset bucket it falls
+           into. The flat "Download CSV" here was redundant with the Stand
+           Transfer Report (same data, but grouped by stand and including
+           waste) — removed; that's now the one place to export transfers. -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+        <input class="form-input" type="date" id="wh-tf-date" onchange="whSetTransferDateFilter(this.value)" style="flex:1;min-width:130px;margin:0">
+        <button class="wh-tf-filter-btn" data-tf="all" onclick="whSetTransferFilter('all',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--aramark-red);color:#fff;font-weight:700">All open</button>
       </div>
       <div id="wh-transfers-list"><div class="loading"><div class="spinner"></div>Loading transfers…</div></div>
     </div>
@@ -4069,7 +4073,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-supervisor-tiles-1';
+const BUILD_TAG = '2026-09-27-transfers-date-filter-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6368,7 +6372,10 @@ async function doLogin() {
 
       if(state.staffAccount.group==='warehouse'){
         state.whName=state.staffAccount.name;
-        const n=document.getElementById('wh-name');if(n)n.textContent=state.staffAccount.name+' ('+whRoleLabel(state.staffAccount.role)+') · auto-refresh 10s';
+        // Just "Auto-refresh 10s" — the name+role used to repeat here AND
+        // right below in the role-profile-strip's own title, a literal
+        // duplicate with nothing else added.
+        const n=document.getElementById('wh-name');if(n)n.textContent='Auto-refresh 10s';
         renderWarehouseForRole();
         if(!resumePendingQrAfterLogin())showScreen('screen-warehouse');
       }else if(state.staffAccount.group==='food'){
@@ -6780,7 +6787,7 @@ async function submitPin() {
       maybeAutoPromptPush(state.staffAccount.role);
       if (state.pinTarget === 'warehouse') {
         state.whName = res.name;  // kept for backward compatibility — many existing functions read this directly
-        document.getElementById('wh-name').textContent = res.name + ' (' + whRoleLabel(res.role) + ') · auto-refresh 10s';
+        document.getElementById('wh-name').textContent = 'Auto-refresh 10s';
         renderWarehouseForRole();
         if(!resumePendingQrAfterLogin())showScreen('screen-warehouse');
       } else if (state.pinTarget === 'kitchen') {
@@ -11088,7 +11095,7 @@ async function mtLoadAssignees() {
   // Pull current open-task counts per person so a manager isn't blindly
   // assigning — without this, nothing stopped one person getting overloaded
   // while others sat idle, since the picker was just a plain name list.
-  const openRows = await sb('transfers?status=neq.confirmed&assigned_to_id=not.is.null&select=assigned_to_id').catch(()=>({_err:true}));
+  const openRows = await sb('transfers?status=neq.confirmed&wh_confirmed_at=is.null&assigned_to_id=not.is.null&select=assigned_to_id').catch(()=>({_err:true}));
   const counts = {};
   if (!openRows._err && Array.isArray(openRows)) {
     openRows.forEach(t => { counts[t.assigned_to_id] = (counts[t.assigned_to_id] || 0) + 1; });
@@ -11208,7 +11215,7 @@ async function mtLoadStandItems() {
   // surfaced so it's a decision, not an accident.
   const warnEl = document.getElementById('mt-duplicate-warning');
   warnEl.style.display = 'none';
-  sb('transfers?stand=eq.'+encodeURIComponent(stand)+'&status=neq.confirmed&select=id,status,assigned_to_name,created_at&order=created_at.desc&limit=3').then(existing => {
+  sb('transfers?stand=eq.'+encodeURIComponent(stand)+'&status=neq.confirmed&wh_confirmed_at=is.null&select=id,status,assigned_to_name,created_at&order=created_at.desc&limit=3').then(existing => {
     if (existing._err || !Array.isArray(existing) || !existing.length) return;
     const lines = existing.map(t => (TRANSFER_STATUS[t.status]||{}).label + (t.assigned_to_name ? ' · assigned to ' + t.assigned_to_name : ' · unassigned'));
     warnEl.innerHTML = '⚠️ ' + stand + ' already has ' + existing.length + ' open transfer' + (existing.length===1?'':'s') + ': ' + lines.join(', ') + '. Creating another is fine if this is genuinely separate work.';
@@ -18467,8 +18474,19 @@ async function saToggleStand(standName, enabled, btn) {
 // tile's live badge (short summary) — one source of truth for "what
 // needs the manager's attention right now."
 async function whComputeStats() {
-  const rows = await sb('transfers?status=neq.confirmed&select=id,stand,status,assigned_to_name,wh_confirmed_at&limit=200').catch(()=>({_err:true}));
-  if (rows._err || !Array.isArray(rows)) return null;
+  const rawRows = await sb('transfers?status=neq.confirmed&select=id,stand,status,assigned_to_name,wh_confirmed_at&limit=200').catch(()=>({_err:true}));
+  if (rawRows._err || !Array.isArray(rawRows)) return null;
+  // Real bug: `status=neq.confirmed` alone isn't enough — a stand delivery
+  // sits at status='verified' forever until that STAND's own regular
+  // Manager does their separate final receipt confirm (a different screen,
+  // different person, on their own schedule). Once the warehouse manager's
+  // own wh_confirmed_at is set, the warehouse side's job is entirely done;
+  // leaving it counted here made a row show up in "Open" while its own
+  // row in the list simultaneously read "✓ Confirmed" — the exact
+  // contradiction reported. Warehouse-side stats now stop counting it the
+  // moment wh_confirmed_at is set, regardless of what the literal `status`
+  // column still says.
+  const rows = rawRows.filter(r => !r.wh_confirmed_at);
   const total = rows.length;
   const unassigned = rows.filter(r => !r.assigned_to_name).length;
   // Real fix: this used to check status==='delivered', but 'delivered'
@@ -18887,6 +18905,14 @@ function whSetTransferFilter(mode, btn){
   });
   loadWhTransfers();
 }
+// Picking a date directly always wins over "All open" — matches tapping
+// any other filter control in this app (last one tapped is the active one).
+function whSetTransferDateFilter(dateStr){
+  state._whTransferFilter = 'date';
+  state._whTransferFilterDate = dateStr || localISODate();
+  document.querySelectorAll('.wh-tf-filter-btn').forEach(b=>{ b.style.background='var(--bg-card)'; b.style.color='var(--text)'; });
+  loadWhTransfers();
+}
 // Which venue(s) are actually running today, from today's schedule —
 // same approach getStandsList uses so the two always agree.
 async function whGetTodayVenues(){
@@ -18923,34 +18949,35 @@ async function loadWhTransfers() {
   // is today's venue — the common case is "what do I deliver for
   // tonight's event" — but old open work is one tap away, and never
   // silently hidden forever.
-  const tfFilter = state._whTransferFilter || 'today';
-  // Broadened beyond "today" — tasks are ongoing day-to-day work, not just a
-  // game-day burst, so this shows everything still open regardless of which
-  // day it was created, until it's actually confirmed done.
+  // Real date picker instead of guessing which of "Today's venue"/"Last 2
+  // days" a transfer falls into — pick the exact day directly, or switch
+  // to "All open" for everything not yet confirmed regardless of date.
+  if (!state._whTransferFilter) { state._whTransferFilter = 'date'; state._whTransferFilterDate = localISODate(); }
+  const tfFilter = state._whTransferFilter;
+  const dateInput = document.getElementById('wh-tf-date');
+  if (dateInput && !dateInput.value) dateInput.value = state._whTransferFilterDate || localISODate();
   let query = 'transfers?status=neq.confirmed&order=created_at.desc&limit=150&select=*';
-  const rows = await sb(query).catch(()=>({_err:true}));
+  const rawRows = await sb(query).catch(()=>({_err:true}));
   const badge = document.getElementById('wh-transfer-count');
-  if (rows._err) { el.innerHTML = '<div class="notice" style="background:rgba(220,38,38,0.08);color:#DC2626;font-size:12px">Could not load transfers. Run transfers.sql in Supabase.</div>'; return; }
+  if (rawRows._err) { el.innerHTML = '<div class="notice" style="background:rgba(220,38,38,0.08);color:#DC2626;font-size:12px">Could not load transfers. Run transfers.sql in Supabase.</div>'; return; }
+  // Real bug: `status=neq.confirmed` isn't enough on its own — a stand
+  // delivery sits at status='verified' until that stand's own regular
+  // Manager does a separate final receipt confirm elsewhere, so a row the
+  // warehouse manager already approved (wh_confirmed_at set) kept showing
+  // up here in "All Transfers" while its own right-side label read
+  // "✓ Confirmed" — reported as "once it's confirmed still showing up."
+  // The warehouse side's job is done the moment wh_confirmed_at is set,
+  // regardless of what the literal status column still says.
+  const rows = rawRows.filter(t => !t.wh_confirmed_at);
   // Apply the venue/day filter to whatever the query returned. This is
   // done client-side so switching filters is instant and doesn't refetch.
   let filtered = rows;
-  if (tfFilter === 'recent') {
-    const cutoff = Date.now() - 2*24*60*60*1000;
-    filtered = rows.filter(t => new Date(t.created_at).getTime() >= cutoff);
-  } else if (tfFilter === 'today') {
-    const todayVenues = await whGetTodayVenues();
-    if (todayVenues.size) {
-      const standVenue = await whGetStandVenueMap();
-      // Warehouse-to-warehouse transfers (DFA Warehouse / MAS Warehouse)
-      // always show under "Today's venue" regardless of which venue has a
-      // game today — a transfer sent to the OTHER venue's warehouse ahead
-      // of an upcoming game was getting silently hidden here, which is
-      // exactly what looked like "the transfer disappeared."
-      filtered = rows.filter(t => WAREHOUSE_TRANSFER_HUBS.includes(t.stand) || todayVenues.has(standVenue[t.stand] || '__none__'));
-      // If nothing matches today's venue, don't show a confusingly empty
-      // list — fall back to recent so there's still something actionable.
-      if (!filtered.length) filtered = rows.filter(t => new Date(t.created_at).getTime() >= Date.now() - 2*24*60*60*1000);
-    }
+  if (tfFilter === 'date') {
+    const day = state._whTransferFilterDate || localISODate();
+    // game_date is the authoritative day every transfer is created with
+    // (see mtCreateTransfer/whStartOwnedTransfer/force-restock) — matching
+    // on that instead of created_at avoids timezone-boundary surprises.
+    filtered = rows.filter(t => (t.game_date || String(t.created_at||'').slice(0,10)) === day);
   }
   const workingRows = filtered;
   // Employees only see their own assigned tasks. Supervisors and managers see
@@ -20602,7 +20629,7 @@ async function init() {
   const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
   if (path === '/warehouse' || path === '/warehouse/index.html') {
     if (state.staffAccount && state.staffAccount.group === 'warehouse') {
-      document.getElementById('wh-name').textContent = state.staffAccount.name + ' (' + whRoleLabel(state.staffAccount.role) + ') · auto-refresh 10s';
+      document.getElementById('wh-name').textContent = 'Auto-refresh 10s';
       renderWarehouseForRole();
       showScreen('screen-warehouse');
       return;
@@ -20651,7 +20678,7 @@ async function init() {
     }
     if (state.staffAccount && state.staffAccount.group === 'warehouse') {
       const nameEl = document.getElementById('wh-name');
-      if (nameEl) nameEl.textContent = state.staffAccount.name + ' (' + whRoleLabel(state.staffAccount.role) + ') · auto-refresh 10s';
+      if (nameEl) nameEl.textContent = 'Auto-refresh 10s';
       renderWarehouseForRole();
       showScreen('screen-warehouse');
       return;

@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-27-transfers-date-filter-1
+- **Real bug fix:** the manager's name showed twice on the Warehouse screen — once in the header, once again right below in the role card, word for word. The header now just shows "Auto-refresh 10s"; the role card already has the name.
+- **Real bug fix, the big one:** a transfer the warehouse manager had already approved (wh_confirmed_at set) could still sit in "All Transfers" and every open-count, because its literal `status` column only reaches `verified` until a completely different person — the receiving concession stand's own regular Manager — does their own separate final receipt confirm. So the same row would show "✓ Confirmed" on its own line while still counting as "Open" above it. Every warehouse-side list/count now treats wh_confirmed_at as done, regardless of what the stand's own confirm step still says.
+- Replaced the "Today's venue / Last 2 days / All open" three-button filter on Transfers with an actual date picker + one "All open" toggle — pick the exact day directly instead of guessing which preset bucket it falls into.
+- Removed the "Download CSV" button from the Transfers pane — it duplicated the Stand Transfer Report (same underlying data, but grouped by stand and including waste), which is now the one place to export transfers.
+
 ## 2026-09-27-supervisor-tiles-1
 - Warehouse Supervisor now gets the same tile menu as the Manager instead of the old text tab-bar — two big tiles, 🚚 Transfers (red, since verifying deliveries is their main job) and 📥 Requests, each showing a live open-count the same tab-bar badges always tracked. Employee's single-list screen was left as is — one list plus one full-width Quick Drop button is already the simplest shape for a screen with exactly one job; a tile menu would only add a navigation step for no benefit there.
 
