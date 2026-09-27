@@ -3675,14 +3675,17 @@
          just created two different ways. Old Transfers/Requests tabs
          stay fully intact underneath for full detail. -->
     <div id="wh-mode-todeliver" style="display:none">
+      <!-- The "tap a stand → deliver → done" guidance used to repeat here
+           AND in the dismissible first-game-help banner right above the
+           tab-bar — the same message twice was a big chunk of what made
+           this screen feel like it was half messages. Kept only the tip
+           banner (dismissible, so it goes away for good once read). -->
       <button class="btn btn-ghost" onclick="whScanToOpen()" style="width:100%;margin-bottom:12px">📷 Quick Drop — scan stand & add stock</button>
-      <div class="notice info" style="font-size:12px;margin-bottom:12px">📋 <b>Simple flow:</b> tap a stand → we tell them you're on the way → check what you brought → finish delivery. QR is helpful, but it will not block you.</div>
       <div id="wh-todeliver-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
     </div>
 
     <!-- MODE 0: TRANSFERS (assigned deliveries) -->
     <div id="wh-mode-transfers">
-      <div class="notice info" style="font-size:12px;margin-bottom:12px">🚚 Deliver assigned transfers to stands. Tap a stand → check off items → done. Or scan the stand's QR code.</div>
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
         <button class="wh-tf-filter-btn" data-tf="today" onclick="whSetTransferFilter('today',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--aramark-red);color:#fff;font-weight:700">Today's venue</button>
         <button class="wh-tf-filter-btn" data-tf="recent" onclick="whSetTransferFilter('recent',this)" style="flex:1;min-width:90px;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-weight:700">Last 2 days</button>
@@ -3943,13 +3946,18 @@
   <div class="content">
     <div class="card wh-coverage-card" id="wh-coverage-card" style="padding:14px">
       <div style="font-weight:850;font-size:13px">🗺️ Warehouse game-day coverage</div>
-      <div style="font-size:9px;color:var(--text-2);margin:3px 0 8px">Assign Warehouse employees/supervisors to delivery areas. Admin controls every team; Warehouse Manager controls Warehouse only.</div>
+      <div style="font-size:9px;color:var(--text-2);margin:3px 0 8px">One place for both ways to assign someone: pick an area (a group of stands) and/or specific stand(s) directly. Either drives "My Stands" and routes new stock request alerts straight to them — no separate tools, one save.</div>
       <div class="wh-coverage-grid">
         <div>
           <label class="form-label" style="margin-top:0">Warehouse person</label>
           <select class="form-input" id="whcov-person" onchange="warehouseCoveragePersonChanged()"><option>Loading…</option></select>
+          <label class="form-label">Area(s) — a group of stands</label>
           <div class="coverage-area-chips" id="whcov-areas"></div>
-          <button class="btn btn-primary" onclick="warehouseCoverageSave()" style="margin-top:5px">Save coverage</button>
+          <label class="form-label">Specific stand(s) — today's game only, in addition to any area above</label>
+          <input class="form-input" type="text" id="whcov-stand-search" placeholder="🔍 Search today's stands…" oninput="whCovRenderStands()" style="margin-bottom:6px">
+          <div id="whcov-stands-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 8px"></div>
+          <button class="btn btn-primary" onclick="warehouseCoverageSave()" style="margin-top:8px">Save coverage</button>
+          <button class="btn btn-ghost" onclick="warehouseCoverageClear()" style="margin-top:6px;border-color:#DC2626;color:#DC2626">Remove this person's coverage</button>
         </div>
         <div>
           <div style="font-size:9px;font-weight:850;margin-bottom:5px">TODAY'S WAREHOUSE PLAN</div>
@@ -4050,7 +4058,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-24-warehouse-mgr-fixes-2';
+const BUILD_TAG = '2026-09-27-warehouse-coverage-unify-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -14671,13 +14679,36 @@ async function coverageUseObviousMatches(){const venue=document.getElementById('
 async function coverageAdminSaveArea(){const venue=document.getElementById('cov-venue').value,key=document.getElementById('cov-area-select').value,areas=await coverageGetAreas(venue),area=areas.find(a=>a.area_key===key);if(!area)return;if(await coverageSaveArea({...area,stands:_covAreaStands,updated_at:new Date().toISOString()})){toast('✅ '+area.area_name+' mapped to '+_covAreaStands.length+' stands');await coverageAdminLoadAreas();}}
 async function coverageImportFootballPlan(){const date=document.getElementById('cov-date').value,venue=document.getElementById('cov-venue').value,rows=await sb('staff_accounts?is_active=eq.true&select=employee_id,name,role').catch(()=>({_err:true}));if(rows._err||!Array.isArray(rows))return toast('Could not load app accounts','error');const ar=await coverageGetAreas(venue),areaByName=Object.fromEntries(ar.map(a=>[a.area_name,a.area_key])),byNorm=new Map();rows.forEach(p=>byNorm.set(coverageNormName(p.name),p));let matched=0,unmatched=[];for(const [planName,areaNames] of Object.entries(FOOTBALL_PLAN_SEED)){const p=byNorm.get(coverageNormName(planName));if(!p){unmatched.push(planName);continue;}const keys=areaNames.map(n=>areaByName[n]).filter(Boolean);if(!keys.length)continue;await coverageSaveAssignment({event_date:date,venue,employee_id:p.employee_id,name:p.name,role:p.role,team:coverageTeamForRole(p.role),area_keys:keys,direct_stands:[],notify_requests:true,source:'2026 Support-Football.xlsx',updated_at:new Date().toISOString()});matched++;}await coverageAdminRenderCurrent();document.getElementById('cov-assign-status').textContent='📄 Football plan: '+matched+' app accounts linked · '+unmatched.length+' names still need an app account/name match.';toast('📄 Loaded '+matched+' matched assignments'+(coveragePreviewOnly()?' in preview':''));}
 
-let _whCovPeople=[],_whCovSelected=[];
-async function warehouseCoverageInit(){const card=document.getElementById('wh-coverage-card');if(!card)return;const rows=await sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor)&is_active=eq.true&select=employee_id,name,role&order=name.asc').catch(()=>({_err:true}));_whCovPeople=!rows._err&&Array.isArray(rows)?rows:[];const sel=document.getElementById('whcov-person');if(sel)sel.innerHTML='<option value="">— Select warehouse person —</option>'+_whCovPeople.map(p=>'<option value="'+escapeAttr(p.employee_id)+'">'+escapeHtml(p.name)+'</option>').join('');await warehouseCoverageRenderAreas();await warehouseCoverageCurrent();}
+// Warehouse coverage — ONE mechanism (game_day_assignments), not two.
+// Previously an area/group could be assigned here (screen-wh-team) while a
+// completely separate, now-orphaned "Zone Assignments" tool (dead code —
+// its HTML form no longer exists) was the only thing that ever wrote a
+// specific-stand assignment, into a different table (zone_assignments)
+// that this screen never touched. That's exactly the "sometimes by group,
+// sometimes by stand" split reported — the stand half had no working UI at
+// all. Both now live on the same row here (area_keys + direct_stands),
+// which resolveWarehouseAssigneesForStand() and getMyWarehouseCoverageStands()
+// already know how to expand together — no other code needed to change.
+let _whCovPeople=[],_whCovSelected=[],_whCovSelectedStands=[],_whCovStandsList=[];
+async function warehouseCoverageInit(){const card=document.getElementById('wh-coverage-card');if(!card)return;const rows=await sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor)&is_active=eq.true&select=employee_id,name,role&order=name.asc').catch(()=>({_err:true}));_whCovPeople=!rows._err&&Array.isArray(rows)?rows:[];const sel=document.getElementById('whcov-person');if(sel)sel.innerHTML='<option value="">— Select warehouse person —</option>'+_whCovPeople.map(p=>'<option value="'+escapeAttr(p.employee_id)+'">'+escapeHtml(p.name)+'</option>').join('');await whCovLoadStandsList();await warehouseCoverageRenderAreas();whCovRenderStands();await warehouseCoverageCurrent();}
 async function warehouseCoverageRenderAreas(){const areas=await coverageGetAreas('Mountain America Stadium'),el=document.getElementById('whcov-areas');if(el)el.innerHTML=areas.map(a=>'<button class="coverage-area-chip '+(_whCovSelected.includes(a.area_key)?'selected':'')+'" onclick="warehouseCoverageToggle(\''+escapeAttr(a.area_key)+'\')">'+escapeHtml(a.area_name)+'</button>').join('');}
 function warehouseCoverageToggle(k){if(_whCovSelected.includes(k))_whCovSelected=_whCovSelected.filter(x=>x!==k);else _whCovSelected.push(k);warehouseCoverageRenderAreas();}
-async function warehouseCoveragePersonChanged(){_whCovSelected=[];const emp=document.getElementById('whcov-person').value;if(!emp)return warehouseCoverageRenderAreas();const rows=await coverageGetAssignments(localISODate(),'Mountain America Stadium'),r=rows.find(x=>String(x.employee_id)===String(emp)&&x.team==='warehouse');if(r)_whCovSelected=(r.area_keys||[]).slice();warehouseCoverageRenderAreas();}
-async function warehouseCoverageSave(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person','error');if(!_whCovSelected.length)return toast('Choose at least one area','error');const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));if(await coverageSaveAssignment({event_date:localISODate(),venue:'Mountain America Stadium',employee_id:emp,name:p?p.name:'',role:p?p.role:'warehouse_employee',team:'warehouse',area_keys:_whCovSelected,direct_stands:[],notify_requests:true,updated_at:new Date().toISOString()})){toast('✅ Warehouse coverage saved');warehouseCoverageCurrent();}}
-async function warehouseCoverageCurrent(){const el=document.getElementById('whcov-current');if(!el)return;const rows=(await coverageGetAssignments(localISODate(),'Mountain America Stadium')).filter(x=>x.team==='warehouse'),ar=await coverageGetAreas('Mountain America Stadium');el.innerHTML=rows.length?rows.map(r=>'<div class="coverage-current-row"><div class="coverage-current-name">'+escapeHtml(r.name||r.employee_id)+'</div><div class="coverage-current-meta">'+escapeHtml((r.area_keys||[]).map(k=>{const a=ar.find(x=>x.area_key===k);return a?a.area_name:k;}).join(' · '))+'</div></div>').join(''):'<div style="padding:8px;font-size:8px;color:var(--text-3)">No warehouse coverage assigned yet.</div>';}
+// Today's actual stand list — same source the stock-count dropdown and
+// the old dead Zone Assignments tool both used, just kept local here.
+async function whCovLoadStandsList(){const today=localISODate();const todayRows=await sb('schedule?event_date=eq.'+today+'&is_test=neq.true&select=location').catch(()=>({_err:true}));let stands=[];if(!todayRows._err&&Array.isArray(todayRows)&&todayRows.length)stands=[...new Set(todayRows.map(r=>r.location).filter(Boolean))];stands=filterCurrentMountainAmericaStands2026(stands);if(!stands.length)stands=mountainAmericaStandNames2026().slice();_whCovStandsList=stands.sort(standSort);}
+function whCovRenderStands(){const c=document.getElementById('whcov-stands-list');if(!c)return;const q=(document.getElementById('whcov-stand-search')||{value:''}).value.toLowerCase().trim();const list=_whCovStandsList.filter(s=>!q||s.toLowerCase().indexOf(q)>=0);if(!list.length){c.innerHTML='<div style="font-size:11px;color:var(--text-3);padding:6px 0">No stands found for today.</div>';return;}c.innerHTML=list.map(s=>{const checked=_whCovSelectedStands.includes(s)?'checked':'';return '<label style="display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px"><input type="checkbox" '+checked+' onchange="whCovToggleStand(this,\''+s.replace(/'/g,"\\'")+'\')"> '+escapeHtml(s)+'</label>';}).join('');}
+function whCovToggleStand(cb,stand){if(cb.checked){if(!_whCovSelectedStands.includes(stand))_whCovSelectedStands.push(stand);}else{_whCovSelectedStands=_whCovSelectedStands.filter(s=>s!==stand);}}
+async function warehouseCoveragePersonChanged(){_whCovSelected=[];_whCovSelectedStands=[];const emp=document.getElementById('whcov-person').value;if(!emp){warehouseCoverageRenderAreas();whCovRenderStands();return;}const rows=await coverageGetAssignments(localISODate(),'Mountain America Stadium'),r=rows.find(x=>String(x.employee_id)===String(emp)&&x.team==='warehouse');if(r){_whCovSelected=(r.area_keys||[]).slice();_whCovSelectedStands=(r.direct_stands||[]).slice();}warehouseCoverageRenderAreas();whCovRenderStands();}
+async function warehouseCoverageSave(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person','error');if(!_whCovSelected.length&&!_whCovSelectedStands.length)return toast('Choose at least one area or stand','error');const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));if(await coverageSaveAssignment({event_date:localISODate(),venue:'Mountain America Stadium',employee_id:emp,name:p?p.name:'',role:p?p.role:'warehouse_employee',team:'warehouse',area_keys:_whCovSelected,direct_stands:_whCovSelectedStands,notify_requests:true,updated_at:new Date().toISOString()})){toast('✅ Warehouse coverage saved — '+(_whCovSelected.length+_whCovSelectedStands.length)+' area/stand assignment(s)');warehouseCoverageCurrent();}else toast('Could not save coverage','error');}
+async function warehouseCoverageClear(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person first','error');if(!(await confirmAction('They\'ll go back to seeing every stand/request until reassigned.',{title:'Remove this person\'s coverage?',confirmLabel:'Remove'})))return;if(await coverageDeleteAssignment(localISODate(),'Mountain America Stadium',emp,'warehouse')){_whCovSelected=[];_whCovSelectedStands=[];warehouseCoverageRenderAreas();whCovRenderStands();toast('Coverage removed');warehouseCoverageCurrent();}else toast('Could not remove coverage','error');}
+async function warehouseCoverageCurrent(){const el=document.getElementById('whcov-current');if(!el)return;const rows=(await coverageGetAssignments(localISODate(),'Mountain America Stadium')).filter(x=>x.team==='warehouse'),ar=await coverageGetAreas('Mountain America Stadium');el.innerHTML=rows.length?rows.map(r=>{const areaNames=(r.area_keys||[]).map(k=>{const a=ar.find(x=>x.area_key===k);return a?a.area_name:k;});const parts=[...areaNames,...(r.direct_stands||[])];return '<div class="coverage-current-row"><div class="coverage-current-name">'+escapeHtml(r.name||r.employee_id)+'</div><div class="coverage-current-meta">'+escapeHtml(parts.join(' · ')||'No area/stand')+'</div></div>';}).join(''):'<div style="padding:8px;font-size:8px;color:var(--text-3)">No warehouse coverage assigned yet.</div>';}
+// "My Stands" filter and new-request push routing both resolve through
+// this — coverage first (area + direct stand, today's game), falling back
+// to the legacy zone_assignments table only if nothing was ever migrated
+// there, same fallback order resolveWarehouseAssigneesForStand() already
+// used for push routing. No assignment anywhere = null = show everything,
+// same contract as before this existed.
+async function getMyWarehouseCoverageStands(employeeId){if(!employeeId)return null;const rows=await coverageGetAssignments(localISODate(),'Mountain America Stadium').catch(()=>[]);const row=(rows||[]).find(r=>String(r.employee_id)===String(employeeId)&&r.team==='warehouse');if(row){const expanded=await coverageExpandAssignmentStands([row]);if(expanded.stands.length)return expanded.stands;}const res=await api('getMyZoneStands',{employeeId});return (res.ok&&res.stands&&res.stands.length)?res.stands:null;}
 function supportOpsScopeLabel(){if(state.supportOpsScope==='__my__')return state.supportMyCoverageLabel||'My coverage';return state.supportOpsScope||'All stands';}
 
 
@@ -17713,117 +17744,13 @@ async function whConfirmCartReturn(keyNum, employeeName) {
   });
 }
 
-// ── ZONE ASSIGNMENTS (warehouse manager admin) ──
-let _zaStandsList = [];
-let _zaSelectedStands = [];
-let _zaPeople = []; // [{empId, name}]
-
-async function zaLoadPeople() {
-  const role = document.getElementById('za-role').value;
-  const sel = document.getElementById('za-person');
-  sel.innerHTML = '<option value="">Loading…</option>';
-  if (role === 'warehouse') {
-    const rows = await sb('staff_accounts?role=eq.warehouse_employee&is_active=eq.true&select=employee_id,name&order=name.asc').catch(()=>({_err:true}));
-    _zaPeople = (!rows._err && Array.isArray(rows)) ? rows.map(r => ({ empId: r.employee_id, name: r.name })) : [];
-  } else {
-    const today = localISODate();
-    const rows = await sb('schedule?event_date=eq.'+today+'&role=ilike.*supervisor*&select=employee_id,worker_name').catch(()=>({_err:true}));
-    const seen = new Set();
-    _zaPeople = [];
-    if (!rows._err && Array.isArray(rows)) {
-      rows.forEach(r => { if (!seen.has(r.employee_id)) { seen.add(r.employee_id); _zaPeople.push({ empId: r.employee_id, name: r.worker_name }); } });
-    }
-  }
-  sel.innerHTML = '<option value="">Select person…</option>' + _zaPeople.map(p => '<option value="'+p.empId+'">'+escapeHtml(p.name)+'</option>').join('');
-  document.getElementById('za-stands-area').style.display = 'none';
-}
-
-// Same today-scoped stand list the stock-count dropdown builds, just kept
-// local to this module instead of touching a <select> element.
-async function zaLoadStandsList() {
-  const today = localISODate();
-  const todayRows = await sb('schedule?event_date=eq.'+today+'&is_test=neq.true&select=location').catch(()=>({_err:true}));
-  let stands = [];
-  if (!todayRows._err && Array.isArray(todayRows) && todayRows.length) {
-    stands = [...new Set(todayRows.map(r => r.location).filter(Boolean))];
-  }
-  stands=filterCurrentMountainAmericaStands2026(stands);
-  if (!stands.length) stands=mountainAmericaStandNames2026().slice();
-  _zaStandsList = stands.sort(standSort);
-}
-
-async function zaLoadExisting() {
-  const empId = document.getElementById('za-person').value;
-  const area = document.getElementById('za-stands-area');
-  if (!empId) { area.style.display = 'none'; return; }
-  area.style.display = 'block';
-  if (!_zaStandsList.length) await zaLoadStandsList();
-  const res = await api('getMyZoneStands', { employeeId: empId });
-  _zaSelectedStands = (res.ok && res.stands) ? res.stands.slice() : [];
-  zaRenderStands();
-}
-
-function zaRenderStands() {
-  const c = document.getElementById('za-stands-list');
-  const q = (document.getElementById('za-stand-search').value || '').toLowerCase().trim();
-  const list = _zaStandsList.filter(s => !q || s.toLowerCase().indexOf(q) >= 0);
-  if (!list.length) { c.innerHTML = '<div class="notice info" style="font-size:12px">No stands found for today.</div>'; return; }
-  c.innerHTML = list.map(s => {
-    const checked = _zaSelectedStands.includes(s) ? 'checked' : '';
-    return '<label style="display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--border);cursor:pointer">' +
-      '<input type="checkbox" ' + checked + ' onchange="zaToggleStand(this,\'' + s.replace(/'/g,"\\'") + '\')">' +
-      '<span style="font-size:13px">' + escapeHtml(s) + '</span></label>';
-  }).join('');
-}
-
-function zaToggleStand(cb, stand) {
-  if (cb.checked) { if (!_zaSelectedStands.includes(stand)) _zaSelectedStands.push(stand); }
-  else { _zaSelectedStands = _zaSelectedStands.filter(s => s !== stand); }
-}
-
-async function zaSaveAssignment() {
-  const empId = document.getElementById('za-person').value;
-  if (!empId) return toast('Pick a person first', 'error');
-  const person = _zaPeople.find(p => p.empId === empId);
-  const role = document.getElementById('za-role').value;
-  if (role === 'warehouse' && _zaSelectedStands.length) {
-    const all=await api('getZoneAssignments',{});
-    if(all.ok) for(const row of (all.assignments||[])){
-      if(row.role!=='warehouse'||String(row.employee_id)===String(empId))continue;
-      const remaining=(row.stands||[]).filter(s=>!_zaSelectedStands.includes(s));
-      if(remaining.length!==(row.stands||[]).length){
-        if(remaining.length) await api('setZoneAssignment',{employeeId:row.employee_id,name:row.name||'',role:'warehouse',stands:remaining});
-        else await api('deleteZoneAssignment',{employeeId:row.employee_id});
-      }
-    }
-  }
-  const res = await api('setZoneAssignment', { employeeId: empId, name: person ? person.name : '', role, stands: _zaSelectedStands });
-  if (res.ok) { toast('✅ Assignment saved — ' + _zaSelectedStands.length + ' stand(s)'); zaLoadCurrent(); }
-  else toast(res.error || 'Could not save', 'error');
-}
-
-async function zaClearAssignment() {
-  const empId = document.getElementById('za-person').value;
-  if (!empId) return;
-  if (!(await confirmAction('They\'ll go back to seeing every stand.', {title:'Remove this assignment?', confirmLabel:'Remove'}))) return;
-  const res = await api('deleteZoneAssignment', { employeeId: empId });
-  if (res.ok) { toast('Assignment removed'); _zaSelectedStands = []; zaRenderStands(); zaLoadCurrent(); }
-  else toast(res.error || 'Could not remove', 'error');
-}
-
-async function zaLoadCurrent() {
-  const el = document.getElementById('za-current-list');
-  if (!el) return;
-  const res = await api('getZoneAssignments', {});
-  if (!res.ok) { el.innerHTML = '<div class="notice" style="font-size:11px">Could not load — run zone_assignments_table.sql in Supabase.</div>'; return; }
-  const rows = res.assignments || [];
-  if (!rows.length) { el.innerHTML = '<div style="color:var(--text-2)">No one assigned yet — everyone sees every stand.</div>'; return; }
-  el.innerHTML = rows.map(r => {
-    const roleLabel = r.role === 'supervisor' ? '👮 Supervisor' : '📦 Warehouse';
-    const standsTxt = (r.stands||[]).join(', ') || '(no stands)';
-    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>' + escapeHtml(r.name||r.employee_id) + '</b> <span style="color:var(--text-2)">· ' + roleLabel + '</span><br><span style="color:var(--text-2)">' + escapeHtml(standsTxt) + '</span></div>';
-  }).join('');
-}
+// The old "Zone Assignments" admin tool (by specific stand, into the
+// zone_assignments table) lived here — its HTML form was removed a while
+// back but these functions were left behind, fully unreachable. Removed:
+// stand-based warehouse assignment is now folded into the coverage tool
+// on screen-wh-team (see warehouseCoverageSave et al above), which writes
+// direct_stands onto the same row as area assignment instead of a second,
+// disconnected table with no working UI.
 
 // ── PREMIUM DEPARTMENT ──
 let _premLocations = [];
@@ -18382,16 +18309,15 @@ async function loadWarehouse() {
 }
 
 // ── ZONE FILTER for warehouse Requests tab ──
-// Same additive pattern as the supervisor toggle: unassigned (no row in
-// zone_assignments) means this stays hidden and every request still shows,
-// exactly like before this feature existed.
+// Same additive pattern as before: unassigned (no coverage row, and
+// nothing in the legacy zone_assignments fallback) means this stays
+// hidden and every request still shows, exactly like before this existed.
 async function whInitZoneToggle() {
   const row = document.getElementById('wh-zone-toggle');
   if (!row) return;
   if (!state.staffAccount || !state.staffAccount.empId) { row.style.display = 'none'; return; }
   if (state._myWhZoneStands === undefined) {
-    const res = await api('getMyZoneStands', { employeeId: state.staffAccount.empId });
-    state._myWhZoneStands = (res.ok && res.stands) ? res.stands : null;
+    state._myWhZoneStands = await getMyWarehouseCoverageStands(state.staffAccount.empId);
   }
   if (state._myWhZoneStands && state._myWhZoneStands.length) {
     row.style.display = 'flex';

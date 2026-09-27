@@ -4,6 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-27-warehouse-coverage-unify-1
+- Removed the redundant guidance notices repeated inside the Available Jobs and Transfers panes (Warehouse Employee/Supervisor) — the same "tap a stand, deliver, done" message was already shown right above the tab-bar in the dismissible first-game tip, so it was appearing twice on screen and eating space. Kept the one dismissible copy.
+- **Real architecture bug, fixed:** warehouse assignment was split across two disconnected systems — the "Assign & Team" screen wrote area/group assignments into `game_day_assignments`, while a completely separate, now-orphaned "Zone Assignments" tool was the only thing that ever wrote a specific-stand assignment, into a different table (`zone_assignments`) — and that tool's HTML form had already been removed, leaving stand-based assignment with no working UI at all. This is exactly the "sometimes by group, sometimes by stands" behavior reported.
+  - "Assign & Team" now has ONE form for both: pick an area (a group of stands) and/or specific stand(s) from today's game directly, saved together on the same row.
+  - Added a "Remove this person's coverage" button (previously only reachable through the dead tool).
+  - The "My Stands" filter and new-stock-request push notifications now both resolve through this same unified coverage data (area or direct stand, today's game specifically — the old table had no date, so a stale assignment from a past game could silently carry forward forever), falling back to the legacy table only if nothing was ever set there, and to "notify everyone" only if the stand truly has no one assigned — same safe default as before.
+  - Deleted the dead "Zone Assignments" JS (zaLoadPeople/zaSaveAssignment/etc.) — fully unreachable code left over from when its form was removed.
+
 ## 2026-09-24-warehouse-mgr-fixes-2
 - **Real bug fix:** the manager's tile grid was rendering as a vertical stack instead of the intended 2-column grid — an inline `display:block` set in JS was overriding the `.action-tiles` class's `display:grid`. Removed the override.
 - Golf Cart hidden from all access for now — removed from the Warehouse Manager tile grid, the login screen's "Golf Cart Key" button, the Manager's Records tab and quick-tools grid, and the Admin "Golf cart drivers" card (hidden, not deleted, to avoid breaking `adminLoadDrivers()` which still targets those element ids on every Admin tab open). All underlying screens/functions are left intact — this is reversible by restoring the removed buttons/entries.

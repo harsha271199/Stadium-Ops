@@ -21,9 +21,9 @@
 | **Stand Lead** | Same | + Requests (Stock/IT), Food Safety, My Team — own stand only |
 | **Portable-stand upgraded worker** (bartender etc.) | Same | Same as Stand Lead, minus Add Walk-in Worker + Request Worker Move. Only applies to stands flagged `lead_access_for_all = true` (Admin toggle), and only non-main stands — a main stand can never be affected by this. |
 | **Supervisor** | Same | All-stands Live (with clock-out), Request Stock/Report IT with a stand picker, Checklists & Inventory Status, Stand Transfer Record, My Team for any stand |
-| **Warehouse Employee** | PIN (last-5 + 4-digit PIN) | Only "To Deliver" (merged transfers + requests) and "Cart" (self-checkout) |
-| **Warehouse Supervisor** | Same | Full Transfers + Requests tabs, plus Cart |
-| **Warehouse Manager** | Same | Everything — Transfers, Requests, Inventory, Cart driver admin, Zone Assignments, Portable Stand Access *(this now actually lives under Admin — see note below)* |
+| **Warehouse Employee** | PIN (last-5 + 4-digit PIN) | Only "To Deliver" (merged transfers + requests). Golf Cart hidden from all access for now. |
+| **Warehouse Supervisor** | Same | Full Transfers + Requests tabs. Golf Cart hidden from all access for now. |
+| **Warehouse Manager** | Same | Tile menu (no tab-bar): Create Transfer, All Transfers, Approvals, Requests, Stock Report, Assign & Team. Assign & Team is the single coverage tool — area (group) and/or specific stand(s) per person, one save, drives both "My Stands" and new-request push routing. Golf Cart hidden from all access for now, Portable Stand Access lives under Admin. |
 | **NPO Group Leader** | Group name + PIN | Roster present/absent, stock requests, checklists — no clock in/out. Multi-stand groups get a picker at login. |
 | **Tech** | PIN | IT ticket resolution |
 | **Golf cart driver** | Own last-5 ID (separate `cart_drivers` list, not role-based) | Check out a key, daily pre-use inspection |
