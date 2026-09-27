@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-27-crew-ambiguity-fix-1
+- **Real bug fix, found by QA stress-testing a synthetic duplicate schedule (not live data):** Move Worker and Add Walk-in both resolve the destination stand's crew/event_name by matching a "207 Stand"-style pattern. If a stand ever has two differently-named crews at the same physical location and neither name matches that pattern, the code used to silently pick whichever crew name came back first — meaning a moved or walked-in worker could land in the wrong Stand Lead's roster with zero indication anything went wrong. Reproduced concretely against a synthetic dataset (safe test date, cleaned up after — never touched real schedule data). Now: if the crew can't be resolved unambiguously, the worker is not silently misassigned — Move Worker leaves their crew grouping unset (still visible in the Team Control overview by location) and Add Walk-in gives them their own walk-in crew group (same fallback already used when a stand has no crew at all) — and the acting manager gets an explicit warning toast either way instead of nothing.
+
 ## 2026-09-27-notify-audit-1
 - **Real bug fix, notification gap:** when a warehouse employee marks a delivery "Delivered," the "ready to verify" push only ever went to Warehouse Supervisor accounts — if no supervisor is actually working that game (smaller events sometimes run with just a manager + employees), nobody got notified at all. Now falls back to the Warehouse Manager when no supervisor is active.
 

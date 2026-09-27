@@ -82,12 +82,34 @@
       "test_id": "MOVE-STAND-EDGE-1",
       "role": "Manager / Support Manager / Supervisor",
       "feature": "Move/walk-in event_name resolution when destination stand has ambiguous crew names",
-      "steps": "Trace the event_name-matching regex fallback in managerMoveWorker and addWalkin.",
-      "expected": "If the '207 Stand'-style regex match fails and multiple distinct event_names exist at the destination stand, the code should not silently guess.",
-      "actual": "MINOR EDGE CASE (not required to fix by spec): when regex match fails, code falls back to whichever event_name is first in the result set rather than flagging ambiguity. Low risk under normal ReadyOn naming (single crew per stand is typical); worth a follow-up if two crews are ever imported under the identical stand name.",
-      "status": "NOTE (not blocking)",
-      "method": "code_trace",
-      "evidence": "index.html ~L5717-5720, ~L5763-5766"
+      "steps": "Built a synthetic duplicate schedule on a safe, non-colliding test date (2000-01-01, never matches any real 'today' query) via the Supabase MCP connector, including a stand with two crews sharing one location where neither event_name matches the '<3-digit> Stand' regex pattern. Replayed managerMoveWorker's and addWalkin's exact resolution logic as SQL against it.",
+      "expected": "The code should not silently guess which crew to attach the worker to.",
+      "actual": "CONFIRMED REAL BUG, reproduced concretely (not hypothetical): the code picked whichever crew name came back first with zero indication of ambiguity — a moved/walked-in worker could land in the wrong Stand Lead's roster silently. FIXED this session (build 2026-09-27-crew-ambiguity-fix-1): when ambiguous, Move Worker leaves crew grouping unset instead of guessing (still visible in the location-based Team Control overview) and Add Walk-in falls back to its own walk-in crew group (the same fallback already used for a stand with no crew at all); both now show the acting manager an explicit warning toast instead of failing silently. All synthetic test data was on the 2000-01-01 test date only and has been fully deleted (verified: 0 rows remaining) — no real schedule data was touched.",
+      "status": "PASS (fixed)",
+      "method": "data_verified (synthetic QA dataset, cleaned up after)",
+      "evidence": "index.html managerMoveWorker ~L5708-5729, addWalkin ~L5766-5783; CHANGELOG.md 2026-09-27-crew-ambiguity-fix-1"
+    },
+    {
+      "test_id": "STRESS-DUPLICATE-SCHEDULE-1",
+      "role": "N/A (data-layer stress test)",
+      "feature": "Duplicate-import resilience: same employee appearing twice in one crew's schedule",
+      "steps": "Inserted the same employee_id twice under the same event_name with two different start_times (mirrors a real documented ReadyOn duplicate-import scenario) into the synthetic dataset above, then replayed getMyTeam's and getBedCheck's exact dedup algorithm as SQL.",
+      "expected": "Dedupes to one person, keeping the earliest start_time, at both the crew level and the location level.",
+      "actual": "Confirmed correct in both cases — 29 (crew) and 32 (full location, including a second unrelated crew) came back exactly as expected, duplicate correctly collapsed to its earliest-start-time row.",
+      "status": "PASS",
+      "method": "data_verified (synthetic QA dataset, cleaned up after)",
+      "evidence": "SQL replication of schedule dedup logic against test date 2000-01-01, deleted after"
+    },
+    {
+      "test_id": "STRESS-DUPLICATE-SUBMIT-1",
+      "role": "N/A (data-layer stress test)",
+      "feature": "Duplicate-submission protection (client_uuid) actually enforced at the DB level, not just assumed by app code",
+      "steps": "Attempted to insert two stock_requests rows with the identical client_uuid in one transaction.",
+      "expected": "Second insert rejected; first insert not silently duplicated.",
+      "actual": "Confirmed: unique index uq_stock_requests_client_uuid (and the equivalent for kitchen_requests) rejected the duplicate with a real constraint violation; the whole test transaction rolled back cleanly, leaving zero rows behind.",
+      "status": "PASS",
+      "method": "data_verified",
+      "evidence": "Postgres error 23505 on uq_stock_requests_client_uuid; verified 0 rows left in stock_requests for the QA-TEST-STAND probe"
     },
     {
       "test_id": "WALKIN-DEDUP-1",

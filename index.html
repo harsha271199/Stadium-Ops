@@ -4073,7 +4073,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-notify-audit-1';
+const BUILD_TAG = '2026-09-27-crew-ambiguity-fix-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5711,18 +5711,27 @@ async function api(action, data) {
       // My Team is crew-based, so changing location alone would make the worker
       // invisible to the destination Stand Lead.
       let targetEvent='';
+      let ambiguousCrew=false;
       const targetRows=await sb('schedule?location=eq.'+encodeURIComponent(data.toStand)+'&event_date=eq.'+encodeURIComponent(today)+'&is_test=neq.true&select=event_name').catch(()=>({_err:true}));
       if(!targetRows._err&&Array.isArray(targetRows)&&targetRows.length){
         const names=[...new Set(targetRows.map(x=>String(x.event_name||'').trim()).filter(Boolean))];
         const m=String(data.toStand||'').match(/^(\d{3})/);
         if(m)targetEvent=names.find(x=>new RegExp('(?:^|\\s)'+m[1]+'\\s+Stand','i').test(x))||'';
         if(!targetEvent&&names.length===1)targetEvent=names[0];
-        if(!targetEvent&&names.length)targetEvent=names[0];
+        // Real bug found via QA stress-testing: if the regex can't tell two
+        // differently-named crews at the same location apart, this used to
+        // just silently pick whichever name came back first — meaning a
+        // moved worker could land in the WRONG Stand Lead's crew with no
+        // error at all. Leaving event_name unset instead means the worker
+        // still shows up in the Team Control overview (location-based) but
+        // isn't misassigned to either specific Stand Lead's crew list —
+        // fails visible, not silent.
+        if(!targetEvent&&names.length>1)ambiguousCrew=true;
       }
       const patch={location:data.toStand};
       if(targetEvent)patch.event_name=targetEvent;
       const r = await sb('schedule?employee_id=eq.'+encodeURIComponent(data.empId)+'&event_date=eq.'+encodeURIComponent(today), { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify(patch) });
-      return r._err ? {ok:false} : {ok:true};
+      return r._err ? {ok:false} : {ok:true, ambiguousCrew};
     }
 
     case 'addWalkin': {
@@ -5757,13 +5766,20 @@ async function api(action, data) {
       // Attach the walk-in to the destination stand's real crew/event when
       // possible so the destination Stand Lead sees them immediately.
       let eventName='';
+      let ambiguousCrew=false;
       const targetRows=await sb('schedule?location=eq.'+encodeURIComponent(data.stand)+'&event_date=eq.'+encodeURIComponent(today)+'&is_test=neq.true&select=event_name').catch(()=>({_err:true}));
       if(!targetRows._err&&Array.isArray(targetRows)&&targetRows.length){
         const names=[...new Set(targetRows.map(x=>String(x.event_name||'').trim()).filter(Boolean))];
         const sm=String(data.stand||'').match(/^(\d{3})/);
         if(sm)eventName=names.find(x=>new RegExp('(?:^|\\s)'+sm[1]+'\\s+Stand','i').test(x))||'';
         if(!eventName&&names.length===1)eventName=names[0];
-        if(!eventName&&names.length)eventName=names[0];
+        // Real bug found via QA stress-testing (same class as managerMoveWorker):
+        // guessing which of two ambiguously-named crews to attach a walk-in to
+        // could silently put them under the WRONG Stand Lead. If the regex
+        // can't tell them apart, fall back to the walk-in's own synthetic
+        // crew name (same fallback already used when there's no crew at all)
+        // instead of guessing — visible in Team Control, not misassigned.
+        if(!eventName&&names.length>1)ambiguousCrew=true;
       }
       if(!eventName)eventName='Walk-in · '+data.stand;
 
@@ -5775,7 +5791,7 @@ async function api(action, data) {
       const verify=await sb('schedule?employee_id=like.*'+encodeURIComponent(loginId)+'&event_date=eq.'+encodeURIComponent(today)+'&location=eq.'+encodeURIComponent(data.stand)+'&select=employee_id,worker_name,location,event_name').catch(()=>({_err:true}));
       if(verify._err||!Array.isArray(verify)||!verify.some(x=>String(x.employee_id||'').endsWith(loginId)))return {ok:false,error:'Walk-in saved but login verification failed — refresh and try again'};
       const lastName=name.includes(',')?name.split(',')[0].trim():name.split(/\s+/).pop();
-      return {ok:true,loginId,lastName,storedEmployeeId:storedEmpId};
+      return {ok:true,loginId,lastName,storedEmployeeId:storedEmpId,ambiguousCrew};
     }
 
     // ---------- INVENTORY ----------
@@ -8691,7 +8707,8 @@ async function submitWalkin() {
   await withLock(evtBtn(), 'Adding…', async () => {
     const res = await api('addWalkin', { name, empId, stand });
     if (res.ok) {
-      toast('✅ '+name+' added · login '+empId+' + last name');
+      if(res.ambiguousCrew) toast('⚠️ '+name+' added · login '+empId+' — this stand has more than one crew name and none could be matched automatically, so they were given their own walk-in crew group. They may not appear in a specific Stand Lead\'s My Team until an admin sorts the crew out.','error',12000);
+      else toast('✅ '+name+' added · login '+empId+' + last name');
       document.getElementById('walkin-name').value = ''; document.getElementById('walkin-empid').value = '';
       if(leadership||state._walkinReturn==='manager_team'){
         state._walkinReturn=''; state.myTeamStand=stand;
@@ -9226,7 +9243,8 @@ async function confirmMoveTeamWorker(){
   document.getElementById('move-worker-modal').style.display='none';
   const res=await api('managerMoveWorker',{empId:w.empId,name:w.name,fromStand:from,toStand:to,role:w.role||'',movedBy:who.name||'Manager'});
   if(!(res.ok||res.simulated))return toast('Could not move worker','error');
-  toast('📍 '+w.name+' moved to '+to);
+  if(res.ambiguousCrew) toast('⚠️ '+w.name+' moved to '+to+' — that stand has more than one crew name and none could be matched automatically. They\'ll show in the Team Control overview but may not appear in a specific Stand Lead\'s My Team until an admin sets their crew manually.','error',12000);
+  else toast('📍 '+w.name+' moved to '+to);
   await loadMyTeam();
   if(typeof loadMgrRoster==='function')loadMgrRoster();
 }
