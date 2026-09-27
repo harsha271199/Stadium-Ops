@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-27-walkin-search-dupe-flag-1
+- My Team's inline Add Walk-in search already auto-searches as you type (no need to type the full name) — confirmed matching Premium's search behavior, no change needed there.
+- **New:** search results now flag anyone already on today's schedule elsewhere ("⚠️ Already on today's schedule at <stand>") right in the result list, using the same duplicate-detection rule the save step already enforces. With several similarly-named people in a big directory, this is what actually lets a manager tell them apart before tapping Add — "this John Smith is free, that one's already at 214" — instead of only finding out from a rejection message after picking the wrong one.
+
 ## 2026-09-27-team-checkin-refresh-1
 - **My Team (Concession attendance) brought up to Premium's Check-in quality.** Concession has both regular employees and NPO members in one roster — both are handled correctly throughout:
   - Added a search box + status filter chips (Working / On break / Not arrived / Absent), matching Premium's Check-ins screen — filters instantly against the already-loaded roster, no re-fetch per keystroke.

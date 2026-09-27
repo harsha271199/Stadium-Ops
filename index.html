@@ -4102,7 +4102,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-team-checkin-refresh-1';
+const BUILD_TAG = '2026-09-27-walkin-search-dupe-flag-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9315,14 +9315,30 @@ function teamWalkinSearch(term){
   box.innerHTML='<div style="font-size:11px;color:var(--text-2);padding:6px 0">Searching…</div>';
   _teamWalkinSearchTimer=setTimeout(async()=>{
     const safe=encodeURIComponent('*'+q.replace(/[*,()]/g,'')+'*');
-    const rows=await sb('employee_directory?full_name=ilike.'+safe+'&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(()=>({_err:true}));
+    const today=localISODate();
+    // Real UX improvement, requested to match/exceed Premium's version: check
+    // who's already on today's schedule elsewhere WHILE searching, not only
+    // after tapping Add. With several similarly-named people in a big
+    // directory, this is what actually lets a manager tell them apart —
+    // "this John Smith is free, that one's already at 214" — instead of a
+    // rejection popup after the fact. One schedule query, reused for every
+    // candidate below, same suffix-match rule addWalkin's own backend uses.
+    const [rows,todaySched]=await Promise.all([
+      sb('employee_directory?full_name=ilike.'+safe+'&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(()=>({_err:true})),
+      sb('schedule?event_date=eq.'+encodeURIComponent(today)+'&select=employee_id,location,event_name').catch(()=>({_err:true}))
+    ]);
     if(rows._err){box.innerHTML='<div class="notice" style="font-size:11px">Could not search right now — type the name and ID manually below.</div>';return;}
     if(!Array.isArray(rows)||!rows.length){box.innerHTML='<div class="notice info" style="font-size:11px;padding:8px 10px">No match found — type their name and ID manually below. They\'ll still be added.</div>';return;}
+    const schedRows=(!todaySched._err&&Array.isArray(todaySched))?todaySched:[];
     box.innerHTML=rows.map(r=>{
       const nm=escapeAttr(r.full_name||''),id=escapeAttr(r.employee_id||''),role=escapeAttr(r.role||'');
+      const loginId=String(r.employee_id||'').slice(-5);
+      const already=loginId?schedRows.find(s=>String(s.employee_id||'').endsWith(loginId)):null;
+      const flag=already?'<div class="meta" style="color:#DC2626;font-weight:700">⚠️ Already on today\'s schedule at '+escapeHtml(already.location||already.event_name||'another stand')+'</div>':'';
       return '<div class="prem-walkin-result" onclick="teamWalkinPickPerson(\''+nm+'\',\''+id+'\')">'+
         '<div class="name">'+escapeHtml(r.full_name||'')+'</div>'+
         '<div class="meta">ID '+escapeHtml(r.employee_id||'')+(r.role?' · '+escapeHtml(r.role):'')+'</div>'+
+        flag+
       '</div>';
     }).join('');
   },300);
