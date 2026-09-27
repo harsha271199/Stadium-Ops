@@ -304,7 +304,7 @@
 
   /* WAREHOUSE MANAGER — status stat chips (Needs your attention row) */
   .wh-stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:7px}
-  .wh-stat-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 6px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border);text-align:center}
+  .wh-stat-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 6px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border);text-align:center;cursor:pointer}
   .wh-stat-chip b{font-size:19px;font-weight:800;color:var(--text)}
   .wh-stat-chip span{font-size:9.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.02em}
   .wh-stat-chip.info{border-color:rgba(0,102,179,0.35);background:rgba(0,102,179,0.08)}
@@ -3669,7 +3669,7 @@
          below via a tile — gives them the back button they were missing,
          without duplicating the pane markup/logic per role. -->
     <div class="page-header" id="wh-mgr-backbar" style="display:none;margin:0 0 14px;padding:0 0 10px;background:transparent">
-      <div class="back-btn" role="button" tabindex="0" aria-label="Back to menu" onclick="whMgrBackToMenu()">← Back</div>
+      <div class="back-btn" role="button" tabindex="0" aria-label="Back to menu" onclick="whMgrBackToMenu()">←</div>
       <div><div class="page-title" id="wh-mgr-backbar-title">Menu</div></div>
     </div>
 
@@ -4062,7 +4062,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-print-picklist-1';
+const BUILD_TAG = '2026-09-27-warehouse-mgr-polish-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4111,7 +4111,7 @@ function showScreen(id) {
   if (id === 'screen-all-stock') { loadAllStockReqs(); state.refreshInterval = setInterval(loadAllStockReqs, 15000); }
   if (id === 'screen-all-checks') { loadAllChecksStatus(); state.refreshInterval = setInterval(loadAllChecksStatus, 15000); }
   if (id === 'screen-transfer-record') { loadStandTransferRecord(); }
-  if (id === 'screen-wh-create-transfer') { mtLoadStands(); mtLoadAssignees(); }
+  if (id === 'screen-wh-create-transfer') { mtResetTransferForm(); mtLoadStands(); mtLoadAssignees(); }
   if (id === 'screen-wh-approvals') { loadWhApprovals(); state.refreshInterval = setInterval(loadWhApprovals, 15000); }
   if (id === 'screen-wh-team') { warehouseCoverageInit(); }
   else if (id === 'screen-supervisor') { loadSupervisor(); document.getElementById('sup-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}); state.refreshInterval = setInterval(loadSupervisor, 15000); }
@@ -10946,6 +10946,9 @@ const WAREHOUSE_TRANSFER_HUBS = ['DFA Warehouse', 'MAS Warehouse'];
 // pre-picked, instead of making a manager dig through a dropdown to find
 // "MAS Warehouse" buried alongside every concession stand.
 async function whQuickHubTransfer(fromStand, toStand) {
+  // showScreen() resets this whole form first (mtResetTransferForm) — this
+  // then layers its own specific picks on top of a clean slate, instead of
+  // whatever a previous Self Transfer / hub pick left behind.
   showScreen('screen-wh-create-transfer');
   await mtLoadStands();
   await mtLoadAssignees();
@@ -10953,6 +10956,11 @@ async function whQuickHubTransfer(fromStand, toStand) {
   if (sel) sel.value = toStand;
   // Defaults to himself — warehouse-to-warehouse is usually the manager
   // doing it in person, not assigning it out. Still changeable below.
+  // The flag stops mtLoadStandItems's own coverage auto-routing from
+  // silently overwriting this the moment items load (the real bug behind
+  // "self transfer getting confused") — still fully changeable via the
+  // dropdown afterward, this only stops it being auto-overwritten.
+  state._mtForceSelfAssign = true;
   const assignSel = document.getElementById('mt-assign-to');
   const me = state.staffAccount;
   if (assignSel && me) assignSel.value = me.empId + '|' + me.name;
@@ -10968,6 +10976,7 @@ async function whGoSelfTransfer() {
   showScreen('screen-wh-create-transfer');
   await mtLoadStands();
   await mtLoadAssignees();
+  state._mtForceSelfAssign = true;
   const assignSel = document.getElementById('mt-assign-to');
   const me = state.staffAccount;
   if (assignSel && me) assignSel.value = me.empId + '|' + me.name;
@@ -11094,6 +11103,14 @@ async function mtLoadAssignees() {
 async function mtApplyStandCoverageOwner(stand) {
   const label=document.getElementById('mt-route-owner'), sel=document.getElementById('mt-assign-to');
   if(!label||!sel||!stand)return;
+  // Real bug: Self Transfer and the Warehouse<->Warehouse hub shortcut both
+  // set the assignee to the manager himself BEFORE loading the stand's
+  // items — but loading items always calls this function, which then
+  // silently overwrote that back to whoever the coverage system routes the
+  // stand to, undoing the self-assignment the manager just chose (reported
+  // as "click self transfer... getting some confuse"). Once either
+  // shortcut sets this flag, auto-routing stays out of the way.
+  if (state._mtForceSelfAssign) { label.textContent = '📍 Assigned to you — self transfer.'; return; }
   const coverage=await resolveWarehouseAssigneesForStand(stand);
   if(!coverage.available){label.textContent='Stand coverage not installed yet — assign manually for now.';return;}
   if(!coverage.people.length){label.textContent='No route owner — choose a person or leave in shared pool.';return;}
@@ -11135,6 +11152,38 @@ async function mtAddItemsToTransfer(transferId, items) {
 
 // Tap-based transfer creation using real stand items
 let _mtItems = [];  // {name, pack, qty}
+
+// Real bug fix: switching between Self Transfer, the Warehouse<->Warehouse
+// hub shortcut, and a plain manual pick used to leave the previous
+// attempt's stand/items/assignee sitting in the form — e.g. pick MAS->DFA,
+// change your mind, tap Self Transfer, and the old DFA Warehouse items (or
+// its auto-picked assignee) were still there underneath. Every entry point
+// into this screen now starts from a clean slate before applying its own
+// specific defaults on top.
+function mtResetTransferForm() {
+  const standSel = document.getElementById('mt-stand');
+  if (standSel) standSel.value = '';
+  const itemsArea = document.getElementById('mt-items-area');
+  if (itemsArea) itemsArea.style.display = 'none';
+  _mtItems = [];
+  const assignSel = document.getElementById('mt-assign-to');
+  if (assignSel) assignSel.value = '';
+  const routeOwner = document.getElementById('mt-route-owner');
+  if (routeOwner) routeOwner.textContent = '';
+  const search = document.getElementById('mt-item-search');
+  if (search) search.value = '';
+  const customItem = document.getElementById('mt-custom-item');
+  if (customItem) customItem.value = '';
+  const customQty = document.getElementById('mt-custom-qty');
+  if (customQty) customQty.value = '';
+  const summary = document.getElementById('mt-summary');
+  if (summary) summary.textContent = '';
+  const dupWarn = document.getElementById('mt-duplicate-warning');
+  if (dupWarn) dupWarn.style.display = 'none';
+  const hubPicker = document.getElementById('wh-hub-picker');
+  if (hubPicker) hubPicker.style.display = 'none';
+  state._mtForceSelfAssign = false;
+}
 
 async function mtLoadStandItems() {
   const stand = document.getElementById('mt-stand').value;
@@ -18404,11 +18453,11 @@ async function refreshWarehouseManagerStats() {
   el.innerHTML =
     '<div style="font-size:12px;font-weight:800;letter-spacing:1px;color:var(--text-2);margin-bottom:8px">TODAY AT A GLANCE</div>' +
     '<div class="wh-stat-row">' +
-      '<div class="wh-stat-chip"><b>' + s.total + '</b><span>Open</span></div>' +
-      '<div class="wh-stat-chip' + (s.unassigned ? ' warn' : '') + '"><b>' + s.unassigned + '</b><span>Unassigned</span></div>' +
-      '<div class="wh-stat-chip' + (s.awaitingSupervisor ? ' info' : '') + '"><b>' + s.awaitingSupervisor + '</b><span>Awaiting supervisor</span></div>' +
-      '<div class="wh-stat-chip' + (s.awaitingConfirm.length ? ' urgent' : '') + '"><b>' + s.awaitingConfirm.length + '</b><span>Needs your approval</span></div>' +
-      '<div class="wh-stat-chip' + (s.partialRows.length ? ' urgent' : '') + '"><b>' + s.partialRows.length + '</b><span>Partial / short</span></div>' +
+      '<div class="wh-stat-chip" onclick="whApprovalsStatClick(\'open\')"><b>' + s.total + '</b><span>Open</span></div>' +
+      '<div class="wh-stat-chip' + (s.unassigned ? ' warn' : '') + '" onclick="whApprovalsStatClick(\'unassigned\')"><b>' + s.unassigned + '</b><span>Unassigned</span></div>' +
+      '<div class="wh-stat-chip' + (s.awaitingSupervisor ? ' info' : '') + '" onclick="whApprovalsStatClick(\'supervisor\')"><b>' + s.awaitingSupervisor + '</b><span>Awaiting supervisor</span></div>' +
+      '<div class="wh-stat-chip' + (s.awaitingConfirm.length ? ' urgent' : '') + '" onclick="whApprovalsStatClick(\'confirm\')"><b>' + s.awaitingConfirm.length + '</b><span>Needs your approval</span></div>' +
+      '<div class="wh-stat-chip' + (s.partialRows.length ? ' urgent' : '') + '" onclick="whApprovalsStatClick(\'partial\')"><b>' + s.partialRows.length + '</b><span>Partial / short</span></div>' +
     '</div>' +
     '<div style="font-size:11px;color:var(--text-2);margin-top:6px">' + perPersonHtml + '</div>';
 }
@@ -18432,6 +18481,25 @@ async function whUpdateApprovalsTile() {
 // The Approvals screen's own list — only what's actually actionable
 // (verified, waiting on him) or flagged (partial/short), not the full
 // open-transfers list. Reuses TRANSFER_STATUS for consistent coloring.
+// The stat chips looked like buttons (same card styling as other clickable
+// stat tiles elsewhere in the app) but did nothing when tapped — reported
+// as "big box but I can't open anything." "Needs your approval" and
+// "Partial/short" are already the exact list right below on this same
+// screen, so those just scroll to it; the other three describe transfers
+// this screen deliberately doesn't list (open/unassigned/awaiting a
+// supervisor's physical check), so those jump to All Transfers instead.
+function whApprovalsStatClick(kind) {
+  if (kind === 'confirm' || kind === 'partial') {
+    const list = document.getElementById('wh-appr-list');
+    if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  showScreen('screen-warehouse');
+  whMgrOpenPane('transfers');
+  const allBtn = document.querySelector('.wh-tf-filter-btn[data-tf="all"]');
+  if (allBtn) whSetTransferFilter('all', allBtn);
+}
+
 async function loadWhApprovals() {
   const el = document.getElementById('wh-appr-list');
   if (!el) return;
@@ -18553,6 +18621,12 @@ function whMode(el, mode) {
   document.getElementById('wh-mode-cart').style.display = mode === 'cart' ? 'block' : 'none';
   if (mode === 'todeliver') loadWhToDeliver();
   if (mode === 'transfers') loadWhTransfers();
+  // Real bug: every other mode re-fetched/re-rendered fresh the moment you
+  // switched into it — Requests was the one exception, silently relying on
+  // whatever loadWarehouse()'s background 10s cycle had last rendered
+  // (which could be up to 10s stale, or from before this pane was even
+  // shown). That's exactly what looked like "old version, old details."
+  if (mode === 'requests') { renderWarehouse(); whInitZoneToggle(); }
   if (mode === 'inventory') loadWarehouseCounts();
   if (mode === 'cart') adminLoadDrivers();
 }

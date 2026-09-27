@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-27-warehouse-mgr-polish-1
+- **Real bug fix:** every back button on the manager's tile screens read "← Back Back" — the page-header component already appends "Back" via CSS after the arrow, and the new back bar was also putting the word "Back" in as literal text, doubling it. Now just the arrow, matching every other back button in the app.
+- **Real bug fix:** the "Today at a glance" stat boxes on Approvals (Open/Unassigned/Awaiting supervisor/Needs your approval/Partial-short) were styled exactly like other tappable stat tiles elsewhere in the app but did nothing when tapped. They're now real: "Needs your approval"/"Partial or short" scroll down to the list right below (they're already in it); "Open"/"Unassigned"/"Awaiting supervisor" jump to All Transfers, since those transfers aren't listed on this screen at all.
+- **Real bug fix:** switching into the Requests pane was the one mode that didn't refresh anything — every other pane (Transfers, Stock Report, etc.) re-fetched the moment you opened it, but Requests just showed whatever the background 10-second cycle had last rendered, which could be stale or from before the pane was even opened. Reported as "still old version, old details." Now refreshes immediately like every other pane.
+- **Real bug fix:** picking "MAS → DFA" (or any Warehouse↔Warehouse transfer) and then switching to Self Transfer without finishing left the previous stand/items sitting in the form underneath — and separately, Self Transfer's own "assigned to you" pick was getting silently overwritten back to the stand's auto-routed owner the moment its items loaded. Both fixed: every entry into Create Transfer now starts from a clean form, and a self/hub transfer's assignee is no longer auto-overwritten once you've explicitly chosen yourself.
+- Confirmed working as intended, no changes needed: the Assign & Team coverage tool (area + specific-stand assignment, one save).
+
 ## 2026-09-27-print-picklist-1
 - New: **Print Picklist** — a 🖨️ button on each not-yet-picked-up transfer in the Warehouse Manager's/Supervisor's Transfers list, modeled on the Yellow Dog Inventory paper picklist this replaces day-to-day (stand, item/pack, a big QTY box, and a checkbox column to tick off while physically pulling stock) — for handing to someone pulling stock without a phone, or keeping a paper backup.
 - Stand Transfer Report now takes an optional stand filter (leave blank for every stand) alongside the date, matching how Yellow Dog's own Transfers screen is filtered before a post-game download.
