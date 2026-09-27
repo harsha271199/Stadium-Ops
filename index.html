@@ -4000,15 +4000,22 @@
       <input class="form-input" type="text" id="ts-quick-search" placeholder="🔍 Search stand items…" oninput="renderTsQuickPicker()" style="margin-bottom:8px">
       <div id="ts-self-picker-list" style="max-height:300px;overflow-y:auto"></div>
     </div>
-    <div style="background:var(--bg-elevated);border-radius:12px;padding:12px;margin:12px 0">
-      <div id="ts-manual-add-title" style="font-size:12px;font-weight:700;margin-bottom:8px">➕ Add extra item</div>
-      <div style="display:flex;gap:8px">
+    <!-- Collapsed by default whenever the item picker above is showing
+         (Force Restock / QR / self-service) — that picker is the fast way
+         to add something, and having this plain text-entry box wide open
+         right below it, doing the same thing, was pure duplicate clutter.
+         Still here as the escape hatch for an item not on the stand's
+         list, and stays open by default for a plain assigned delivery
+         (no picker), where this IS the way to add something extra. -->
+    <details id="ts-manual-add-details" style="background:var(--bg-elevated);border-radius:12px;padding:12px;margin:12px 0">
+      <summary id="ts-manual-add-title" style="font-size:12px;font-weight:700;cursor:pointer">➕ Add extra item</summary>
+      <div style="display:flex;gap:8px;margin-top:8px">
         <input class="form-input" type="text" id="ts-add-item" placeholder="Item (e.g. Water)" list="ts-item-list" style="flex:1;margin:0">
         <input class="form-input" type="number" id="ts-add-qty" placeholder="Cases" min="0" style="width:80px;margin:0">
         <button class="btn btn-ghost" onclick="tsAddItemFromButton(this)" style="width:auto;padding:0 14px">Add</button>
       </div>
       <datalist id="ts-item-list"></datalist>
-    </div>
+    </details>
     <button class="btn btn-primary" onclick="tsMarkDelivered()" id="ts-deliver-btn">✓ Mark delivered</button>
 
     <div id="ts-waiting-msg" style="display:none;background:var(--bg-elevated);border-radius:12px;padding:14px;margin-top:14px;font-size:13px;color:var(--text-2);text-align:center"></div>
@@ -4062,7 +4069,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-self-transfer-one-tap-1';
+const BUILD_TAG = '2026-09-27-employee-supervisor-declutter-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -17813,6 +17820,7 @@ function renderWarehouseForRole() {
   const role = state.staffAccount ? state.staffAccount.role : 'warehouse_employee';
   const isWhMgr = role === 'warehouse_manager';
   const isWhSup = role === 'warehouse_supervisor';
+  const isWhEmp = role === 'warehouse_employee';
 
   const roleLabel = isWhMgr ? 'WAREHOUSE MANAGER' : isWhSup ? 'WAREHOUSE SUPERVISOR' : 'WAREHOUSE EMPLOYEE';
   const headerLabel = document.getElementById('wh-role-label');
@@ -17857,13 +17865,18 @@ function renderWarehouseForRole() {
   // Golf Cart hidden from all access for now.
   if (cartTab) cartTab.style.display = 'none';
 
-  // Manager sees a tile menu only — no slider. Employee/Supervisor keep
-  // the original tab-bar untouched, panes always visible as before.
+  // Manager sees a tile menu only — no slider. Supervisor keeps the
+  // original tab-bar (Transfers + Requests are both real destinations for
+  // that role). Employee's tab-bar only ever had ONE visible tab —
+  // Available Jobs — since every other tab is manager/supervisor-only;
+  // a "tab bar" with a single option is pure decoration, so it's hidden
+  // for Employee too and the list just shows directly, same idea as the
+  // manager cleanup.
   const tabbarWrap = document.getElementById('wh-tabbar-wrap');
   const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
   const panesWrap = document.getElementById('wh-panes-wrap');
   const backbar = document.getElementById('wh-mgr-backbar');
-  if (tabbarWrap) tabbarWrap.style.display = isWhMgr ? 'none' : '';
+  if (tabbarWrap) tabbarWrap.style.display = (isWhMgr || isWhEmp) ? 'none' : '';
   if (backbar) backbar.style.display = 'none';
   if (isWhMgr) {
     if (tilesSlot) tilesSlot.style.display = '';
@@ -19226,6 +19239,11 @@ async function openTransferStand(stand, source, transferId) {
       :'Tap +1 or use the quantity box below.';
     renderTsQuickPicker();
   } else pickerEl.style.display='none';
+  // Collapse the plain manual-add box whenever the picker above is the
+  // primary way to add something (it does the same job, just plainer) —
+  // stays open when there's no picker, since it's the only way then.
+  const manualDetails = document.getElementById('ts-manual-add-details');
+  if (manualDetails) manualDetails.open = !quickMode;
 
   // Load this session. Force Restock never reads/claims/fulfills stand requests.
   await loadTsItems();

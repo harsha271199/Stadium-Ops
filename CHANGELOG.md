@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-27-employee-supervisor-declutter-1
+Reviewed Warehouse Employee and Warehouse Supervisor's own screens the same way the manager's screen was — Supervisor's tab-bar (Transfers + Requests) was already fine, two real destinations. Two real things found for Employee/Force Restock:
+- Warehouse Employee's tab-bar only ever showed one visible tab — "Available Jobs" — since every other tab is manager/supervisor-only. A tab strip with a single option is pure decoration, so it's hidden for Employee too now, same as the manager cleanup; the list just shows directly.
+- Force Restock / Quick Drop / self-service delivery showed two ways to add the same item at once: the big-button item picker/menu, and a plain "Add extra item" text box, both wide open on screen doing the same job. The text box is now tucked under a collapsed "➕ Add extra item" you tap open only if what you need genuinely isn't on the picker's list — still there as the escape hatch, just not competing with the main way to add something. Stays open by default on a plain assigned delivery, where there's no picker and it's the only way to add something extra.
+
 ## 2026-09-27-self-transfer-one-tap-1
 - A true self-transfer (Warehouse Manager assigned it to himself and is the one physically delivering it) used to still require three separate taps — Mark Delivered, then Verify & e-sign (typing his own name), then Approve — for something one person did entirely themselves. "Mark Delivered" now detects this case and does all three in one tap: the same inventory ledger write verification would have made, the verify stamp, and the approval stamp, landing on `verified` (or straight to `confirmed` for a warehouse↔warehouse hub transfer, per the hub fix above) instead of sitting at `delivered` waiting on steps nobody else needs to do. A stand delivery someone else picks up, or one a supervisor/different person verifies, is completely unaffected — the full sign-off chain still applies whenever a different person is actually meant to check the work.
 
