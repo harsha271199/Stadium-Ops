@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-27-print-picklist-1
+- New: **Print Picklist** — a 🖨️ button on each not-yet-picked-up transfer in the Warehouse Manager's/Supervisor's Transfers list, modeled on the Yellow Dog Inventory paper picklist this replaces day-to-day (stand, item/pack, a big QTY box, and a checkbox column to tick off while physically pulling stock) — for handing to someone pulling stock without a phone, or keeping a paper backup.
+- Stand Transfer Report now takes an optional stand filter (leave blank for every stand) alongside the date, matching how Yellow Dog's own Transfers screen is filtered before a post-game download.
+
 ## 2026-09-27-standtransfer-report-eta-fix-1
 - Verified against the described workflow and confirmed already correct, no changes needed: manager pre-game transfer assignment + self-transfer, warehouse-manager self-verify/self-confirm on any transfer (not just self-delivered — a manager can already open any employee's delivered transfer from the Transfers list and sign off himself, so a busy warehouse supervisor is never a blocker), Force Restock's single QR scan covering multiple item adds with no re-scan, and stock-request delivery offering both a QR scan and a no-scan "Finish delivery" choice.
 - **New: Stand Transfer Report** (Warehouse Manager → Stock Report pane) — one report split by stand for a chosen date, each stand showing everything transferred to it plus any waste that stand's supervisor/lead logged that same day, previously only visible on two separate, unconnected screens. Available as one CSV (grouped by stand) or a PDF with one printed page per stand.
