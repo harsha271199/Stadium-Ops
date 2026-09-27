@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-27-picklist-delivery-record-1
+- Removed Stock Report (warehouse counts) entirely — confirmed nobody counts stock mid-game, so it was dead weight. The "Stock Report" tile/pane is now dedicated solely to Stand Transfer Report, which is what was actually useful in that pane.
+- The 🖨️ print button on a transfer is no longer limited to before pickup — it's available at every stage. Before pickup it prints a Picklist (empty box to tick off while pulling, same as the Yellow Dog picklist this replaces). Once delivered/verified/confirmed, the same button prints a Delivery Record instead, showing the actual delivered quantities with a checkmark — the document meant to be entered into Yellow Dog's Purchasing/Worksheet Transfers.
+- Restyled both to match the app's own Inventory Stand Sheet print (bordered header box, plain table) instead of a separate custom design, so every printed document in the app looks like one consistent system.
+
 ## 2026-09-27-warehouse-mgr-polish-1
 - **Real bug fix:** every back button on the manager's tile screens read "← Back Back" — the page-header component already appends "Back" via CSS after the arrow, and the new back bar was also putting the word "Back" in as literal text, doubling it. Now just the arrow, matching every other back button in the app.
 - **Real bug fix:** the "Today at a glance" stat boxes on Approvals (Open/Unassigned/Awaiting supervisor/Needs your approval/Partial-short) were styled exactly like other tappable stat tiles elsewhere in the app but did nothing when tapped. They're now real: "Needs your approval"/"Partial or short" scroll down to the list right below (they're already in it); "Open"/"Unassigned"/"Awaiting supervisor" jump to All Transfers, since those transfers aren't listed on this screen at all.
