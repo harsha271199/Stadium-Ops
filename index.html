@@ -4112,7 +4112,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-28-food-autoroute-simplify-1';
+const BUILD_TAG = '2026-09-28-coverage-owner-deterministic-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -11338,6 +11338,11 @@ async function mtApplyStandCoverageOwner(stand) {
   const coverage=await resolveWarehouseAssigneesForStand(stand);
   if(!coverage.available){label.textContent='Stand coverage not installed yet — assign manually for now.';return;}
   if(!coverage.people.length){label.textContent='No route owner — choose a person or leave in shared pool.';return;}
+  // TODO(round-robin): when 2+ people cover the same stand, this always
+  // picks whoever was assigned to it first (coverageGetAssignments orders
+  // by updated_at.asc) rather than rotating between them. Deliberate for
+  // now, per direct instruction — round robin is a planned follow-up, not
+  // an oversight.
   const owner=coverage.people[0];
   const opt=Array.from(sel.options).find(o=>(o.value||'').split('|')[0]===String(owner.employee_id));
   if(opt){sel.value=opt.value;label.textContent='📍 Route owner: '+(owner.name||owner.employee_id)+' — selected automatically.';}
@@ -15167,7 +15172,14 @@ function coverageLocalAssignments(date){try{return JSON.parse(localStorage.getIt
 async function coverageGetVenues(){const rows=await sb('stands?select=venue&order=venue.asc').catch(()=>({_err:true}));return rows._err||!Array.isArray(rows)?['Mountain America Stadium']:[...new Set(rows.map(r=>r.venue).filter(Boolean))];}
 async function coverageGetAreas(venue){if(coveragePreviewOnly())return coverageLocalAreas().filter(x=>x.venue===venue);const rows=await sb('coverage_areas?venue=eq.'+encodeURIComponent(venue)+'&select=*&order=sort_order.asc,area_name.asc').catch(()=>({_err:true}));return rows._err||!Array.isArray(rows)?[]:rows;}
 async function coverageSaveArea(row){if(coveragePreviewOnly()){let rows=coverageLocalAreas();const i=rows.findIndex(x=>x.venue===row.venue&&x.area_key===row.area_key);if(i>=0)rows[i]={...rows[i],...row};else rows.push(row);localStorage.setItem(coverageAreasKey(),JSON.stringify(rows));return true;}const r=await sb('coverage_areas?on_conflict=venue,area_key',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});return !r._err;}
-async function coverageGetAssignments(date,venue){if(coveragePreviewOnly()){const rows=coverageLocalAssignments(date);return venue?rows.filter(x=>x.venue===venue):rows;}let q='game_day_assignments?event_date=eq.'+encodeURIComponent(date)+'&select=*';if(venue)q+='&venue=eq.'+encodeURIComponent(venue);const rows=await sb(q).catch(()=>({_err:true}));return rows._err||!Array.isArray(rows)?[]:rows;}
+// Real fix, per direct instruction (round-robin deferred to later, but the
+// pick needs to be deterministic NOW): with no ORDER BY, when 2+ people
+// cover the same stand, "the route owner" was whichever row Postgres
+// happened to return first — arbitrary, unpredictable, not something a
+// manager could reason about. Ordering by updated_at.asc means whoever was
+// assigned to that stand FIRST is consistently the one auto-picked, until
+// round-robin replaces this with real rotation.
+async function coverageGetAssignments(date,venue){if(coveragePreviewOnly()){const rows=coverageLocalAssignments(date);return venue?rows.filter(x=>x.venue===venue):rows;}let q='game_day_assignments?event_date=eq.'+encodeURIComponent(date)+'&select=*&order=updated_at.asc';if(venue)q+='&venue=eq.'+encodeURIComponent(venue);const rows=await sb(q).catch(()=>({_err:true}));return rows._err||!Array.isArray(rows)?[]:rows;}
 let _coverageLastError='';async function coverageSaveAssignment(row){_coverageLastError='';const actor=(state.staffAccount&&state.staffAccount.name)||(state.user&&state.user.name)||'Admin';row={source:'manual',updated_by:actor,...row,updated_by:row.updated_by||actor};if(coveragePreviewOnly()){let rows=coverageLocalAssignments(row.event_date);rows=rows.filter(x=>!(x.venue===row.venue&&String(x.employee_id)===String(row.employee_id)&&x.team===row.team));rows.push(row);coverageSaveLocalAssignments(row.event_date,rows);return true;}const r=await sb('game_day_assignments?on_conflict=event_date,venue,employee_id,team',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)}).catch(()=>({_err:true}));if(r._err){_coverageLastError=(r.msg||('HTTP '+(r.status||''))).trim();return false;}return true;}
 async function coverageDeleteAssignment(date,venue,emp,team){if(coveragePreviewOnly()){let rows=coverageLocalAssignments(date);rows=rows.filter(x=>!(x.venue===venue&&String(x.employee_id)===String(emp)&&x.team===team));coverageSaveLocalAssignments(date,rows);return true;}const r=await sb('game_day_assignments?event_date=eq.'+encodeURIComponent(date)+'&venue=eq.'+encodeURIComponent(venue)+'&employee_id=eq.'+encodeURIComponent(emp)+'&team=eq.'+encodeURIComponent(team),{method:'DELETE',headers:{Prefer:'return=minimal'}});return !r._err;}
 async function coverageGetAllMyAssignments(empId,date){const rows=await coverageGetAssignments(date,'');return rows.filter(x=>String(x.employee_id)===String(empId));}

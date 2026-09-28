@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-28-coverage-owner-deterministic-1
+- **Real fix, per direct instruction:** when 2+ people are assigned to cover the same stand, the auto-picked "route owner" for a new transfer used to be whichever row the database happened to return first — arbitrary, not something a manager could predict. Now it's deterministic: whoever was assigned to that stand first stays the consistent pick. Round-robin between multiple covering people is planned as a follow-up (deliberately not built yet), not an oversight — marked with a TODO in the code.
+
 ## 2026-09-28-food-autoroute-simplify-1
 - **Real workflow fix, found by direct report: Food Manager was manually assigning a runner from a dropdown for every single order, all game, and stopped using the app because of it.** Root cause: a runner already assigned to cover a stand's area was only ever sent an informational "heads up" push — the actual assignment step was always left for the Food Manager to do by hand, no matter what. New food requests now auto-assign directly to that covering runner at submission (straight into their My Jobs, no claim step needed); the Food Manager still sees every order and can reassign any of them, but only needs to act on the ones genuinely unclaimed (no runner covers that stand yet).
 - Food Manager's queue card replaced the always-visible runner dropdown with a compact status (🏃 Assigned: name, or 🔴 Unclaimed) plus a small ↔ reassign toggle that opens the dropdown only when tapped. Unclaimed orders now sort to the top so they're the first thing seen.
