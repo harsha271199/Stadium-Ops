@@ -4112,7 +4112,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-28-teamcontrol-premium-1';
+const BUILD_TAG = '2026-09-28-transfer-dedupe-fix-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -11401,6 +11401,14 @@ function mtResetTransferForm() {
   const hubPicker = document.getElementById('wh-hub-picker');
   if (hubPicker) hubPicker.style.display = 'none';
   state._mtForceSelfAssign = false;
+  // Fresh id every time this form opens — real bug fix (found via a live
+  // report of duplicate transfers piling up on one stand): transfers had no
+  // duplicate-submission protection at all, unlike stock/kitchen requests,
+  // which both already use this exact pattern (stable per-form uuid + a
+  // partial unique index on the column). A slow-network retry or a second
+  // tap before the first request finishes could silently create a second,
+  // near-identical transfer with no way to tell it apart from a genuine one.
+  state._mtTransferUuid = null;
 }
 
 async function mtLoadStandItems() {
@@ -11522,9 +11530,11 @@ async function mtCreateTransfer() {
     // assignable task (e.g. a morning restock assigned to one person and an
     // afternoon one assigned to someone else, same stand, same day, tracked
     // separately) rather than one shared per-stand-per-day bucket.
+    const transferClientUuid = state._mtTransferUuid || (state._mtTransferUuid = genUUID());
     const body = {
       stand, game_date: today, status: 'pending',
-      initiated_by: transferInitiatorName()
+      initiated_by: transferInitiatorName(),
+      client_uuid: transferClientUuid
     };
     if (assignId) {
       body.assigned_to_id = assignId;
@@ -11533,7 +11543,14 @@ async function mtCreateTransfer() {
       body.assigned_at = new Date().toISOString();
     }
     const created = await sb('transfers', { method:'POST', headers:{Prefer:'return=representation'}, body: JSON.stringify(body) });
-    if (created._err || !Array.isArray(created) || !created.length) return toast('Could not create transfer — try again', 'error');
+    if (created._err || !Array.isArray(created) || !created.length) {
+      // A duplicate-key error here means this exact submission already went
+      // through (a retry landed after the first one actually succeeded) —
+      // that's the protection working, not a real failure, so don't let the
+      // manager re-submit into a second real duplicate by tapping again.
+      if (created._err && /duplicate key/i.test(created.msg||'')) { toast('This transfer already went through — check All Transfers before creating another.', 'error', 8000); state._mtTransferUuid = null; return; }
+      return toast('Could not create transfer — try again', 'error');
+    }
     await mtAddItemsToTransfer(created[0].id, items);
     // Real push, not just the in-app banner from before — this is the exact
     // gap flagged earlier: someone assigned a task with the app closed used
@@ -11544,6 +11561,7 @@ async function mtCreateTransfer() {
     document.getElementById('mt-assign-to').value = '';
     document.getElementById('mt-items-area').style.display = 'none';
     _mtItems = [];
+    state._mtTransferUuid = null; // went through — next transfer gets its own fresh id
     loadMgrTransfers();
   });
 }

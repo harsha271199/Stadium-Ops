@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-28-transfer-dedupe-fix-1
+- **Real bug fix, found by live user report:** the `transfers` table had no duplicate-submission protection at all — unlike Stock and Kitchen requests, which both already use a stable per-form client id plus a database-level unique constraint. Repeated taps or a slow-network retry on Create Transfer could silently create multiple near-identical transfers for the same stand, which is exactly what was cluttering Approvals/All Transfers/the Stand Transfer Report with old, incomplete-looking entries. Added the same protection: a `client_uuid` column + unique index on `transfers`, and the Create Transfer form now generates one stable id per form-open, reused across retries, cleared only after a real success.
+- Cleaned up the accumulated test transfers from today's testing (6 rows across 4 stands, all confirmed test/demo activity, not real game data) — Approvals and All Transfers are correctly empty again.
+
 ## 2026-09-28-teamcontrol-premium-1
 - **Team Control's "All Stands" screen rebuilt to match Premium's Check-ins interface**, per direct request: individual worker rows with inline ✓ Present / ✕ Absent right in the list — no more tapping into a stand just to mark someone — collapsible per-stand groups, and CSV + PDF export (same clean printable style as every other export in this app).
 - **Employee Stands and NPO Stands are now two clearly separate sections**, not mixed together. Employee rows keep the fuller action set (↔ Move, ⭐ Feedback, inline expand — no modals). NPO rows are intentionally simpler — Present/Absent only, since NPO placement is controlled by the group assignment, not this screen.
