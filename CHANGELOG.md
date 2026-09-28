@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-28-myteam-buttons-polish-1
+- **My Team's UI (Manager/Support Manager/Supervisor/Stand Lead all share this screen) restyled to match Team Control's polish**, per direct request that it looked "cheap" next to the new screen. Wordy full-width pill buttons ("✅ Mark present", "❌ Mark absent", "☕ Start break"...) are now the same round icon buttons (✓ ✕ ☕ ⏹ ↔ ⭐) as Team Control, with the same colored-left-border row style. No behavior changed — every existing rule for who can do what to whom is untouched, only the visual presentation.
+
 ## 2026-09-28-transfer-dedupe-fix-1
 - **Real bug fix, found by live user report:** the `transfers` table had no duplicate-submission protection at all — unlike Stock and Kitchen requests, which both already use a stable per-form client id plus a database-level unique constraint. Repeated taps or a slow-network retry on Create Transfer could silently create multiple near-identical transfers for the same stand, which is exactly what was cluttering Approvals/All Transfers/the Stand Transfer Report with old, incomplete-looking entries. Added the same protection: a `client_uuid` column + unique index on `transfers`, and the Create Transfer form now generates one stable id per form-open, reused across retries, cleared only after a real success.
 - Cleaned up the accumulated test transfers from today's testing (6 rows across 4 stands, all confirmed test/demo activity, not real game data) — Approvals and All Transfers are correctly empty again.

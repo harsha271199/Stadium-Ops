@@ -4112,7 +4112,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-28-transfer-dedupe-fix-1';
+const BUILD_TAG = '2026-09-28-myteam-buttons-polish-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9216,13 +9216,20 @@ function renderMyTeamList() {
       <button class="btn btn-ghost" onclick="leadershipRefreshCurrentTeam()">↻ Refresh team</button>
     </div>`;
   }
-  html += `<div class="card" style="display:flex;gap:14px;text-align:center;padding:12px">
-    <div style="flex:1"><div style="font-size:20px;font-weight:700;color:var(--success)">${active.length}</div><div style="font-size:11px;color:var(--text-2)">Working</div></div>
-    <div style="flex:1"><div style="font-size:20px;font-weight:700;color:var(--info)">${onBreak.length}</div><div style="font-size:11px;color:var(--text-2)">On break</div></div>
-    <div style="flex:1"><div style="font-size:20px;font-weight:700;color:var(--text-3)">${pending.length}</div><div style="font-size:11px;color:var(--text-2)">Pending</div></div>
-    <div style="flex:1"><div style="font-size:20px;font-weight:700;color:#DC2626">${absent.length}</div><div style="font-size:11px;color:var(--text-2)">Absent</div></div>
+  html += `<div class="bc-stats-bar">
+    <div class="bc-stat"><div style="font-size:22px;font-weight:800;color:var(--success)">${active.length}</div><div style="font-size:11px;color:var(--text-2)">Working</div></div>
+    <div class="bc-stat"><div style="font-size:22px;font-weight:800;color:var(--info)">${onBreak.length}</div><div style="font-size:11px;color:var(--text-2)">On break</div></div>
+    <div class="bc-stat"><div style="font-size:22px;font-weight:800;color:var(--text-3)">${pending.length}</div><div style="font-size:11px;color:var(--text-2)">Pending</div></div>
+    <div class="bc-stat"><div style="font-size:22px;font-weight:800;color:#DC2626">${absent.length}</div><div style="font-size:11px;color:var(--text-2)">Absent</div></div>
   </div>`;
 
+  // Real UX fix, requested to match the polish of the new Team Control
+  // screen: same .prem-row / .prem-status-btn round icon buttons instead of
+  // a stack of wordy full-width pill buttons. My Team needs a couple of
+  // actions Team Control doesn't (break toggle, clock out), so those get
+  // their own icon buttons too, but the visual language — and every
+  // existing visibility rule for who can do what — is unchanged.
+  let rowsHtml='';
   let anyRowShown=false;
   team.forEach((w, i) => {
     // Don't show yourself in your own team list — "My Team" means the
@@ -9234,53 +9241,52 @@ function renderMyTeamList() {
     if (actorEmpId && String(w.empId) === String(actorEmpId)) return;
     if (!matchesFilter(w)) return;
     anyRowShown=true;
-    let statusBadge = '';
-    if (w.status === 'working' && w.onBreak) statusBadge = '<span class="role-badge" style="background:rgba(0,102,179,0.12);color:var(--info)">☕ ON BREAK</span>';
-    else if (w.status === 'working') statusBadge = '<span class="role-badge worker">✓ WORKING</span>';
-    else if (w.status === 'absent') statusBadge = '<span class="role-badge" style="background:rgba(220,38,38,0.12);color:#DC2626">❌ ABSENT</span>';
-    else if (w.status === 'left') statusBadge = '<span class="role-badge" style="background:rgba(140,140,140,0.15);color:var(--text-3)">LEFT</span>';
-    else statusBadge = '<span class="role-badge" style="background:rgba(255,140,0,0.12);color:var(--warning)">⏳ NOT ARRIVED</span>';
+    const rowCls = w.status === 'working' && !w.onBreak ? 'present' : w.status === 'absent' ? 'absent' : '';
+    let statusTag = '';
+    if (w.status === 'working' && w.onBreak) statusTag = '<span style="font-size:9px;color:var(--info);font-weight:800">ON BREAK</span>';
+    else if (w.status === 'left') statusTag = '<span style="font-size:9px;color:var(--text-3);font-weight:800">LEFT</span>';
+    else if (w.status === 'scheduled') statusTag = '<span style="font-size:9px;color:var(--warning);font-weight:800">NOT ARRIVED</span>';
 
     const canManageThis = canManageTeamRole(w.role);
     const canClockOut = w.status === 'working' && canManageThis;
-    const readOnlyNote = !canManageThis && mapRole(w.role)!=='worker' ? '<div style="margin-top:8px;font-size:10px;color:var(--text-3);font-weight:700">View only · equal or higher role</div>' : '';
-    html += `<div class="card" style="padding:12px 14px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-        <div style="flex:1">
-          <div style="font-weight:600;font-size:14px">${escapeHtml(w.name)}</div>
-          <div style="font-size:11px;color:var(--text-2);margin-top:2px">${escapeHtml(w.role || '')}${w.isNpo?'':' · ID '+escapeHtml(w.empId)}</div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:2px">${w.isNpo?'Approved NPO roster':((w.startTime || '—')+' – '+(w.endTime || '—'))}</div>
-        </div>
-        <div>${statusBadge}</div>
+    const readOnlyNote = !canManageThis && mapRole(w.role)!=='worker' ? '<div style="font-size:9px;color:var(--text-3);font-weight:700;padding:0 12px 6px">View only · equal or higher role</div>' : '';
+    rowsHtml += `<div class="prem-row ${rowCls}" id="my-team-row-${i}">
+      <div class="prem-row-info">
+        <div class="prem-row-name">${escapeHtml(w.name)} ${statusTag}</div>
+        <div class="prem-row-meta">${escapeHtml(w.role || '')}${w.isNpo?'':' · ID '+escapeHtml(w.empId)} · ${w.isNpo?'Approved NPO roster':((w.startTime || '—')+'–'+(w.endTime || '—'))}</div>
       </div>
-      ${readOnlyNote}
-      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        ${(w.status === 'scheduled' || w.status === 'absent') && canManageTeamRole(w.role) ? `<button class="btn btn-ghost" onclick="teamCheckIn(${i})" style="flex:1;padding:8px;font-size:12px;border-color:#00A651;color:#00A651">✅ Mark present</button>` : ''}
-        ${w.status !== 'absent' && canManageTeamRole(w.role) ? `<button class="btn btn-ghost" onclick="teamMarkAbsent(${i})" style="flex:1;padding:8px;font-size:12px;border-color:#DC2626;color:#DC2626">❌ Mark absent</button>` : ''}
-        ${w.status === 'absent' && canManageTeamRole(w.role) ? `<button class="btn btn-ghost" onclick="teamClearAbsent(${i})" style="flex:1;padding:8px;font-size:12px">↩️ Clear absent</button>` : ''}
-        ${w.status === 'working' && !w.onBreak && canManageTeamRole(w.role) ? `<button class="btn btn-ghost" onclick="teamBreakStart(${i})" style="flex:1;padding:8px;font-size:12px">☕ Start break</button>` : ''}
-        ${w.status === 'working' && w.onBreak && canManageTeamRole(w.role) ? `<button class="btn btn-ghost" onclick="teamBreakEnd(${i})" style="flex:1;padding:8px;font-size:12px;border-color:#00A651;color:#00A651">✅ End break</button>` : ''}
-        ${canClockOut ? `<button class="btn btn-ghost" onclick="teamClockOut(${i})" style="flex:1;padding:8px;font-size:12px;border-color:#DC2626;color:#DC2626">⏹ Clock out</button>` : ''}
-        ${w.status === 'left' && canManageTeamRole(w.role) ? `<button class="btn btn-ghost" onclick="teamResume(${i})" style="flex:1;padding:8px;font-size:12px;border-color:#00A651;color:#00A651">↩️ Resume</button>` : ''}
-        ${leadershipCanMove && !w.isNpo && canManageTeamRole(w.role) ? `<button class="btn btn-ghost team-move-btn" onclick="leadershipMoveTeamWorker(${i})" style="flex:1;padding:8px;font-size:12px">📍 Move stand</button>` : ''}
-        ${mapRole(w.role)==='worker' && canGrantTeamStandAccess() ? `<button class="btn btn-ghost" onclick="teamToggleStandAccess(${i},${!w.standAccessEnabled},this)" style="flex:1;padding:8px;font-size:12px;${w.standAccessEnabled?'border-color:#DC2626;color:#DC2626':'border-color:#0066B3;color:#0066B3'}">${w.standAccessEnabled?'🔒 Remove stand access':'🔓 Enable stand access'}</button>` : ''}
-        ${canManageTeamRole(w.role) && !w.isNpo ? `<button class="btn btn-ghost" onclick="toggleFb(${i})" style="flex:1;padding:8px;font-size:12px">⭐ Feedback</button>` : ''}
+      <div class="prem-row-actions">
+        ${(w.status === 'scheduled' || w.status === 'absent') && canManageThis ? `<button class="prem-status-btn p" onclick="teamCheckIn(${i})" aria-label="Mark present">✓</button>` : ''}
+        ${w.status !== 'absent' && canManageThis ? `<button class="prem-status-btn a" onclick="teamMarkAbsent(${i})" aria-label="Mark absent">✕</button>` : ''}
+        ${w.status === 'absent' && canManageThis ? `<button class="prem-move-btn" onclick="teamClearAbsent(${i})" aria-label="Clear absent">↩</button>` : ''}
+        ${w.status === 'working' && !w.onBreak && canManageThis ? `<button class="prem-move-btn" onclick="teamBreakStart(${i})" aria-label="Start break">☕</button>` : ''}
+        ${w.status === 'working' && w.onBreak && canManageThis ? `<button class="prem-status-btn p on" onclick="teamBreakEnd(${i})" aria-label="End break">✓</button>` : ''}
+        ${canClockOut ? `<button class="prem-move-btn" onclick="teamClockOut(${i})" aria-label="Clock out">⏹</button>` : ''}
+        ${w.status === 'left' && canManageThis ? `<button class="prem-move-btn" onclick="teamResume(${i})" aria-label="Resume">↩</button>` : ''}
+        ${leadershipCanMove && !w.isNpo && canManageThis ? `<button class="prem-move-btn" onclick="leadershipMoveTeamWorker(${i})" aria-label="Move stand">↔</button>` : ''}
+        ${canManageThis && !w.isNpo ? `<button class="prem-move-btn" onclick="toggleFb(${i})" aria-label="Feedback">⭐</button>` : ''}
       </div>
-      <div id="fb-form-${i}" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <button class="chip" id="fb-good-${i}" onclick="fbRate(${i},'good')" style="flex:1">👍 Great job</button>
-          <button class="chip" id="fb-bad-${i}" onclick="fbRate(${i},'needs_improvement')" style="flex:1">👎 Needs improvement</button>
-        </div>
-        <input class="form-input" id="fb-note-${i}" placeholder="Optional note — e.g. stayed late, helped train, was late…" style="margin-bottom:8px">
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-primary" onclick="submitFb(${i})" style="flex:2;padding:10px;font-size:13px">Send feedback</button>
-          <button class="btn btn-ghost" onclick="toggleFb(${i})" style="flex:1;padding:10px;font-size:13px">Cancel</button>
-        </div>
+    </div>`;
+    if (readOnlyNote) rowsHtml += readOnlyNote;
+    if (mapRole(w.role)==='worker' && canGrantTeamStandAccess()) {
+      rowsHtml += `<div style="padding:0 12px 10px"><button class="btn btn-ghost" onclick="teamToggleStandAccess(${i},${!w.standAccessEnabled},this)" style="width:100%;padding:7px;font-size:11px;margin:0;${w.standAccessEnabled?'border-color:#DC2626;color:#DC2626':'border-color:#0066B3;color:#0066B3'}">${w.standAccessEnabled?'🔒 Remove stand access':'🔓 Enable stand access'}</button></div>`;
+    }
+    rowsHtml += `<div id="fb-form-${i}" style="display:none;padding:0 12px 12px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="chip" id="fb-good-${i}" onclick="fbRate(${i},'good')" style="flex:1">👍 Great job</button>
+        <button class="chip" id="fb-bad-${i}" onclick="fbRate(${i},'needs_improvement')" style="flex:1">👎 Needs improvement</button>
+      </div>
+      <input class="form-input" id="fb-note-${i}" placeholder="Optional note — e.g. stayed late, helped train, was late…" style="margin-bottom:8px">
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="submitFb(${i})" style="flex:2;padding:10px;font-size:13px">Send feedback</button>
+        <button class="btn btn-ghost" onclick="toggleFb(${i})" style="flex:1;padding:10px;font-size:13px">Cancel</button>
       </div>
     </div>`;
   });
 
-  if(!anyRowShown) html += '<div style="font-size:11px;color:var(--text-3);padding:10px 0">No one matches — clear the search or filter.</div>';
+  html += anyRowShown
+    ? '<div class="prem-loc-group open">' + rowsHtml + '</div>'
+    : '<div style="font-size:11px;color:var(--text-3);padding:10px 0">No one matches — clear the search or filter.</div>';
   c.innerHTML = html;
 }
 function myTeamSetFilter(f, btn) {
