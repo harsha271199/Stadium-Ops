@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-28-golfcart-reenable-1
+- **Golf Cart re-enabled, per direct request.** The full system — authorized-driver whitelist, license/policy verification, key checkout with a race-condition guard, return with issue-flagging, and repair-confirmation before a flagged cart goes back into service — was already fully built and had real production data in it (30 approved drivers, 4 keys), but had been switched off with no entry point. It's back:
+  - Warehouse Manager and Warehouse Supervisor both now have a "🛺 Golf Cart" tile — driver approval and the flagged/needs-review list, exactly the same for both roles (was Manager-only).
+  - Warehouse Employee gets a "🛺 Golf Cart — check out / return a key" button on their delivery screen — they had no way to reach the driver-facing checkout flow at all before this.
+  - The flagged-issue return, which already takes a cart out of service and requires a manager/supervisor to mark it repaired before it's usable again, **is** the maintenance report — no separate system needed, it was just unreachable.
+  - Cart notifications (a flagged return) now reach Warehouse Supervisor too, not just Warehouse Manager and the stand Manager.
+  - The repair-confirmation log now records the real person who confirmed it, not a hardcoded placeholder — matters now that Supervisor can confirm it too, not just Manager.
+  - Both tiles show a live "🚫 N flagged — needs review" badge, same at-a-glance pattern as the Approvals tile, so nobody has to open the pane just to check.
+
 ## 2026-09-28-merge-requests-transfers-1
 - **Merged Requests into All Transfers for Warehouse Manager, per direct request.** A stand's stock request and a manager-created transfer are the same thing to deal with once work is moving (a fulfilled request literally becomes a transfers row) — the only real gap was the window before that happens, when a Pending/Claimed request has no transfer row yet and was invisible in All Transfers. That gap is closed: open requests now show as their own cards (📥 Stand requested, amber-flagged) right in the same All Transfers list, using their existing Start Delivery/Deliver Items actions — once a stand's real transfer exists, its card takes over and the request card steps aside instead of showing the same stand twice.
 - The separate Requests tile is gone from the Warehouse Manager's screen — one list to check instead of two. Warehouse Employee and Supervisor keep their own Requests tab unchanged, since they use it differently (to find and claim their own work).

@@ -3724,6 +3724,11 @@
            this screen feel like it was half messages. Kept only the tip
            banner (dismissible, so it goes away for good once read). -->
       <button class="btn btn-ghost" onclick="whScanToOpen()" style="width:100%;margin-bottom:12px">📷 Quick Drop — scan stand & add stock</button>
+      <!-- Real fix, per direct request: Golf Cart re-enabled for the
+           actual drivers. Employee's screen stays deliberately simple (one
+           list + one main action), so this is a plain secondary button,
+           not a tile — same weight as Quick Drop above it. -->
+      <button class="btn btn-ghost" onclick="goGolfCart()" style="width:100%;margin-bottom:12px">🛺 Golf Cart — check out / return a key</button>
       <div id="wh-todeliver-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
     </div>
 
@@ -4112,7 +4117,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-28-merge-requests-transfers-1';
+const BUILD_TAG = '2026-09-28-golfcart-reenable-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -13002,8 +13007,12 @@ async function adminToggleNpo(id, active) {
 }
 
 // ---- Cart driver management ----
+// Real fix, per direct request: Supervisor now gets the exact same Golf
+// Cart driver-approval access as Manager, not just Manager — both use the
+// same wh-adm-drv-* pane/ids, so both need to be treated the same here.
+function isWhCartAdmin() { return !!(state.staffAccount && ['warehouse_manager', 'warehouse_supervisor'].includes(state.staffAccount.role)); }
 async function adminLoadDrivers() {
-  const isWhMgr = state.staffAccount && state.staffAccount.role === 'warehouse_manager';
+  const isWhMgr = isWhCartAdmin();
   const el = document.getElementById(isWhMgr ? 'wh-adm-drv-list' : 'adm-drv-list');
   const rows = await sb('cart_drivers?order=name.asc&select=*');
   const summary = document.getElementById('adm-drv-summary'); // only exists on the plain-manager Admin screen
@@ -13022,7 +13031,7 @@ async function adminLoadDrivers() {
     '</div>').join('');
 }
 async function adminAddDriver() {
-  const isWhMgr = state.staffAccount && state.staffAccount.role === 'warehouse_manager';
+  const isWhMgr = isWhCartAdmin();
   const idEl = document.getElementById(isWhMgr ? 'wh-adm-drv-id' : 'adm-drv-id');
   const nameEl = document.getElementById(isWhMgr ? 'wh-adm-drv-name' : 'adm-drv-name');
   const empId = idEl.value.trim();
@@ -16082,7 +16091,11 @@ function gcShowReturnIssueBox() {
 }
 
 function notifyCartManagers(title, body) {
-  sb('staff_accounts?role=eq.warehouse_manager&is_active=eq.true&select=employee_id').then(mgrs => {
+  // Real fix, per direct request: Supervisor gets the same golf-cart
+  // notifications as Manager now — previously only warehouse_manager and
+  // (stand) manager heard about a flagged cart, meaning a supervisor
+  // covering the warehouse solo had no idea a cart went out of service.
+  sb('staff_accounts?role=in.(warehouse_manager,warehouse_supervisor)&is_active=eq.true&select=employee_id').then(mgrs => {
     if (!mgrs._err && Array.isArray(mgrs)) mgrs.forEach(m => sendPushTo(m.employee_id, title, body));
   }).catch(() => {});
   sb('staff_accounts?role=eq.manager&is_active=eq.true&select=employee_id').then(mgrs => {
@@ -18388,8 +18401,16 @@ function renderWarehouseForRole() {
       '</div>' +
       '<div class="action-tile" onclick="whMgrOpenPane(\'requests\')">' +
         '<span class="tile-icon">📥</span><div class="tile-label">Requests</div><div class="tile-sub" id="wh-sup-tile-requests-sub">Stock requests from stands</div>' +
+      '</div>' +
+      // Real fix, per direct request: Supervisor gets the same Golf Cart
+      // access as Manager now — driver approval, flagged-issue review, and
+      // the same notifications — not just Manager.
+      '<div class="action-tile" id="wh-tile-cart" onclick="whMgrOpenPane(\'cart\')">' +
+        '<span class="tile-icon">🛺</span><div class="tile-label">Golf Cart</div><div class="tile-sub" id="wh-tile-cart-sub">Drivers + flagged issues</div>' +
       '</div>';
     whSupSyncTileBadges();
+    whUpdateCartTile();
+    whBuildCartPane();
     return;
   }
   if (!isWhMgr) return;
@@ -18421,12 +18442,18 @@ function renderWarehouseForRole() {
     '<div class="action-tile" onclick="whMgrOpenPane(\'inventory\')">' +
       '<span class="tile-icon">📄</span><div class="tile-label">Stand Transfer Report</div><div class="tile-sub">End-of-day, per stand</div>' +
     '</div>' +
-    // Golf Cart hidden from all access for now — tile removed here;
-    // whMgrOpenPane('cart') and the wh-mode-cart pane are left intact.
+    // Real fix, per direct request: Golf Cart re-enabled — the whole
+    // checkout/return/issue-flag/repair-confirm system was already built
+    // and working, it was just switched off with no entry point. Driver
+    // approval + the "needs review" flagged-cart list live in this pane.
+    '<div class="action-tile" id="wh-tile-cart" onclick="whMgrOpenPane(\'cart\')">' +
+      '<span class="tile-icon">🛺</span><div class="tile-label">Golf Cart</div><div class="tile-sub" id="wh-tile-cart-sub">Drivers + flagged issues</div>' +
+    '</div>' +
     '<div class="action-tile" onclick="showScreen(\'screen-wh-team\')">' +
       '<span class="tile-icon">👥</span><div class="tile-label">Assign & Team</div><div class="tile-sub">Who covers what today</div>' +
     '</div>';
   whUpdateApprovalsTile();
+  whUpdateCartTile();
 
   // Was "Stock Report" (warehouse counts) with Stand Transfer Report
   // tacked on below it — dropped the counts half entirely (confirmed
@@ -18450,7 +18477,13 @@ function renderWarehouseForRole() {
       '</div>';
   }
 
-  // Golf Cart — same, its own dedicated tab now.
+  whBuildCartPane();
+}
+// Extracted so both Warehouse Manager and Warehouse Supervisor can build
+// this pane — Supervisor's tile branch returns early, before it used to
+// reach this code, which is why the pane stayed blank for them even once
+// they had a tile pointing at it.
+function whBuildCartPane() {
   const cartContainer = document.getElementById('wh-mode-cart');
   if (cartContainer) {
     cartContainer.innerHTML =
@@ -18501,15 +18534,21 @@ async function loadWhCartReturns() {
 
 async function whConfirmCartReturn(keyNum, employeeName) {
   await withLock(event.currentTarget, 'Confirming…', async () => {
-    const confirmer = (state.staffAccount && state.staffAccount.name) || 'Warehouse Manager';
+    // Real fix: this used to log the literal string 'warehouse_manager' as
+    // the employee_id regardless of who actually confirmed it — meaningless
+    // once a Supervisor can confirm too. Uses the real confirming person's
+    // own id/name now, same as every other action in this log.
+    const confirmerId = (state.staffAccount && state.staffAccount.empId) || 'warehouse';
+    const confirmer = (state.staffAccount && state.staffAccount.name) || 'Warehouse';
     await sb('cart_keys?key_number=eq.'+keyNum, {
       method:'PATCH', headers:{Prefer:'return=minimal'},
       body: JSON.stringify({ status:'available', checked_out_by_id:null, checked_out_by_name:null, checked_out_at:null, policy_accepted_at:null, updated_at:new Date().toISOString() })
     });
     await sb('cart_log', { method:'POST', headers:{Prefer:'return=minimal'},
-      body: JSON.stringify({ key_number:keyNum, employee_id:'warehouse_manager', employee_name:confirmer, action:'return_confirmed', notes:'Confirmed return of key from '+employeeName }) });
+      body: JSON.stringify({ key_number:keyNum, employee_id:confirmerId, employee_name:confirmer, action:'return_confirmed', notes:'Confirmed return of key from '+employeeName }) });
     toast('✅ Key ' + keyNum + ' marked available');
     loadWhCartReturns();
+    whUpdateCartTile();
   });
 }
 
@@ -19000,6 +19039,23 @@ async function whUpdateApprovalsTile() {
     sub.textContent = needs + ' waiting' + (s.partialRows.length ? ' · ' + s.partialRows.length + ' partial' : '');
     if (tile) tile.classList.add('tile-red');
   }
+}
+// Same "at a glance" pattern as Approvals — surfaces flagged carts
+// (reported at return, not yet marked repaired) right on the tile so a
+// manager/supervisor doesn't need to open the pane just to check.
+async function whUpdateCartTile() {
+  const sub = document.getElementById('wh-tile-cart-sub');
+  const tile = document.getElementById('wh-tile-cart');
+  if (!sub) return;
+  const logRows = await sb('cart_log?order=created_at.desc&limit=100&select=*').catch(() => ({ _err: true }));
+  if (logRows._err) { sub.textContent = 'Drivers + flagged issues'; return; }
+  const flagged = logRows.filter(l => {
+    if (l.action !== 'return_requested') return false;
+    const t = new Date(l.created_at).getTime();
+    return !logRows.some(c => c.action === 'return_confirmed' && c.key_number === l.key_number && new Date(c.created_at).getTime() > t);
+  });
+  if (!flagged.length) { sub.textContent = 'All carts in service ✅'; if (tile) tile.classList.remove('tile-red'); }
+  else { sub.textContent = '🚫 ' + flagged.length + ' flagged — needs review'; if (tile) tile.classList.add('tile-red'); }
 }
 
 // The Approvals screen's own list — only what's actually actionable
