@@ -2912,7 +2912,13 @@
       </div>
       <div id="mgr-team-all">
         <div id="bc-stats" class="bc-stats-bar"></div>
-        <input class="form-input" type="text" id="bc-search" placeholder="🔍 Search worker or stand..." oninput="filterBedCheck()" style="margin-bottom:12px">
+        <input class="form-input" type="text" id="bc-search" placeholder="🔍 Search worker or stand..." oninput="filterBedCheck()" style="margin-bottom:8px">
+        <div class="chip-row" id="bc-status-filters" style="margin-bottom:12px">
+          <button class="chip selected" data-f="all" onclick="bcSetStatusFilter('all',this)">All</button>
+          <button class="chip" data-f="full" onclick="bcSetStatusFilter('full',this)">Fully staffed</button>
+          <button class="chip" data-f="partial" onclick="bcSetStatusFilter('partial',this)">Partial</button>
+          <button class="chip" data-f="none" onclick="bcSetStatusFilter('none',this)">None here</button>
+        </div>
         <div id="bc-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>
       </div>
     </div>
@@ -4102,7 +4108,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-27-walkin-search-dupe-flag-1';
+const BUILD_TAG = '2026-09-28-backnav-noschedule-fix-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5583,7 +5589,15 @@ async function api(action, data) {
           });
         });
       }
-      return { ok:true, stands:Object.values(standsMap).sort((a,b)=>standSort(a.stand,b.stand)) };
+      // Real UX fix, found from a live report: with zero real schedule rows
+      // for today, every stand shown here is only here because an NPO
+      // group happened to be assigned to it (the venue-gate above can't
+      // gate anything without a real schedule to compare against) — so the
+      // whole screen silently renders as if it were "the NPO screen" with
+      // no explanation, which looked exactly like a broken/wrong-role view
+      // to a manager expecting to see their real football roster. Surface
+      // it plainly instead of leaving it to look unexplained.
+      return { ok:true, stands:Object.values(standsMap).sort((a,b)=>standSort(a.stand,b.stand)), noScheduleToday: dedupedSched.length===0 };
     }
 
     // ---------- TEAM ----------
@@ -11024,6 +11038,7 @@ function loadMgrRoster() {
   state.bedCheckLoading = true;
   api('getBedCheck', {}).then(res => {
     state.bedCheckStands = res.stands || [];
+    state.bedCheckNoScheduleToday = !!res.noScheduleToday;
     state.bedCheckLoading = false;
     renderBedCheck();
   });
@@ -13363,6 +13378,11 @@ async function clearCheckins() {
 }
 
 function filterBedCheck() { renderBedCheck(); }
+function bcSetStatusFilter(f, btn) {
+  state._bcStatusFilter = f;
+  document.querySelectorAll('#bc-status-filters .chip').forEach(c => c.classList.toggle('selected', c === btn));
+  renderBedCheck();
+}
 
 // ============================================================
 // CONTACTS SYSTEM
@@ -16270,20 +16290,33 @@ function renderBedCheck() {
   }
 
   const q = (document.getElementById('bc-search').value || '').toLowerCase().trim();
-  
+
   if (q) {
     stands = stands.filter(s => {
       if (s.stand.toLowerCase().indexOf(q) >= 0) return true;
       return s.workers.some(w => w.name.toLowerCase().indexOf(q) >= 0 || String(w.empId).indexOf(q) >= 0);
     });
   }
-  
+  const statusFilter = state._bcStatusFilter || 'all';
+  if (statusFilter !== 'all') {
+    stands = stands.filter(s => {
+      if (statusFilter === 'full') return s.total > 0 && s.here === s.total;
+      if (statusFilter === 'partial') return s.here > 0 && s.here < s.total;
+      if (statusFilter === 'none') return s.here === 0;
+      return true;
+    });
+  }
+
+  const noSchedBanner = state.bedCheckNoScheduleToday
+    ? '<div class="notice" style="font-weight:600">⚠️ No game schedule has been uploaded for today yet. Every stand below only appears because it\'s assigned to an NPO group — your regular football/concession roster will show up once today\'s ReadyOn schedule is imported.</div>'
+    : '';
+
   if (stands.length === 0) {
-    c.innerHTML = '<div class="empty"><div class="empty-icon">'+(npoOnly?'🤝':'🔍')+'</div><p>'+(npoOnly?'No active NPO stands found':'No matching stands')+'</p></div>';
+    c.innerHTML = noSchedBanner + '<div class="empty"><div class="empty-icon">'+(npoOnly?'🤝':'🔍')+'</div><p>'+(npoOnly?'No active NPO stands found':'No matching stands')+'</p></div>';
     return;
   }
-  
-  c.innerHTML = stands.map(s => {
+
+  c.innerHTML = noSchedBanner + stands.map(s => {
     // Bigger, phone-first card design. The old version crammed status into
     // one 11px line of slashes and icons ("3/5 here · ☕2 · ❌1") that's
     // genuinely hard to read fast on a phone mid-shift. This makes the
@@ -21009,7 +21042,7 @@ const BACK_MAP = {
   'screen-my-it': 'screen-submenu-requests',
   'screen-inventory': 'screen-submenu-checks',
   'screen-golfcart': 'screen-home',
-  'screen-myteam': 'screen-submenu-team',
+  'screen-my-team': 'screen-submenu-team', // real typo fix — was 'screen-myteam', which never matched the actual screen id, so this entry was dead
   'screen-walkin': 'screen-submenu-team',
   'screen-movereq': 'screen-submenu-team',
 };
@@ -21044,6 +21077,24 @@ function handleAppBack() {
   // screen underneath while it's still showing.
   const confirmModal = document.getElementById('app-confirm-modal');
   if (confirmModal && confirmModal.style.display !== 'none') { _appDialogClose(false); return; }
+
+  // Real bug found via user report: reqScreenBack() (the in-app ← button)
+  // already knew that Support Manager/Manager/Admin reach a single stand's
+  // My Team by tapping a card in Team Control, so it reopens Team Control
+  // on the way back instead of landing on the bedcheck screen's default
+  // view. The phone's native swipe-back gesture goes through THIS function
+  // instead (via popstate), which never had that same special case — it
+  // fell through to BACK_MAP (whose 'screen-myteam' key doesn't even match
+  // the real 'screen-my-team' screen id) and landed on whatever tab
+  // screen-bedcheck happened to have open, which looked like "a different,
+  // wrong page" to someone expecting to land back on Team Control.
+  if (cur === 'screen-my-team' && state._mgrTeamStandalone && state.staffAccount && state.staffAccount.group === 'manager') {
+    state._mgrTeamStandalone=false;
+    showScreen('screen-bedcheck');
+    restoreMgrSidebarState();
+    mgrSimpleOpenTeamControl();
+    return;
+  }
 
   // Warehouse Manager's tile menu opens shared panes (Transfers/Requests/
   // Stock Report/Golf Cart) in place rather than navigating to a new
