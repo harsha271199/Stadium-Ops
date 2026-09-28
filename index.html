@@ -4112,7 +4112,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-28-myteam-buttons-polish-1';
+const BUILD_TAG = '2026-09-28-food-autoroute-simplify-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -14227,7 +14227,18 @@ async function submitKitchenRequest(){
   const enriched=items.map(x=>{const m=_kitchenStandItems.find(y=>String(y.itemName).toLowerCase()===String(x.itemName).toLowerCase());return {...x,unit:m&&m.unit||'units',pack:m&&m.pack||'',track_inventory:!!m};});
   const deadline=new Date(Date.now()+(Number(state.kitchenETA)||30)*60000).toISOString();const suggested=await kitchenSuggestedRunner(stand);
   const requestClientUuid=state._kitchenRequestUuid||(state._kitchenRequestUuid=genUUID());
-  const row={client_uuid:requestClientUuid,stand,requested_by:who.name,requested_by_id:who.empId||'',items:enriched.map(x=>x.qty+' × '+x.itemName).join(', '),items_json:{items:enriched},note:holdNote+document.getElementById('kitchen-request-note').value,urgency:state.kitchenUrgency||'Normal',eta_minutes:Number(state.kitchenETA)||30,eta_deadline:deadline,status:'open',assigned_runner_id:null,assigned_runner_name:null};
+  // Real fix for the actual reason Food Manager stopped using the app
+  // mid-game: this used to leave EVERY order unassigned no matter what,
+  // requiring a manual pick from a runner dropdown for every single order
+  // even when a runner is already assigned to cover this exact stand's
+  // area. Auto-route straight to that runner now — the Food Manager still
+  // sees every order and can reassign it (the dropdown didn't go away,
+  // it's just no longer the default action needed for every order), but
+  // the common case (a runner already covers this area) needs zero manual
+  // assignment at all.
+  const autoAssignId=(suggested&&suggested.employee_id&&!String(suggested.employee_id).startsWith('preview-'))?suggested.employee_id:null;
+  const autoAssignName=autoAssignId?suggested.name:null;
+  const row={client_uuid:requestClientUuid,stand,requested_by:who.name,requested_by_id:who.empId||'',items:enriched.map(x=>x.qty+' × '+x.itemName).join(', '),items_json:{items:enriched},note:holdNote+document.getElementById('kitchen-request-note').value,urgency:state.kitchenUrgency||'Normal',eta_minutes:Number(state.kitchenETA)||30,eta_deadline:deadline,status:'open',assigned_runner_id:autoAssignId,assigned_runner_name:autoAssignName};
   state._lastKitchenCreateError=null;const made=await kitchenCreate(row);if(!made){const e=state._lastKitchenCreateError||{};return toast('Could not send Food request'+(e.status?' · HTTP '+e.status:'')+(e.msg?' · '+String(e.msg).slice(0,90):''),'error',10000);}
   state._kitchenRequestUuid=null; // real request went through — next one gets its own fresh id
   state._kitchenHoldActive=false;
@@ -14236,30 +14247,23 @@ async function submitKitchenRequest(){
   if(holdWrapDone){holdWrapDone.style.display='none';holdWrapDone.innerHTML='';}
   document.getElementById('kitchen-req-preview-notice').style.display=_kitchenPreview?'':'none';
   if(!_kitchenPreview){
-    // Smart routing: Food Managers coordinate new orders and formally
-    // assign a runner (that assignment step is what actually sends it to
-    // the runner's My Jobs and is left untouched here — a manager still
-    // needs to load-balance across runners, not have this auto-claim for
-    // them). But the runner covering this stand's area (Food Manager's
-    // "Runner Areas" assignment) previously heard nothing until a manager
-    // got around to picking them from a dropdown — on a busy night that
-    // could be several minutes of the runner having no idea a request
-    // for their own area even came in. This adds an immediate, separate
-    // heads-up push straight to that runner, alongside the existing
-    // Food Manager alert — informational only, doesn't assign the job.
     const foodMgrs=await sb('staff_accounts?role=in.(food_manager,kitchen_coordinator)&is_active=eq.true&select=employee_id').catch(()=>({_err:true}));
     if(!foodMgrs._err&&Array.isArray(foodMgrs)&&foodMgrs.length){
-      foodMgrs.forEach(x=>sendPushTo(x.employee_id,'🍽️ New food request · '+stand,row.items.slice(0,90)+' · '+kitchenEtaText(row)));
+      foodMgrs.forEach(x=>sendPushTo(x.employee_id,'🍽️ New food request · '+stand,row.items.slice(0,90)+' · '+kitchenEtaText(row)+(autoAssignName?' · auto-assigned to '+autoAssignName:' · unclaimed')));
+    }
+    if(autoAssignId){
+      // Real assignment now, not just a heads-up — this is the request
+      // that used to sit unclaimed until a Food Manager manually picked a
+      // runner from a dropdown, for every single order, all game long.
+      sendPushTo(autoAssignId,'🍔 New order — your area · '+stand,row.items.slice(0,90)+' · tap My Jobs');
     }else{
-      // Safety fallback if no active Food Manager account exists.
+      // No runner covers this stand's area — falls into the normal
+      // self-serve Available Jobs queue, same as before.
       const foodTeam=await sb('staff_accounts?role=in.(food_runner,kitchen_runner)&is_active=eq.true&select=employee_id').catch(()=>({_err:true}));
       if(!foodTeam._err&&Array.isArray(foodTeam))foodTeam.forEach(x=>sendPushTo(x.employee_id,'🍽️ New food delivery request',stand+' · '+row.items.slice(0,75)));
     }
-    if(suggested&&suggested.employee_id&&!String(suggested.employee_id).startsWith('preview-')){
-      sendPushTo(suggested.employee_id,'📍 New request in your area — '+stand,row.items.slice(0,90)+' · a Food Manager will confirm shortly');
-    }
   }
-  toast(made._queued?'📤 Food request queued — will send when WiFi returns':('🍔 Food request sent'+(suggested?' · suggested '+suggested.name:'')));
+  toast(made._queued?'📤 Food request queued — will send when WiFi returns':('🍔 Food request sent'+(autoAssignName?' · assigned to '+autoAssignName:'')));
   if(isSupportManagerSession()){
     state.supportOpsScope=stand;state.supportRequestStand=stand;
     showScreen('screen-bedcheck');restoreMgrSidebarState();supportOpsTab('food',true);
@@ -14471,7 +14475,16 @@ async function renderKitchenQueue(rows){
   const moving=active.filter(r=>r.status==='on_the_way');
   const unclaimed=active.filter(r=>!r.assigned_runner_id);
   const needsAttention=unclaimed.length+overdue.length+dueSoon.length;
-  const mgrSummary='<div class="notice info" style="margin-bottom:10px"><b>Food queue</b> · Highest-priority and due-soon requests are shown first.</div>';
+  // Real UX fix — this is the actual reason the Food Manager stopped using
+  // the app mid-game: every single order used to require manually picking
+  // a runner from an always-visible dropdown, even though a runner already
+  // covering that stand's area is now auto-assigned at submission (see
+  // submitKitchenRequest). Assigned orders just show who has it — the
+  // manager's job during a busy game is to glance for the RARE case
+  // (unclaimed, no runner covers that area) and step in only there.
+  // Unclaimed orders sort first so that glance is fast.
+  active.sort((a,b)=>(a.assigned_runner_id?1:0)-(b.assigned_runner_id?1:0));
+  const mgrSummary='<div class="notice info" style="margin-bottom:10px"><b>Food queue</b> · Assigned orders are handled by that runner — you only need to act on 🔴 Unclaimed ones or to reassign.</div>';
   if(!active.length){el.innerHTML=mgrSummary+'<div class="empty"><div class="empty-icon">✅</div><p>Food delivery queue is clear.</p></div>';return;}
   const runners=await kitchenGetRunners();
   el.innerHTML=mgrSummary+active.map(r=>{
@@ -14479,12 +14492,21 @@ async function renderKitchenQueue(rows){
     let actions='';
     if(r.status==='open')actions=`<button class="btn btn-primary" onclick="kitchenSetStatus('${r.id}','preparing')" style="margin-top:8px">👨‍🍳 Preparing</button>`;
     else if(r.status==='preparing')actions=`<button class="btn btn-primary" onclick="kitchenSetStatus('${r.id}','ready')" style="margin-top:8px">✅ Food Ready — Notify Runner</button>`;
+    const assignRowId='kf-assign-'+r.id;
+    const assignedTag=r.assigned_runner_id
+      ? `<span style="font-size:11px;font-weight:800;color:var(--success)">🏃 ${escapeHtml(r.assigned_runner_name||'Assigned')}</span>`
+      : `<span style="font-size:11px;font-weight:800;color:#DC2626">🔴 Unclaimed</span>`;
     return `<div class="food-runner-card">
       <div style="display:flex;justify-content:space-between;gap:8px"><div class="stand">${escapeHtml(r.stand)}</div><div style="font-size:10px;font-weight:850">${kitchenStatusLabel(r.status)}</div></div>
       <div class="items">${kitchenItemsText(r)}</div>
       <div class="meta">${kitchenEtaText(r)} · requested by ${escapeHtml(r.requested_by||'')}</div>
-      <label class="form-label" style="margin-top:8px">Runner assignment <span style="font-weight:650;color:var(--text-2)">(assigning sends it directly to that runner's My Jobs)</span></label>
-      <select class="form-input" onchange="kitchenAssignRunner('${r.id}',this.value,this.options[this.selectedIndex].text)"><option value="">— Unclaimed —</option>${opts}</select>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px">
+        ${assignedTag}
+        <button class="prem-move-btn" onclick="document.getElementById('${assignRowId}').classList.toggle('open')" aria-label="Reassign" style="width:32px;height:32px;font-size:13px">↔</button>
+      </div>
+      <div class="prem-move-row${r.assigned_runner_id?'':' open'}" id="${assignRowId}">
+        <select class="form-input" onchange="kitchenAssignRunner('${r.id}',this.value,this.options[this.selectedIndex].text)" style="margin:0;font-size:13px"><option value="">— Unclaimed —</option>${opts}</select>
+      </div>
       ${actions}
     </div>`;
   }).join('');
