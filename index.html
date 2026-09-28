@@ -2912,6 +2912,10 @@
       </div>
       <div id="mgr-team-all">
         <div id="bc-stats" class="bc-stats-bar"></div>
+        <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px">
+          <button class="prem-export-btn" onclick="bcExportCSV()">⬇️ CSV</button>
+          <button class="prem-export-btn" onclick="bcExportPDF()">🖨️ PDF</button>
+        </div>
         <input class="form-input" type="text" id="bc-search" placeholder="🔍 Search worker or stand..." oninput="filterBedCheck()" style="margin-bottom:8px">
         <div class="chip-row" id="bc-status-filters" style="margin-bottom:12px">
           <button class="chip selected" data-f="all" onclick="bcSetStatusFilter('all',this)">All</button>
@@ -4108,7 +4112,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-28-backnav-noschedule-fix-1';
+const BUILD_TAG = '2026-09-28-teamcontrol-premium-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -11036,6 +11040,9 @@ function loadBedCheck() {
 
 function loadMgrRoster() {
   state.bedCheckLoading = true;
+  if (!state._bcAllStands) {
+    api('getStandsList', {}).then(res => { state._bcAllStands = (res.ok && res.stands) ? res.stands.map(s => s.stand_name).filter(Boolean).sort(standSort) : []; }).catch(() => { state._bcAllStands = []; });
+  }
   api('getBedCheck', {}).then(res => {
     state.bedCheckStands = res.stands || [];
     state.bedCheckNoScheduleToday = !!res.noScheduleToday;
@@ -16261,9 +16268,73 @@ async function updateMaint(id, status) {
 function filterMaint(filter) { loadMgrMaint(filter); }
 
 
+let _bcOpenGroups = new Set();
+function bcToggleGroup(key) {
+  if (_bcOpenGroups.has(key)) _bcOpenGroups.delete(key); else _bcOpenGroups.add(key);
+  const el = document.getElementById('bc-group-' + key.replace(/[^a-zA-Z0-9]/g, '_'));
+  if (el) el.classList.toggle('open', _bcOpenGroups.has(key));
+}
+// One flat array indexes every worker row on this screen (employee AND NPO,
+// across every stand) so the inline action buttons have something stable to
+// reference — same idea as _premScheduleRows, just built fresh each render
+// from state.bedCheckStands (still the real objects, not copies, so an
+// optimistic mutation here is the same mutation the next render will see).
+function bcBuildRowHtml(w, idx, npoMode) {
+  const cls = w.status === 'working' && !w.onBreak ? 'present' : w.status === 'absent' ? 'absent' : '';
+  const meta = npoMode ? escapeHtml(w.role || '') : escapeHtml(w.role || '') + (w.startTime ? ' · ' + escapeHtml(w.startTime) + '–' + escapeHtml(w.endTime || '') : '');
+  let html = `<div class="prem-row ${cls}" id="bc-row-${idx}">
+    <div class="prem-row-info">
+      <div class="prem-row-name">${escapeHtml(w.name)}${w.onBreak ? ' <span style="font-size:9px;color:var(--info);font-weight:800">ON BREAK</span>' : ''}</div>
+      <div class="prem-row-meta">${meta}</div>
+    </div>
+    <div class="prem-row-actions">
+      <button class="prem-status-btn p${w.status === 'working' && !w.onBreak ? ' on' : ''}" onclick="bcCheckIn(${idx})" aria-label="Present">✓</button>
+      <button class="prem-status-btn a${w.status === 'absent' ? ' on' : ''}" onclick="bcMarkAbsent(${idx})" aria-label="Absent">✕</button>
+      ${!npoMode ? `<button class="prem-move-btn" onclick="bcToggleMoveRow(${idx})" aria-label="Move">↔</button>` : ''}
+      ${!npoMode ? `<button class="prem-move-btn" onclick="bcToggleFb(${idx})" aria-label="Feedback">⭐</button>` : ''}
+    </div>
+  </div>`;
+  if (!npoMode) {
+    const opts = (state._bcAllStands || []).filter(s => s !== w.stand).map(s => '<option value="' + escapeAttr(s) + '">' + escapeHtml(s) + '</option>').join('');
+    html += `<div class="prem-move-row" id="bc-move-${idx}"><select class="form-input" onchange="bcMoveWorker(${idx},this.value)" style="margin:0;font-size:13px"><option value="">Move to…</option>${opts}</select></div>`;
+    html += `<div id="bc-fb-form-${idx}" style="display:none;margin:0 12px 10px;border-top:1px solid var(--border);padding-top:10px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="chip" id="bc-fb-good-${idx}" onclick="bcFbRate(${idx},'good')" style="flex:1">👍 Great job</button>
+        <button class="chip" id="bc-fb-bad-${idx}" onclick="bcFbRate(${idx},'needs_improvement')" style="flex:1">👎 Needs improvement</button>
+      </div>
+      <input class="form-input" id="bc-fb-note-${idx}" placeholder="Optional note…" style="margin-bottom:8px">
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="bcSubmitFb(${idx})" style="flex:2;padding:10px;font-size:13px">Send feedback</button>
+        <button class="btn btn-ghost" onclick="bcToggleFb(${idx})" style="flex:1;padding:10px;font-size:13px">Cancel</button>
+      </div>
+    </div>`;
+  }
+  return html;
+}
+function bcRenderSection(sectionKey, title, icon, stands, npoMode) {
+  const groups = stands.map(s => ({ stand: s.stand, workers: (s.workers || []).filter(w => !!w.isNpo === npoMode) })).filter(g => g.workers.length > 0);
+  if (!groups.length) return '';
+  let html = '<div class="mgr-v10-section-label">' + icon + ' ' + title + ' · ' + groups.length + '</div>';
+  html += groups.map(g => {
+    const present = g.workers.filter(w => w.status === 'working' && !w.onBreak).length;
+    const key = sectionKey + ':' + g.stand;
+    const searching = !!(document.getElementById('bc-search').value || '').trim() || (state._bcStatusFilter || 'all') !== 'all';
+    const isOpen = searching || _bcOpenGroups.has(key);
+    const rowsHtml = g.workers.map(w => { w.stand = g.stand; const idx = state._bcFlatWorkers.push(w) - 1; return bcBuildRowHtml(w, idx, npoMode); }).join('');
+    return `<div class="prem-loc-group${isOpen ? ' open' : ''}" id="bc-group-${key.replace(/[^a-zA-Z0-9]/g, '_')}">
+      <div class="prem-loc-head" onclick="bcToggleGroup('${key.replace(/'/g, "\\'")}')">
+        <span>${npoMode ? '🤝 ' : ''}${escapeHtml(g.stand)}</span>
+        <span class="prem-loc-count${present === g.workers.length ? ' done' : ''}">${present}/${g.workers.length}</span>
+      </div>
+      <div class="prem-loc-body">${rowsHtml}</div>
+    </div>`;
+  }).join('');
+  return html;
+}
 function renderBedCheck() {
   const c = document.getElementById('bc-list');
   if (state.bedCheckLoading) { c.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>'; return; }
+  if (state._bcFbOpen != null) return; // don't wipe an open feedback form on an unrelated refresh
   let stands = state.bedCheckStands || [];
   const npoOnly = state.mgrV10TeamMode === 'npo';
   if(npoOnly) stands = stands.filter(x=>x.hasNpo);
@@ -16316,41 +16387,151 @@ function renderBedCheck() {
     return;
   }
 
-  c.innerHTML = noSchedBanner + stands.map(s => {
-    // Bigger, phone-first card design. The old version crammed status into
-    // one 11px line of slashes and icons ("3/5 here · ☕2 · ❌1") that's
-    // genuinely hard to read fast on a phone mid-shift. This makes the
-    // headline number big, gives each status its own clear chip with a
-    // word (not just an icon), and colour-codes the whole left edge so a
-    // supervisor can tell a fully-staffed stand from a problem one at a
-    // glance without reading anything.
-    let edge = '#DC2626', statusWord = 'None here', statusBg = 'rgba(220,38,38,0.1)', statusColor = '#DC2626';
-    if (s.here === s.total && s.total > 0) { edge = 'var(--success)'; statusWord = 'Fully staffed'; statusBg = 'rgba(0,166,81,0.12)'; statusColor = 'var(--success)'; }
-    else if (s.here > 0) { edge = 'var(--warning)'; statusWord = 'Partial'; statusBg = 'rgba(245,158,11,0.14)'; statusColor = '#B45309'; }
-
-    const chips = [];
-    if (s.onBreak > 0) chips.push(`<span style="background:rgba(37,99,235,0.12);color:var(--info);padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600">☕ ${s.onBreak} on break</span>`);
-    if (s.absent > 0) chips.push(`<span style="background:rgba(220,38,38,0.12);color:#DC2626;padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600">❌ ${s.absent} absent</span>`);
-    if (s.pending > 0) chips.push(`<span style="background:rgba(245,158,11,0.14);color:#B45309;padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600">⏳ ${s.pending} not in yet</span>`);
-    if (s.left > 0) chips.push(`<span style="background:var(--bg-elevated);color:var(--text-3);padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600">⏹ ${s.left} left</span>`);
-
-    return `<div class="card" style="padding:0;cursor:pointer;overflow:hidden;margin-bottom:10px" onclick="leadershipOpenStandAttendance('${escapeAttr(s.stand)}')">
-      <div style="display:flex;align-items:stretch">
-        <div style="width:6px;background:${edge};flex-shrink:0"></div>
-        <div style="flex:1;padding:14px 14px 14px 12px;min-width:0">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-            <div style="font-weight:750;font-size:16px;line-height:1.25;min-width:0">${s.hasNpo?'🤝 ':''}${escapeHtml(s.stand)}</div>
-            <div style="font-size:22px;color:var(--text-3);flex-shrink:0;line-height:1">›</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <span style="font-size:20px;font-weight:800;color:${statusColor}">${s.here}<span style="font-size:14px;font-weight:600;color:var(--text-3)">/${s.total}</span></span>
-            <span style="background:${statusBg};color:${statusColor};padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700">${statusWord}</span>
-          </div>
-          ${chips.length ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">${chips.join('')}</div>` : ''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  // Real UX rework, matching Premium Check-ins: individual worker rows with
+  // inline ✓/✕/move/feedback right here, collapsible by stand, instead of a
+  // stand-summary card that only opens the full My Team screen on tap.
+  // Employee and NPO stands are kept in clearly separate sections — NPO
+  // attendance only needs Present/Absent (placement and shift details are
+  // controlled by the NPO group assignment, not this screen), while
+  // employee stands keep the fuller action set (Move, Feedback) that was
+  // already available one tap deeper in My Team.
+  state._bcFlatWorkers = [];
+  const employeeHtml = bcRenderSection('emp', 'Employee Stands', '👥', npoOnly ? [] : stands, false);
+  const npoHtml = bcRenderSection('npo', 'NPO Stands', '🤝', stands, true);
+  c.innerHTML = (employeeHtml || npoHtml)
+    ? noSchedBanner + employeeHtml + npoHtml
+    : noSchedBanner + '<div class="empty"><div class="empty-icon">🔍</div><p>No matching stands</p></div>';
+}
+// Real UX fix, matching Premium's premiumSetCheckin: instant, optimistic —
+// tap it, see it update immediately, syncs in the background. Any failure
+// rolls the row back and says why, same as My Team's equivalent actions.
+async function bcCheckIn(idx) {
+  const w = state._bcFlatWorkers[idx]; if (!w) return;
+  const who = getRequesterIdentity();
+  const prevStatus = w.status, prevBreak = w.onBreak;
+  w.status = 'working'; w.onBreak = false; renderBedCheck();
+  const res = await api('photoCheckin', { empId: w.empId, name: w.name, stand: w.stand, photoBlob: null, gameLabel: GAME_LABEL });
+  if (res.ok) {
+    await sb('attendance', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: w.stand, status:'working', notes: 'Checked in by ' + who.name }) });
+    toast('✅ ' + w.name + ' checked in');
+  } else { w.status = prevStatus; w.onBreak = prevBreak; renderBedCheck(); toast(res.error || 'Could not check in — try again', 'error'); }
+}
+async function bcMarkAbsent(idx) {
+  const w = state._bcFlatWorkers[idx]; if (!w) return;
+  const who = getRequesterIdentity();
+  const prevStatus = w.status, prevBreak = w.onBreak;
+  w.status = 'absent'; w.onBreak = false; renderBedCheck();
+  const res = await api('markAbsent', { empId: w.empId, name: w.name, stand: w.stand, markedBy: who.name });
+  if (res.ok || res.simulated) {
+    await sb('attendance', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: w.stand, status:'absent', notes:'Marked absent by '+who.name }) }).catch(()=>{});
+    toast('❌ ' + w.name + ' marked absent');
+  } else { w.status = prevStatus; w.onBreak = prevBreak; renderBedCheck(); toast(res.error || 'Could not mark absent', 'error'); }
+}
+function bcToggleMoveRow(idx) {
+  const el = document.getElementById('bc-move-' + idx);
+  if (el) el.classList.toggle('open');
+}
+async function bcMoveWorker(idx, toStand) {
+  if (!toStand) return;
+  const w = state._bcFlatWorkers[idx]; if (!w) return;
+  const who = getRequesterIdentity();
+  const fromStand = w.stand;
+  await withLock(evtBtn(), 'Moving…', async () => {
+    const res = await api('managerMoveWorker', { empId: w.empId, name: w.name, fromStand, toStand, role: w.role || '', movedBy: who.name || 'Manager' });
+    if (!(res.ok || res.simulated)) return toast('Could not move worker', 'error');
+    if (res.ambiguousCrew) toast('⚠️ ' + w.name + ' moved to ' + toStand + ' — that stand has more than one crew name and none could be matched automatically.', 'error', 12000);
+    else toast('📍 ' + w.name + ' moved to ' + toStand);
+    loadMgrRoster();
+  });
+}
+function bcToggleFb(idx) {
+  const f = document.getElementById('bc-fb-form-' + idx);
+  if (!f) return;
+  const open = f.style.display === 'none';
+  document.querySelectorAll('[id^="bc-fb-form-"]').forEach(el => el.style.display = 'none');
+  state._bcFbRating = null;
+  if (open) { f.style.display = 'block'; state._bcFbOpen = idx; }
+  else { state._bcFbOpen = null; renderBedCheck(); }
+}
+function bcFbRate(idx, rating) {
+  state._bcFbRating = rating;
+  document.getElementById('bc-fb-good-' + idx).classList.toggle('selected', rating === 'good');
+  document.getElementById('bc-fb-bad-' + idx).classList.toggle('selected', rating === 'needs_improvement');
+}
+async function bcSubmitFb(idx) {
+  const w = state._bcFlatWorkers[idx]; if (!w) return;
+  if (!state._bcFbRating) return toast('Pick 👍 or 👎 first', 'error');
+  const who = getRequesterIdentity();
+  const note = document.getElementById('bc-fb-note-' + idx).value.trim();
+  await withLock(evtBtn(), 'Sending…', async () => {
+    const res = await api('submitFeedback', { empId: w.empId, workerName: w.name, stand: w.stand, givenBy: who.name, givenByRole: TIER_LABELS[who.tier] || who.tier, rating: state._bcFbRating, note });
+    if (res.ok) { toast('⭐ Feedback saved'); state._bcFbOpen = null; state._bcFbRating = null; renderBedCheck(); }
+    else toast(res.error || 'Could not save feedback', 'error');
+  });
+}
+// -- Export today's Team Control roster (CSV + printable "PDF"), same
+// pattern as Premium's premiumExportCheckinsCSV/PDF — covers both Employee
+// and NPO stands with a Type column so the two stay distinguishable in the
+// exported record even though they're separate sections on screen.
+function bcExportCSV() {
+  const stands = state.bedCheckStands || [];
+  if (!stands.length) return toast('Nothing to export', 'error');
+  const esc = v => { const t = String(v == null ? '' : v); return (t.indexOf(',') >= 0 || t.indexOf('"') >= 0) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  let csv = 'Stand,Name,Role,Start,End,Status,Type\n';
+  stands.forEach(s => {
+    (s.workers || []).slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(w => {
+      csv += [s.stand, w.name, w.role || '', w.startTime || '', w.endTime || '', w.onBreak ? 'On break' : (w.status||''), w.isNpo ? 'NPO' : 'Employee'].map(esc).join(',') + '\n';
+    });
+  });
+  downloadCSV(csv, 'team_control_' + localISODate() + '.csv');
+  toast('⬇️ Team Control CSV downloaded');
+}
+function bcExportPDF() {
+  const stands = state.bedCheckStands || [];
+  if (!stands.length) return toast('Nothing to export', 'error');
+  const w = window.open('', '_blank');
+  if (!w) return toast('⚠️ Popup blocked — allow popups for this site and try again', 'error');
+  const date = localISODate();
+  const empStands = stands.filter(s => (s.workers||[]).some(x=>!x.isNpo));
+  const npoStands = stands.filter(s => (s.workers||[]).some(x=>x.isNpo));
+  const totalHere = stands.reduce((n,s)=>n+s.here,0), totalAll = stands.reduce((n,s)=>n+s.total,0);
+  const section = (title, list, npoMode) => list.length ? '<div class="loc" style="border-bottom-color:' + (npoMode?'#8B5CF6':'#E4002B') + '">' + title + '</div>' + list.map(s => {
+    const rows = (s.workers||[]).filter(x=>!!x.isNpo===npoMode).slice().sort((a,b)=>a.name.localeCompare(b.name));
+    if (!rows.length) return '';
+    return '<div class="loc2">' + escapeHtml(s.stand) + ' (' + rows.filter(x=>x.status==='working').length + '/' + rows.length + ')</div>' +
+      '<table><thead><tr><th>Name</th><th>Role</th><th>Time</th><th style="width:70px">Status</th></tr></thead><tbody>' +
+      rows.map(r => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.role||'') + '</td><td>' + escapeHtml(r.startTime||'') + '–' + escapeHtml(r.endTime||'') + '</td><td class="st ' + (r.status||'') + '">' + escapeHtml(r.onBreak?'break':(r.status||'')) + '</td></tr>').join('') +
+      '</tbody></table>';
+  }).join('') : '';
+  let html = '<html><head><title>Team Control — ' + escapeHtml(date) + '</title><style>' +
+    '@page{size:letter portrait;margin:0.5in}' +
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}' +
+    'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0}' +
+    '.hdr{border:1.4px solid #555;margin-bottom:14px;border-radius:6px;overflow:hidden}' +
+    '.hdr-title{text-align:center;font-size:20px;font-weight:800;padding:10px;background:#f7f7f7;border-bottom:1.4px solid #555}' +
+    '.hdr-row{display:flex;border-top:1px solid #777}' +
+    '.hdr-cell{flex:1;padding:8px 12px;border-right:1px solid #777;font-size:12px}' +
+    '.hdr-cell:last-child{border-right:none}' +
+    '.hdr-cell .lbl{font-size:9px;text-transform:uppercase;color:#555;display:block;margin-bottom:2px}' +
+    '.loc{font-size:15px;font-weight:800;margin:16px 0 4px;padding-bottom:4px;border-bottom:2px solid #E4002B}' +
+    '.loc2{font-size:13px;font-weight:800;margin:10px 0 4px}' +
+    'table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px}' +
+    'th{border:1px solid #666;padding:5px 6px;background:#eee;font-weight:800;text-align:left}' +
+    'td{border:1px solid #999;padding:5px 6px}' +
+    'tr:nth-child(even) td{background:#f6f6f6}' +
+    '.st{font-weight:800;font-size:9px;text-transform:uppercase}' +
+    '.st.working{color:#00A651}.st.absent{color:#DC2626}' +
+    '</style></head><body>' +
+    '<div class="hdr"><div class="hdr-title">🏟️ Team Control — Concession</div><div class="hdr-row">' +
+      '<div class="hdr-cell"><span class="lbl">Date</span>' + escapeHtml(date) + '</div>' +
+      '<div class="hdr-cell"><span class="lbl">Checked in</span>' + totalHere + ' / ' + totalAll + '</div>' +
+      '<div class="hdr-cell"><span class="lbl">Printed</span>' + escapeHtml(new Date().toLocaleString()) + '</div>' +
+    '</div></div>' +
+    section('👥 Employee Stands', empStands, false) +
+    section('🤝 NPO Stands', npoStands, true) +
+    '<scr' + 'ipt>window.print()<\/scr' + 'ipt></body></html>';
+  w.document.write(html);
+  w.document.close();
 }
 
 function escapeAttr(s) { return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
