@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-28-merge-requests-transfers-1
+- **Merged Requests into All Transfers for Warehouse Manager, per direct request.** A stand's stock request and a manager-created transfer are the same thing to deal with once work is moving (a fulfilled request literally becomes a transfers row) — the only real gap was the window before that happens, when a Pending/Claimed request has no transfer row yet and was invisible in All Transfers. That gap is closed: open requests now show as their own cards (📥 Stand requested, amber-flagged) right in the same All Transfers list, using their existing Start Delivery/Deliver Items actions — once a stand's real transfer exists, its card takes over and the request card steps aside instead of showing the same stand twice.
+- The separate Requests tile is gone from the Warehouse Manager's screen — one list to check instead of two. Warehouse Employee and Supervisor keep their own Requests tab unchanged, since they use it differently (to find and claim their own work).
+
 ## 2026-09-28-coverage-owner-deterministic-1
 - **Real fix, per direct instruction:** when 2+ people are assigned to cover the same stand, the auto-picked "route owner" for a new transfer used to be whichever row the database happened to return first — arbitrary, not something a manager could predict. Now it's deterministic: whoever was assigned to that stand first stays the consistent pick. Round-robin between multiple covering people is planned as a follow-up (deliberately not built yet), not an oversight — marked with a TODO in the code.
 

@@ -4112,7 +4112,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-28-coverage-owner-deterministic-1';
+const BUILD_TAG = '2026-09-28-merge-requests-transfers-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -18413,13 +18413,10 @@ function renderWarehouseForRole() {
       '<span class="tile-icon">🚚</span><div class="tile-label">Create Transfer</div><div class="tile-sub">Send stock — self or assign</div>' +
     '</div>' +
     '<div class="action-tile" onclick="whMgrOpenPane(\'transfers\')">' +
-      '<span class="tile-icon">📦</span><div class="tile-label">All Transfers</div><div class="tile-sub">Deliveries in progress</div>' +
+      '<span class="tile-icon">📦</span><div class="tile-label">All Transfers</div><div class="tile-sub">Deliveries + stand requests — one list</div>' +
     '</div>' +
     '<div class="action-tile" id="wh-tile-approvals" onclick="showScreen(\'screen-wh-approvals\')">' +
       '<span class="tile-icon">✅</span><div class="tile-label">Approvals</div><div class="tile-sub" id="wh-tile-approvals-sub">Loading…</div>' +
-    '</div>' +
-    '<div class="action-tile" onclick="whMgrOpenPane(\'requests\')">' +
-      '<span class="tile-icon">📥</span><div class="tile-label">Requests</div><div class="tile-sub">Stock requests from stands</div>' +
     '</div>' +
     '<div class="action-tile" onclick="whMgrOpenPane(\'inventory\')">' +
       '<span class="tile-icon">📄</span><div class="tile-label">Stand Transfer Report</div><div class="tile-sub">End-of-day, per stand</div>' +
@@ -19484,7 +19481,47 @@ async function loadWhTransfers() {
     const items = await sb('transfer_items?transfer_id=in.(' + checkIds.join(',') + ')&select=transfer_id,qty_requested,qty_delivered').catch(() => ({ _err: true }));
     if (!items._err && Array.isArray(items)) items.forEach(it => { if (it.qty_delivered != null && Number(it.qty_delivered) < Number(it.qty_requested || 0)) partialIds.add(it.transfer_id); });
   }
-  el.innerHTML = visible.map(t => {
+  // Real merge, per direct request: Requests and Transfers are the same
+  // thing to a warehouse manager once work is actually moving (a fulfilled
+  // stock request becomes a real transfers row — see openTransferStand).
+  // The gap is the window BEFORE that happens: a Pending/On-the-way stock
+  // request has no transfers row yet, so it would be invisible here
+  // without this. Fetched only for warehouse_manager (Employee/Supervisor
+  // keep their existing separate Requests tab, which they use differently
+  // — to find and claim their own work, not to oversee everything).
+  // Dedup rule: once a stand's transfers row already exists (someone
+  // opened the delivery checklist), that row takes over as the visible
+  // record for that stand — the raw request card steps aside instead of
+  // showing the same stand twice.
+  let requestCardsHtml = '';
+  if (role === 'warehouse_manager') {
+    const standsAlreadyShown = new Set(visible.map(t => t.stand));
+    const openReqs = await sb("stock_requests?status=in.(open,claimed)&order=created_at.desc&select=*").catch(() => ({ _err: true }));
+    if (!openReqs._err && Array.isArray(openReqs)) {
+      let reqRows = openReqs;
+      if (tfFilter === 'date') {
+        const day = state._whTransferFilterDate || localISODate();
+        reqRows = reqRows.filter(r => String(r.created_at || '').slice(0, 10) === day);
+      }
+      reqRows = reqRows.filter(r => !standsAlreadyShown.has(r.stand));
+      requestCardsHtml = reqRows.map(r => {
+        const standJs = escapeAttr(r.stand);
+        const action = r.status === 'open'
+          ? `<button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();claimReq('${r.id}')">🚚 Start delivery</button>`
+          : `<button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();openTransferStand('${standJs}','list',null)">📦 Deliver items</button>`;
+        return `<div class="sub-menu-btn" style="border-left:4px solid #F59E0B">
+          <span class="smb-icon" onclick="openTransferStand('${standJs}','list',null)">📥</span>
+          <div style="flex:1" onclick="openTransferStand('${standJs}','list',null)">
+            <div class="smb-label">${escapeHtml(r.stand)}</div>
+            <div class="smb-sub">📥 Stand requested · ${escapeHtml(r.requested_by || '')} · <span style="color:#F59E0B;font-weight:700">${r.status === 'open' ? 'Not started' : 'Claimed — ' + escapeHtml(r.claimed_by || '')}</span></div>
+          </div>
+          ${action}
+        </div>`;
+      }).join('');
+    }
+  }
+
+  el.innerHTML = requestCardsHtml + visible.map(t => {
     const st = TRANSFER_STATUS[t.status] || TRANSFER_STATUS.pending;
     const partialBadge = partialIds.has(t.id) ? ' <span style="color:#DC2626;font-weight:800">⚠️ Partial</span>' : '';
     const isMine = t.assigned_to_id === myId;
