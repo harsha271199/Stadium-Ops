@@ -4164,7 +4164,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-cart-questions-1';
+const BUILD_TAG = '2026-09-29-food-stands-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -14717,41 +14717,68 @@ async function kitchenRunnerDeliver(id){
   if(r._queued)toast('📤 Delivery queued — keep the app open until Online');
 if(!_kitchenPreview){const items=r.items_json&&Array.isArray(r.items_json.items)?r.items_json.items:[];for(let i=0;i<items.length;i++){const x=items[i];if(!x.track_inventory)continue;await logMovement({stand:r.stand,item:x.itemName,qty:Number(x.qty||0),type:'kitchen_in',direction:'in',refTable:'kitchen_requests',refId:String(r.id),note:'Food delivery by '+(state.staffAccount?state.staffAccount.name:'Runner')});}}if(r.requested_by_id)sendPushTo(r.requested_by_id,'✅ Food delivery arrived',r.stand+' · '+kitchenItemsText(r).replace(/<[^>]+>/g,''));if(!r._queued)toast('✅ Delivered');loadKitchenConsole();}
 
-let _foodMgrCovPeople=[],_foodMgrCovSelected=[];
+let _foodMgrCovPeople=[],_foodMgrCovStands=new Set(),_foodMgrCovAreas=[],_foodMgrCovAllStands=[];
 async function renderKitchenAssignments(){
   const el=document.getElementById('kitchen-assign');if(!el)return;
   _foodMgrCovPeople=await kitchenGetRunners();
   if(!_foodMgrCovPeople.length){el.innerHTML='<div class="notice">No Food Runner accounts yet. Add them in Admin → Access Center first.</div>';return;}
-  el.innerHTML='<div class="notice info" style="font-size:11px"><b>Game-day Runner Areas</b><br>Assign each Food Runner to stadium areas. Their Available Jobs list defaults to those stands; they can still open All Stadium in an emergency. Assignments sync automatically.</div>'+ 
-    '<label class="form-label" style="margin-top:0">Food Runner</label><select class="form-input" id="fm-cov-person" onchange="foodManagerCoveragePersonChanged()"><option value="">— Select runner —</option>'+_foodMgrCovPeople.map(r=>'<option value="'+escapeAttr(r.employee_id)+'">'+escapeHtml(r.name)+'</option>').join('')+'</select>'+ 
-    '<div class="coverage-area-chips" id="fm-cov-areas" style="margin-top:9px"></div>'+ 
-    '<button class="btn btn-primary" onclick="foodManagerCoverageSave()">Save runner coverage</button>'+ 
+  _foodMgrCovAreas=await coverageGetAreas('Mountain America Stadium');
+  const sr=await sb('stands?select=stand_name&order=stand_name.asc').catch(()=>({_err:true}));
+  const names=new Set();
+  if(Array.isArray(sr))sr.forEach(x=>{if(x.stand_name)names.add(canonicalStandName2026(x.stand_name));});
+  _foodMgrCovAreas.forEach(a=>(a.stands||[]).forEach(s=>names.add(canonicalStandName2026(s))));
+  _foodMgrCovAllStands=[...names].sort((x,y)=>x.localeCompare(y,undefined,{numeric:true}));
+  el.innerHTML='<div class="notice info" style="font-size:11px"><b>Game-day Runner Coverage</b><br>Pick whole areas, or tap individual stands (use the filter box to find one). Their Available Jobs list defaults to these stands; they can still open All Stadium in an emergency. Assignments sync automatically.</div>'+
+    '<label class="form-label" style="margin-top:0">Food Runner</label><select class="form-input" id="fm-cov-person" onchange="foodManagerCoveragePersonChanged()"><option value="">— Select runner —</option>'+_foodMgrCovPeople.map(r=>'<option value="'+escapeAttr(r.employee_id)+'">'+escapeHtml(r.name)+'</option>').join('')+'</select>'+
+    '<label class="form-label">Areas (tap to add or remove every stand in it)</label><div class="coverage-area-chips" id="fm-cov-areas" style="margin-top:4px"></div>'+
+    '<label class="form-label">Stands <span id="fm-cov-count" style="font-weight:700"></span></label>'+
+    '<input class="form-input" id="fm-cov-filter" placeholder="Filter stands — type a name or number" oninput="foodManagerCoverageRenderStands()" style="margin-bottom:6px">'+
+    '<div class="coverage-area-chips" id="fm-cov-stands" style="max-height:230px;overflow:auto"></div>'+
+    '<button class="btn btn-primary" style="margin-top:10px" onclick="foodManagerCoverageSave()">Save runner coverage</button>'+
     '<div style="font-size:11px;font-weight:800;margin:14px 0 6px">Today\'s Food coverage</div><div class="coverage-current" id="fm-cov-current"></div>';
-  _foodMgrCovSelected=[];await foodManagerCoverageRenderAreas();await foodManagerCoverageCurrent();
+  _foodMgrCovStands=new Set();foodManagerCoverageRender();await foodManagerCoverageCurrent();
 }
-async function foodManagerCoverageRenderAreas(){const ar=await coverageGetAreas('Mountain America Stadium'),el=document.getElementById('fm-cov-areas');if(el)el.innerHTML=ar.map(a=>'<button class="coverage-area-chip '+(_foodMgrCovSelected.includes(a.area_key)?'selected':'')+'" onclick="foodManagerCoverageToggle(\''+escapeAttr(a.area_key)+'\')">'+escapeHtml(a.area_name)+'</button>').join('');}
-function foodManagerCoverageToggle(k){if(_foodMgrCovSelected.includes(k))_foodMgrCovSelected=_foodMgrCovSelected.filter(x=>x!==k);else _foodMgrCovSelected.push(k);foodManagerCoverageRenderAreas();}
+function foodManagerCoverageRender(){foodManagerCoverageRenderAreas();foodManagerCoverageRenderStands();}
+function foodManagerCoverageRenderAreas(){
+  const el=document.getElementById('fm-cov-areas');if(!el)return;
+  el.innerHTML=_foodMgrCovAreas.map(a=>{
+    const st=(a.stands||[]).map(canonicalStandName2026);
+    const full=st.length&&st.every(s=>_foodMgrCovStands.has(s));
+    return '<button class="coverage-area-chip '+(full?'selected':'')+'" onclick="foodManagerCoverageToggle(\''+escapeAttr(a.area_key)+'\')">'+escapeHtml(a.area_name)+'</button>';
+  }).join('');
+}
+function foodManagerCoverageRenderStands(){
+  const el=document.getElementById('fm-cov-stands');if(!el)return;
+  const f=((document.getElementById('fm-cov-filter')||{}).value||'').trim().toLowerCase();
+  const list=_foodMgrCovAllStands.filter(s=>!f||s.toLowerCase().includes(f)||_foodMgrCovStands.has(s)&&f==='selected');
+  el.innerHTML=list.length?list.map(s=>'<button class="coverage-area-chip '+(_foodMgrCovStands.has(s)?'selected':'')+'" onclick="foodManagerCoverageToggleStand(this.dataset.s)" data-s="'+escapeAttr(s)+'">'+escapeHtml(s)+'</button>').join(''):'<div style="font-size:11px;color:var(--text-3)">No stands match.</div>';
+  const c=document.getElementById('fm-cov-count');if(c)c.textContent='· '+_foodMgrCovStands.size+' selected';
+}
+function foodManagerCoverageToggle(k){
+  const a=_foodMgrCovAreas.find(x=>x.area_key===k);if(!a)return;
+  const st=(a.stands||[]).map(canonicalStandName2026);
+  if(st.every(s=>_foodMgrCovStands.has(s)))st.forEach(s=>_foodMgrCovStands.delete(s));else st.forEach(s=>_foodMgrCovStands.add(s));
+  foodManagerCoverageRender();
+}
+function foodManagerCoverageToggleStand(s){
+  if(_foodMgrCovStands.has(s))_foodMgrCovStands.delete(s);else _foodMgrCovStands.add(s);
+  foodManagerCoverageRender();
+}
 async function foodManagerCoveragePersonChanged(){
-  _foodMgrCovSelected=[];
+  _foodMgrCovStands=new Set();
   const emp=document.getElementById('fm-cov-person').value;
   if(emp){
     const rows=await kitchenFetchAssignments(),r=rows.find(x=>String(x.employee_id)===String(emp));
-    const areas=await coverageGetAreas('Mountain America Stadium');
-    if(r&&Array.isArray(r.stands)){
-      _foodMgrCovSelected=areas.filter(a=>(a.stands||[]).some(s=>r.stands.map(canonicalStandName2026).includes(canonicalStandName2026(s)))).map(a=>a.area_key);
-    }
+    if(r&&Array.isArray(r.stands))r.stands.forEach(s=>_foodMgrCovStands.add(canonicalStandName2026(s)));
   }
-  foodManagerCoverageRenderAreas();
+  foodManagerCoverageRender();
 }
 async function foodManagerCoverageSave(){
   const emp=document.getElementById('fm-cov-person').value;
   if(!emp)return toast('Select a Food Runner','error');
-  if(!_foodMgrCovSelected.length)return toast('Choose at least one area','error');
+  if(!_foodMgrCovStands.size)return toast('Choose at least one area or stand','error');
   const person=_foodMgrCovPeople.find(x=>String(x.employee_id)===String(emp));
-  const areas=await coverageGetAreas('Mountain America Stadium');
-  const standSet=new Set();
-  _foodMgrCovSelected.forEach(k=>{const a=areas.find(x=>x.area_key===k);if(a)(a.stands||[]).forEach(s=>standSet.add(canonicalStandName2026(s)));});
-  const row={employee_id:emp,name:person?person.name:'',role:'food_runner',stands:[...standSet],is_active:true,updated_at:new Date().toISOString()};
+  const row={employee_id:emp,name:person?person.name:'',role:'food_runner',stands:[..._foodMgrCovStands],is_active:true,updated_at:new Date().toISOString()};
   const ok=await kitchenSaveAssignment(row);
   if(ok){toast('✅ Food Runner coverage saved in Supabase');await foodManagerCoverageCurrent();}
 }
@@ -14759,9 +14786,11 @@ async function foodManagerCoverageCurrent(){
   const el=document.getElementById('fm-cov-current');if(!el)return;
   const rows=await kitchenFetchAssignments(),ar=await coverageGetAreas('Mountain America Stadium');
   el.innerHTML=rows.length?rows.map(r=>{
-    const canon=(r.stands||[]).map(canonicalStandName2026);
-    const names=ar.filter(a=>(a.stands||[]).some(s=>canon.includes(canonicalStandName2026(s)))).map(a=>a.area_name);
-    return '<div class="coverage-current-row"><div class="coverage-current-name">'+escapeHtml(r.name||r.employee_id)+'</div><div class="coverage-current-meta">'+escapeHtml(names.join(' · ')||'All stadium fallback / no area assigned')+'</div></div>';
+    const canon=(r.stands||[]).map(canonicalStandName2026),cs=new Set(canon),used=new Set();
+    const names=ar.filter(a=>{const st=(a.stands||[]).map(canonicalStandName2026);const full=st.length&&st.every(x=>cs.has(x));if(full)st.forEach(x=>used.add(x));return full;}).map(a=>a.area_name);
+    const extra=canon.filter(x=>!used.has(x));
+    const txt=names.concat(extra.length?[extra.length>8?extra.length+' stands':extra.join(', ')]:[]);
+    return '<div class="coverage-current-row"><div class="coverage-current-name">'+escapeHtml(r.name||r.employee_id)+'</div><div class="coverage-current-meta">'+escapeHtml(txt.join(' · ')||'All stadium fallback / no area assigned')+'</div></div>';
   }).join(''):'<div style="padding:8px;font-size:8px;color:var(--text-3)">No Food Runner coverage assigned yet.</div>';
 }
 

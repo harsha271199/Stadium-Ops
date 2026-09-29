@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-29-food-stands-1
+- **Food Manager → Runner Areas now also works by individual stand.** Pick whole areas (tap again to remove all of them), or tap single stands using the new filter box. Area buttons light up only when every stand in the area is selected; a "N selected" count shows the total. "Today's Food coverage" lists full areas plus any extra individual stands. Data is unchanged (`kitchen_runner_assignments.stands`), so existing assignments load as-is.
+
 ## 2026-09-29-cart-questions-1
 - **Golf cart safety questions, rebuilt to the managers' actual rule.** Every take and every return is now checked with real questions, answered one by one (OK or Issue) — no all-good shortcut buttons (I had added two by mistake, "✓ All good" and "Mark all 12 OK"; both removed):
   - **First person on a cart each day, taking it:** the full **12 questions** (unchanged).
