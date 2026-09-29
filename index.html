@@ -4134,7 +4134,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-sup-cart-simplify-1';
+const BUILD_TAG = '2026-09-29-myteam-date-fix-cart-id-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -18605,10 +18605,20 @@ function whBuildRosterPane() {
         '</div>'
         : ''
       ) +
-      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">' +
-        '<input class="form-input" type="date" id="wh-roster-date" style="margin:0;flex:1" onchange="loadWhRoster()">' +
-        '<button class="btn btn-ghost" onclick="document.getElementById(\'wh-roster-date\').value=localISODate();loadWhRoster()" style="width:auto;margin:0;padding:14px 16px;white-space:nowrap">Today</button>' +
-      '</div>' +
+      // Real change, per direct correction: Supervisor doesn't need to
+      // browse other dates — this is a right-now attendance tool, not a
+      // planning one, and a date picker just invites picking the wrong
+      // day by mistake. Manager keeps the picker (e.g. to prep tomorrow's
+      // roster ahead of time). Supervisor's date is fixed to today via
+      // localISODate(), which already resolves in America/Phoenix, not the
+      // browser's own timezone or raw UTC.
+      (isRealMgr
+        ? '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">' +
+            '<input class="form-input" type="date" id="wh-roster-date" style="margin:0;flex:1" onchange="loadWhRoster()">' +
+            '<button class="btn btn-ghost" onclick="document.getElementById(\'wh-roster-date\').value=localISODate();loadWhRoster()" style="width:auto;margin:0;padding:14px 16px;white-space:nowrap">Today</button>' +
+          '</div>'
+        : '<input type="hidden" id="wh-roster-date" value="' + localISODate() + '">'
+      ) +
       '<input class="form-input" type="text" id="wh-roster-search" placeholder="Search by name…" oninput="renderWhRosterList()" style="margin:0 0 10px">' +
       '<div id="wh-roster-progress" style="font-size:12px;color:var(--text-2);margin-bottom:8px"></div>' +
       '<div id="wh-roster-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>' +
@@ -18744,7 +18754,12 @@ function renderWhRosterList() {
     return '<div class="prem-row">' +
       '<div class="prem-row-info">' +
         '<div class="prem-row-name">' + escapeHtml(w.name) + (w.role ? ' <span style="font-weight:400;color:var(--text-2);font-size:11px">· ' + escapeHtml(w.role) + '</span>' : '') + '</div>' +
-        '<div class="prem-row-meta">' + (isIn ? (w.status === 'break' ? 'On break' : 'Working') : isAbsent ? 'Marked absent' : 'Not checked in yet') + ((w.startTime || w.endTime) ? ' · Scheduled ' + escapeHtml(w.startTime || '?') + '–' + escapeHtml(w.endTime || '?') : '') + '</div>' +
+        // Real fix, found by screenshot: this used to be one line combining
+        // status + scheduled time — .prem-row-meta is nowrap+ellipsis (used
+        // everywhere else in the app), so the end time got silently cut
+        // off. Split onto two separate meta lines so neither truncates.
+        '<div class="prem-row-meta">' + (isIn ? (w.status === 'break' ? 'On break' : 'Working') : isAbsent ? 'Marked absent' : 'Not checked in yet') + '</div>' +
+        ((w.startTime || w.endTime) ? '<div class="prem-row-meta">Scheduled ' + escapeHtml(w.startTime || '?') + '–' + escapeHtml(w.endTime || '?') + '</div>' : '') +
       '</div>' +
       '<div class="prem-row-actions">' +
         '<button class="prem-status-btn p' + (isIn ? ' on' : '') + '" onclick="whRosterCheckIn(' + idx + ')" aria-label="Check in">✓</button>' +
