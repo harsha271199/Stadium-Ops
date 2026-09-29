@@ -4134,7 +4134,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-myteam-tab-fix-mgr-only-upload-1';
+const BUILD_TAG = '2026-09-29-sup-cart-checkout-transfer-fix-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -18508,17 +18508,12 @@ function renderWarehouseForRole() {
       // the same notifications — not just Manager.
       '<div class="action-tile" id="wh-tile-cart" onclick="whMgrOpenPane(\'cart\')">' +
         '<span class="tile-icon"><svg width="32" height="30" style="vertical-align:-6px"><use href="#gc-icon"/></svg></span><div class="tile-label">Golf Cart</div><div class="tile-sub" id="wh-tile-cart-sub">Drivers + flagged issues</div>' +
-      '</div>' +
-      // Real fix, per direct audit request: a pure read/export report
-      // carries no approval authority, so there's no real reason
-      // Supervisor couldn't generate it too if Manager isn't around.
-      '<div class="action-tile" onclick="whMgrOpenPane(\'inventory\')">' +
-        '<span class="tile-icon">📄</span><div class="tile-label">Stand Transfer Report</div><div class="tile-sub">End-of-day, per stand</div>' +
       '</div>';
+      // Real change, per direct correction: Stand Transfer Report removed
+      // from Supervisor — Manager only, no exceptions.
     whSupSyncTileBadges();
     whUpdateCartTile();
     whBuildCartPane();
-    whBuildInventoryPane();
     whBuildRosterPane();
     return;
   }
@@ -18619,6 +18614,14 @@ function whBuildCartPane() {
     cartContainer.innerHTML =
       '<div style="max-width:480px">' +
         '<div id="wh-cart-returns" style="margin-bottom:14px"></div>' +
+        // Real fix, per direct report: Supervisor had no way to physically
+        // check out a cart himself — this pane only ever managed OTHER
+        // people's access, the actual key checkout screen (goGolfCart)
+        // only had an entry point on Employee's own delivery screen. Same
+        // button, same destination — if you're not an approved driver
+        // yourself, that screen already blocks you there, same as it does
+        // for anyone else.
+        '<button class="btn btn-ghost" onclick="goGolfCart()" style="width:100%;margin-bottom:14px"><svg width="15" height="14" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Check out / return a key yourself</button>' +
         // Real feature, per direct request: Supervisor/Manager marks each
         // approved driver in/out of cart duty themselves — same as My
         // Team's attendance (a Stand Lead/Supervisor marks their workers,
@@ -20006,15 +20009,27 @@ async function loadWhTransfers() {
     // supervisor AND manager at the earlier 'delivered' stage, which
     // overlapped with the supervisor's own e-sign screen and caused the
     // "warehouse worker seeing supervisor sign-off" confusion.
-    const canConfirm = role === 'warehouse_manager' && t.status === 'verified' && !t.wh_confirmed_at;
+    // Real fix, per direct request: Supervisor can approve now too, not
+    // just Manager — same rule as whFinalApprove()/whConfirmTask() above.
+    const canConfirm = (role === 'warehouse_manager' || role === 'warehouse_supervisor') && t.status === 'verified' && !t.wh_confirmed_at;
     let rightSide;
     if (t.wh_confirmed_at) {
       rightSide = '<span style="font-size:11px;color:#00A651;font-weight:700">✓ Confirmed</span>';
     } else if (canConfirm) {
       rightSide = '<button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();whConfirmTask(' + t.id + ',\'' + t.stand.replace(/'/g,"\\'") + '\')">✅ Approve</button>';
     } else if (t.assigned_to_id) {
+      // Real fix, per direct report: a transfer Manager assigned directly
+      // to Supervisor/Manager (as the person who has to physically deliver
+      // it) used to show a plain "✓ Assigned to you" text label here with
+      // no visible way to act on it — the row itself was still tappable
+      // and opened the full delivery checklist, but nothing on screen said
+      // so. Anyone still working through their own delivery now gets an
+      // actual button that says what to do next.
+      const stillWorking = isMine && (t.status === 'pending' || t.status === 'delivering');
       rightSide = isMine
-        ? '<span style="font-size:11px;color:#00A651;font-weight:700">✓ Assigned to you</span>'
+        ? (stillWorking
+            ? '<button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();openTransferStand(\'' + t.stand.replace(/'/g,"\\'") + '\',\'list\',' + t.id + ')">▶ Continue delivery</button>'
+            : '<span style="font-size:11px;color:#00A651;font-weight:700">✓ Assigned to you</span>')
         : '<span style="font-size:11px;color:var(--text-2)">' + escapeHtml(t.assigned_to_name || '') + '</span>';
     } else {
       // Unassigned (legacy / force-stock via QR) — keep self-serve claim as a fallback
@@ -20056,7 +20071,14 @@ async function loadWhTransfers() {
 // the 'verified' stage — was 'delivered' before, which fired too early and
 // overlapped with the supervisor's own e-sign step.
 async function whConfirmTask(id, stand) {
-  const who = state.staffAccount ? state.staffAccount.name : 'Warehouse Manager';
+  // Real fix: this is the same final-approval action as whFinalApprove()
+  // (the transfer-detail screen's version), just reachable from the list
+  // view instead — that one now allows Supervisor too, this one had been
+  // missed and was still Manager-only in the UI with no gate in the
+  // function itself at all. Same rule applied both places now.
+  if (!isWarehouseManagerSession() && !isWarehouseSupervisorSession()) return toast('Warehouse Manager or Supervisor approval required', 'error');
+  const isSupApproval = isWarehouseSupervisorSession();
+  const who = state.staffAccount ? state.staffAccount.name : (isSupApproval ? 'Warehouse Supervisor' : 'Warehouse Manager');
   const whoId = state.staffAccount ? state.staffAccount.empId : '';
   const body = { wh_confirmed_by_id: whoId, wh_confirmed_by_name: who, wh_confirmed_at: new Date().toISOString() };
   // Real bug: this only ever set wh_confirmed_at, never the transfer's own
@@ -20071,6 +20093,11 @@ async function whConfirmTask(id, stand) {
   if (WAREHOUSE_TRANSFER_HUBS.includes(stand)) { body.status = 'confirmed'; body.confirmed_by = who; body.confirmed_at = body.wh_confirmed_at; }
   const res = await sb('transfers?id=eq.'+id+'&status=eq.verified', { method:'PATCH', headers:{Prefer:'return=representation'}, body: JSON.stringify(body) });
   if (res._err || !Array.isArray(res) || !res.length) { toast('Could not approve — try refreshing', 'error'); loadWhTransfers(); return; }
+  if (isSupApproval) {
+    sb('staff_accounts?role=eq.warehouse_manager&is_active=eq.true&select=employee_id').then(mgrs => {
+      if (!mgrs._err && Array.isArray(mgrs)) mgrs.forEach(m => sendPushTo(m.employee_id, '✅ Supervisor approved a transfer', who + ' approved ' + stand + ' without you'));
+    }).catch(() => {});
+  }
   toast('✅ Approved');
   loadWhTransfers();
 }
