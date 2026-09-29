@@ -3167,6 +3167,14 @@
       </div>
 
       <div class="card" style="margin-top:12px;padding:14px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">👥 Upload warehouse roster (My Team)</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Same roster export Warehouse Manager/Supervisor's "My Team" check-in list reads from. Uploading again for the same date replaces it.</div>
+        <input type="file" id="adm-roster-file" accept=".csv,text/csv" class="form-input" style="padding:10px">
+        <button class="btn btn-primary" id="adm-roster-upload-btn" onclick="adminUploadWarehouseRoster('adm-roster')">⬆️ Upload warehouse roster</button>
+        <div id="adm-roster-upload-status" style="font-size:12px;margin-top:8px"></div>
+      </div>
+
+      <div class="card" style="margin-top:12px;padding:14px">
         <div style="font-weight:700;font-size:14px;margin-bottom:4px">📦 Upload inventory (Yellow Dog CSV)</div>
         <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Columns needed: Stand, Item Name, Unit, Pack, Exp Start. Extra columns are OK.</div>
         <input type="file" id="up-inv-file" accept=".csv,text/csv" class="form-input" style="padding:10px">
@@ -4120,7 +4128,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-wh-roster-cart-monitor-1';
+const BUILD_TAG = '2026-09-29-wh-myteam-rename-admin-upload-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -11234,7 +11242,7 @@ function whHubTransferGo() {
 // panes and load functions the Employee/Supervisor tab-bar uses, just
 // with a "back to menu" affordance instead of a visible tab strip, since
 // the manager's tab-bar is hidden entirely (see renderWarehouseForRole).
-const WH_MGR_PANE_TITLES = { transfers: '🚚 All Transfers', requests: '📥 Requests', inventory: '📄 Stand Transfer Report', cart: '⛳ Golf Cart', roster: '👥 Warehouse Roster' };
+const WH_MGR_PANE_TITLES = { transfers: '🚚 All Transfers', requests: '📥 Requests', inventory: '📄 Stand Transfer Report', cart: '⛳ Golf Cart', roster: '👥 My Team' };
 function whMgrOpenPane(mode) {
   const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
   const panesWrap = document.getElementById('wh-panes-wrap');
@@ -18462,6 +18470,15 @@ function renderWarehouseForRole() {
       '<div class="action-tile" onclick="whMgrOpenPane(\'requests\')">' +
         '<span class="tile-icon">📥</span><div class="tile-label">Requests</div><div class="tile-sub" id="wh-sup-tile-requests-sub">Stock requests from stands</div>' +
       '</div>' +
+      // Real feature, per direct request: Supervisor can't clock in 400+
+      // warehouse staff one at a time — same "leader checks their own
+      // people in" pattern as Stand Lead's My Team, scoped to whoever's on
+      // today's uploaded warehouse roster, not the whole building roster.
+      // Named and placed to match — right after Requests, same as it sits
+      // near the top of every other role's own menu.
+      '<div class="action-tile" onclick="whMgrOpenPane(\'roster\')">' +
+        '<span class="tile-icon">👥</span><div class="tile-label">My Team</div><div class="tile-sub" id="wh-tile-roster-sub">Check in/out · today\'s crew</div>' +
+      '</div>' +
       // Real fix, per direct request: Supervisor gets the same Golf Cart
       // access as Manager now — driver approval, flagged-issue review, and
       // the same notifications — not just Manager.
@@ -18473,14 +18490,6 @@ function renderWarehouseForRole() {
       // Supervisor couldn't generate it too if Manager isn't around.
       '<div class="action-tile" onclick="whMgrOpenPane(\'inventory\')">' +
         '<span class="tile-icon">📄</span><div class="tile-label">Stand Transfer Report</div><div class="tile-sub">End-of-day, per stand</div>' +
-      '</div>' +
-      // Real feature, per direct request: Supervisor can't clock in 400+
-      // warehouse staff one at a time — same "leader checks their own
-      // people in" pattern as My Team, scoped to whoever's on today's
-      // uploaded warehouse roster, not the whole roster of every
-      // department.
-      '<div class="action-tile" onclick="whMgrOpenPane(\'roster\')">' +
-        '<span class="tile-icon">👥</span><div class="tile-label">Warehouse Roster</div><div class="tile-sub" id="wh-tile-roster-sub">Check in/out · today\'s crew</div>' +
       '</div>';
     whSupSyncTileBadges();
     whUpdateCartTile();
@@ -18512,6 +18521,13 @@ function renderWarehouseForRole() {
     '<div class="action-tile" onclick="whMgrOpenPane(\'transfers\')">' +
       '<span class="tile-icon">📦</span><div class="tile-label">All Transfers</div><div class="tile-sub">Deliveries + stand requests — one list</div>' +
     '</div>' +
+    // Manager gets everything Supervisor's My Team tile does, same shared
+    // pane — outranks Supervisor so nothing here is Supervisor-only.
+    // Placed right after All Transfers to match where it sits on
+    // Supervisor's own menu (right after Requests).
+    '<div class="action-tile" onclick="whMgrOpenPane(\'roster\')">' +
+      '<span class="tile-icon">👥</span><div class="tile-label">My Team</div><div class="tile-sub" id="wh-tile-roster-sub">Check in/out · today\'s crew</div>' +
+    '</div>' +
     '<div class="action-tile" id="wh-tile-approvals" onclick="showScreen(\'screen-wh-approvals\')">' +
       '<span class="tile-icon">✅</span><div class="tile-label">Approvals</div><div class="tile-sub" id="wh-tile-approvals-sub">Loading…</div>' +
     '</div>' +
@@ -18527,12 +18543,6 @@ function renderWarehouseForRole() {
     '</div>' +
     '<div class="action-tile" onclick="showScreen(\'screen-wh-team\')">' +
       '<span class="tile-icon">👥</span><div class="tile-label">Assign & Team</div><div class="tile-sub">Who covers what today</div>' +
-    '</div>' +
-    // Manager gets everything Supervisor's Warehouse Roster tile does,
-    // same shared pane — outranks Supervisor so nothing here is
-    // Supervisor-only.
-    '<div class="action-tile" onclick="whMgrOpenPane(\'roster\')">' +
-      '<span class="tile-icon">👥</span><div class="tile-label">Warehouse Roster</div><div class="tile-sub" id="wh-tile-roster-sub">Check in/out · today\'s crew</div>' +
     '</div>';
   whUpdateApprovalsTile();
   whUpdateCartTile();
@@ -18646,11 +18656,12 @@ function whBuildRosterPane() {
   loadWhRoster();
 }
 
-async function adminUploadWarehouseRoster() {
-  const f = document.getElementById('wh-roster-file').files[0];
-  const st = document.getElementById('wh-roster-upload-status');
+async function adminUploadWarehouseRoster(prefix) {
+  prefix = prefix || 'wh-roster';
+  const f = document.getElementById(prefix + '-file').files[0];
+  const st = document.getElementById(prefix + '-upload-status');
   if (!f) return toast('Pick the roster CSV first', 'error');
-  await withLock(document.getElementById('wh-roster-upload-btn'), 'Uploading…', async () => {
+  await withLock(document.getElementById(prefix + '-upload-btn'), 'Uploading…', async () => {
     st.style.color = '';
     st.textContent = 'Reading roster file…';
     const rows = parseCSV(await f.text());
@@ -18712,10 +18723,15 @@ async function adminUploadWarehouseRoster() {
     if (res._err) { st.style.color = '#DC2626'; st.textContent = '⚠️ Upload failed partway — try again.'; return; }
     st.style.color = '';
     st.textContent = '✅ ' + parsed.length + ' warehouse staff loaded for ' + eventDate;
-    document.getElementById('wh-roster-file').value = '';
-    const dateEl = document.getElementById('wh-roster-date');
-    if (dateEl) dateEl.value = eventDate;
-    loadWhRoster();
+    f.value = '';
+    // The Admin screen's card has no date picker or list of its own — it's
+    // just an alternate upload entry point into the same table the
+    // Warehouse Manager/Supervisor "My Team" screen reads from.
+    if (prefix === 'wh-roster') {
+      const dateEl = document.getElementById('wh-roster-date');
+      if (dateEl) dateEl.value = eventDate;
+      loadWhRoster();
+    }
   });
 }
 
@@ -18736,6 +18752,7 @@ async function loadWhRoster() {
   if (!attRows._err && Array.isArray(attRows)) attRows.forEach(a => { attByEmp[a.employee_id] = a; }); // asc order — last write per person wins
   state._whRosterFlat = rosterRows.map(r => ({
     empId: r.employee_id, name: r.name, role: r.role, phone: r.phone,
+    startTime: r.start_time, endTime: r.end_time,
     status: (attByEmp[r.employee_id] || {}).status || 'not_arrived'
   }));
   renderWhRosterList();
@@ -18760,7 +18777,7 @@ function renderWhRosterList() {
     return '<div class="prem-row">' +
       '<div class="prem-row-info">' +
         '<div class="prem-row-name">' + escapeHtml(w.name) + (w.role ? ' <span style="font-weight:400;color:var(--text-2);font-size:11px">· ' + escapeHtml(w.role) + '</span>' : '') + '</div>' +
-        '<div class="prem-row-meta">' + (isIn ? (w.status === 'break' ? 'On break' : 'Working') : isAbsent ? 'Marked absent' : 'Not checked in yet') + '</div>' +
+        '<div class="prem-row-meta">' + (isIn ? (w.status === 'break' ? 'On break' : 'Working') : isAbsent ? 'Marked absent' : 'Not checked in yet') + ((w.startTime || w.endTime) ? ' · Scheduled ' + escapeHtml(w.startTime || '?') + '–' + escapeHtml(w.endTime || '?') : '') + '</div>' +
       '</div>' +
       '<div class="prem-row-actions">' +
         '<button class="prem-status-btn p' + (isIn ? ' on' : '') + '" onclick="whRosterCheckIn(' + idx + ')" aria-label="Check in">✓</button>' +
