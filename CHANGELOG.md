@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-29-cart-return-ui-1
+Found by the user testing the previous golf cart build on a phone.
+- **"Check out" is gone from the golf cart flow — it read like attendance's Check out.** The cart now says **take** and **return**: "✓ All good — take Key 1", "Submit inspection & take the key", "🟡 You have this — tap to return", "🔴 In use", "Key 1 is yours — collect it from your Manager or the Warehouse Manager".
+- **The return buttons now look and work like buttons.** They were outlined/notice-style (read as text, and the options appeared off-screen below the keys, so tapping "Return Key" seemed to do nothing). The return block now sits **above** the keys with solid colored buttons: 🔑 Return Key N (red), ✓ No problems — return key (green), ⚠️ Report an issue (orange), and it scrolls the options into view.
+- **Tapping the tile of the key you're holding now starts the return** (it looked tappable but did nothing). Other people's keys say "In use" and are visibly not tappable.
+- **Returning always asks first**, with "return" wording (not "drop key"): "Return Key N? — Hand the key back to your Manager or the Warehouse Manager. [Not yet] [Yes, return key]"; reporting an issue asks "Report the issue and return Key N?". After it goes through you're taken back to your home screen with a "✅ Key N returned — thank you!" notice.
+- **The full first-of-the-day inspection is no longer 12 separate taps:** a green **✓ Mark all 12 OK** button at the top ticks everything, then tap Issue on anything that isn't right.
+- Tested in a headless browser (18 new checks + the earlier 17 + 14 + 8, all passing).
+
 ## 2026-09-29-cart-no-hold-1
 - **Golf cart: nobody is held on the cart page anymore, per direct request — drivers have warehouse work to do.** Checking out a key (from either the quick check or the full inspection) now sends the person straight back to their own home screen (the warehouse page for warehouse staff) the instant the key is checked out. The "collect your key from your Manager or the Warehouse Manager" reminder stays up for 8 seconds as a notice on the home screen instead of a separate confirmation page. (It used to show a confirmation page for ~3.5 s first.) Returning a key already went straight back and still does. Only a reported problem keeps you on the key board, since you then need to pick a different cart.
 

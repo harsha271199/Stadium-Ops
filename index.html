@@ -2314,27 +2314,34 @@
 
     <!-- STEP 3: Key selection board (verified drivers) -->
     <div id="gc-keys-section" style="display:none">
-      <div class="notice info" style="margin-bottom:12px;font-size:12px">🔑 Tap an available key to check it out. Keys are held by the Warehouse Manager.</div>
-      <div id="gc-keys-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px"></div>
-      <div id="gc-return-section" style="display:none">
-        <div style="height:1px;background:var(--border);margin:8px 0 16px"></div>
-        <div class="notice warning" style="margin-bottom:12px;font-size:12px">⚠️ You currently have a key checked out. Return it below.</div>
-        <button class="btn btn-ghost" id="gc-return-btn" onclick="gcShowReturnOptions()" style="width:100%;border-color:#DC2626;color:#DC2626">🔑 Return my key</button>
-        <div id="gc-return-options" style="display:none;margin-top:12px">
-          <div style="font-size:12px;color:var(--text-2);margin-bottom:10px">Any issues with the cart before you drop the key off?</div>
-          <button class="btn btn-primary" onclick="gcSubmitReturn(false)" style="width:100%;margin-bottom:8px">✅ No issues — drop key, done</button>
-          <button class="btn btn-ghost" onclick="gcShowReturnIssueBox()" style="width:100%;border-color:#DC2626;color:#DC2626">⚠️ Report an issue</button>
-          <div id="gc-return-issue-box" style="display:none;margin-top:10px">
-            <textarea class="form-input" id="gc-return-issue-text" rows="2" placeholder="Describe the issue"></textarea>
-            <button class="btn btn-primary" onclick="gcSubmitReturn(true)" style="width:100%;margin-top:8px">Submit &amp; take cart out of service →</button>
+      <div class="notice info" style="margin-bottom:12px;font-size:12px">🔑 Tap an available key to take it. Keys are held by the Warehouse Manager.</div>
+      <!-- Return block sits ABOVE the keys so it is the first thing you see when
+           you are holding a key. Solid coloured buttons (not outlined/notice-style),
+           because outlined ones read as text and people weren't tapping them. -->
+      <div id="gc-return-section" style="display:none;margin-bottom:16px">
+        <div style="background:#FFF7E6;border:2px solid #D97706;border-radius:14px;padding:14px">
+          <div id="gc-return-title" style="font-weight:800;font-size:16px;color:#92400E">You have a key</div>
+          <div style="font-size:12px;color:#92400E;margin:2px 0 12px">Done with the cart? Return the key here.</div>
+          <button id="gc-return-btn" onclick="gcShowReturnOptions()" style="display:block;width:100%;min-height:54px;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:800;color:#fff;cursor:pointer;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);background:#B91C1C">🔑 Return Key</button>
+          <div id="gc-return-options" style="display:none;margin-top:14px">
+            <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text-1)">Any problem with the cart?</div>
+            <button id="gc-return-ok-btn" onclick="gcSubmitReturn(false)" style="display:block;width:100%;min-height:54px;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:800;color:#fff;cursor:pointer;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);background:#00A651;margin-bottom:10px">✓ No problems — return key</button>
+            <button onclick="gcShowReturnIssueBox()" style="display:block;width:100%;min-height:54px;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:800;color:#fff;cursor:pointer;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);background:#D97706">⚠️ Report an issue</button>
+            <div id="gc-return-issue-box" style="display:none;margin-top:10px">
+              <textarea class="form-input" id="gc-return-issue-text" rows="3" placeholder="Describe the issue" style="font-size:16px;line-height:1.4;min-height:96px;color:var(--text-1);background:var(--bg-elevated);border:2px solid var(--border)"></textarea>
+              <button onclick="gcSubmitReturn(true)" style="display:block;width:100%;min-height:54px;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:800;color:#fff;cursor:pointer;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);background:#B91C1C;margin-top:8px">Report issue &amp; return key</button>
+            </div>
           </div>
         </div>
       </div>
+      <div id="gc-keys-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px"></div>
     </div>
 
     <!-- STEP 3b: Daily Pre-Use Inspection — once per cart per day, before checkout -->
     <div id="gc-inspect-section" style="display:none">
       <div class="notice info" style="margin-bottom:12px;font-size:12px">🧰 Pre-Use Inspection — Cart <span id="gc-inspect-cartid"></span>, today. This is the full check — done by the first driver on this cart each day. Everyone after that only does a 5-second quick check. Form OS-07a-03.</div>
+      <button onclick="gcInspectAllOk()" style="display:block;width:100%;min-height:54px;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:800;color:#fff;cursor:pointer;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);background:#00A651;margin-bottom:6px">✓ Mark all 12 OK</button>
+      <div style="font-size:12px;color:var(--text-2);margin:0 2px 12px;text-align:center">Then tap <b>Issue</b> on anything that isn't right.</div>
       <div id="gc-inspect-items"></div>
       <label class="form-label" id="gc-inspect-comments-label" style="margin-top:12px">Comments (required if anything is flagged)</label>
       <!-- 16px+ text and a solid border: the old small textarea was hard to see
@@ -2342,7 +2349,7 @@
            view on focus (see gcInspectFocus). -->
       <textarea class="form-input" id="gc-inspect-comments" rows="4" placeholder="Describe any issue found" onfocus="gcInspectFocus()" style="font-size:16px;line-height:1.4;min-height:110px;color:var(--text-1);background:var(--bg-elevated);border:2px solid var(--border)"></textarea>
       <div style="font-size:12px;color:var(--text-2);margin-top:12px;line-height:1.4">By tapping the button below you confirm you will operate this cart safely per the Aramark Cart Safety Rules.</div>
-      <button class="btn btn-primary" id="gc-inspect-submit-btn" onclick="gcSubmitInspection()" style="margin-top:10px">Submit inspection &amp; check out →</button>
+      <button class="btn btn-primary" id="gc-inspect-submit-btn" onclick="gcSubmitInspection()" style="margin-top:10px">Submit inspection &amp; take the key →</button>
       <button class="btn btn-ghost" onclick="gcShowKeys()" style="margin-top:8px">← Back to keys</button>
     </div>
 
@@ -2359,8 +2366,8 @@
         <span style="background:var(--bg-elevated);border:1.5px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:600">🔧 No damage or leaks</span>
       </div>
       <div id="gc-quick-good-box">
-        <button class="btn btn-primary" id="gc-quick-allgood-btn" onclick="gcQuickAllGood()" style="font-size:18px;padding:18px">✓ All good — check out</button>
-        <div style="font-size:11px;color:var(--text-2);margin:8px 2px 14px;text-align:center;line-height:1.4">Looks fine to drive? By checking out you confirm you will operate this cart safely per the Aramark Cart Safety Rules.</div>
+        <button class="btn btn-primary" id="gc-quick-allgood-btn" onclick="gcQuickAllGood()" style="font-size:18px;padding:18px">✓ All good — take this cart</button>
+        <div style="font-size:11px;color:var(--text-2);margin:8px 2px 14px;text-align:center;line-height:1.4">Looks fine to drive? By taking the cart you confirm you will operate this cart safely per the Aramark Cart Safety Rules.</div>
         <button class="btn btn-ghost" onclick="gcQuickShowIssue()" style="border-color:#DC2626;color:#DC2626">⚠️ Something's wrong</button>
       </div>
       <div id="gc-quick-issue-box" style="display:none">
@@ -2382,7 +2389,7 @@
     <div id="gc-confirm-section" style="display:none">
       <div style="text-align:center;padding:30px 20px">
         <div style="font-size:48px;margin-bottom:12px">✅</div>
-        <div style="font-size:20px;font-weight:700;margin-bottom:8px">Key Checked Out</div>
+        <div style="font-size:20px;font-weight:700;margin-bottom:8px">Key is yours</div>
         <div id="gc-confirm-msg" style="font-size:14px;color:var(--text-2);margin-bottom:24px"></div>
         <div class="notice warning" style="text-align:left;font-size:13px">Collect your key from your Manager or the Warehouse Manager.</div>
         <div style="font-size:12px;color:var(--text-2);margin-top:14px">Taking you back to your home screen…</div>
@@ -3277,7 +3284,7 @@
           <span id="adm-drv-chevron" style="font-size:18px;color:var(--text-2)">▸</span>
         </div>
         <div id="adm-drv-body" style="display:none;margin-top:10px">
-          <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Only people on this list can check out cart keys.</div>
+          <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Only people on this list can take cart keys.</div>
           <div id="adm-drv-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>
         </div>
       </div>
@@ -3780,7 +3787,7 @@
            actual drivers. Employee's screen stays deliberately simple (one
            list + one main action), so this is a plain secondary button,
            not a tile — same weight as Quick Drop above it. -->
-      <button class="btn btn-ghost" onclick="goGolfCart()" style="width:100%;margin-bottom:12px"><svg width="15" height="14" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Golf Cart — check out / return a key</button>
+      <button class="btn btn-ghost" onclick="goGolfCart()" style="width:100%;margin-bottom:12px"><svg width="15" height="14" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Golf Cart — take / return a key</button>
       <div id="wh-todeliver-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
     </div>
 
@@ -4172,7 +4179,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-cart-no-hold-1';
+const BUILD_TAG = '2026-09-29-cart-return-ui-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15940,7 +15947,7 @@ async function gcSubmitPolicyOnly() {
     document.getElementById('gc-ft-policy').style.display = 'none';
     document.getElementById('gc-ft-done').style.display = '';
     document.getElementById('gc-sub').textContent = 'Verified ✅';
-    toast('✅ Policy acknowledged — you can now check out keys');
+    toast('✅ Policy acknowledged — you can now take keys');
   });
 }
 
@@ -16029,7 +16036,7 @@ async function gcSubmitVerification() {
     document.getElementById('gc-ft-done').style.display = '';
     gcSetStep(3);
     document.getElementById('gc-sub').textContent = 'Verified ✅';
-    toast('✅ Verification complete — you can now check out keys');
+    toast('✅ Verification complete — you can now take keys');
   });
 }
 
@@ -16067,6 +16074,12 @@ async function gcShowKeys() {
   if (myKey) {
     document.getElementById('gc-return-btn').textContent = '🔑 Return Key ' + myKey.key_number;
     document.getElementById('gc-return-btn').dataset.key = myKey.key_number;
+    document.getElementById('gc-return-title').textContent = 'You have Key ' + myKey.key_number;
+    document.getElementById('gc-return-ok-btn').textContent = '✓ No problems — return Key ' + myKey.key_number;
+    // Fresh state each time the board is shown.
+    document.getElementById('gc-return-options').style.display = 'none';
+    document.getElementById('gc-return-issue-box').style.display = 'none';
+    document.getElementById('gc-return-issue-text').value = '';
   }
 
   document.getElementById('gc-keys-grid').innerHTML = rows.map(r => {
@@ -16075,14 +16088,16 @@ async function gcShowKeys() {
     const mine = String(r.checked_out_by_id) === String(_gcUser.empId);
     const bg = avail ? '#DCFCE7' : flagged ? '#FEE2E2' : mine ? '#FEF3C7' : '#FEE2E2';
     const border = avail ? '#00A651' : flagged ? '#DC2626' : mine ? '#D97706' : '#DC2626';
-    const label = avail ? '✅ Available' : flagged ? '🚫 Out of service' : mine ? '🟡 You have this' : '🔴 Checked out';
+    const label = avail ? '✅ Available' : flagged ? '🚫 Out of service' : mine ? '🟡 You have this — tap to return' : '🔴 In use';
     const who = !avail && !mine ? (r.checked_out_by_name || 'Someone else') : '';
     const when = r.checked_out_at ? new Date(r.checked_out_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
     const insp = inspMap[r.key_number];
     const inspBadge = avail
       ? (insp ? '<div style="font-size:10px;color:#00A651;margin-top:4px">✓ Inspected today · 5-sec check</div>' : '<div style="font-size:10px;color:#D97706;margin-top:4px">First use today · full inspection</div>')
       : '';
-    return `<div onclick="${avail ? 'gcSelectKey('+r.key_number+')' : ''}" style="background:${bg};border:2px solid ${border};border-radius:12px;padding:16px;text-align:center;cursor:${avail?'pointer':'default'};transition:transform 0.1s" ${avail?'onmousedown="this.style.transform=\'scale(0.96)\'" onmouseup="this.style.transform=\'scale(1)\'"':''}>
+    const tap = avail ? 'gcSelectKey('+r.key_number+')' : (mine ? 'gcTapMyKey()' : '');
+    const clickable = avail || mine;
+    return `<div onclick="${tap}" style="background:${bg};border:2px solid ${border};border-radius:12px;padding:16px;text-align:center;cursor:${clickable?'pointer':'default'};${clickable?'':'opacity:.8;'}transition:transform 0.1s" ${avail?'onmousedown="this.style.transform=\'scale(0.96)\'" onmouseup="this.style.transform=\'scale(1)\'"':''}>
       <div style="font-size:28px;font-weight:800;color:${border};margin-bottom:4px">Key ${r.key_number}</div>
       <div style="font-size:12px;font-weight:600;color:${border}">${label}</div>
       ${who ? `<div style="font-size:11px;color:#6B7280;margin-top:4px">${who}</div>` : ''}
@@ -16115,6 +16130,7 @@ async function gcShowQuickCheck(keyNum) {
   document.getElementById('gc-quick-section').style.display = '';
   document.getElementById('gc-sub').textContent = 'Quick check — Key ' + keyNum;
   document.getElementById('gc-quick-keynum').textContent = keyNum;
+  document.getElementById('gc-quick-allgood-btn').textContent = '✓ All good — take Key ' + keyNum;
   document.getElementById('gc-quick-good-box').style.display = '';
   document.getElementById('gc-quick-issue-box').style.display = 'none';
   document.getElementById('gc-quick-comments').value = '';
@@ -16131,7 +16147,7 @@ async function gcShowQuickCheck(keyNum) {
 async function gcQuickAllGood() {
   const keyNum = _gcSelectedKey;
   let saved = false;
-  await withLock(document.getElementById('gc-quick-allgood-btn'), 'Checking out…', async () => {
+  await withLock(document.getElementById('gc-quick-allgood-btn'), 'Getting your key…', async () => {
     // Recorded like the full inspection so there is a who/when trail for every pick-up.
     const r = await sb('cart_inspections', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({
       cart_id: keyNum, inspection_date: localISODate(), results: { _type:'quick', 'Brakes':'Done', 'Tires / steering':'Done', 'Damage / leaks':'Done' }, comments: '',
@@ -16301,7 +16317,7 @@ function gcAutoHome(ms) {
 
 async function gcSubmitCheckout() {
   gcHideAll();
-  document.getElementById('gc-sub').textContent = 'Checking out Key ' + _gcSelectedKey + '…';
+  document.getElementById('gc-sub').textContent = 'Getting Key ' + _gcSelectedKey + '…';
   const now = new Date().toISOString();
   // Guarded: only checks out if the key is still 'available' at write time.
   // Previously this was unconditional — two drivers tapping the same key within
@@ -16318,7 +16334,7 @@ async function gcSubmitCheckout() {
   // Per direct request: don't hold anyone on this page — they have warehouse
   // work to do. Straight back to their own home screen the moment the key is
   // checked out; the "collect your key" reminder stays up as a notice instead.
-  toast('🔑 Key ' + _gcSelectedKey + ' checked out — collect it from your Manager or the Warehouse Manager', 'success', 8000);
+  toast('🔑 Key ' + _gcSelectedKey + ' is yours — collect it from your Manager or the Warehouse Manager', 'success', 8000);
   gcGoHome();
 }
 
@@ -16332,10 +16348,23 @@ async function gcSubmitCheckout() {
 // approve. Only a reported issue actually blocks the cart and needs a
 // manager's attention before it goes back into the rotation.
 function gcShowReturnOptions() {
-  document.getElementById('gc-return-options').style.display = 'block';
+  const o = document.getElementById('gc-return-options');
+  o.style.display = 'block';
+  setTimeout(() => o.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+}
+// Tapping the tile of the key you are holding starts the return — it used to
+// look tappable but do nothing.
+function gcTapMyKey() {
+  const sec = document.getElementById('gc-return-section');
+  if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  gcShowReturnOptions();
+}
+function gcInspectAllOk() {
+  document.querySelectorAll('#gc-inspect-items .check-opt[data-val="Done"]').forEach(b => selCheck(b));
 }
 function gcShowReturnIssueBox() {
   document.getElementById('gc-return-issue-box').style.display = 'block';
+  setTimeout(() => { const t = document.getElementById('gc-return-issue-text'); if (t) { t.scrollIntoView({ behavior: 'smooth', block: 'center' }); t.focus(); } }, 80);
 }
 
 function notifyCartManagers(title, body) {
@@ -16358,12 +16387,12 @@ async function gcSubmitReturn(hasIssue) {
     issueText = document.getElementById('gc-return-issue-text').value.trim();
     if (!issueText) return toast('Describe the issue before submitting', 'error');
   }
-  const confirmMsg = hasIssue
-    ? 'Report this issue and take Key ' + keyNum + ' out of service until a manager reviews it?'
-    : 'It becomes available for the next person right away.';
-  // A clean return is already a deliberate tap on "No issues — drop key, done",
-  // so no extra confirm; only reporting an issue asks first.
-  if (hasIssue && !(await confirmAction(confirmMsg, { title: 'Report issue — Key ' + keyNum, confirmLabel: 'Report & take out of service', danger: true }))) return;
+  // Always ask before returning (per direct request) — the clean path used to
+  // fire straight away with no question at all.
+  const okReturn = await confirmAction(
+    hasIssue ? 'Key ' + keyNum + ' will be taken out of service until a manager checks the cart.' : 'Hand the key back to your Manager or the Warehouse Manager.',
+    { title: hasIssue ? 'Report the issue and return Key ' + keyNum + '?' : 'Return Key ' + keyNum + '?', confirmLabel: hasIssue ? 'Report & return key' : 'Yes, return key', cancelLabel: 'Not yet', danger: !!hasIssue });
+  if (!okReturn) return;
 
   let returned = false;
   await withLock(document.getElementById('gc-return-btn'), 'Returning…', async () => {
@@ -16375,7 +16404,7 @@ async function gcSubmitReturn(hasIssue) {
         body: JSON.stringify({ status:'flagged', updated_at:new Date().toISOString() }) });
       await sb('cart_log', { method:'POST', headers:{Prefer:'return=minimal'},
         body: JSON.stringify({ key_number:keyNum, employee_id:_gcUser.empId, employee_name:_gcUser.name, action:'return_requested', notes:issueText }) });
-      toast('⚠️ Issue reported — this cart is out of service until a manager reviews it', 'error');
+      toast('⚠️ Issue reported — Key ' + keyNum + ' returned and out of service until a manager reviews it', 'error', 7000);
       notifyCartManagers('🚫 Key ' + keyNum + ' returned with an issue', issueText + ' — reported by ' + _gcUser.name);
     } else {
       // No issue — free the key immediately, no manager action required.
@@ -16383,12 +16412,12 @@ async function gcSubmitReturn(hasIssue) {
         body: JSON.stringify({ status:'available', checked_out_by_id:null, checked_out_by_name:null, checked_out_at:null, policy_accepted_at:null, updated_at:new Date().toISOString() }) });
       await sb('cart_log', { method:'POST', headers:{Prefer:'return=minimal'},
         body: JSON.stringify({ key_number:keyNum, employee_id:_gcUser.empId, employee_name:_gcUser.name, action:'return_confirmed', notes:'Auto-confirmed — no issues reported' }) });
-      toast('✅ Key ' + keyNum + ' returned — available for the next person');
+      toast('✅ Key ' + keyNum + ' returned — thank you!', 'success', 6000);
       notifyCartManagers('🔑 Key ' + keyNum + ' returned', 'No issues reported — by ' + _gcUser.name);
     }
     returned = true;
   });
-  // Done — straight back to the person's home screen, no extra taps.
+  // Done — back to the person's home screen (they have warehouse work to do).
   if (returned) gcGoHome();
 }
 
@@ -16497,7 +16526,7 @@ async function loadCartLog() {
   el.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:8px">FULL LOG (last 50)</div>' +
     rows.map(r => {
       const icon = r.action==='checkout'?'🔑':r.action==='return_requested'?'↩️':'✅';
-      const label = r.action==='checkout'?'Checked out':r.action==='return_requested'?'Return requested':'Return confirmed';
+      const label = r.action==='checkout'?'Took key':r.action==='return_requested'?'Return requested':'Return confirmed';
       return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
         <div style="font-size:20px">${icon}</div>
         <div>
@@ -18683,7 +18712,7 @@ function renderWarehouseForRole() {
       // return screen, no driver list, no Cart Duty, no flagged-cart
       // review — all of that is Manager-only now.
       '<div class="action-tile" onclick="goGolfCart()">' +
-        '<span class="tile-icon"><svg width="32" height="30" style="vertical-align:-6px"><use href="#gc-icon"/></svg></span><div class="tile-label">Golf Cart</div><div class="tile-sub">Check out or return a key</div>' +
+        '<span class="tile-icon"><svg width="32" height="30" style="vertical-align:-6px"><use href="#gc-icon"/></svg></span><div class="tile-label">Golf Cart</div><div class="tile-sub">Take or return a key</div>' +
       '</div>';
       // Real change, per direct correction: Stand Transfer Report removed
       // from Supervisor — Manager only, no exceptions.
@@ -18785,7 +18814,7 @@ function whBuildCartPane() {
     cartContainer.innerHTML =
       '<div style="max-width:480px">' +
         '<div id="wh-cart-returns" style="margin-bottom:14px"></div>' +
-        '<button class="btn btn-ghost" onclick="goGolfCart()" style="width:100%;margin-bottom:14px"><svg width="15" height="14" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Check out / return a key yourself</button>' +
+        '<button class="btn btn-ghost" onclick="goGolfCart()" style="width:100%;margin-bottom:14px"><svg width="15" height="14" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Take / return a key yourself</button>' +
         '<div class="card" style="padding:14px;margin-bottom:14px">' +
           '<div style="font-weight:700;font-size:14px;margin-bottom:2px">' +
             '<svg width="15" height="14" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Cart Duty — Today</div>' +
@@ -18798,7 +18827,7 @@ function whBuildCartPane() {
           '<input class="form-input" type="text" id="wh-adm-drv-name" placeholder="Full name">' +
           '<button class="btn btn-primary" onclick="adminAddDriver()" style="margin-top:6px">Add driver →</button>' +
         '</div>' +
-        '<div class="notice info" style="font-size:12px"><svg width="13" height="12" style="vertical-align:-1px"><use href="#gc-icon"/></svg> Only people on this list can check out cart keys.</div>' +
+        '<div class="notice info" style="font-size:12px"><svg width="13" height="12" style="vertical-align:-1px"><use href="#gc-icon"/></svg> Only people on this list can take cart keys.</div>' +
         '<div id="wh-adm-drv-list" style="margin-top:10px"><div class="loading"><div class="spinner"></div>Loading...</div></div>' +
       '</div>';
     loadWhCartReturns();
