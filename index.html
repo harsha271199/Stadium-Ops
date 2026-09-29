@@ -3768,6 +3768,9 @@
     <!-- MODE 4: GOLF CART (warehouse manager only) -->
     <div id="wh-mode-cart" style="display:none"></div>
 
+    <!-- MODE 5: WAREHOUSE ROSTER — daily crew check-in/out (manager + supervisor) -->
+    <div id="wh-mode-roster" style="display:none"></div>
+
     <!-- MODE 2: STOCK COUNT (digital counting clipboard) -->
     <div id="wh-mode-count" style="display:none">
       <div class="notice info" style="font-size:12px;margin-bottom:12px">📋 Count stock as you fill each stand. Saved counts become the stand's opening inventory — no more paper.</div>
@@ -4117,7 +4120,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-zonestands-coverage-fix-1';
+const BUILD_TAG = '2026-09-29-wh-roster-cart-monitor-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -11231,7 +11234,7 @@ function whHubTransferGo() {
 // panes and load functions the Employee/Supervisor tab-bar uses, just
 // with a "back to menu" affordance instead of a visible tab strip, since
 // the manager's tab-bar is hidden entirely (see renderWarehouseForRole).
-const WH_MGR_PANE_TITLES = { transfers: '🚚 All Transfers', requests: '📥 Requests', inventory: '📄 Stand Transfer Report', cart: '⛳ Golf Cart' };
+const WH_MGR_PANE_TITLES = { transfers: '🚚 All Transfers', requests: '📥 Requests', inventory: '📄 Stand Transfer Report', cart: '⛳ Golf Cart', roster: '👥 Warehouse Roster' };
 function whMgrOpenPane(mode) {
   const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
   const panesWrap = document.getElementById('wh-panes-wrap');
@@ -13013,6 +13016,8 @@ async function adminToggleNpo(id, active) {
 function isWhCartAdmin() { return !!(state.staffAccount && ['warehouse_manager', 'warehouse_supervisor'].includes(state.staffAccount.role)); }
 async function adminLoadDrivers() {
   const isWhMgr = isWhCartAdmin();
+  const isRealMgr = state.staffAccount && state.staffAccount.role === 'warehouse_manager';
+  const myEmpId = state.staffAccount && state.staffAccount.empId;
   const el = document.getElementById(isWhMgr ? 'wh-adm-drv-list' : 'adm-drv-list');
   const rows = await sb('cart_drivers?order=name.asc&select=*');
   const summary = document.getElementById('adm-drv-summary'); // only exists on the plain-manager Admin screen
@@ -13022,13 +13027,55 @@ async function adminLoadDrivers() {
   }
   const activeCount = rows.filter(d => d.is_active).length;
   if (summary) summary.textContent = rows.length + ' driver' + (rows.length===1?'':'s') + (activeCount < rows.length ? ' · ' + activeCount + ' active' : '') + ' — tap to view';
-  if (!rows.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:6px 0">No approved drivers yet.</div>'; return; }
-  el.innerHTML = rows.map(dr =>
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)' + (dr.is_active ? '' : ';opacity:0.5') + '">' +
-      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">' + dr.name + (dr.is_active ? '' : ' (revoked)') + '</div>' +
-      '<div style="font-size:11px;color:var(--text-2)">ID ' + dr.employee_id + '</div></div>' +
-      '<button class="btn btn-ghost" onclick="adminToggleDriver(' + dr.id + ',' + (!dr.is_active) + ')" style="width:auto;padding:6px 10px;font-size:11px;flex-shrink:0' + (dr.is_active ? ';border-color:#DC2626;color:#DC2626' : '') + '">' + (dr.is_active ? 'Revoke' : 'Re-approve') + '</button>' +
-    '</div>').join('');
+  if (!rows.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:6px 0">No approved drivers yet.</div>'; }
+  else {
+    // Real change, per direct request: a plain-manager Admin session and
+    // the Warehouse Manager can still manage anyone. Warehouse Supervisor
+    // is monitor-only now — sees the same list, but the toggle button only
+    // renders on their own row (self-request/self-revoke), never on
+    // someone else's.
+    const canManageOthers = !isWhMgr || isRealMgr;
+    el.innerHTML = rows.map(dr => {
+      const isSelf = isWhMgr && !isRealMgr && String(dr.employee_id) === String(myEmpId);
+      const showToggle = canManageOthers || isSelf;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)' + (dr.is_active ? '' : ';opacity:0.5') + '">' +
+        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">' + dr.name + (dr.is_active ? '' : ' (revoked)') + '</div>' +
+        '<div style="font-size:11px;color:var(--text-2)">ID ' + dr.employee_id + '</div></div>' +
+        (showToggle ? '<button class="btn btn-ghost" onclick="adminToggleDriver(' + dr.id + ',' + (!dr.is_active) + ')" style="width:auto;padding:6px 10px;font-size:11px;flex-shrink:0' + (dr.is_active ? ';border-color:#DC2626;color:#DC2626' : '') + '">' + (dr.is_active ? 'Revoke' : 'Re-approve') + '</button>' : '') +
+      '</div>';
+    }).join('');
+  }
+  if (isWhMgr && !isRealMgr) whCartSelfServiceRender(rows);
+}
+// Supervisor-only: request/self-approve their own cart access. Notifies
+// every warehouse manager/supervisor + the stand manager either way, so
+// nobody's surprised who's driving.
+function whCartSelfServiceRender(allDrivers) {
+  const el = document.getElementById('wh-cart-self-service');
+  if (!el) return;
+  const myEmpId = state.staffAccount && state.staffAccount.empId;
+  const mine = (allDrivers || []).find(d => String(d.employee_id) === String(myEmpId));
+  if (mine && mine.is_active) {
+    el.innerHTML = '<div class="card" style="padding:14px"><div style="font-weight:700;font-size:14px;margin-bottom:4px">✅ You have cart access</div><div style="font-size:11px;color:var(--text-2)">Approved by ' + escapeHtml(mine.added_by || '—') + '. <button class="btn btn-ghost" onclick="whSupSelfApproveCart(false)" style="width:auto;padding:5px 10px;font-size:11px;margin-top:6px;border-color:#DC2626;color:#DC2626">Give up my own access</button></div></div>';
+  } else {
+    el.innerHTML = '<div class="card" style="padding:14px"><div style="font-weight:700;font-size:14px;margin-bottom:6px"><svg width="14" height="13" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Request cart access</div><div style="font-size:11px;color:var(--text-2);margin-bottom:8px">As Supervisor, you can approve your own access — the Warehouse Manager is notified either way.</div><button class="btn btn-primary" onclick="whSupSelfApproveCart(true)">Approve myself as a driver →</button></div>';
+  }
+}
+async function whSupSelfApproveCart(approve) {
+  const empId = state.staffAccount && state.staffAccount.empId;
+  const name = state.staffAccount && state.staffAccount.name;
+  if (!empId || !name) return toast('Missing account info', 'error');
+  if (approve) {
+    const r = await sb('cart_drivers', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ employee_id:empId, name:name, added_by:name + ' (self, Supervisor)', is_active:true }) });
+    if (r._err) return toast('Could not save', 'error');
+    toast('✅ Cart access approved for yourself');
+    notifyCartManagers('🛺 Supervisor self-approved cart access', name + ' approved themself as a golf cart driver.');
+  } else {
+    await sb('cart_drivers?employee_id=eq.' + encodeURIComponent(empId), { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ is_active:false }) });
+    toast('Cart access removed');
+    notifyCartManagers('🛺 Supervisor gave up cart access', name + ' removed their own golf cart access.');
+  }
+  adminLoadDrivers();
 }
 async function adminAddDriver() {
   const isWhMgr = isWhCartAdmin();
@@ -18426,11 +18473,20 @@ function renderWarehouseForRole() {
       // Supervisor couldn't generate it too if Manager isn't around.
       '<div class="action-tile" onclick="whMgrOpenPane(\'inventory\')">' +
         '<span class="tile-icon">📄</span><div class="tile-label">Stand Transfer Report</div><div class="tile-sub">End-of-day, per stand</div>' +
+      '</div>' +
+      // Real feature, per direct request: Supervisor can't clock in 400+
+      // warehouse staff one at a time — same "leader checks their own
+      // people in" pattern as My Team, scoped to whoever's on today's
+      // uploaded warehouse roster, not the whole roster of every
+      // department.
+      '<div class="action-tile" onclick="whMgrOpenPane(\'roster\')">' +
+        '<span class="tile-icon">👥</span><div class="tile-label">Warehouse Roster</div><div class="tile-sub" id="wh-tile-roster-sub">Check in/out · today\'s crew</div>' +
       '</div>';
     whSupSyncTileBadges();
     whUpdateCartTile();
     whBuildCartPane();
     whBuildInventoryPane();
+    whBuildRosterPane();
     return;
   }
   if (!isWhMgr) return;
@@ -18471,12 +18527,19 @@ function renderWarehouseForRole() {
     '</div>' +
     '<div class="action-tile" onclick="showScreen(\'screen-wh-team\')">' +
       '<span class="tile-icon">👥</span><div class="tile-label">Assign & Team</div><div class="tile-sub">Who covers what today</div>' +
+    '</div>' +
+    // Manager gets everything Supervisor's Warehouse Roster tile does,
+    // same shared pane — outranks Supervisor so nothing here is
+    // Supervisor-only.
+    '<div class="action-tile" onclick="whMgrOpenPane(\'roster\')">' +
+      '<span class="tile-icon">👥</span><div class="tile-label">Warehouse Roster</div><div class="tile-sub" id="wh-tile-roster-sub">Check in/out · today\'s crew</div>' +
     '</div>';
   whUpdateApprovalsTile();
   whUpdateCartTile();
 
   whBuildInventoryPane();
   whBuildCartPane();
+  whBuildRosterPane();
 }
 // Was "Stock Report" (warehouse counts) with Stand Transfer Report tacked
 // on below it — dropped the counts half entirely (confirmed nobody
@@ -18512,6 +18575,13 @@ function whBuildInventoryPane() {
 function whBuildCartPane() {
   const cartContainer = document.getElementById('wh-mode-cart');
   if (cartContainer) {
+    // Real change, per direct request: Supervisor's cart access used to
+    // mirror Manager's exactly (approve/revoke anyone). Now it's monitor-only
+    // — Supervisor can see who has access and who holds a key, but the only
+    // driver record they can create or revoke is their own (self-request,
+    // self-approve, Manager notified either way). Manager keeps full
+    // authority over every driver, unchanged.
+    const isRealMgr = state.staffAccount && state.staffAccount.role === 'warehouse_manager';
     cartContainer.innerHTML =
       '<div style="max-width:480px">' +
         '<div id="wh-cart-returns" style="margin-bottom:14px"></div>' +
@@ -18527,13 +18597,16 @@ function whBuildCartPane() {
           '<div style="font-size:11px;color:var(--text-2);margin-bottom:8px">Mark who\'s actually on the cart right now. Separate from key checkout — this is your own record, not the driver\'s.</div>' +
           '<div id="wh-cart-duty-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>' +
         '</div>' +
-        '<div class="card" style="padding:14px;margin-bottom:14px">' +
-          '<div style="font-weight:700;font-size:14px;margin-bottom:8px">➕ Approve a driver</div>' +
-          '<input class="form-input" type="text" id="wh-adm-drv-id" placeholder="Employee ID (last 5 digits)" maxlength="5">' +
-          '<input class="form-input" type="text" id="wh-adm-drv-name" placeholder="Full name">' +
-          '<button class="btn btn-primary" onclick="adminAddDriver()" style="margin-top:6px">Add driver →</button>' +
-        '</div>' +
-        '<div class="notice info" style="font-size:12px"><svg width="13" height="12" style="vertical-align:-1px"><use href="#gc-icon"/></svg> Only people on this list can check out cart keys.</div>' +
+        (isRealMgr ?
+          '<div class="card" style="padding:14px;margin-bottom:14px">' +
+            '<div style="font-weight:700;font-size:14px;margin-bottom:8px">➕ Approve a driver</div>' +
+            '<input class="form-input" type="text" id="wh-adm-drv-id" placeholder="Employee ID (last 5 digits)" maxlength="5">' +
+            '<input class="form-input" type="text" id="wh-adm-drv-name" placeholder="Full name">' +
+            '<button class="btn btn-primary" onclick="adminAddDriver()" style="margin-top:6px">Add driver →</button>' +
+          '</div>'
+          : '<div id="wh-cart-self-service" style="margin-bottom:14px"></div>'
+        ) +
+        '<div class="notice info" style="font-size:12px"><svg width="13" height="12" style="vertical-align:-1px"><use href="#gc-icon"/></svg> Only people on this list can check out cart keys.' + (isRealMgr ? '' : ' You can monitor everyone here — approving or revoking someone else\'s access is the Warehouse Manager\'s call.') + '</div>' +
         '<div id="wh-adm-drv-list" style="margin-top:10px"><div class="loading"><div class="spinner"></div>Loading...</div></div>' +
       '</div>';
     loadWhCartReturns();
@@ -18541,6 +18614,213 @@ function whBuildCartPane() {
     loadWhCartDuty();
   }
 }
+// Warehouse Roster — daily crew check-in/out, per direct request: with
+// 400+ warehouse staff, Supervisor/Manager can't clock people in one at a
+// time from memory or hunt down individual employee IDs. Uploaded per-date
+// from the same ReadyOn-style roster export used for scheduling, scoped
+// ONLY to warehouse staff for that date — never the full building roster.
+// Same "leader checks their own people in, not self-report" pattern
+// already established by My Team/Team Control.
+function whBuildRosterPane() {
+  const el = document.getElementById('wh-mode-roster');
+  if (!el) return;
+  el.innerHTML =
+    '<div style="max-width:520px">' +
+      '<div class="card" style="padding:14px;margin-bottom:14px">' +
+        '<div style="font-weight:700;font-size:14px;margin-bottom:6px">📤 Upload today\'s warehouse roster</div>' +
+        '<div style="font-size:11px;color:var(--text-2);margin-bottom:8px">Same roster export used for scheduling. Uploading again for the same date replaces it — it never piles on top.</div>' +
+        '<input class="form-input" type="file" id="wh-roster-file" accept=".csv" style="margin:0 0 8px">' +
+        '<button class="btn btn-primary" id="wh-roster-upload-btn" onclick="adminUploadWarehouseRoster()">Upload roster CSV →</button>' +
+        '<div id="wh-roster-upload-status" style="font-size:12px;margin-top:6px"></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">' +
+        '<input class="form-input" type="date" id="wh-roster-date" style="margin:0;flex:1" onchange="loadWhRoster()">' +
+        '<button class="btn btn-ghost" onclick="document.getElementById(\'wh-roster-date\').value=localISODate();loadWhRoster()" style="width:auto;margin:0;padding:14px 16px;white-space:nowrap">Today</button>' +
+      '</div>' +
+      '<input class="form-input" type="text" id="wh-roster-search" placeholder="Search by name…" oninput="renderWhRosterList()" style="margin:0 0 10px">' +
+      '<div id="wh-roster-progress" style="font-size:12px;color:var(--text-2);margin-bottom:8px"></div>' +
+      '<div id="wh-roster-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>' +
+    '</div>';
+  const dateEl = document.getElementById('wh-roster-date');
+  if (dateEl && !dateEl.value) dateEl.value = localISODate();
+  loadWhRoster();
+}
+
+async function adminUploadWarehouseRoster() {
+  const f = document.getElementById('wh-roster-file').files[0];
+  const st = document.getElementById('wh-roster-upload-status');
+  if (!f) return toast('Pick the roster CSV first', 'error');
+  await withLock(document.getElementById('wh-roster-upload-btn'), 'Uploading…', async () => {
+    st.style.color = '';
+    st.textContent = 'Reading roster file…';
+    const rows = parseCSV(await f.text());
+    if (rows.length < 2) { st.style.color = '#DC2626'; st.textContent = '⚠️ File looks empty.'; return; }
+
+    // Metadata rows before the real header ("Date: 09/29/2026, Generated
+    // on:...") — find the row that actually has Date/Name/ID columns, same
+    // approach the ReadyOn schedule upload already uses.
+    let headerIdx = -1, col = null;
+    for (let hi = 0; hi < Math.min(rows.length, 12); hi++) {
+      const H = rows[hi].map(normHeader);
+      const c = {
+        date: pickCol(H, ['date']),
+        role: pickCol(H, ['role', 'position']),
+        name: pickCol(H, ['name', 'worker_name', 'employee_name']),
+        employee_id: pickCol(H, ['id', 'employee_id', 'emp_id']),
+        phone: pickCol(H, ['phone']),
+        work_schedule_type: pickCol(H, ['work_schedule_type', 'schedule_type', 'type']),
+        start_time: pickCol(H, ['start_time', 'start']),
+        end_time: pickCol(H, ['end_time', 'end'])
+      };
+      if (c.date >= 0 && c.name >= 0 && c.employee_id >= 0) { headerIdx = hi; col = c; break; }
+    }
+    if (headerIdx < 0) { st.style.color = '#DC2626'; st.textContent = '⚠️ Could not find Date, Name and ID columns.'; return; }
+
+    const get = (r, i) => i >= 0 ? String(r[i] || '').trim() : '';
+    // The roster export wraps its date as '="09/29/2026"' (an Excel
+    // text-forcing formula) — pull the MM/DD/YYYY out of that instead of
+    // assuming a plain date string.
+    const extractDate = (v) => {
+      const m = String(v || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      return m ? m[3] + '-' + m[1].padStart(2, '0') + '-' + m[2].padStart(2, '0') : '';
+    };
+
+    const dataRows = rows.slice(headerIdx + 1);
+    const parsed = [];
+    let eventDate = '';
+    dataRows.forEach(r => {
+      const d = extractDate(get(r, col.date));
+      if (!d) return;
+      if (!eventDate) eventDate = d;
+      const empId = get(r, col.employee_id);
+      const name = get(r, col.name);
+      if (!empId || !name) return;
+      parsed.push({
+        event_date: d, role: get(r, col.role), name: name, employee_id: empId,
+        phone: get(r, col.phone), work_schedule_type: get(r, col.work_schedule_type),
+        start_time: get(r, col.start_time), end_time: get(r, col.end_time)
+      });
+    });
+    if (!parsed.length) { st.style.color = '#DC2626'; st.textContent = '⚠️ No valid rows found.'; return; }
+
+    st.textContent = 'Replacing existing roster for ' + eventDate + '…';
+    // Delete-then-reinsert for that date, same established pattern as
+    // setZoneAssignment — a re-upload for the same date replaces what was
+    // there, it never piles on top.
+    await sb('warehouse_roster?event_date=eq.' + eventDate, { method: 'DELETE', headers: { Prefer: 'return=minimal' } }).catch(() => {});
+    const res = await sbBulkInsert('warehouse_roster', parsed, st);
+    if (res._err) { st.style.color = '#DC2626'; st.textContent = '⚠️ Upload failed partway — try again.'; return; }
+    st.style.color = '';
+    st.textContent = '✅ ' + parsed.length + ' warehouse staff loaded for ' + eventDate;
+    document.getElementById('wh-roster-file').value = '';
+    const dateEl = document.getElementById('wh-roster-date');
+    if (dateEl) dateEl.value = eventDate;
+    loadWhRoster();
+  });
+}
+
+async function loadWhRoster() {
+  const dateEl = document.getElementById('wh-roster-date');
+  const date = (dateEl && dateEl.value) || localISODate();
+  if (dateEl && !dateEl.value) dateEl.value = date;
+  const list = document.getElementById('wh-roster-list');
+  if (!list) return;
+  list.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+  const [rosterRows, attRows] = await Promise.all([
+    sb('warehouse_roster?event_date=eq.' + date + '&order=name.asc&select=*').catch(() => ({ _err: true })),
+    sb('attendance?entry_date=eq.' + date + '&stand=eq.Warehouse&order=updated_at.asc&select=*').catch(() => ({ _err: true }))
+  ]);
+  if (rosterRows._err) { list.innerHTML = '<div class="notice" style="font-size:11px;color:#DC2626">⚠️ ' + (rosterRows.status === 404 ? 'warehouse_roster table missing' : 'Could not load') + '</div>'; return; }
+  if (!rosterRows.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>No warehouse roster uploaded for ' + date + ' yet.</p></div>'; state._whRosterFlat = []; return; }
+  const attByEmp = {};
+  if (!attRows._err && Array.isArray(attRows)) attRows.forEach(a => { attByEmp[a.employee_id] = a; }); // asc order — last write per person wins
+  state._whRosterFlat = rosterRows.map(r => ({
+    empId: r.employee_id, name: r.name, role: r.role, phone: r.phone,
+    status: (attByEmp[r.employee_id] || {}).status || 'not_arrived'
+  }));
+  renderWhRosterList();
+}
+
+function renderWhRosterList() {
+  const list = document.getElementById('wh-roster-list');
+  const progress = document.getElementById('wh-roster-progress');
+  if (!list) return;
+  const all = state._whRosterFlat || [];
+  const q = (document.getElementById('wh-roster-search') || { value: '' }).value.toLowerCase().trim();
+  const rows = q ? all.filter(w => w.name.toLowerCase().indexOf(q) >= 0) : all;
+  if (progress) {
+    const working = all.filter(w => w.status === 'working' || w.status === 'break').length;
+    progress.textContent = working + ' of ' + all.length + ' checked in';
+  }
+  if (!rows.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>No match.</p></div>'; return; }
+  list.innerHTML = rows.map(w => {
+    const idx = all.indexOf(w);
+    const isIn = w.status === 'working' || w.status === 'break';
+    const isAbsent = w.status === 'absent';
+    return '<div class="prem-row">' +
+      '<div class="prem-row-info">' +
+        '<div class="prem-row-name">' + escapeHtml(w.name) + (w.role ? ' <span style="font-weight:400;color:var(--text-2);font-size:11px">· ' + escapeHtml(w.role) + '</span>' : '') + '</div>' +
+        '<div class="prem-row-meta">' + (isIn ? (w.status === 'break' ? 'On break' : 'Working') : isAbsent ? 'Marked absent' : 'Not checked in yet') + '</div>' +
+      '</div>' +
+      '<div class="prem-row-actions">' +
+        '<button class="prem-status-btn p' + (isIn ? ' on' : '') + '" onclick="whRosterCheckIn(' + idx + ')" aria-label="Check in">✓</button>' +
+        '<button class="prem-status-btn a' + (isAbsent ? ' on' : '') + '" onclick="whRosterMarkAbsent(' + idx + ')" aria-label="Mark absent">✕</button>' +
+        '<button class="prem-move-btn" onclick="whRosterToggleFb(' + idx + ')" aria-label="Feedback">⭐</button>' +
+      '</div>' +
+      '<div class="card" id="wh-roster-fb-' + idx + '" style="display:none;margin-top:6px;padding:10px">' +
+        '<button class="btn btn-ghost" onclick="whRosterFbRate(' + idx + ',\'good\')" id="wh-roster-fb-good-' + idx + '" style="width:auto;padding:6px 10px;font-size:12px;margin-right:6px">👍 Good</button>' +
+        '<button class="btn btn-ghost" onclick="whRosterFbRate(' + idx + ',\'needs_improvement\')" id="wh-roster-fb-bad-' + idx + '" style="width:auto;padding:6px 10px;font-size:12px">👎 Needs work</button>' +
+        '<input class="form-input" type="text" id="wh-roster-fb-note-' + idx + '" placeholder="Optional note" style="margin:8px 0 6px">' +
+        '<button class="btn btn-primary" onclick="whRosterSubmitFb(' + idx + ')" style="padding:8px">Save feedback</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function whRosterCheckIn(idx) {
+  const w = (state._whRosterFlat || [])[idx]; if (!w) return;
+  const prev = w.status;
+  w.status = 'working';
+  renderWhRosterList();
+  const who = getRequesterIdentity();
+  const r = await sb('attendance', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: 'Warehouse', status: 'working', notes: 'Checked in by ' + who.name }) }).catch(() => ({ _err: true }));
+  if (r && r._err) { w.status = prev; renderWhRosterList(); toast('Could not check in — try again', 'error'); }
+}
+async function whRosterMarkAbsent(idx) {
+  const w = (state._whRosterFlat || [])[idx]; if (!w) return;
+  const prev = w.status;
+  w.status = w.status === 'absent' ? 'not_arrived' : 'absent';
+  renderWhRosterList();
+  const who = getRequesterIdentity();
+  const r = await sb('attendance', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: 'Warehouse', status: w.status, notes: (w.status === 'absent' ? 'Marked absent by ' : 'Cleared absence by ') + who.name }) }).catch(() => ({ _err: true }));
+  if (r && r._err) { w.status = prev; renderWhRosterList(); toast('Could not save — try again', 'error'); }
+}
+function whRosterToggleFb(idx) {
+  const f = document.getElementById('wh-roster-fb-' + idx);
+  if (!f) return;
+  const open = f.style.display === 'none';
+  document.querySelectorAll('div[id^="wh-roster-fb-"]').forEach(el => { if (/^wh-roster-fb-\d+$/.test(el.id)) el.style.display = 'none'; });
+  state._whRosterFbRating = null;
+  if (open) { f.style.display = 'block'; state._whRosterFbOpen = idx; }
+  else { state._whRosterFbOpen = null; }
+}
+function whRosterFbRate(idx, rating) {
+  state._whRosterFbRating = rating;
+  document.getElementById('wh-roster-fb-good-' + idx).classList.toggle('selected', rating === 'good');
+  document.getElementById('wh-roster-fb-bad-' + idx).classList.toggle('selected', rating === 'needs_improvement');
+}
+async function whRosterSubmitFb(idx) {
+  const w = (state._whRosterFlat || [])[idx]; if (!w) return;
+  if (!state._whRosterFbRating) return toast('Pick 👍 or 👎 first', 'error');
+  const who = getRequesterIdentity();
+  const note = (document.getElementById('wh-roster-fb-note-' + idx) || { value: '' }).value.trim();
+  await withLock(evtBtn(), 'Sending…', async () => {
+    const res = await api('submitFeedback', { empId: w.empId, workerName: w.name, stand: 'Warehouse', givenBy: who.name, givenByRole: TIER_LABELS[who.tier] || who.tier, rating: state._whRosterFbRating, note });
+    if (res.ok) { toast('⭐ Feedback saved'); state._whRosterFbOpen = null; state._whRosterFbRating = null; renderWhRosterList(); }
+    else toast(res.error || 'Could not save feedback', 'error');
+  });
+}
+
 // Cart Duty — a Supervisor/Manager-only attendance-style log for cart use,
 // distinct from the physical key checkout/return flow above. Today only,
 // by design: no way to pick another date, so this can't become a
@@ -19278,6 +19558,8 @@ function whMode(el, mode) {
   document.getElementById('wh-mode-count').style.display = mode === 'count' ? 'block' : 'none';
   document.getElementById('wh-mode-inventory').style.display = mode === 'inventory' ? 'block' : 'none';
   document.getElementById('wh-mode-cart').style.display = mode === 'cart' ? 'block' : 'none';
+  const rosterPane = document.getElementById('wh-mode-roster');
+  if (rosterPane) rosterPane.style.display = mode === 'roster' ? 'block' : 'none';
   if (mode === 'todeliver') loadWhToDeliver();
   if (mode === 'transfers') loadWhTransfers();
   // Real bug: every other mode re-fetched/re-rendered fresh the moment you
@@ -19289,7 +19571,8 @@ function whMode(el, mode) {
   // 'inventory' mode is now Stand Transfer Report only (Stock Report/
   // warehouse counts removed — confirmed nobody counts mid-game) — nothing
   // to auto-load until the manager actually taps a download button.
-  if (mode === 'cart') adminLoadDrivers();
+  if (mode === 'cart') { adminLoadDrivers(); loadWhCartReturns(); loadWhCartDuty(); }
+  if (mode === 'roster') loadWhRoster();
 }
 
 // Merges transfers and stock requests into one list, GROUPED BY STAND —
