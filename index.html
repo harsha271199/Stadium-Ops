@@ -4140,7 +4140,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-wh-audit-cart-dialogs-1';
+const BUILD_TAG = '2026-09-29-wh-checkin-checkout-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -18854,14 +18854,30 @@ async function loadWhRoster() {
   ]);
   if (rosterRows._err) { list.innerHTML = '<div class="notice" style="font-size:11px;color:#DC2626">⚠️ ' + (rosterRows.status === 404 ? 'warehouse_roster table missing' : 'Could not load') + '</div>'; return; }
   if (!rosterRows.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>No warehouse roster uploaded for ' + date + ' yet.</p></div>'; state._whRosterFlat = []; return; }
+  // Attendance rows are in time order — walk them to get each person's status
+  // plus WHEN they checked in and out (a re-check-in after a check-out starts a
+  // new session).
   const attByEmp = {};
-  if (!attRows._err && Array.isArray(attRows)) attRows.forEach(a => { attByEmp[a.employee_id] = a; }); // asc order — last write per person wins
-  state._whRosterFlat = rosterRows.map(r => ({
-    empId: r.employee_id, name: r.name, role: r.role, phone: r.phone,
-    startTime: r.start_time, endTime: r.end_time,
-    status: (attByEmp[r.employee_id] || {}).status || 'not_arrived'
-  }));
+  if (!attRows._err && Array.isArray(attRows)) attRows.forEach(a => {
+    const e = attByEmp[a.employee_id] || (attByEmp[a.employee_id] = { status: 'not_arrived', inAt: null, outAt: null });
+    const t = a.updated_at || a.created_at || null;
+    if (a.status === 'working') { if (!e.inAt || e.status === 'ended') e.inAt = t; e.outAt = null; }
+    if (a.status === 'ended') e.outAt = t;
+    e.status = a.status;
+  });
+  state._whRosterFlat = rosterRows.map(r => {
+    const e = attByEmp[r.employee_id] || {};
+    return {
+      empId: r.employee_id, name: r.name, role: r.role, phone: r.phone,
+      startTime: r.start_time, endTime: r.end_time,
+      status: e.status || 'not_arrived', inAt: e.inAt || null, outAt: e.outAt || null
+    };
+  });
   renderWhRosterList();
+}
+function whTimeStr(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Phoenix' }); } catch (e) { return ''; }
 }
 
 function renderWhRosterList() {
@@ -18872,30 +18888,33 @@ function renderWhRosterList() {
   const q = (document.getElementById('wh-roster-search') || { value: '' }).value.toLowerCase().trim();
   const rows = q ? all.filter(w => w.name.toLowerCase().indexOf(q) >= 0) : all;
   if (progress) {
-    const working = all.filter(w => w.status === 'working' || w.status === 'break').length;
-    progress.textContent = working + ' of ' + all.length + ' checked in';
+    const inNow = all.filter(w => w.status === 'working' || w.status === 'break').length;
+    const outDone = all.filter(w => w.status === 'ended').length;
+    progress.textContent = inNow + ' checked in · ' + outDone + ' checked out · ' + all.length + ' scheduled';
   }
   if (!rows.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>No match.</p></div>'; return; }
   list.innerHTML = rows.map(w => {
     const idx = all.indexOf(w);
     const isIn = w.status === 'working' || w.status === 'break';
-    const isAbsent = w.status === 'absent';
-    return '<div class="prem-row">' +
-      '<div class="prem-row-info">' +
+    const isOut = w.status === 'ended';
+    const statusText = isIn ? (w.status === 'break' ? 'On break' : 'Checked in ' + whTimeStr(w.inAt))
+      : isOut ? 'Checked out ' + whTimeStr(w.outAt) + (w.inAt ? ' · in ' + whTimeStr(w.inAt) : '')
+      : w.status === 'absent' ? 'Marked absent' : 'Not checked in yet';
+    const btn = 'flex:1;height:40px;border-radius:10px;font-size:13px;font-weight:700;border:1.5px solid var(--border);background:var(--bg-elevated);color:var(--text-1);cursor:pointer';
+    return '<div class="prem-row" style="flex-wrap:wrap">' +
+      '<div class="prem-row-info" style="flex:1 1 100%">' +
         '<div class="prem-row-name">' + escapeHtml(w.name) + (w.role ? ' <span style="font-weight:400;color:var(--text-2);font-size:11px">· ' + escapeHtml(w.role) + '</span>' : '') + '</div>' +
-        // Real fix, found by screenshot: this used to be one line combining
-        // status + scheduled time — .prem-row-meta is nowrap+ellipsis (used
-        // everywhere else in the app), so the end time got silently cut
-        // off. Split onto two separate meta lines so neither truncates.
-        '<div class="prem-row-meta">' + (isIn ? (w.status === 'break' ? 'On break' : 'Working') : isAbsent ? 'Marked absent' : 'Not checked in yet') + '</div>' +
+        // Status and scheduled time are separate meta lines: .prem-row-meta is
+        // nowrap+ellipsis app-wide, so one combined line got cut off.
+        '<div class="prem-row-meta" style="font-weight:' + (isIn ? '700' : '400') + ';color:' + (isIn ? '#00A651' : 'var(--text-2)') + '">' + statusText + '</div>' +
         ((w.startTime || w.endTime) ? '<div class="prem-row-meta">Scheduled ' + escapeHtml(w.startTime || '?') + '–' + escapeHtml(w.endTime || '?') + '</div>' : '') +
       '</div>' +
-      '<div class="prem-row-actions">' +
-        '<button class="prem-status-btn p' + (isIn ? ' on' : '') + '" onclick="whRosterCheckIn(' + idx + ')" aria-label="Check in">✓</button>' +
-        '<button class="prem-status-btn a' + (isAbsent ? ' on' : '') + '" onclick="whRosterMarkAbsent(' + idx + ')" aria-label="Mark absent">✕</button>' +
-        '<button class="prem-move-btn" onclick="whRosterToggleFb(' + idx + ')" aria-label="Feedback">⭐</button>' +
+      '<div style="display:flex;gap:8px;width:100%;margin-top:8px">' +
+        '<button style="' + btn + (isIn ? ';background:#00A651;border-color:#00A651;color:#fff' : '') + '" onclick="whRosterCheckIn(' + idx + ')">' + (isIn ? '✓ Checked in' : '✓ Check in') + '</button>' +
+        '<button style="' + btn + (isOut ? ';background:#DC2626;border-color:#DC2626;color:#fff' : (isIn ? ';border-color:#DC2626;color:#DC2626' : ';opacity:.55')) + '" onclick="whRosterCheckOut(' + idx + ')">' + (isOut ? '⏹ Checked out' : '⏹ Check out') + '</button>' +
+        '<button style="' + btn + ';flex:0 0 46px" onclick="whRosterToggleFb(' + idx + ')" aria-label="Feedback">⭐</button>' +
       '</div>' +
-      '<div class="card" id="wh-roster-fb-' + idx + '" style="display:none;margin-top:6px;padding:10px">' +
+      '<div class="card" id="wh-roster-fb-' + idx + '" style="display:none;margin-top:8px;padding:10px;width:100%">' +
         '<button class="btn btn-ghost" onclick="whRosterFbRate(' + idx + ',\'good\')" id="wh-roster-fb-good-' + idx + '" style="width:auto;padding:6px 10px;font-size:12px;margin-right:6px">👍 Good</button>' +
         '<button class="btn btn-ghost" onclick="whRosterFbRate(' + idx + ',\'needs_improvement\')" id="wh-roster-fb-bad-' + idx + '" style="width:auto;padding:6px 10px;font-size:12px">👎 Needs work</button>' +
         '<input class="form-input" type="text" id="wh-roster-fb-note-' + idx + '" placeholder="Optional note" style="margin:8px 0 6px">' +
@@ -18911,22 +18930,25 @@ function isWhRosterLeader() {
 async function whRosterCheckIn(idx) {
   if (!isWhRosterLeader()) return toast('Not authorized', 'error');
   const w = (state._whRosterFlat || [])[idx]; if (!w) return;
-  const prev = w.status;
-  w.status = 'working';
+  if (w.status === 'working' || w.status === 'break') return; // already in
+  const prev = { status: w.status, inAt: w.inAt, outAt: w.outAt };
+  w.status = 'working'; w.inAt = new Date().toISOString(); w.outAt = null;
   renderWhRosterList();
   const who = getRequesterIdentity();
   const r = await sb('attendance', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: 'Warehouse', status: 'working', notes: 'Checked in by ' + who.name }) }).catch(() => ({ _err: true }));
-  if (r && r._err) { w.status = prev; renderWhRosterList(); toast('Could not check in — try again', 'error'); }
+  if (r && r._err) { Object.assign(w, prev); renderWhRosterList(); toast('Could not check in — try again', 'error'); }
 }
-async function whRosterMarkAbsent(idx) {
+async function whRosterCheckOut(idx) {
   if (!isWhRosterLeader()) return toast('Not authorized', 'error');
   const w = (state._whRosterFlat || [])[idx]; if (!w) return;
-  const prev = w.status;
-  w.status = w.status === 'absent' ? 'not_arrived' : 'absent';
+  if (w.status === 'ended') return; // already out
+  if (w.status !== 'working' && w.status !== 'break') return toast('Check ' + w.name.split(',')[0] + ' in first', 'error');
+  const prev = { status: w.status, inAt: w.inAt, outAt: w.outAt };
+  w.status = 'ended'; w.outAt = new Date().toISOString();
   renderWhRosterList();
   const who = getRequesterIdentity();
-  const r = await sb('attendance', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: 'Warehouse', status: w.status, notes: (w.status === 'absent' ? 'Marked absent by ' : 'Cleared absence by ') + who.name }) }).catch(() => ({ _err: true }));
-  if (r && r._err) { w.status = prev; renderWhRosterList(); toast('Could not save — try again', 'error'); }
+  const r = await sb('attendance', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: 'Warehouse', status: 'ended', notes: 'Checked out by ' + who.name }) }).catch(() => ({ _err: true }));
+  if (r && r._err) { Object.assign(w, prev); renderWhRosterList(); toast('Could not check out — try again', 'error'); }
 }
 function whRosterToggleFb(idx) {
   const f = document.getElementById('wh-roster-fb-' + idx);

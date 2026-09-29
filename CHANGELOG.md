@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-29-wh-checkin-checkout-1
+- **Warehouse My Team (Supervisor + Manager) now has real Check in and Check out, not present/absent, per direct correction.** Each person has two labeled buttons — **✓ Check in** and **⏹ Check out** — plus ⭐ feedback, instead of the bare ✓ / ✕ icons. The row shows the actual times in Phoenix time: "Checked in 8:05 AM", then "Checked out 1:00 PM · in 8:10 AM", with the scheduled shift on its own line. Check out is greyed until the person is checked in (and tapping it early says to check them in first); checking in again after a check-out starts a new session. The counter reads "N checked in · N checked out · N scheduled". The ✕ Absent button is gone. Tested with sample attendance data.
+
 ## 2026-09-29-wh-audit-cart-dialogs-1
 Found by a full warehouse-department recheck (code audit + live database checks + a headless-browser smoke test of the new code, 14 checks passing).
 - **Golf cart: popups fixed.** The dark native browser popups ("asu-aramark.netlify.app says…") are replaced with the app's own readable dialog. Inspection is now one action — the safety acknowledgement is printed above the button and **"Submit inspection & check out"** does both, so there is no second popup sitting on top of a "Saving…" button. The Comments box is bigger (16px text, solid border), scrolls itself into view when tapped, and turns red and jumps into view the moment any item is marked Issue. Flagged-cart and return popups are readable too.
