@@ -4088,8 +4088,8 @@
     </div>
 
     <div id="ts-manager-approval" style="display:none;background:var(--bg-elevated);border-radius:12px;padding:14px;margin-top:14px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px">✅ Warehouse manager approval</div>
-      <div style="font-size:12px;color:var(--text-2);margin-bottom:10px">Supervisor has signed off. Final internal approval before this goes to the stand manager.</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px" id="ts-manager-approval-title">✅ Final approval</div>
+      <div style="font-size:12px;color:var(--text-2);margin-bottom:10px" id="ts-manager-approval-sub">Sign-off complete. Final internal approval before this goes to the stand manager.</div>
       <button class="btn btn-primary" onclick="whFinalApprove()">✅ Approve</button>
     </div>
 
@@ -4128,7 +4128,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-wh-myteam-permission-gates-1';
+const BUILD_TAG = '2026-09-29-sup-final-approval-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -20401,12 +20401,23 @@ function renderTsStatus() {
     }
   }
 
-  // Warehouse manager's final internal approval — a separate stage from the
-  // supervisor's e-sign, only appears once status is 'verified' (supervisor
-  // already signed), only visible to warehouse_manager.
+  // Final internal approval — a separate stage from the sign-off, only
+  // appears once status is 'verified' and nobody's confirmed it yet. Real
+  // change, per direct request: Manager was the only one who could ever
+  // finish this, so a delivery sat waiting whenever he wasn't around to
+  // confirm it. Supervisor can now do it too — Manager is notified whenever
+  // Supervisor completes one so he stays aware even when he wasn't the one
+  // who did it (see whFinalApprove).
   if (approvalEl) {
-    if (_tsTransfer.status === 'verified' && role === 'warehouse_manager' && !_tsTransfer.wh_confirmed_at) {
+    const canApprove = role === 'warehouse_manager' || role === 'warehouse_supervisor';
+    if (_tsTransfer.status === 'verified' && canApprove && !_tsTransfer.wh_confirmed_at) {
       approvalEl.style.display = 'block';
+      const titleEl = document.getElementById('ts-manager-approval-title');
+      const subEl = document.getElementById('ts-manager-approval-sub');
+      if (titleEl) titleEl.textContent = role === 'warehouse_manager' ? '✅ Manager approval' : '✅ Supervisor approval';
+      if (subEl) subEl.textContent = role === 'warehouse_manager'
+        ? 'Sign-off complete. Final internal approval before this goes to the stand manager.'
+        : 'Sign-off complete. You can finish this yourself — the Warehouse Manager is notified either way.';
     } else {
       approvalEl.style.display = 'none';
     }
@@ -21147,12 +21158,15 @@ async function tsRevertDelivery() {
 // point in the lifecycle: after verification, before the stand manager's
 // own separate final confirm.
 async function whFinalApprove() {
-  // Real guard — this final approval step is documented as "only visible
-  // to warehouse_manager" (hidden for other roles via CSS), but the
-  // function itself had no check, so it was directly callable by any
-  // signed-in warehouse session.
-  if (!isWarehouseManagerSession()) return toast('Warehouse Manager approval required', 'error');
-  const who = state.staffAccount ? state.staffAccount.name : 'Warehouse Manager';
+  // Real change, per direct request: Manager being the only one who could
+  // ever finish this meant a delivery just sat waiting whenever he wasn't
+  // around — no toggle, no away-state to manage, Supervisor can simply
+  // finish it themself. The function itself is the actual gate (not just
+  // the button — same lesson as every other permission fix this session):
+  // only Manager or Supervisor can call this at all.
+  if (!isWarehouseManagerSession() && !isWarehouseSupervisorSession()) return toast('Warehouse Manager or Supervisor approval required', 'error');
+  const isSupApproval = isWarehouseSupervisorSession();
+  const who = state.staffAccount ? state.staffAccount.name : (isSupApproval ? 'Warehouse Supervisor' : 'Warehouse Manager');
   const whoId = state.staffAccount ? state.staffAccount.empId : '';
   const nowIso = new Date().toISOString();
   const body = { wh_confirmed_by_id: whoId, wh_confirmed_by_name: who, wh_confirmed_at: nowIso };
@@ -21167,6 +21181,14 @@ async function whFinalApprove() {
   if (res._err || !Array.isArray(res) || !res.length) { toast('Could not approve — try refreshing', 'error'); return; }
   _tsTransfer.wh_confirmed_at = nowIso;
   if (isHub) _tsTransfer.status = 'confirmed';
+  // Manager wasn't the one who did this — make sure he still finds out,
+  // same as any other action someone did on his behalf while he wasn't
+  // the one handling it.
+  if (isSupApproval) {
+    sb('staff_accounts?role=eq.warehouse_manager&is_active=eq.true&select=employee_id').then(mgrs => {
+      if (!mgrs._err && Array.isArray(mgrs)) mgrs.forEach(m => sendPushTo(m.employee_id, '✅ Supervisor approved a transfer', who + ' approved ' + _tsTransfer.stand + ' without you'));
+    }).catch(() => {});
+  }
   toast(isHub ? '✅ Approved & confirmed — warehouse transfer complete' : '✅ Approved — visible to the stand manager for final confirm');
   renderTsItems();
   renderTsStatus();
