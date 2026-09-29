@@ -3695,8 +3695,8 @@
         <div class="tab-item active" id="wh-tab-transfers" onclick="whMode(this,'transfers')">🚚 Transfers <span class="badge-count" id="wh-transfer-count">0</span></div>
         <div class="tab-item" id="wh-tab-requests" onclick="whMode(this,'requests')">📥 Requests <span class="badge-count" id="wh-open-count">0</span></div>
         <div class="tab-item" id="wh-tab-inventory" style="display:none" onclick="whMode(this,'inventory')">📄 Stand Transfer Report</div>
-        <div class="tab-item" id="wh-tab-cart" style="display:none" onclick="whMode(this,'cart')">🛺 Golf Cart</div>
-        <div class="tab-item" id="wh-tab-mycart" style="display:none" onclick="goGolfCart()">🛺 Cart</div>
+        <div class="tab-item" id="wh-tab-cart" style="display:none" onclick="whMode(this,'cart')"><svg width="14" height="13" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Golf Cart</div>
+        <div class="tab-item" id="wh-tab-mycart" style="display:none" onclick="goGolfCart()"><svg width="14" height="13" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Cart</div>
       </div>
     </div>
 
@@ -3728,7 +3728,7 @@
            actual drivers. Employee's screen stays deliberately simple (one
            list + one main action), so this is a plain secondary button,
            not a tile — same weight as Quick Drop above it. -->
-      <button class="btn btn-ghost" onclick="goGolfCart()" style="width:100%;margin-bottom:12px">🛺 Golf Cart — check out / return a key</button>
+      <button class="btn btn-ghost" onclick="goGolfCart()" style="width:100%;margin-bottom:12px"><svg width="15" height="14" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Golf Cart — check out / return a key</button>
       <div id="wh-todeliver-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
     </div>
 
@@ -4117,7 +4117,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-28-golfcart-reenable-1';
+const BUILD_TAG = '2026-09-29-cart-icon-duty-audit-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -11231,7 +11231,7 @@ function whHubTransferGo() {
 // panes and load functions the Employee/Supervisor tab-bar uses, just
 // with a "back to menu" affordance instead of a visible tab strip, since
 // the manager's tab-bar is hidden entirely (see renderWarehouseForRole).
-const WH_MGR_PANE_TITLES = { transfers: '🚚 All Transfers', requests: '📥 Requests', inventory: '📄 Stand Transfer Report', cart: '🛺 Golf Cart' };
+const WH_MGR_PANE_TITLES = { transfers: '🚚 All Transfers', requests: '📥 Requests', inventory: '📄 Stand Transfer Report', cart: '⛳ Golf Cart' };
 function whMgrOpenPane(mode) {
   const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
   const panesWrap = document.getElementById('wh-panes-wrap');
@@ -18406,11 +18406,18 @@ function renderWarehouseForRole() {
       // access as Manager now — driver approval, flagged-issue review, and
       // the same notifications — not just Manager.
       '<div class="action-tile" id="wh-tile-cart" onclick="whMgrOpenPane(\'cart\')">' +
-        '<span class="tile-icon">🛺</span><div class="tile-label">Golf Cart</div><div class="tile-sub" id="wh-tile-cart-sub">Drivers + flagged issues</div>' +
+        '<span class="tile-icon"><svg width="32" height="30" style="vertical-align:-6px"><use href="#gc-icon"/></svg></span><div class="tile-label">Golf Cart</div><div class="tile-sub" id="wh-tile-cart-sub">Drivers + flagged issues</div>' +
+      '</div>' +
+      // Real fix, per direct audit request: a pure read/export report
+      // carries no approval authority, so there's no real reason
+      // Supervisor couldn't generate it too if Manager isn't around.
+      '<div class="action-tile" onclick="whMgrOpenPane(\'inventory\')">' +
+        '<span class="tile-icon">📄</span><div class="tile-label">Stand Transfer Report</div><div class="tile-sub">End-of-day, per stand</div>' +
       '</div>';
     whSupSyncTileBadges();
     whUpdateCartTile();
     whBuildCartPane();
+    whBuildInventoryPane();
     return;
   }
   if (!isWhMgr) return;
@@ -18447,7 +18454,7 @@ function renderWarehouseForRole() {
     // and working, it was just switched off with no entry point. Driver
     // approval + the "needs review" flagged-cart list live in this pane.
     '<div class="action-tile" id="wh-tile-cart" onclick="whMgrOpenPane(\'cart\')">' +
-      '<span class="tile-icon">🛺</span><div class="tile-label">Golf Cart</div><div class="tile-sub" id="wh-tile-cart-sub">Drivers + flagged issues</div>' +
+      '<span class="tile-icon"><svg width="32" height="30" style="vertical-align:-6px"><use href="#gc-icon"/></svg></span><div class="tile-label">Golf Cart</div><div class="tile-sub" id="wh-tile-cart-sub">Drivers + flagged issues</div>' +
     '</div>' +
     '<div class="action-tile" onclick="showScreen(\'screen-wh-team\')">' +
       '<span class="tile-icon">👥</span><div class="tile-label">Assign & Team</div><div class="tile-sub">Who covers what today</div>' +
@@ -18455,10 +18462,18 @@ function renderWarehouseForRole() {
   whUpdateApprovalsTile();
   whUpdateCartTile();
 
-  // Was "Stock Report" (warehouse counts) with Stand Transfer Report
-  // tacked on below it — dropped the counts half entirely (confirmed
-  // nobody actually counts stock mid-game, so it was dead weight), and
-  // this pane/tile is now dedicated to Stand Transfer Report alone.
+  whBuildInventoryPane();
+  whBuildCartPane();
+}
+// Was "Stock Report" (warehouse counts) with Stand Transfer Report tacked
+// on below it — dropped the counts half entirely (confirmed nobody
+// actually counts stock mid-game, so it was dead weight), and this pane/
+// tile is now dedicated to Stand Transfer Report alone. Extracted (same
+// reason as whBuildCartPane) so Supervisor's early-return tile branch can
+// reach it too — a pure read/export report, no approval authority
+// involved, so there's no real risk in Supervisor generating it too if
+// the Manager isn't around at end of night.
+function whBuildInventoryPane() {
   const invContainer = document.getElementById('wh-mode-inventory');
   if (invContainer) {
     invContainer.innerHTML =
@@ -18476,8 +18491,6 @@ function renderWarehouseForRole() {
         '<button class="btn btn-ghost" onclick="printStandTransferReportPDF()" style="margin-top:8px">🖨️ Download report (PDF, one page per stand)</button>' +
       '</div>';
   }
-
-  whBuildCartPane();
 }
 // Extracted so both Warehouse Manager and Warehouse Supervisor can build
 // this pane — Supervisor's tile branch returns early, before it used to
@@ -18489,18 +18502,71 @@ function whBuildCartPane() {
     cartContainer.innerHTML =
       '<div style="max-width:480px">' +
         '<div id="wh-cart-returns" style="margin-bottom:14px"></div>' +
+        // Real feature, per direct request: Supervisor/Manager marks each
+        // approved driver in/out of cart duty themselves — same as My
+        // Team's attendance (a Stand Lead/Supervisor marks their workers,
+        // workers don't self-report), not a self-service action by the
+        // employee. Scoped to today only — no date picker, on purpose, so
+        // yesterday's record can't be edited after the fact.
+        '<div class="card" style="padding:14px;margin-bottom:14px">' +
+          '<div style="font-weight:700;font-size:14px;margin-bottom:2px">' +
+            '<svg width="15" height="14" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Cart Duty — Today</div>' +
+          '<div style="font-size:11px;color:var(--text-2);margin-bottom:8px">Mark who\'s actually on the cart right now. Separate from key checkout — this is your own record, not the driver\'s.</div>' +
+          '<div id="wh-cart-duty-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>' +
+        '</div>' +
         '<div class="card" style="padding:14px;margin-bottom:14px">' +
           '<div style="font-weight:700;font-size:14px;margin-bottom:8px">➕ Approve a driver</div>' +
           '<input class="form-input" type="text" id="wh-adm-drv-id" placeholder="Employee ID (last 5 digits)" maxlength="5">' +
           '<input class="form-input" type="text" id="wh-adm-drv-name" placeholder="Full name">' +
           '<button class="btn btn-primary" onclick="adminAddDriver()" style="margin-top:6px">Add driver →</button>' +
         '</div>' +
-        '<div class="notice info" style="font-size:12px">🛺 Only people on this list can check out cart keys.</div>' +
+        '<div class="notice info" style="font-size:12px"><svg width="13" height="12" style="vertical-align:-1px"><use href="#gc-icon"/></svg> Only people on this list can check out cart keys.</div>' +
         '<div id="wh-adm-drv-list" style="margin-top:10px"><div class="loading"><div class="spinner"></div>Loading...</div></div>' +
       '</div>';
     loadWhCartReturns();
     adminLoadDrivers();
+    loadWhCartDuty();
   }
+}
+// Cart Duty — a Supervisor/Manager-only attendance-style log for cart use,
+// distinct from the physical key checkout/return flow above. Today only,
+// by design: no way to pick another date, so this can't become a
+// retroactive record someone edits after the fact.
+async function loadWhCartDuty() {
+  const el = document.getElementById('wh-cart-duty-list');
+  if (!el) return;
+  const today = localISODate();
+  const [drivers, logRows] = await Promise.all([
+    sb('cart_drivers?is_active=eq.true&order=name.asc&select=*').catch(() => ({ _err: true })),
+    sb('cart_log?action=in.(duty_checkin,duty_checkout)&order=created_at.asc&select=*').catch(() => ({ _err: true }))
+  ]);
+  if (drivers._err) { el.innerHTML = '<div class="notice" style="font-size:11px;color:#DC2626">Could not load drivers.</div>'; return; }
+  if (!drivers.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:6px 0">No approved drivers yet — add one below.</div>'; return; }
+  const todaysLog = (!logRows._err && Array.isArray(logRows) ? logRows : []).filter(l => String(l.created_at || '').slice(0, 10) === today);
+  const latestByDriver = {};
+  todaysLog.forEach(l => { latestByDriver[l.employee_id] = l; }); // asc order — last write per driver wins
+  el.innerHTML = drivers.map(dr => {
+    const latest = latestByDriver[dr.employee_id];
+    const isIn = latest && latest.action === 'duty_checkin';
+    return '<div class="prem-row' + (isIn ? ' present' : '') + '">' +
+      '<div class="prem-row-info">' +
+        '<div class="prem-row-name">' + escapeHtml(dr.name) + '</div>' +
+        '<div class="prem-row-meta">' + (latest ? (isIn ? 'Checked in · ' : 'Checked out · ') + new Date(latest.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'Not marked yet today') + '</div>' +
+      '</div>' +
+      '<div class="prem-row-actions">' +
+        '<button class="prem-status-btn p' + (isIn ? ' on' : '') + '" onclick="whSetCartDuty(\'' + escapeAttr(dr.employee_id) + '\',\'' + escapeAttr(dr.name).replace(/'/g,"\\'") + '\',\'duty_checkin\')" aria-label="Check in">✓</button>' +
+        '<button class="prem-status-btn a' + (!isIn && latest ? ' on' : '') + '" onclick="whSetCartDuty(\'' + escapeAttr(dr.employee_id) + '\',\'' + escapeAttr(dr.name).replace(/'/g,"\\'") + '\',\'duty_checkout\')" aria-label="Check out">✕</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+async function whSetCartDuty(empId, name, action) {
+  const who = (state.staffAccount && state.staffAccount.name) || 'Warehouse';
+  const res = await sb('cart_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ key_number: null, employee_id: empId, employee_name: name, action, confirmed_by: who }) }).catch(() => ({ _err: true }));
+  if (res && res._err) return toast('Could not save — try again', 'error');
+  toast((action === 'duty_checkin' ? '✅ ' : '⏹ ') + name + (action === 'duty_checkin' ? ' checked in' : ' checked out'));
+  loadWhCartDuty();
 }
 
 // Warehouse Manager can now also confirm a key return — previously only
