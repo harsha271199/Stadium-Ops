@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-29-cart-questions-1
+- **Golf cart safety questions, rebuilt to the managers' actual rule.** Every take and every return is now checked with real questions, answered one by one (OK or Issue) — no all-good shortcut buttons (I had added two by mistake, "✓ All good" and "Mark all 12 OK"; both removed):
+  - **First person on a cart each day, taking it:** the full **12 questions** (unchanged).
+  - **Every later person taking that same cart that day:** **4 questions** — Brakes work · Tires & steering good · No new damage or fluid leaks · Lights, horn & seatbelt work.
+  - **Returning a key (everyone):** the same **4 questions**, required. "Return Key N" opens them; the button stays until all 4 are answered, and a description is required if anything is an Issue.
+  - Any Issue (at take or return) takes the cart out of service, logs it for the Manager's "needs review" list (cleared with "Mark repaired & back in service") and notifies managers. At pick-up the key is not handed over.
+- Every check is recorded (who, when, each answer, type: full / quick / return). Only a clean **full** inspection counts as "first use done" for the day — quick and return records don't, so the first driver of the day always gets the 12.
+- The key board says "First use today · 12 questions" or "✓ Inspected today · 4 questions". After taking or returning a key you're sent straight back to your home screen with a notice.
+- Tested end to end in a headless browser (18 checks).
+
 ## 2026-09-29-cart-return-ui-1
 Found by the user testing the previous golf cart build on a phone.
 - **"Check out" is gone from the golf cart flow — it read like attendance's Check out.** The cart now says **take** and **return**: "✓ All good — take Key 1", "Submit inspection & take the key", "🟡 You have this — tap to return", "🔴 In use", "Key 1 is yours — collect it from your Manager or the Warehouse Manager".
