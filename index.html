@@ -4134,7 +4134,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-sup-cart-checkout-transfer-fix-1';
+const BUILD_TAG = '2026-09-29-sup-cart-simplify-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -13024,14 +13024,14 @@ async function adminToggleNpo(id, active) {
 }
 
 // ---- Cart driver management ----
-// Real fix, per direct request: Supervisor now gets the exact same Golf
-// Cart driver-approval access as Manager, not just Manager — both use the
-// same wh-adm-drv-* pane/ids, so both need to be treated the same here.
-function isWhCartAdmin() { return !!(state.staffAccount && ['warehouse_manager', 'warehouse_supervisor'].includes(state.staffAccount.role)); }
+// Real change, per direct correction: Golf Cart admin (driver list, Cart
+// Duty, flagged-cart review) is Manager-only now — Supervisor's tile goes
+// straight to the plain checkout/return screen instead, same as any
+// approved driver. Removed the monitor-only/self-service branching this
+// used to need for Supervisor since he never reaches this pane at all now.
+function isWhCartAdmin() { return !!(state.staffAccount && state.staffAccount.role === 'warehouse_manager'); }
 async function adminLoadDrivers() {
   const isWhMgr = isWhCartAdmin();
-  const isRealMgr = state.staffAccount && state.staffAccount.role === 'warehouse_manager';
-  const myEmpId = state.staffAccount && state.staffAccount.empId;
   const el = document.getElementById(isWhMgr ? 'wh-adm-drv-list' : 'adm-drv-list');
   const rows = await sb('cart_drivers?order=name.asc&select=*');
   const summary = document.getElementById('adm-drv-summary'); // only exists on the plain-manager Admin screen
@@ -13041,57 +13041,13 @@ async function adminLoadDrivers() {
   }
   const activeCount = rows.filter(d => d.is_active).length;
   if (summary) summary.textContent = rows.length + ' driver' + (rows.length===1?'':'s') + (activeCount < rows.length ? ' · ' + activeCount + ' active' : '') + ' — tap to view';
-  if (!rows.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:6px 0">No approved drivers yet.</div>'; }
-  else {
-    // Real change, per direct request: a plain-manager Admin session and
-    // the Warehouse Manager can still manage anyone. Warehouse Supervisor
-    // is monitor-only now — sees the same list, but the toggle button only
-    // renders on their own row (self-request/self-revoke), never on
-    // someone else's.
-    const canManageOthers = !isWhMgr || isRealMgr;
-    el.innerHTML = rows.map(dr => {
-      const isSelf = isWhMgr && !isRealMgr && String(dr.employee_id) === String(myEmpId);
-      const showToggle = canManageOthers || isSelf;
-      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)' + (dr.is_active ? '' : ';opacity:0.5') + '">' +
-        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">' + dr.name + (dr.is_active ? '' : ' (revoked)') + '</div>' +
-        '<div style="font-size:11px;color:var(--text-2)">ID ' + dr.employee_id + '</div></div>' +
-        (showToggle ? '<button class="btn btn-ghost" onclick="adminToggleDriver(' + dr.id + ',' + (!dr.is_active) + ')" style="width:auto;padding:6px 10px;font-size:11px;flex-shrink:0' + (dr.is_active ? ';border-color:#DC2626;color:#DC2626' : '') + '">' + (dr.is_active ? 'Revoke' : 'Re-approve') + '</button>' : '') +
-      '</div>';
-    }).join('');
-  }
-  if (isWhMgr && !isRealMgr) whCartSelfServiceRender(rows);
-}
-// Supervisor-only: request/self-approve their own cart access. Notifies
-// every warehouse manager/supervisor + the stand manager either way, so
-// nobody's surprised who's driving.
-function whCartSelfServiceRender(allDrivers) {
-  const el = document.getElementById('wh-cart-self-service');
-  if (!el) return;
-  const myEmpId = state.staffAccount && state.staffAccount.empId;
-  const mine = (allDrivers || []).find(d => String(d.employee_id) === String(myEmpId));
-  if (mine && mine.is_active) {
-    el.innerHTML = '<div class="card" style="padding:14px"><div style="font-weight:700;font-size:14px;margin-bottom:4px">✅ You have cart access</div><div style="font-size:11px;color:var(--text-2)">Approved by ' + escapeHtml(mine.added_by || '—') + '. <button class="btn btn-ghost" onclick="whSupSelfApproveCart(false)" style="width:auto;padding:5px 10px;font-size:11px;margin-top:6px;border-color:#DC2626;color:#DC2626">Give up my own access</button></div></div>';
-  } else {
-    el.innerHTML = '<div class="card" style="padding:14px"><div style="font-weight:700;font-size:14px;margin-bottom:6px"><svg width="14" height="13" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Request cart access</div><div style="font-size:11px;color:var(--text-2);margin-bottom:8px">As Supervisor, you can approve your own access — the Warehouse Manager is notified either way.</div><button class="btn btn-primary" onclick="whSupSelfApproveCart(true)">Approve myself as a driver →</button></div>';
-  }
-}
-async function whSupSelfApproveCart(approve) {
-  const role = state.staffAccount && state.staffAccount.role;
-  if (!['warehouse_supervisor', 'warehouse_manager'].includes(role)) return toast('Not authorized', 'error');
-  const empId = state.staffAccount && state.staffAccount.empId;
-  const name = state.staffAccount && state.staffAccount.name;
-  if (!empId || !name) return toast('Missing account info', 'error');
-  if (approve) {
-    const r = await sb('cart_drivers', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ employee_id:empId, name:name, added_by:name + ' (self, Supervisor)', is_active:true }) });
-    if (r._err) return toast('Could not save', 'error');
-    toast('✅ Cart access approved for yourself');
-    notifyCartManagers('🛺 Supervisor self-approved cart access', name + ' approved themself as a golf cart driver.');
-  } else {
-    await sb('cart_drivers?employee_id=eq.' + encodeURIComponent(empId), { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ is_active:false }) });
-    toast('Cart access removed');
-    notifyCartManagers('🛺 Supervisor gave up cart access', name + ' removed their own golf cart access.');
-  }
-  adminLoadDrivers();
+  if (!rows.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:6px 0">No approved drivers yet.</div>'; return; }
+  el.innerHTML = rows.map(dr =>
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)' + (dr.is_active ? '' : ';opacity:0.5') + '">' +
+      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">' + dr.name + (dr.is_active ? '' : ' (revoked)') + '</div>' +
+      '<div style="font-size:11px;color:var(--text-2)">ID ' + dr.employee_id + '</div></div>' +
+      '<button class="btn btn-ghost" onclick="adminToggleDriver(' + dr.id + ',' + (!dr.is_active) + ')" style="width:auto;padding:6px 10px;font-size:11px;flex-shrink:0' + (dr.is_active ? ';border-color:#DC2626;color:#DC2626' : '') + '">' + (dr.is_active ? 'Revoke' : 'Re-approve') + '</button>' +
+    '</div>').join('');
 }
 async function adminAddDriver() {
   const isWhMgr = isWhCartAdmin();
@@ -13107,22 +13063,13 @@ async function adminAddDriver() {
   adminLoadDrivers();
 }
 async function adminToggleDriver(id, active) {
-  // Real fix, found auditing this feature's own permissions: the button
-  // that calls this was already hidden from Supervisor for anyone but
-  // themself, but the function itself had no check — directly callable
-  // (e.g. from devtools) by any signed-in warehouse session, same class of
-  // gap whFinalApprove had before it was fixed. Warehouse Employee is
-  // never authorized here at all; Supervisor can only toggle their own
-  // driver record, everyone else (Warehouse Manager, plain Manager/Admin)
-  // keeps full authority.
+  // Real fix, found auditing this feature's own permissions, then
+  // tightened further per direct correction: Supervisor no longer manages
+  // any driver record, not even their own — Golf Cart admin is Manager
+  // (and plain Manager/Admin) only. The function itself is the actual
+  // gate, not just the missing button.
   const role = state.staffAccount && state.staffAccount.role;
-  if (role === 'warehouse_employee') return toast('Not authorized', 'error');
-  if (role === 'warehouse_supervisor') {
-    const rows = await sb('cart_drivers?id=eq.' + id + '&select=employee_id');
-    const target = !rows._err && rows[0];
-    const myEmpId = state.staffAccount && state.staffAccount.empId;
-    if (!target || String(target.employee_id) !== String(myEmpId)) return toast('Only the Warehouse Manager can change someone else\'s cart access', 'error');
-  }
+  if (role !== 'warehouse_manager' && role !== 'manager' && role !== 'admin') return toast('Not authorized', 'error');
   await sb('cart_drivers?id=eq.' + id, { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ is_active: active }) });
   adminLoadDrivers();
 }
@@ -18503,17 +18450,17 @@ function renderWarehouseForRole() {
       '<div class="action-tile" onclick="whMgrOpenPane(\'roster\')">' +
         '<span class="tile-icon">👥</span><div class="tile-label">My Team</div><div class="tile-sub" id="wh-tile-roster-sub">Check in/out · today\'s crew</div>' +
       '</div>' +
-      // Real fix, per direct request: Supervisor gets the same Golf Cart
-      // access as Manager now — driver approval, flagged-issue review, and
-      // the same notifications — not just Manager.
-      '<div class="action-tile" id="wh-tile-cart" onclick="whMgrOpenPane(\'cart\')">' +
-        '<span class="tile-icon"><svg width="32" height="30" style="vertical-align:-6px"><use href="#gc-icon"/></svg></span><div class="tile-label">Golf Cart</div><div class="tile-sub" id="wh-tile-cart-sub">Drivers + flagged issues</div>' +
+      // Real change, per direct correction: Supervisor's Golf Cart access
+      // stripped down to exactly what he needs — he's an approved driver
+      // like anyone else, not an admin. Goes straight to the checkout/
+      // return screen, no driver list, no Cart Duty, no flagged-cart
+      // review — all of that is Manager-only now.
+      '<div class="action-tile" onclick="goGolfCart()">' +
+        '<span class="tile-icon"><svg width="32" height="30" style="vertical-align:-6px"><use href="#gc-icon"/></svg></span><div class="tile-label">Golf Cart</div><div class="tile-sub">Check out or return a key</div>' +
       '</div>';
       // Real change, per direct correction: Stand Transfer Report removed
       // from Supervisor — Manager only, no exceptions.
     whSupSyncTileBadges();
-    whUpdateCartTile();
-    whBuildCartPane();
     whBuildRosterPane();
     return;
   }
@@ -18601,49 +18548,30 @@ function whBuildInventoryPane() {
 // this pane — Supervisor's tile branch returns early, before it used to
 // reach this code, which is why the pane stayed blank for them even once
 // they had a tile pointing at it.
+// Real change, per direct correction: this pane is Manager-only now —
+// Supervisor's Golf Cart tile goes straight to goGolfCart() instead
+// (checkout/return only, same as any approved driver). No more monitor-
+// only/self-service branching here since nobody but Manager reaches it.
 function whBuildCartPane() {
   const cartContainer = document.getElementById('wh-mode-cart');
   if (cartContainer) {
-    // Real change, per direct request: Supervisor's cart access used to
-    // mirror Manager's exactly (approve/revoke anyone). Now it's monitor-only
-    // — Supervisor can see who has access and who holds a key, but the only
-    // driver record they can create or revoke is their own (self-request,
-    // self-approve, Manager notified either way). Manager keeps full
-    // authority over every driver, unchanged.
-    const isRealMgr = state.staffAccount && state.staffAccount.role === 'warehouse_manager';
     cartContainer.innerHTML =
       '<div style="max-width:480px">' +
         '<div id="wh-cart-returns" style="margin-bottom:14px"></div>' +
-        // Real fix, per direct report: Supervisor had no way to physically
-        // check out a cart himself — this pane only ever managed OTHER
-        // people's access, the actual key checkout screen (goGolfCart)
-        // only had an entry point on Employee's own delivery screen. Same
-        // button, same destination — if you're not an approved driver
-        // yourself, that screen already blocks you there, same as it does
-        // for anyone else.
         '<button class="btn btn-ghost" onclick="goGolfCart()" style="width:100%;margin-bottom:14px"><svg width="15" height="14" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Check out / return a key yourself</button>' +
-        // Real feature, per direct request: Supervisor/Manager marks each
-        // approved driver in/out of cart duty themselves — same as My
-        // Team's attendance (a Stand Lead/Supervisor marks their workers,
-        // workers don't self-report), not a self-service action by the
-        // employee. Scoped to today only — no date picker, on purpose, so
-        // yesterday's record can't be edited after the fact.
         '<div class="card" style="padding:14px;margin-bottom:14px">' +
           '<div style="font-weight:700;font-size:14px;margin-bottom:2px">' +
             '<svg width="15" height="14" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Cart Duty — Today</div>' +
           '<div style="font-size:11px;color:var(--text-2);margin-bottom:8px">Mark who\'s actually on the cart right now. Separate from key checkout — this is your own record, not the driver\'s.</div>' +
           '<div id="wh-cart-duty-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>' +
         '</div>' +
-        (isRealMgr ?
-          '<div class="card" style="padding:14px;margin-bottom:14px">' +
-            '<div style="font-weight:700;font-size:14px;margin-bottom:8px">➕ Approve a driver</div>' +
-            '<input class="form-input" type="text" id="wh-adm-drv-id" placeholder="Employee ID (last 5 digits)" maxlength="5">' +
-            '<input class="form-input" type="text" id="wh-adm-drv-name" placeholder="Full name">' +
-            '<button class="btn btn-primary" onclick="adminAddDriver()" style="margin-top:6px">Add driver →</button>' +
-          '</div>'
-          : '<div id="wh-cart-self-service" style="margin-bottom:14px"></div>'
-        ) +
-        '<div class="notice info" style="font-size:12px"><svg width="13" height="12" style="vertical-align:-1px"><use href="#gc-icon"/></svg> Only people on this list can check out cart keys.' + (isRealMgr ? '' : ' You can monitor everyone here — approving or revoking someone else\'s access is the Warehouse Manager\'s call.') + '</div>' +
+        '<div class="card" style="padding:14px;margin-bottom:14px">' +
+          '<div style="font-weight:700;font-size:14px;margin-bottom:8px">➕ Approve a driver</div>' +
+          '<input class="form-input" type="text" id="wh-adm-drv-id" placeholder="Employee ID (last 5 digits)" maxlength="5">' +
+          '<input class="form-input" type="text" id="wh-adm-drv-name" placeholder="Full name">' +
+          '<button class="btn btn-primary" onclick="adminAddDriver()" style="margin-top:6px">Add driver →</button>' +
+        '</div>' +
+        '<div class="notice info" style="font-size:12px"><svg width="13" height="12" style="vertical-align:-1px"><use href="#gc-icon"/></svg> Only people on this list can check out cart keys.</div>' +
         '<div id="wh-adm-drv-list" style="margin-top:10px"><div class="loading"><div class="spinner"></div>Loading...</div></div>' +
       '</div>';
     loadWhCartReturns();

@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-29-sup-cart-simplify-1
+- **Real simplification, per direct correction: Supervisor's Golf Cart access stripped down to exactly what he needs.** He's an approved driver like anyone else on the list — not an admin over it. His tile now goes straight to the checkout/return-a-key screen; the driver list, "Cart Duty — Today," self-service request, and flagged-cart review are all gone from his side, Manager-only. Removed the now-dead self-service functions (`whCartSelfServiceRender`, `whSupSelfApproveCart`) and simplified `adminLoadDrivers`/`adminToggleDriver`/`whBuildCartPane` back to a single Manager-only path instead of branching per role.
+
 ## 2026-09-29-sup-cart-checkout-transfer-fix-1
 - **Real gap fixed, per direct question: "if Warehouse Supervisor wants to use the golf cart himself, how does he?" — he couldn't.** Supervisor's Golf Cart tile only ever opened the monitor/admin pane (driver list, cart duty, self-approve his own driver record) — the actual physical key checkout screen only had an entry point on Employee's own delivery screen. Added the same "Check out / return a key yourself" button to Supervisor's (and Manager's) Golf Cart pane — same destination, same existing approved-driver gate, so anyone not on the list still gets blocked there exactly as before.
 - **Real gap fixed, per direct question: "if Manager assigns a transfer to Supervisor, how does he check and complete it?"** He could already tap into it and complete the whole thing — that part worked — but the row just showed a plain "✓ Assigned to you" text label with no visible way to act, easy to read as "someone else is handling this." Still-in-progress rows assigned to you now show an actual "▶ Continue delivery" button.
