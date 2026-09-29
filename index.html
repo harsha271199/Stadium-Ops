@@ -4172,7 +4172,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-cart-quick-check-1';
+const BUILD_TAG = '2026-09-29-cart-no-hold-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -16315,14 +16315,11 @@ async function gcSubmitCheckout() {
   await sb('cart_log', { method:'POST', headers:{Prefer:'return=minimal'},
     body: JSON.stringify({ key_number:_gcSelectedKey, employee_id:_gcUser.empId, employee_name:_gcUser.name, action:'checkout', policy_accepted:true }) });
 
-  gcHideAll();
-  document.getElementById('gc-confirm-section').style.display = '';
-  document.getElementById('gc-confirm-msg').textContent = _gcUser.name + ' checked out Key ' + _gcSelectedKey + ' at ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-  document.getElementById('gc-sub').textContent = 'Key ' + _gcSelectedKey + ' checked out ✅';
-  toast('🔑 Key ' + _gcSelectedKey + ' — collect from your Manager or the Warehouse Manager');
-  // Per direct request: one automatic trip home instead of leaving a finished
-  // screen up for people to tap through again and again.
-  gcAutoHome(3500);
+  // Per direct request: don't hold anyone on this page — they have warehouse
+  // work to do. Straight back to their own home screen the moment the key is
+  // checked out; the "collect your key" reminder stays up as a notice instead.
+  toast('🔑 Key ' + _gcSelectedKey + ' checked out — collect it from your Manager or the Warehouse Manager', 'success', 8000);
+  gcGoHome();
 }
 
 // ── RETURN A KEY ──
