@@ -4128,7 +4128,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-wh-myteam-rename-admin-upload-1';
+const BUILD_TAG = '2026-09-29-wh-myteam-permission-gates-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -13070,6 +13070,8 @@ function whCartSelfServiceRender(allDrivers) {
   }
 }
 async function whSupSelfApproveCart(approve) {
+  const role = state.staffAccount && state.staffAccount.role;
+  if (!['warehouse_supervisor', 'warehouse_manager'].includes(role)) return toast('Not authorized', 'error');
   const empId = state.staffAccount && state.staffAccount.empId;
   const name = state.staffAccount && state.staffAccount.name;
   if (!empId || !name) return toast('Missing account info', 'error');
@@ -13099,6 +13101,22 @@ async function adminAddDriver() {
   adminLoadDrivers();
 }
 async function adminToggleDriver(id, active) {
+  // Real fix, found auditing this feature's own permissions: the button
+  // that calls this was already hidden from Supervisor for anyone but
+  // themself, but the function itself had no check — directly callable
+  // (e.g. from devtools) by any signed-in warehouse session, same class of
+  // gap whFinalApprove had before it was fixed. Warehouse Employee is
+  // never authorized here at all; Supervisor can only toggle their own
+  // driver record, everyone else (Warehouse Manager, plain Manager/Admin)
+  // keeps full authority.
+  const role = state.staffAccount && state.staffAccount.role;
+  if (role === 'warehouse_employee') return toast('Not authorized', 'error');
+  if (role === 'warehouse_supervisor') {
+    const rows = await sb('cart_drivers?id=eq.' + id + '&select=employee_id');
+    const target = !rows._err && rows[0];
+    const myEmpId = state.staffAccount && state.staffAccount.empId;
+    if (!target || String(target.employee_id) !== String(myEmpId)) return toast('Only the Warehouse Manager can change someone else\'s cart access', 'error');
+  }
   await sb('cart_drivers?id=eq.' + id, { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ is_active: active }) });
   adminLoadDrivers();
 }
@@ -18657,6 +18675,8 @@ function whBuildRosterPane() {
 }
 
 async function adminUploadWarehouseRoster(prefix) {
+  const role = state.staffAccount && state.staffAccount.role;
+  if (!['warehouse_manager', 'warehouse_supervisor', 'manager', 'admin'].includes(role)) return toast('Not authorized', 'error');
   prefix = prefix || 'wh-roster';
   const f = document.getElementById(prefix + '-file').files[0];
   const st = document.getElementById(prefix + '-upload-status');
@@ -18794,7 +18814,11 @@ function renderWhRosterList() {
   }).join('');
 }
 
+function isWhRosterLeader() {
+  return !!(state.staffAccount && ['warehouse_manager', 'warehouse_supervisor'].includes(state.staffAccount.role));
+}
 async function whRosterCheckIn(idx) {
+  if (!isWhRosterLeader()) return toast('Not authorized', 'error');
   const w = (state._whRosterFlat || [])[idx]; if (!w) return;
   const prev = w.status;
   w.status = 'working';
@@ -18804,6 +18828,7 @@ async function whRosterCheckIn(idx) {
   if (r && r._err) { w.status = prev; renderWhRosterList(); toast('Could not check in — try again', 'error'); }
 }
 async function whRosterMarkAbsent(idx) {
+  if (!isWhRosterLeader()) return toast('Not authorized', 'error');
   const w = (state._whRosterFlat || [])[idx]; if (!w) return;
   const prev = w.status;
   w.status = w.status === 'absent' ? 'not_arrived' : 'absent';
