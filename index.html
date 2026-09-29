@@ -1544,6 +1544,7 @@
   <div role="alertdialog" aria-modal="true" aria-labelledby="app-confirm-title" aria-describedby="app-confirm-message" style="background:var(--bg-card);border-radius:14px;width:100%;max-width:420px;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,0.3)" onclick="event.stopPropagation()">
     <div id="app-confirm-title" style="font-size:16px;font-weight:700;margin-bottom:8px"></div>
     <div id="app-confirm-message" style="font-size:14px;color:var(--text-2);white-space:pre-line;line-height:1.5"></div>
+    <textarea id="app-confirm-input" class="form-input" rows="3" style="display:none;margin-top:12px;font-size:16px;line-height:1.4;min-height:88px;color:var(--text-1);background:var(--bg-elevated);border:2px solid var(--border)"></textarea>
     <div style="display:flex;gap:8px;margin-top:18px">
       <button class="btn btn-outline" id="app-confirm-cancel-btn" style="margin:0">Cancel</button>
       <button class="btn btn-primary" id="app-confirm-ok-btn" style="margin:0">OK</button>
@@ -2335,9 +2336,13 @@
     <div id="gc-inspect-section" style="display:none">
       <div class="notice info" style="margin-bottom:12px;font-size:12px">🧰 Pre-Use Inspection — Cart <span id="gc-inspect-cartid"></span>, today. Required once per cart, per day, before checkout. Form OS-07a-03.</div>
       <div id="gc-inspect-items"></div>
-      <label class="form-label" style="margin-top:12px">Comments (required if anything is flagged)</label>
-      <textarea class="form-input" id="gc-inspect-comments" rows="2" placeholder="Describe any issue found"></textarea>
-      <button class="btn btn-primary" id="gc-inspect-submit-btn" onclick="gcSubmitInspection()" style="margin-top:14px">Submit Inspection →</button>
+      <label class="form-label" id="gc-inspect-comments-label" style="margin-top:12px">Comments (required if anything is flagged)</label>
+      <!-- 16px+ text and a solid border: the old small textarea was hard to see
+           and hard to type in, and the keyboard covered it. Scrolls itself into
+           view on focus (see gcInspectFocus). -->
+      <textarea class="form-input" id="gc-inspect-comments" rows="4" placeholder="Describe any issue found" onfocus="gcInspectFocus()" style="font-size:16px;line-height:1.4;min-height:110px;color:var(--text-1);background:var(--bg-elevated);border:2px solid var(--border)"></textarea>
+      <div style="font-size:12px;color:var(--text-2);margin-top:12px;line-height:1.4">By tapping the button below you confirm you will operate this cart safely per the Aramark Cart Safety Rules.</div>
+      <button class="btn btn-primary" id="gc-inspect-submit-btn" onclick="gcSubmitInspection()" style="margin-top:10px">Submit inspection &amp; check out →</button>
       <button class="btn btn-ghost" onclick="gcShowKeys()" style="margin-top:8px">← Back to keys</button>
     </div>
 
@@ -2348,7 +2353,8 @@
         <div style="font-size:20px;font-weight:700;margin-bottom:8px">Key Checked Out</div>
         <div id="gc-confirm-msg" style="font-size:14px;color:var(--text-2);margin-bottom:24px"></div>
         <div class="notice warning" style="text-align:left;font-size:13px">Collect your key from your Manager or the Warehouse Manager.</div>
-        <button class="btn btn-ghost" onclick="renderHome(); goRoleHome()" style="margin-top:16px;width:100%">← Back to home</button>
+        <div style="font-size:12px;color:var(--text-2);margin-top:14px">Taking you back to your home screen…</div>
+        <button class="btn btn-ghost" onclick="gcGoHome()" style="margin-top:10px;width:100%">← Back to home now</button>
       </div>
     </div>
 
@@ -4134,7 +4140,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-myteam-date-fix-cart-id-1';
+const BUILD_TAG = '2026-09-29-wh-audit-cart-dialogs-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4262,6 +4268,9 @@ function confirmAction(message, opts) {
   opts = opts || {};
   return new Promise(resolve => {
     _appDialogResolve = resolve;
+    const inputEl = document.getElementById('app-confirm-input');
+    if (inputEl) inputEl.style.display = 'none';
+    document.getElementById('app-confirm-modal').style.alignItems = 'center';
     document.getElementById('app-confirm-title').textContent = opts.title || 'Please confirm';
     document.getElementById('app-confirm-message').textContent = message;
     const okBtn = document.getElementById('app-confirm-ok-btn');
@@ -4273,6 +4282,39 @@ function confirmAction(message, opts) {
     okBtn.onclick = () => _appDialogClose(true);
     cancelBtn.onclick = () => _appDialogClose(false);
     document.getElementById('app-confirm-modal').style.display = 'flex';
+  });
+}
+// promptAction(message, {title, placeholder, confirmLabel, required}) -> Promise<string|null>
+// Branded replacement for native prompt() — the native one is dark, tiny and
+// hard to type into on a phone. Resolves to the typed text, or null if cancelled.
+function promptAction(message, opts) {
+  opts = opts || {};
+  return new Promise(resolve => {
+    const inputEl = document.getElementById('app-confirm-input');
+    const modal = document.getElementById('app-confirm-modal');
+    const okBtn = document.getElementById('app-confirm-ok-btn');
+    const cancelBtn = document.getElementById('app-confirm-cancel-btn');
+    document.getElementById('app-confirm-title').textContent = opts.title || 'Please enter';
+    document.getElementById('app-confirm-message').textContent = message;
+    inputEl.value = '';
+    inputEl.placeholder = opts.placeholder || '';
+    inputEl.style.display = '';
+    okBtn.textContent = opts.confirmLabel || 'OK';
+    okBtn.className = 'btn btn-primary';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.display = '';
+    // Top-aligned so the on-screen keyboard never covers what's being typed.
+    modal.style.alignItems = 'flex-start';
+    modal.style.paddingTop = '12vh';
+    const finish = (val) => { modal.style.paddingTop = '20px'; modal.style.alignItems = 'center'; inputEl.style.display = 'none'; resolve(val); };
+    _appDialogResolve = (ok) => finish(ok ? inputEl.value.trim() : null);
+    okBtn.onclick = () => {
+      if (opts.required && !inputEl.value.trim()) { inputEl.style.borderColor = '#DC2626'; inputEl.focus(); return; }
+      _appDialogClose(true);
+    };
+    cancelBtn.onclick = () => _appDialogClose(false);
+    modal.style.display = 'flex';
+    setTimeout(() => inputEl.focus(), 60);
   });
 }
 // notifyUser(message, {title}) -> Promise<void> — single-button alert() replacement
@@ -8553,7 +8595,13 @@ async function submitStock() {
     });
     if (res.ok) {
       const etaLabel = etaMins ? (' · due in '+etaMins+'m') : '';
-      if (assignedIds.length) assignedIds.forEach(id => sendPushTo(id,'📥 New request for your stand',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):'')));
+      if (assignedIds.length) {
+        assignedIds.forEach(id => sendPushTo(id,'📥 New request for your stand',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):'')));
+        // Real gap found in the warehouse audit: when a stand had coverage, only the
+        // routed people were told — the Supervisor and Warehouse Manager heard
+        // nothing about a new request unless they happened to be routed too.
+        sb('staff_accounts?role=in.(warehouse_supervisor,warehouse_manager)&is_active=eq.true&select=employee_id').then(ls=>{ if(!ls._err&&Array.isArray(ls)) ls.filter(l=>!assignedIds.map(String).includes(String(l.employee_id))).forEach(l=>sendPushTo(l.employee_id,'📥 New stock request',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):''))); }).catch(()=>{});
+      }
       else sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor,warehouse_manager)&is_active=eq.true&select=employee_id').then(whs=>{ if(!whs._err&&Array.isArray(whs)) whs.forEach(w=>sendPushTo(w.employee_id,'📥 New stock request',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):''))); }).catch(()=>{});
       const supportRoute=await coverageNotifyRequest('stock',targetStand,'📦 Stock request in your coverage',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,70):''),false);
       const routeLabel = assignedNames.length ? (' → '+assignedNames.join(', ')) : '';
@@ -11258,8 +11306,10 @@ function whMgrOpenPane(mode) {
   if (panesWrap) panesWrap.style.display = 'block';
   if (backbar) backbar.style.display = 'flex';
   if (backbarTitle) backbarTitle.textContent = WH_MGR_PANE_TITLES[mode] || 'Menu';
-  const tab = document.getElementById('wh-tab-' + mode);
-  if (tab) whMode(tab, mode);
+  // Always switch the pane, even if no hidden tab element exists for this
+  // mode — that dependency is exactly what left the wrong pane's content
+  // showing under the right title twice (My Team, then Golf Cart).
+  whMode(document.getElementById('wh-tab-' + mode), mode);
 }
 function whMgrBackToMenu() {
   const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
@@ -11322,7 +11372,7 @@ async function mtLoadAssignees() {
   // staff_accounts table — that table is locked down to anon entirely once
   // lock_down_staff_accounts.sql runs, so this is the one safe way left to
   // get names for the assign-to picker without exposing PINs or lockout data.
-  const rows = await sb('warehouse_employee_directory?order=name.asc&select=employee_id,name').catch(()=>({_err:true}));
+  const rows = await sb('warehouse_employee_directory?order=name.asc&select=employee_id,name,role').catch(()=>({_err:true}));
   if (rows._err || !Array.isArray(rows)) return;
   // Pull current open-task counts per person so a manager isn't blindly
   // assigning — without this, nothing stopped one person getting overloaded
@@ -11342,7 +11392,8 @@ async function mtLoadAssignees() {
     rows.map(r => {
       const n = counts[r.employee_id] || 0;
       const load = n === 0 ? 'no open tasks' : n + ' open task' + (n === 1 ? '' : 's');
-      return '<option value="'+escapeAttr(r.employee_id)+'|'+escapeAttr(r.name)+'">'+escapeHtml(r.name)+' — '+load+'</option>';
+      const tag = r.role === 'warehouse_supervisor' ? ' (Supervisor)' : '';
+      return '<option value="'+escapeAttr(r.employee_id)+'|'+escapeAttr(r.name)+'">'+escapeHtml(r.name)+tag+' — '+load+'</option>';
     }).join('');
 }
 
@@ -11690,7 +11741,7 @@ async function mtViewTransfer(id, stand) {
 }
 
 async function mtConfirmTransfer(id) {
-  if (!confirm('Confirm this transfer as received? This locks the record permanently.')) return;
+  if (!(await confirmAction('This locks the record permanently.', { title: 'Confirm this transfer as received?', confirmLabel: 'Confirm received' }))) return;
   await sb('transfers?id=eq.'+id, { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ status:'confirmed', confirmed_by: state.managerName||'Manager', confirmed_at:new Date().toISOString() }) });
   toast('✅ Transfer confirmed & locked');
   loadMgrTransfers();
@@ -15506,7 +15557,31 @@ function updatePushButtonState() {
 // backend bug. Only prompts if permission hasn't been decided yet
 // ('default'), never re-prompts if already granted or denied, and only
 // once per day per device so it isn't naggy.
+// Real bug fix: a device's push subscription row was only ever written at the
+// moment permission was first granted, under whoever was logged in THEN.
+// Every later login on that same phone (a different person, or the same
+// person after their login ID changed) skipped this step because permission
+// was already 'granted' — so pushes for the new person went to nobody.
+// Verified against live data: the active Warehouse Manager, the Warehouse
+// Supervisor and every current warehouse login had zero subscriptions even
+// though several had the bell enabled. Re-links the device on every login.
+async function syncPushSubscriptionIdentity() {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    const who = state.user ? { id: state.user.empId, role: state.user.role }
+      : state.staffAccount ? { id: state.staffAccount.empId, role: state.staffAccount.role } : null;
+    if (!who || !who.id) return;
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;
+    await sb('push_subscriptions?on_conflict=endpoint', { method:'POST', headers:{Prefer:'return=minimal,resolution=merge-duplicates'},
+      body: JSON.stringify({ endpoint: sub.endpoint, p256dh: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh')))), auth: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth')))), user_id: who.id, role: who.role })
+    }).catch(()=>{});
+  } catch (e) { /* never block login over push */ }
+}
 function maybeAutoPromptPush(role) {
+  if ('Notification' in window && Notification.permission === 'granted') { syncPushSubscriptionIdentity(); }
   if (!('Notification' in window) || Notification.permission !== 'default') { updatePushButtonState(); return; }
   // Used to only prompt a handful of roles (warehouse/manager/tech/
   // supervisor) — but a plain Stand Lead genuinely receives real pushes
@@ -16000,11 +16075,13 @@ async function gcSelectKey(keyNum) {
     if (existing[0].has_issue) {
       gcHideAll();
       document.getElementById('gc-sub').textContent = 'Cart flagged';
-      alert('Cart ' + keyNum + ' was flagged today: ' + (existing[0].comments || 'see supervisor') + '\n\nThis cart is out of service until repairs are confirmed. Pick a different cart or speak to your supervisor.');
+      await notifyUser('Cart ' + keyNum + ' was flagged today: ' + (existing[0].comments || 'see supervisor') + '\n\nThis cart is out of service until repairs are confirmed. Pick a different cart or speak to your supervisor.', { title: '🚫 Cart out of service' });
       gcShowKeys();
       return;
     }
-    if (!confirm('Check out Key ' + keyNum + '?\n\nBy proceeding you confirm you will operate this cart safely per the Aramark Cart Safety Rules.')) return;
+    // Branded dialog (readable, big buttons) instead of the native browser
+    // popup, which renders dark and tiny on phones.
+    if (!(await confirmAction('By proceeding you confirm you will operate this cart safely per the Aramark Cart Safety Rules.', { title: 'Check out Key ' + keyNum + '?', confirmLabel: 'Check out' }))) return;
     await gcSubmitCheckout();
     return;
   }
@@ -16017,6 +16094,9 @@ function gcShowInspection(keyNum) {
   document.getElementById('gc-inspect-cartid').textContent = keyNum;
   document.getElementById('gc-sub').textContent = 'Pre-Use Inspection — Cart ' + keyNum;
   document.getElementById('gc-inspect-comments').value = '';
+  document.getElementById('gc-inspect-comments').style.borderColor = '';
+  const cl = document.getElementById('gc-inspect-comments-label');
+  if (cl) { cl.textContent = 'Comments (required if anything is flagged)'; cl.style.color = ''; }
   const items = ['Tires inflated and in good condition','Horn works','Lights work','Steering','Brakes work',
     'Battery plug in good condition','Seatbelts in good condition','Gauges work','Alarms work',
     'No fluid leaks','Mirrors, if applicable','Body or other signs of damage'];
@@ -16024,10 +16104,24 @@ function gcShowInspection(keyNum) {
     <div class="check-item">
       <div class="check-item-label">${label}</div>
       <div class="check-options">
-        <button class="check-opt" data-i="${i}" data-val="Done" onclick="selCheck(this)">OK</button>
-        <button class="check-opt" data-i="${i}" data-val="Issue" onclick="selCheck(this)">Issue</button>
+        <button class="check-opt" data-i="${i}" data-val="Done" onclick="gcSelCheck(this)">OK</button>
+        <button class="check-opt" data-i="${i}" data-val="Issue" onclick="gcSelCheck(this)">Issue</button>
       </div>
     </div>`).join('');
+}
+// Marking something as an Issue means a comment is now required — highlight
+// the box and bring it into view so it can't be missed under the fold.
+function gcSelCheck(btn) {
+  selCheck(btn);
+  if (btn.dataset.val !== 'Issue') return;
+  const box = document.getElementById('gc-inspect-comments');
+  const label = document.getElementById('gc-inspect-comments-label');
+  if (label) { label.textContent = '⚠️ Describe the issue (required)'; label.style.color = '#DC2626'; }
+  if (box) { box.style.borderColor = '#DC2626'; setTimeout(() => box.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80); }
+}
+function gcInspectFocus() {
+  const box = document.getElementById('gc-inspect-comments');
+  if (box) setTimeout(() => box.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
 }
 
 async function gcSubmitInspection() {
@@ -16047,17 +16141,20 @@ async function gcSubmitInspection() {
   const comments = document.getElementById('gc-inspect-comments').value.trim();
   if (hasIssue && !comments) return toast('Describe the issue in Comments before submitting', 'error');
 
+  // The success/flag popups used to fire INSIDE the lock, so the button sat
+  // on "Saving…" behind a dark native popup. Now the save finishes, the lock
+  // releases, and only then does anything pop up.
+  let flagged = false, saved = false;
   await withLock(document.getElementById('gc-inspect-submit-btn'), 'Saving…', async () => {
     const r = await sb('cart_inspections', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({
       cart_id: _gcSelectedKey, inspection_date: localISODate(), results, comments,
       inspected_by_id: _gcUser.empId, inspected_by_name: _gcUser.name, has_issue: hasIssue
     })});
     if (r._err) { toast('Could not save inspection — ' + (r.status === 404 ? 'table missing (run stadium_update.sql)' : 'try again'), 'error'); return; }
+    saved = true;
 
     if (hasIssue) {
-      gcHideAll();
-      document.getElementById('gc-sub').textContent = 'Cart flagged';
-      alert('Issue logged for Cart ' + _gcSelectedKey + '. This cart is now out of service until a supervisor confirms repairs. Please notify your supervisor immediately.');
+      flagged = true;
       toast('⚠️ Cart ' + _gcSelectedKey + ' flagged — notify your supervisor', 'error');
       // Push both warehouse managers and stand/game managers — a flagged
       // cart is exactly the kind of thing that shouldn't wait for someone
@@ -16068,13 +16165,35 @@ async function gcSubmitInspection() {
       sb('staff_accounts?role=eq.manager&is_active=eq.true&select=employee_id').then(mgrs => {
         if (!mgrs._err && Array.isArray(mgrs)) mgrs.forEach(m => sendPushTo(m.employee_id, '🚫 Cart ' + _gcSelectedKey + ' flagged', (comments || 'Issue found on pre-use inspection') + ' — reported by ' + _gcUser.name));
       }).catch(() => {});
-      gcShowKeys();
-      return;
     }
-    toast('✅ Inspection passed — proceeding to checkout');
-    if (!confirm('Check out Key ' + _gcSelectedKey + '?\n\nBy proceeding you confirm you will operate this cart safely per the Aramark Cart Safety Rules.')) { gcShowKeys(); return; }
-    await gcSubmitCheckout();
   });
+  if (flagged) {
+    gcHideAll();
+    document.getElementById('gc-sub').textContent = 'Cart flagged';
+    await notifyUser('Issue logged for Cart ' + _gcSelectedKey + '. This cart is now out of service until a manager confirms repairs. Please notify your manager right away.', { title: '🚫 Cart flagged' });
+    gcShowKeys();
+    return;
+  }
+  // No second popup: the safety acknowledgement is printed right above the
+  // Submit button, so this one tap completes inspection AND checkout.
+  if (saved) await gcSubmitCheckout();
+}
+
+// One-shot return to the person's own home screen. Used after a successful
+// checkout/return so nobody is left on a finished screen tapping buttons.
+let _gcHomeTimer = null;
+function gcGoHome() {
+  if (_gcHomeTimer) { clearTimeout(_gcHomeTimer); _gcHomeTimer = null; }
+  const active = document.querySelector('.screen.active');
+  if (!active || active.id !== 'screen-golfcart') return;
+  if (state.user) { renderHome(); goRoleHome(); }
+  else if (state.staffAccount && state.staffAccount.group === 'warehouse') { showScreen('screen-warehouse'); renderWarehouseForRole(); }
+  else if (state.staffAccount && state.staffAccount.group === 'manager') { showScreen('screen-bedcheck'); restoreMgrSidebarState(); }
+  else { showScreen('screen-login'); }
+}
+function gcAutoHome(ms) {
+  if (_gcHomeTimer) clearTimeout(_gcHomeTimer);
+  _gcHomeTimer = setTimeout(gcGoHome, ms || 3500);
 }
 
 async function gcSubmitCheckout() {
@@ -16098,6 +16217,9 @@ async function gcSubmitCheckout() {
   document.getElementById('gc-confirm-msg').textContent = _gcUser.name + ' checked out Key ' + _gcSelectedKey + ' at ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   document.getElementById('gc-sub').textContent = 'Key ' + _gcSelectedKey + ' checked out ✅';
   toast('🔑 Key ' + _gcSelectedKey + ' — collect from your Manager or the Warehouse Manager');
+  // Per direct request: one automatic trip home instead of leaving a finished
+  // screen up for people to tap through again and again.
+  gcAutoHome(3500);
 }
 
 // ── RETURN A KEY ──
@@ -16138,9 +16260,10 @@ async function gcSubmitReturn(hasIssue) {
   }
   const confirmMsg = hasIssue
     ? 'Report this issue and take Key ' + keyNum + ' out of service until a manager reviews it?'
-    : 'Return Key ' + keyNum + '? It becomes available for the next person right away.';
-  if (!confirm(confirmMsg)) return;
+    : 'It becomes available for the next person right away.';
+  if (!(await confirmAction(confirmMsg, { title: hasIssue ? 'Report issue — Key ' + keyNum : 'Return Key ' + keyNum + '?', confirmLabel: hasIssue ? 'Report & take out of service' : 'Return key', danger: !!hasIssue }))) return;
 
+  let returned = false;
   await withLock(document.getElementById('gc-return-btn'), 'Returning…', async () => {
     if (hasIssue) {
       // Flagged — key stays out of the pool, not auto-freed. Same
@@ -16161,8 +16284,10 @@ async function gcSubmitReturn(hasIssue) {
       toast('✅ Key ' + keyNum + ' returned — available for the next person');
       notifyCartManagers('🔑 Key ' + keyNum + ' returned', 'No issues reported — by ' + _gcUser.name);
     }
-    gcShowKeys();
+    returned = true;
   });
+  // Done — straight back to the person's home screen, no extra taps.
+  if (returned) gcGoHome();
 }
 
 // ============ MANAGER: VERIFIED DRIVERS VIEW ============
@@ -18331,7 +18456,7 @@ function whSupSyncTileBadges() {
   const r = document.getElementById('wh-open-count');
   const ts = document.getElementById('wh-sup-tile-transfers-sub');
   const rs = document.getElementById('wh-sup-tile-requests-sub');
-  if (ts && t) ts.textContent = t.textContent + ' open';
+  if (ts && t) ts.textContent = state._whTileSub || (t.textContent + ' open');
   if (rs && r) rs.textContent = r.textContent + ' open';
 }
 
@@ -18714,8 +18839,12 @@ async function adminUploadWarehouseRoster(prefix) {
 
 async function loadWhRoster() {
   const dateEl = document.getElementById('wh-roster-date');
-  const date = (dateEl && dateEl.value) || localISODate();
-  if (dateEl && !dateEl.value) dateEl.value = date;
+  // Supervisor's roster is always TODAY, re-read every time — the date used
+  // to be fixed when the pane was built, so a phone left open overnight kept
+  // showing yesterday. Manager keeps the picker.
+  const isMgrView = state.staffAccount && state.staffAccount.role === 'warehouse_manager';
+  const date = isMgrView ? ((dateEl && dateEl.value) || localISODate()) : localISODate();
+  if (dateEl && (!dateEl.value || !isMgrView)) dateEl.value = date;
   const list = document.getElementById('wh-roster-list');
   if (!list) return;
   list.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
@@ -18814,6 +18943,7 @@ function whRosterFbRate(idx, rating) {
   document.getElementById('wh-roster-fb-bad-' + idx).classList.toggle('selected', rating === 'needs_improvement');
 }
 async function whRosterSubmitFb(idx) {
+  if (!isWhRosterLeader()) return toast('Not authorized', 'error');
   const w = (state._whRosterFlat || [])[idx]; if (!w) return;
   if (!state._whRosterFbRating) return toast('Pick 👍 or 👎 first', 'error');
   const who = getRequesterIdentity();
@@ -19555,7 +19685,7 @@ function whSetZoneFilter(mode, btn) {
 // Warehouse mode switch (Transfers / Requests / Stock Count)
 function whMode(el, mode) {
   document.querySelectorAll('#screen-warehouse .tab-bar:first-of-type .tab-item').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+  if (el) el.classList.add('active');
   document.getElementById('wh-mode-todeliver').style.display = mode === 'todeliver' ? 'block' : 'none';
   document.getElementById('wh-mode-transfers').style.display = mode === 'transfers' ? 'block' : 'none';
   document.getElementById('wh-mode-requests').style.display = mode === 'requests' ? 'block' : 'none';
@@ -19943,7 +20073,22 @@ async function loadWhTransfers() {
     }
   }
 
-  el.innerHTML = requestCardsHtml + visible.map(t => {
+  // Supervisor/Manager see everyone's transfers, so sort what needs THEM to
+  // the top under plain labels instead of one mixed list: (0) delivered and
+  // waiting for their signature, (1) assigned to them to deliver, (2) signed
+  // and ready for their approval, (3) everything else.
+  const isLeader = role === 'warehouse_manager' || role === 'warehouse_supervisor';
+  const bucketOf = t => {
+    if (!isLeader) return 3;
+    const own = tsIsMyOwnDelivery(t);
+    if (t.status === 'delivered' && !t.wh_confirmed_at && (role === 'warehouse_manager' || !own)) return 0;
+    if (t.assigned_to_id === myId && (t.status === 'pending' || t.status === 'delivering')) return 1;
+    if (t.status === 'verified' && !t.wh_confirmed_at && (role === 'warehouse_manager' || !own)) return 2;
+    return 3;
+  };
+  const BUCKET_LABELS = ['✍️ Needs your signature', '🙋 Assigned to you — deliver these', '✅ Signed — ready for your approval', 'Everything else'];
+  const sortedVisible = isLeader ? visible.slice().sort((a, b) => bucketOf(a) - bucketOf(b)) : visible;
+  const rowHtmls = sortedVisible.map(t => {
     const st = TRANSFER_STATUS[t.status] || TRANSFER_STATUS.pending;
     const partialBadge = partialIds.has(t.id) ? ' <span style="color:#DC2626;font-weight:800">⚠️ Partial</span>' : '';
     const isMine = t.assigned_to_id === myId;
@@ -19954,7 +20099,7 @@ async function loadWhTransfers() {
     // "warehouse worker seeing supervisor sign-off" confusion.
     // Real fix, per direct request: Supervisor can approve now too, not
     // just Manager — same rule as whFinalApprove()/whConfirmTask() above.
-    const canConfirm = (role === 'warehouse_manager' || role === 'warehouse_supervisor') && t.status === 'verified' && !t.wh_confirmed_at;
+    const canConfirm = (role === 'warehouse_manager' || (role === 'warehouse_supervisor' && !tsIsMyOwnDelivery(t))) && t.status === 'verified' && !t.wh_confirmed_at;
     let rightSide;
     if (t.wh_confirmed_at) {
       rightSide = '<span style="font-size:11px;color:#00A651;font-weight:700">✓ Confirmed</span>';
@@ -20002,7 +20147,30 @@ async function loadWhTransfers() {
       </div>
       ${rightSide}${printBtn}
     </div>`;
-  }).join('');
+  });
+  let listHtml = '', lastBucket = -1;
+  sortedVisible.forEach((t, i) => {
+    const b = bucketOf(t);
+    if (isLeader && b !== lastBucket) {
+      listHtml += '<div style="font-size:12px;font-weight:800;color:' + (b === 3 ? 'var(--text-2)' : 'var(--aramark-red)') + ';margin:14px 2px 6px;text-transform:uppercase;letter-spacing:.04em">' + BUCKET_LABELS[b] + '</div>';
+      lastBucket = b;
+    }
+    listHtml += rowHtmls[i];
+  });
+  el.innerHTML = requestCardsHtml + listHtml;
+  // Tile sub-label for Supervisor/Manager: say what needs THEM, not just a count.
+  if (isLeader) {
+    const needSign = sortedVisible.filter(t => bucketOf(t) === 0).length;
+    const mine = sortedVisible.filter(t => bucketOf(t) === 1).length;
+    const ready = sortedVisible.filter(t => bucketOf(t) === 2).length;
+    const parts = [];
+    if (needSign) parts.push(needSign + ' to sign');
+    if (mine) parts.push(mine + ' for you');
+    if (ready) parts.push(ready + ' to approve');
+    state._whTileSub = parts.length ? parts.join(' · ') : null;
+    const tsub = document.getElementById('wh-sup-tile-transfers-sub');
+    if (tsub) tsub.textContent = state._whTileSub || (sortedVisible.length + ' open');
+  }
 }
 
 // Warehouse supervisor/manager physically checks the delivery, then confirms
@@ -20021,6 +20189,11 @@ async function whConfirmTask(id, stand) {
   // function itself at all. Same rule applied both places now.
   if (!isWarehouseManagerSession() && !isWarehouseSupervisorSession()) return toast('Warehouse Manager or Supervisor approval required', 'error');
   const isSupApproval = isWarehouseSupervisorSession();
+  if (isSupApproval) {
+    // A Supervisor can't approve a delivery he made himself — Manager does.
+    const own = await sb('transfers?id=eq.' + id + '&select=assigned_to_id,delivered_by').catch(() => ({ _err: true }));
+    if (!own._err && Array.isArray(own) && own[0] && tsIsMyOwnDelivery(own[0])) return toast('You delivered this one — the Warehouse Manager has to approve it', 'error');
+  }
   const who = state.staffAccount ? state.staffAccount.name : (isSupApproval ? 'Warehouse Supervisor' : 'Warehouse Manager');
   const whoId = state.staffAccount ? state.staffAccount.empId : '';
   const body = { wh_confirmed_by_id: whoId, wh_confirmed_by_name: who, wh_confirmed_at: new Date().toISOString() };
@@ -20367,7 +20540,13 @@ function renderTsStatus() {
   // he can verify (and then, below, also give the final approval) himself.
   // Employees and everyone else see a plain waiting message instead.
   const role = state.staffAccount ? state.staffAccount.role : null;
-  const canVerify = role === 'warehouse_supervisor' || role === 'warehouse_manager';
+  // Separation of duties: a Supervisor can't sign off a delivery he made
+  // himself (found in the warehouse audit — he could deliver, verify AND
+  // approve his own transfer with nobody else ever looking at it). Manager
+  // outranks him, so the Manager signs those instead; Manager's own one-tap
+  // self-handled shortcut is unchanged.
+  const ownDelivery = role === 'warehouse_supervisor' && tsIsMyOwnDelivery(_tsTransfer);
+  const canVerify = (role === 'warehouse_supervisor' && !ownDelivery) || role === 'warehouse_manager';
   const signoffEl = document.getElementById('ts-signoff');
   const waitingEl = document.getElementById('ts-waiting-msg');
   const approvalEl = document.getElementById('ts-manager-approval');
@@ -20381,7 +20560,9 @@ function renderTsStatus() {
   if (waitingEl) {
     if (_tsTransfer.status === 'delivered' && !canVerify) {
       waitingEl.style.display = 'block';
-      waitingEl.textContent = '✓ Marked delivered — waiting for a warehouse supervisor to check and sign off.';
+      waitingEl.textContent = ownDelivery
+        ? '✓ You delivered this one — the Warehouse Manager needs to check and sign it off.'
+        : '✓ Marked delivered — waiting for a warehouse supervisor to check and sign off.';
     } else {
       waitingEl.style.display = 'none';
     }
@@ -20395,7 +20576,7 @@ function renderTsStatus() {
   // Supervisor completes one so he stays aware even when he wasn't the one
   // who did it (see whFinalApprove).
   if (approvalEl) {
-    const canApprove = role === 'warehouse_manager' || role === 'warehouse_supervisor';
+    const canApprove = role === 'warehouse_manager' || (role === 'warehouse_supervisor' && !ownDelivery);
     if (_tsTransfer.status === 'verified' && canApprove && !_tsTransfer.wh_confirmed_at) {
       approvalEl.style.display = 'block';
       const titleEl = document.getElementById('ts-manager-approval-title');
@@ -20528,7 +20709,7 @@ async function tsSetQty(id, val) {
 async function tsRemoveItem(id) {
   const it = _tsItems.find(i => i.id === id);
   if (!it) return;
-  if (!confirm('Remove ' + it.item_name + ' from this list?')) return;
+  if (!(await confirmAction(it.item_name, { title: 'Remove this item from the list?', confirmLabel: 'Remove', danger: true }))) return;
   const r = await sb('transfer_items?id=eq.'+id, { method:'DELETE', headers:{Prefer:'return=minimal'} });
   if (r._err) return toast('Could not remove — try again', 'error');
   // Force-logged items already wrote a real "IN" stock movement the moment
@@ -20994,8 +21175,13 @@ async function tsCompleteDelivery(opts) {
     }
     if(finalStatus==='delivered'){
       sb('staff_accounts?role=eq.warehouse_supervisor&is_active=eq.true&select=employee_id').then(rows=>{
-        if(!rows._err&&Array.isArray(rows)&&rows.length){
-          rows.forEach(x=>sendPushTo(x.employee_id,'📦 Delivery ready to verify',_tsTransfer.stand+' · delivered by '+deliveredByName));
+        // A supervisor who made this delivery himself can't sign it off, so
+        // he isn't the one to alert — if nobody else is on, it goes to the
+        // manager instead (same fallback as "no supervisor on shift").
+        const meId=String((state.staffAccount&&state.staffAccount.empId)||'');
+        const others=(!rows._err&&Array.isArray(rows))?rows.filter(x=>String(x.employee_id)!==meId):[];
+        if(others.length){
+          others.forEach(x=>sendPushTo(x.employee_id,'📦 Delivery ready to verify',_tsTransfer.stand+' · delivered by '+deliveredByName));
         }else{
           // No active supervisor covering this game — the manager is the
           // only one left who'd otherwise never hear this needs verifying.
@@ -21061,6 +21247,15 @@ function showQuickDropSuccess(stand){
   document.body.appendChild(overlay);
 }
 
+// True when the signed-in person is the one who was assigned this transfer or
+// who physically delivered it.
+function tsIsMyOwnDelivery(t) {
+  if (!t || !state.staffAccount) return false;
+  const myId = String(state.staffAccount.empId || '');
+  const myName = String(state.staffAccount.name || state.whName || '').trim().toLowerCase();
+  return (t.assigned_to_id && String(t.assigned_to_id) === myId) ||
+         (t.delivered_by && myName && String(t.delivered_by).trim().toLowerCase() === myName);
+}
 async function tsVerifySign() {
   // Real guard — this step is documented as "gated to warehouse_supervisor
   // or warehouse_manager" (the sign-off button is hidden for other roles
@@ -21070,6 +21265,7 @@ async function tsVerifySign() {
   // instead of waiting on a supervisor to do it for him.
   const verifierRole = isWarehouseManagerSession() ? 'Warehouse Manager' : 'Warehouse Supervisor';
   if (!isWarehouseSupervisorSession() && !isWarehouseManagerSession()) return toast('Supervisor or manager sign-off required', 'error');
+  if (isWarehouseSupervisorSession() && tsIsMyOwnDelivery(_tsTransfer)) return toast('You delivered this one — the Warehouse Manager has to sign it off', 'error');
   const name = document.getElementById('ts-sign-name').value.trim();
   if (!name) return toast('Enter your name to sign', 'error');
 
@@ -21102,9 +21298,12 @@ async function tsVerifySign() {
   // without an actual push behind it — same gap as stock requests had.
   // Pushed to every active warehouse manager, since approval isn't
   // assigned to one specific person.
-  sb('staff_accounts?role=eq.warehouse_manager&is_active=eq.true&select=employee_id').then(mgrs => {
+  // Supervisors can approve now too, so they hear about it as well (except
+  // the person who just signed it).
+  sb('staff_accounts?role=in.(warehouse_manager,warehouse_supervisor)&is_active=eq.true&select=employee_id').then(mgrs => {
+    const me = String((state.staffAccount && state.staffAccount.empId) || '');
     if (!mgrs._err && Array.isArray(mgrs)) {
-      mgrs.forEach(m => sendPushTo(m.employee_id, '✍️ Ready for approval', _tsTransfer.stand + ' — verified by ' + name));
+      mgrs.filter(m => String(m.employee_id) !== me).forEach(m => sendPushTo(m.employee_id, '✍️ Ready for approval', _tsTransfer.stand + ' — verified by ' + name));
     }
   }).catch(() => {});
   renderTsItems();
@@ -21117,7 +21316,10 @@ async function tsVerifySign() {
 // reject at all. Requires a reason so the employee knows what to actually
 // fix, not just "redo it."
 async function tsRevertDelivery() {
-  const reason = prompt('What was wrong? (this is shown to the warehouse employee)');
+  // Function-level gate (the button was only hidden for other roles) and a
+  // readable in-app text box instead of the native prompt().
+  if (!isWarehouseSupervisorSession() && !isWarehouseManagerSession()) return toast('Supervisor or manager only', 'error');
+  const reason = await promptAction('This is shown to the warehouse employee so they know what to fix.', { title: 'What was wrong?', placeholder: 'e.g. Missing 2 cases of water', confirmLabel: 'Send back', required: true });
   if (!reason) return; // cancelled or blank — don't revert silently with no explanation
   const who = state.staffAccount ? state.staffAccount.name : 'Supervisor';
   const res = await sb('transfers?id=eq.'+_tsTransfer.id+'&status=eq.delivered', {
@@ -21152,6 +21354,7 @@ async function whFinalApprove() {
   // only Manager or Supervisor can call this at all.
   if (!isWarehouseManagerSession() && !isWarehouseSupervisorSession()) return toast('Warehouse Manager or Supervisor approval required', 'error');
   const isSupApproval = isWarehouseSupervisorSession();
+  if (isSupApproval && tsIsMyOwnDelivery(_tsTransfer)) return toast('You delivered this one — the Warehouse Manager has to approve it', 'error');
   const who = state.staffAccount ? state.staffAccount.name : (isSupApproval ? 'Warehouse Supervisor' : 'Warehouse Manager');
   const whoId = state.staffAccount ? state.staffAccount.empId : '';
   const nowIso = new Date().toISOString();
