@@ -4117,7 +4117,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-cart-icon-duty-audit-1';
+const BUILD_TAG = '2026-09-29-zonestands-coverage-fix-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -17582,12 +17582,25 @@ async function loadMyChecksStatus() {
 
 // ── ZONE FILTER (supervisor "My Stands" vs "All Stands") ──
 // Additive on top of the existing screens — nothing here changes what
-// happens when a supervisor has no assignment set (getMyZoneStands
-// returns null, the toggle stays hidden, everything behaves exactly as
-// it did before this feature existed).
+// happens when a supervisor has no assignment set (stands stays null, the
+// toggle stays hidden, everything behaves exactly as it did before this
+// feature existed).
+// Real bug fix, found by codebase audit: this used to read only the legacy
+// zone_assignments table via getMyZoneStands — the same table the warehouse
+// coverage fix (getMyWarehouseCoverageStands) already moved off of, because
+// nothing writes to it anymore (its admin form was removed). Left unfixed
+// here, the toggle would silently stay hidden forever for every
+// Manager/Supervisor, even ones with a real coverage assignment set via the
+// current Admin Coverage tool. Now checks game_day_assignments (team:
+// 'support', the same team key Admin Coverage's "Support / Managers" option
+// writes) first, falling back to the legacy table only if nothing was ever
+// migrated — same fallback order the warehouse fix already established.
 async function getMyZoneStandsCached() {
   if (state._myZoneStands !== undefined) return state._myZoneStands;
   if (!state.user || !state.user.empId) { state._myZoneStands = null; return null; }
+  const mine = await coverageGetAllMyAssignments(state.user.empId, stadiumDay()).catch(()=>[]);
+  const expanded = await coverageExpandAssignmentStands(mine.filter(x=>x.team==='support'));
+  if (expanded.stands.length) { state._myZoneStands = expanded.stands; return state._myZoneStands; }
   const res = await api('getMyZoneStands', { employeeId: state.user.empId });
   state._myZoneStands = (res.ok && res.stands) ? res.stands : null;
   return state._myZoneStands;
