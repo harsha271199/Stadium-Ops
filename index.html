@@ -3705,6 +3705,12 @@
         <div class="tab-item" id="wh-tab-inventory" style="display:none" onclick="whMode(this,'inventory')">📄 Stand Transfer Report</div>
         <div class="tab-item" id="wh-tab-cart" style="display:none" onclick="whMode(this,'cart')"><svg width="14" height="13" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Golf Cart</div>
         <div class="tab-item" id="wh-tab-mycart" style="display:none" onclick="goGolfCart()"><svg width="14" height="13" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Cart</div>
+        <!-- Real bug fix: whMgrOpenPane('roster') looks up 'wh-tab-'+mode to
+             find a tab element to hand to whMode() — inventory/cart both had
+             one (hidden, tile-only access), roster never did, so whMode()
+             silently never ran and whichever pane was open before stayed
+             visible underneath the correctly-updated "My Team" title. -->
+        <div class="tab-item" id="wh-tab-roster" style="display:none" onclick="whMode(this,'roster')">👥 My Team</div>
       </div>
     </div>
 
@@ -4128,7 +4134,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-sup-final-approval-1';
+const BUILD_TAG = '2026-09-29-myteam-tab-fix-mgr-only-upload-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -18652,15 +18658,22 @@ function whBuildCartPane() {
 function whBuildRosterPane() {
   const el = document.getElementById('wh-mode-roster');
   if (!el) return;
+  // Real change, per direct request: uploading the roster is a Manager
+  // (and Admin, from its own screen) job — Supervisor gets the check-in
+  // list only, no upload card.
+  const isRealMgr = state.staffAccount && state.staffAccount.role === 'warehouse_manager';
   el.innerHTML =
     '<div style="max-width:520px">' +
-      '<div class="card" style="padding:14px;margin-bottom:14px">' +
-        '<div style="font-weight:700;font-size:14px;margin-bottom:6px">📤 Upload today\'s warehouse roster</div>' +
-        '<div style="font-size:11px;color:var(--text-2);margin-bottom:8px">Same roster export used for scheduling. Uploading again for the same date replaces it — it never piles on top.</div>' +
-        '<input class="form-input" type="file" id="wh-roster-file" accept=".csv" style="margin:0 0 8px">' +
-        '<button class="btn btn-primary" id="wh-roster-upload-btn" onclick="adminUploadWarehouseRoster()">Upload roster CSV →</button>' +
-        '<div id="wh-roster-upload-status" style="font-size:12px;margin-top:6px"></div>' +
-      '</div>' +
+      (isRealMgr ?
+        '<div class="card" style="padding:14px;margin-bottom:14px">' +
+          '<div style="font-weight:700;font-size:14px;margin-bottom:6px">📤 Upload today\'s warehouse roster</div>' +
+          '<div style="font-size:11px;color:var(--text-2);margin-bottom:8px">Same roster export used for scheduling. Uploading again for the same date replaces it — it never piles on top.</div>' +
+          '<input class="form-input" type="file" id="wh-roster-file" accept=".csv" style="margin:0 0 8px">' +
+          '<button class="btn btn-primary" id="wh-roster-upload-btn" onclick="adminUploadWarehouseRoster()">Upload roster CSV →</button>' +
+          '<div id="wh-roster-upload-status" style="font-size:12px;margin-top:6px"></div>' +
+        '</div>'
+        : ''
+      ) +
       '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">' +
         '<input class="form-input" type="date" id="wh-roster-date" style="margin:0;flex:1" onchange="loadWhRoster()">' +
         '<button class="btn btn-ghost" onclick="document.getElementById(\'wh-roster-date\').value=localISODate();loadWhRoster()" style="width:auto;margin:0;padding:14px 16px;white-space:nowrap">Today</button>' +
@@ -18675,8 +18688,11 @@ function whBuildRosterPane() {
 }
 
 async function adminUploadWarehouseRoster(prefix) {
+  // Real change, per direct request: upload is Manager/Admin only —
+  // Supervisor's own button was removed, and the function itself is the
+  // actual gate, not just the missing button.
   const role = state.staffAccount && state.staffAccount.role;
-  if (!['warehouse_manager', 'warehouse_supervisor', 'manager', 'admin'].includes(role)) return toast('Not authorized', 'error');
+  if (!['warehouse_manager', 'manager', 'admin'].includes(role)) return toast('Not authorized', 'error');
   prefix = prefix || 'wh-roster';
   const f = document.getElementById(prefix + '-file').files[0];
   const st = document.getElementById(prefix + '-upload-status');
