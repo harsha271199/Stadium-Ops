@@ -2334,7 +2334,7 @@
 
     <!-- STEP 3b: Daily Pre-Use Inspection — once per cart per day, before checkout -->
     <div id="gc-inspect-section" style="display:none">
-      <div class="notice info" style="margin-bottom:12px;font-size:12px">🧰 Pre-Use Inspection — Cart <span id="gc-inspect-cartid"></span>, today. Required once per cart, per day, before checkout. Form OS-07a-03.</div>
+      <div class="notice info" style="margin-bottom:12px;font-size:12px">🧰 Pre-Use Inspection — Cart <span id="gc-inspect-cartid"></span>, today. This is the full check — done by the first driver on this cart each day. Everyone after that only does a 5-second quick check. Form OS-07a-03.</div>
       <div id="gc-inspect-items"></div>
       <label class="form-label" id="gc-inspect-comments-label" style="margin-top:12px">Comments (required if anything is flagged)</label>
       <!-- 16px+ text and a solid border: the old small textarea was hard to see
@@ -2344,6 +2344,38 @@
       <div style="font-size:12px;color:var(--text-2);margin-top:12px;line-height:1.4">By tapping the button below you confirm you will operate this cart safely per the Aramark Cart Safety Rules.</div>
       <button class="btn btn-primary" id="gc-inspect-submit-btn" onclick="gcSubmitInspection()" style="margin-top:10px">Submit inspection &amp; check out →</button>
       <button class="btn btn-ghost" onclick="gcShowKeys()" style="margin-top:8px">← Back to keys</button>
+    </div>
+
+    <!-- STEP 3c: Quick pick-up check — every checkout after the cart's first full inspection of the day -->
+    <div id="gc-quick-section" style="display:none">
+      <div style="text-align:center;margin:6px 0 14px">
+        <div style="font-size:13px;color:var(--text-2)">Quick check</div>
+        <div style="font-size:30px;font-weight:800">Key <span id="gc-quick-keynum"></span></div>
+        <div id="gc-quick-last" style="font-size:12px;color:var(--text-2);margin-top:4px"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">
+        <span style="background:var(--bg-elevated);border:1.5px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:600">🛑 Brakes</span>
+        <span style="background:var(--bg-elevated);border:1.5px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:600">🛞 Tires &amp; steering</span>
+        <span style="background:var(--bg-elevated);border:1.5px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:600">🔧 No damage or leaks</span>
+      </div>
+      <div id="gc-quick-good-box">
+        <button class="btn btn-primary" id="gc-quick-allgood-btn" onclick="gcQuickAllGood()" style="font-size:18px;padding:18px">✓ All good — check out</button>
+        <div style="font-size:11px;color:var(--text-2);margin:8px 2px 14px;text-align:center;line-height:1.4">Looks fine to drive? By checking out you confirm you will operate this cart safely per the Aramark Cart Safety Rules.</div>
+        <button class="btn btn-ghost" onclick="gcQuickShowIssue()" style="border-color:#DC2626;color:#DC2626">⚠️ Something's wrong</button>
+      </div>
+      <div id="gc-quick-issue-box" style="display:none">
+        <div style="font-weight:700;font-size:15px;margin-bottom:8px">What's wrong?</div>
+        <div id="gc-quick-items" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <button class="btn btn-ghost" data-k="Brakes" onclick="gcQuickToggle(this)" style="width:auto;padding:10px 14px;margin:0">🛑 Brakes</button>
+          <button class="btn btn-ghost" data-k="Tires / steering" onclick="gcQuickToggle(this)" style="width:auto;padding:10px 14px;margin:0">🛞 Tires / steering</button>
+          <button class="btn btn-ghost" data-k="Damage / leaks" onclick="gcQuickToggle(this)" style="width:auto;padding:10px 14px;margin:0">🔧 Damage / leaks</button>
+          <button class="btn btn-ghost" data-k="Other" onclick="gcQuickToggle(this)" style="width:auto;padding:10px 14px;margin:0">❓ Other</button>
+        </div>
+        <textarea class="form-input" id="gc-quick-comments" rows="3" placeholder="Describe it (required)" onfocus="gcQuickFocus()" style="font-size:16px;line-height:1.4;min-height:96px;color:var(--text-1);background:var(--bg-elevated);border:2px solid var(--border)"></textarea>
+        <button class="btn btn-primary" id="gc-quick-report-btn" onclick="gcQuickSubmitIssue()" style="margin-top:10px;background:#DC2626;border-color:#DC2626">Report &amp; take cart out of service</button>
+        <button class="btn btn-ghost" onclick="gcShowQuickCheck(_gcSelectedKey)" style="margin-top:8px">← It's actually fine</button>
+      </div>
+      <button class="btn btn-ghost" onclick="gcShowKeys()" style="margin-top:14px">← Back to keys</button>
     </div>
 
     <!-- STEP 4: Checkout confirmation -->
@@ -4140,7 +4172,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-29-wh-checkin-checkout-1';
+const BUILD_TAG = '2026-09-29-cart-quick-check-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15766,7 +15798,7 @@ let _gcIsFirstTime = false;
 
 // Back button handler — context-aware
 function gcHandleBack() {
-  const sections = ['gc-login-section','gc-blocked-section','gc-firsttime-section','gc-keys-section','gc-inspect-section','gc-confirm-section'];
+  const sections = ['gc-login-section','gc-blocked-section','gc-firsttime-section','gc-keys-section','gc-inspect-section','gc-quick-section','gc-confirm-section'];
   const visible = sections.find(s => document.getElementById(s).style.display !== 'none');
   // If on keys or confirm, go home; if on first-time, go back to login;
   // if mid-inspection, go back to the key board (not straight to home —
@@ -15774,7 +15806,7 @@ function gcHandleBack() {
   // back arrow fell through to the default case while someone was
   // literally in the middle of filling out a safety checklist).
   if (visible === 'gc-firsttime-section') { gcShowLogin(); }
-  else if (visible === 'gc-inspect-section') { gcShowKeys(); }
+  else if (visible === 'gc-inspect-section' || visible === 'gc-quick-section') { gcShowKeys(); }
   else if (state.user) { renderHome(); goRoleHome(); }
   // A warehouse/manager staff session reaching this screen (via the new
   // "Cart" tile) has no state.user at all — falling through to the login
@@ -15806,7 +15838,7 @@ function goGolfCart() {
 }
 
 function gcHideAll() {
-  ['gc-login-section','gc-blocked-section','gc-firsttime-section','gc-keys-section','gc-inspect-section','gc-confirm-section']
+  ['gc-login-section','gc-blocked-section','gc-firsttime-section','gc-keys-section','gc-inspect-section','gc-quick-section','gc-confirm-section']
     .forEach(id => document.getElementById(id).style.display = 'none');
 }
 
@@ -16026,9 +16058,9 @@ async function gcShowKeys() {
   // form just appeared unannounced, which reads as a bug even though it
   // isn't one.
   const today = localISODate();
-  const inspRows = await sb('cart_inspections?inspection_date=eq.'+today+'&select=cart_id,has_issue').catch(()=>({_err:true}));
+  const inspRows = await sb('cart_inspections?inspection_date=eq.'+today+'&select=cart_id,has_issue,results').catch(()=>({_err:true}));
   const inspMap = {};
-  if (!inspRows._err && Array.isArray(inspRows)) inspRows.forEach(i => { inspMap[i.cart_id] = i; });
+  if (!inspRows._err && Array.isArray(inspRows)) inspRows.forEach(i => { if (!i.has_issue && !(i.results && i.results._type === 'quick')) inspMap[i.cart_id] = i; }); // full inspections only
 
   const myKey = rows.find(r => r.status === 'checked_out' && String(r.checked_out_by_id) === String(_gcUser.empId));
   document.getElementById('gc-return-section').style.display = myKey ? '' : 'none';
@@ -16047,9 +16079,9 @@ async function gcShowKeys() {
     const who = !avail && !mine ? (r.checked_out_by_name || 'Someone else') : '';
     const when = r.checked_out_at ? new Date(r.checked_out_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
     const insp = inspMap[r.key_number];
-    const inspBadge = insp
-      ? (insp.has_issue ? '<div style="font-size:10px;font-weight:700;color:#DC2626;margin-top:4px">🚫 Flagged today</div>' : '<div style="font-size:10px;color:#00A651;margin-top:4px">✓ Inspected today</div>')
-      : (avail ? '<div style="font-size:10px;color:#D97706;margin-top:4px">Needs inspection first</div>' : '');
+    const inspBadge = avail
+      ? (insp ? '<div style="font-size:10px;color:#00A651;margin-top:4px">✓ Inspected today · 5-sec check</div>' : '<div style="font-size:10px;color:#D97706;margin-top:4px">First use today · full inspection</div>')
+      : '';
     return `<div onclick="${avail ? 'gcSelectKey('+r.key_number+')' : ''}" style="background:${bg};border:2px solid ${border};border-radius:12px;padding:16px;text-align:center;cursor:${avail?'pointer':'default'};transition:transform 0.1s" ${avail?'onmousedown="this.style.transform=\'scale(0.96)\'" onmouseup="this.style.transform=\'scale(1)\'"':''}>
       <div style="font-size:28px;font-weight:800;color:${border};margin-bottom:4px">Key ${r.key_number}</div>
       <div style="font-size:12px;font-weight:600;color:${border}">${label}</div>
@@ -16061,31 +16093,97 @@ async function gcShowKeys() {
 }
 
 async function gcSelectKey(keyNum) {
-  // Cart inspection required once per cart per day, before checkout — this
-  // is what the safety policy text already referenced ("Drivers will
-  // conduct Pre-Use Inspection checklist before use each day") but never
-  // actually had a screen built for. Checked here, before the checkout
-  // confirmation, not after.
+  // Per direct request from the managers: a cart can be fine at 8am and broken
+  // by 2pm, so EVERY checkout gets a check — but only the first driver of the
+  // day on that cart does the long 12-item form. Everyone after that does a
+  // 5-second quick check (one big "All good" button, or "Something's wrong").
+  // Returns already ask "any issues?" too, so a problem is caught by the
+  // person who just drove it.
   _gcSelectedKey = keyNum;
   const today = localISODate();
-  const existing = await sb('cart_inspections?cart_id=eq.'+keyNum+'&inspection_date=eq.'+today+'&select=*').catch(()=>({_err:true}));
-  if (!existing._err && Array.isArray(existing) && existing.length) {
-    // Already inspected today — but if it was flagged with an issue, block
-    // checkout entirely rather than let it slip through on a re-check.
-    if (existing[0].has_issue) {
-      gcHideAll();
-      document.getElementById('gc-sub').textContent = 'Cart flagged';
-      await notifyUser('Cart ' + keyNum + ' was flagged today: ' + (existing[0].comments || 'see supervisor') + '\n\nThis cart is out of service until repairs are confirmed. Pick a different cart or speak to your supervisor.', { title: '🚫 Cart out of service' });
-      gcShowKeys();
-      return;
-    }
-    // Branded dialog (readable, big buttons) instead of the native browser
-    // popup, which renders dark and tiny on phones.
-    if (!(await confirmAction('By proceeding you confirm you will operate this cart safely per the Aramark Cart Safety Rules.', { title: 'Check out Key ' + keyNum + '?', confirmLabel: 'Check out' }))) return;
-    await gcSubmitCheckout();
-    return;
-  }
+  const existing = await sb('cart_inspections?cart_id=eq.'+keyNum+'&inspection_date=eq.'+today+'&select=has_issue,results').catch(()=>({_err:true}));
+  const rows = (!existing._err && Array.isArray(existing)) ? existing : [];
+  const fullDone = rows.some(i => !i.has_issue && !(i.results && i.results._type === 'quick'));
+  if (fullDone) { await gcShowQuickCheck(keyNum); return; }
   gcShowInspection(keyNum);
+}
+
+// ── QUICK PICK-UP CHECK ──
+async function gcShowQuickCheck(keyNum) {
+  _gcSelectedKey = keyNum;
+  gcHideAll();
+  document.getElementById('gc-quick-section').style.display = '';
+  document.getElementById('gc-sub').textContent = 'Quick check — Key ' + keyNum;
+  document.getElementById('gc-quick-keynum').textContent = keyNum;
+  document.getElementById('gc-quick-good-box').style.display = '';
+  document.getElementById('gc-quick-issue-box').style.display = 'none';
+  document.getElementById('gc-quick-comments').value = '';
+  document.querySelectorAll('#gc-quick-items button').forEach(b => { b.classList.remove('selected'); b.style.borderColor = ''; b.style.background = ''; b.style.color = ''; });
+  const last = document.getElementById('gc-quick-last');
+  last.textContent = '';
+  // Show who used it last so the driver knows what state it was left in.
+  const lg = await sb('cart_log?key_number=eq.'+keyNum+'&action=in.(return_confirmed,return_requested)&order=created_at.desc&limit=1&select=employee_name,action,created_at').catch(()=>({_err:true}));
+  if (!lg._err && Array.isArray(lg) && lg[0]) {
+    const t = new Date(lg[0].created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/Phoenix'});
+    last.textContent = 'Last returned by ' + lg[0].employee_name + ' at ' + t + ' — no issues reported';
+  }
+}
+async function gcQuickAllGood() {
+  const keyNum = _gcSelectedKey;
+  let saved = false;
+  await withLock(document.getElementById('gc-quick-allgood-btn'), 'Checking out…', async () => {
+    // Recorded like the full inspection so there is a who/when trail for every pick-up.
+    const r = await sb('cart_inspections', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({
+      cart_id: keyNum, inspection_date: localISODate(), results: { _type:'quick', 'Brakes':'Done', 'Tires / steering':'Done', 'Damage / leaks':'Done' }, comments: '',
+      inspected_by_id: _gcUser.empId, inspected_by_name: _gcUser.name, has_issue: false
+    })});
+    if (r._err) { toast('Could not save — try again', 'error'); return; }
+    saved = true;
+  });
+  if (saved) await gcSubmitCheckout();
+}
+function gcQuickShowIssue() {
+  document.getElementById('gc-quick-good-box').style.display = 'none';
+  document.getElementById('gc-quick-issue-box').style.display = '';
+}
+function gcQuickToggle(btn) {
+  const on = btn.classList.toggle('selected');
+  btn.style.borderColor = on ? '#DC2626' : '';
+  btn.style.background = on ? '#FEE2E2' : '';
+  btn.style.color = on ? '#B91C1C' : '';
+}
+function gcQuickFocus() {
+  const box = document.getElementById('gc-quick-comments');
+  if (box) setTimeout(() => box.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+}
+// Flag a cart out of service so a manager can review it and mark it repaired.
+// Uses the same records the return-with-issue flow does, so it shows up in the
+// Manager's "needs review" list and clears with "Mark repaired".
+async function gcFlagCart(keyNum, noteText) {
+  await sb('cart_keys?key_number=eq.'+keyNum+'&status=eq.available', { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ status:'flagged', updated_at:new Date().toISOString() }) });
+  await sb('cart_log', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ key_number:keyNum, employee_id:_gcUser.empId, employee_name:_gcUser.name, action:'return_requested', notes:noteText }) });
+  notifyCartManagers('🚫 Key ' + keyNum + ' flagged before use', noteText + ' — reported by ' + _gcUser.name);
+}
+async function gcQuickSubmitIssue() {
+  const keyNum = _gcSelectedKey;
+  const picked = [...document.querySelectorAll('#gc-quick-items button.selected')].map(b => b.dataset.k);
+  const comments = document.getElementById('gc-quick-comments').value.trim();
+  if (!picked.length) return toast('Tap what is wrong first', 'error');
+  if (!comments) { document.getElementById('gc-quick-comments').style.borderColor = '#DC2626'; return toast('Describe the issue so a manager can fix it', 'error'); }
+  let done = false;
+  await withLock(document.getElementById('gc-quick-report-btn'), 'Reporting…', async () => {
+    const r = await sb('cart_inspections', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({
+      cart_id: keyNum, inspection_date: localISODate(), results: { _type:'quick', issues: picked }, comments,
+      inspected_by_id: _gcUser.empId, inspected_by_name: _gcUser.name, has_issue: true
+    })});
+    if (r._err) { toast('Could not save — try again', 'error'); return; }
+    await gcFlagCart(keyNum, 'Pick-up check — ' + picked.join(', ') + ': ' + comments);
+    done = true;
+  });
+  if (!done) return;
+  gcHideAll();
+  await notifyUser('Key ' + keyNum + ' is now out of service until a manager checks it. Thanks for reporting it — please pick a different cart.', { title: '🚫 Cart flagged' });
+  gcShowKeys();
 }
 
 function gcShowInspection(keyNum) {
@@ -16156,6 +16254,11 @@ async function gcSubmitInspection() {
     if (hasIssue) {
       flagged = true;
       toast('⚠️ Cart ' + _gcSelectedKey + ' flagged — notify your supervisor', 'error');
+      // Also mark the key out of service + log it for review, so the Manager can
+      // actually clear it with "Mark repaired" (before, a flagged inspection
+      // could only ever block the cart for the rest of the day).
+      await sb('cart_keys?key_number=eq.'+_gcSelectedKey+'&status=eq.available', { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ status:'flagged', updated_at:new Date().toISOString() }) });
+      await sb('cart_log', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ key_number:_gcSelectedKey, employee_id:_gcUser.empId, employee_name:_gcUser.name, action:'return_requested', notes:'Full inspection — ' + (comments || 'issue found') }) });
       // Push both warehouse managers and stand/game managers — a flagged
       // cart is exactly the kind of thing that shouldn't wait for someone
       // to happen to open the app and notice.
@@ -16261,7 +16364,9 @@ async function gcSubmitReturn(hasIssue) {
   const confirmMsg = hasIssue
     ? 'Report this issue and take Key ' + keyNum + ' out of service until a manager reviews it?'
     : 'It becomes available for the next person right away.';
-  if (!(await confirmAction(confirmMsg, { title: hasIssue ? 'Report issue — Key ' + keyNum : 'Return Key ' + keyNum + '?', confirmLabel: hasIssue ? 'Report & take out of service' : 'Return key', danger: !!hasIssue }))) return;
+  // A clean return is already a deliberate tap on "No issues — drop key, done",
+  // so no extra confirm; only reporting an issue asks first.
+  if (hasIssue && !(await confirmAction(confirmMsg, { title: 'Report issue — Key ' + keyNum, confirmLabel: 'Report & take out of service', danger: true }))) return;
 
   let returned = false;
   await withLock(document.getElementById('gc-return-btn'), 'Returning…', async () => {

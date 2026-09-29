@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-29-cart-quick-check-1
+- **Golf cart: every pick-up now gets checked, without a big form, per the managers' request.** A cart can be fine at 8am and broken by 2pm, so once-a-day wasn't enough — but making everyone do 12 items every time means nobody does it properly. Now: the **first driver on a cart each day** does the full 12-item inspection (unchanged); **every driver after that** gets a **quick check** — the cart number, who returned it last and when, three chips (🛑 Brakes · 🛞 Tires & steering · 🔧 No damage or leaks), one big **✓ All good — check out** button and a red **⚠️ Something's wrong**. "Something's wrong" asks what (tap Brakes / Tires-steering / Damage-leaks / Other) and requires a description.
+- **Reporting a problem now really takes the cart out of service.** A quick-check issue, and a failed full inspection, mark the key **out of service** and log it in the Manager's "needs review" list, so the Manager can clear it with **Mark repaired & back in service**. (Before, a failed full inspection only blocked the cart for the rest of the day with no way to clear it.) Managers are notified.
+- **Every pick-up is recorded** (who, when, all-good or issue) in the same inspections table. The key board says "✓ Inspected today · 5-sec check" or "First use today · full inspection".
+- **Returning a key is one tap:** "No issues — drop key, done" no longer asks a second confirm; reporting an issue still asks first. Returns already ask "any issues?", so the driver who just used the cart is the second safety net.
+- Tested in a headless browser: first use → full form; later driver → quick check; All good → recorded + key checked out; Something's wrong → blocked until something is picked and described, then flags the cart and logs it for review; key-board badges; one-tap return.
+
 ## 2026-09-29-wh-checkin-checkout-1
 - **Warehouse My Team (Supervisor + Manager) now has real Check in and Check out, not present/absent, per direct correction.** Each person has two labeled buttons — **✓ Check in** and **⏹ Check out** — plus ⭐ feedback, instead of the bare ✓ / ✕ icons. The row shows the actual times in Phoenix time: "Checked in 8:05 AM", then "Checked out 1:00 PM · in 8:10 AM", with the scheduled shift on its own line. Check out is greyed until the person is checked in (and tapping it early says to check them in first); checking in again after a check-out starts a new session. The counter reads "N checked in · N checked out · N scheduled". The ✕ Absent button is gone. Tested with sample attendance data.
 
