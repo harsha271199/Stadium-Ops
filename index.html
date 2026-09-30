@@ -4279,7 +4279,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-30-team-1';
+const BUILD_TAG = '2026-09-30-team-2';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15646,7 +15646,20 @@ async function coverageDeleteAssignment(date,venue,emp,team){if(coveragePreviewO
 async function coverageGetAllMyAssignments(empId,date){const rows=await coverageGetAssignments(date,'');return rows.filter(x=>String(x.employee_id)===String(empId));}
 async function coverageExpandAssignmentStands(assignments){const stands=new Set(),names=[];for(const a of assignments||[]){const ar=await coverageGetAreas(a.venue);(a.area_keys||[]).forEach(k=>{const x=ar.find(z=>z.area_key===k);if(x){names.push(x.area_name);(x.stands||[]).forEach(s=>stands.add(s));}});(a.direct_stands||[]).forEach(s=>stands.add(s));}return {stands:[...stands],areaNames:[...new Set(names)]};}
 async function coverageVenueForStand(stand){if(!stand)return 'Mountain America Stadium';state._coverageVenueCache=state._coverageVenueCache||{};const canon=canonicalStandName2026(stand);if(state._coverageVenueCache[canon])return state._coverageVenueCache[canon];let rows=await sb('stands?stand_name=eq.'+encodeURIComponent(canon)+'&select=venue&limit=1').catch(()=>({_err:true}));if((rows._err||!rows[0])&&canon!==String(stand)){rows=await sb('stands?stand_name=eq.'+encodeURIComponent(stand)+'&select=venue&limit=1').catch(()=>({_err:true}));}const v=!rows._err&&rows[0]&&rows[0].venue?rows[0].venue:'Mountain America Stadium';state._coverageVenueCache[canon]=v;return v;}
-async function coverageResolveStand(kind,stand){const venue=await coverageVenueForStand(stand),areas=await coverageGetAreas(venue),matched=areas.filter(a=>(a.stands||[]).some(s=>canonicalStandName2026(s).toLowerCase()===canonicalStandName2026(stand).toLowerCase())),keys=new Set(matched.map(a=>a.area_key)),assignments=await coverageGetAssignments(stadiumDay(),venue),teamForKind=kind==='stock'?'warehouse':kind==='food'?'food':'it',people=assignments.filter(a=>(a.area_keys||[]).some(k=>keys.has(k))||((a.direct_stands||[]).includes(stand)));return {venue,areas:matched,all:people,support:people.filter(a=>a.team==='support'),operational:people.filter(a=>a.team===teamForKind)};}
+// Every active stand at every venue (Mountain America, DFA, Soccer…), for
+// pickers that must not depend on who happens to be on today's schedule.
+const VENUE_SHORT={'Mountain America Stadium':'Mountain America','Desert Financial Arena':'DFA','Sun Devil Soccer Stadium':'Soccer'};
+async function allVenueStands(){
+  if(state._allVenueStands&&Date.now()-state._allVenueStands.at<600000)return state._allVenueStands.rows;
+  const rows=await sb('stands?select=stand_name,venue,stand_type').catch(()=>({_err:true}));
+  const seen=new Map();
+  mountainAmericaStandNames2026().forEach(n=>seen.set(n,'Mountain America Stadium'));
+  if(Array.isArray(rows))rows.forEach(r=>{const v=String(r.venue||'');if(!r.stand_name||/inactive/i.test(v)||r.stand_type==='warehouse')return;const n=v==='Mountain America Stadium'?canonicalStandName2026(r.stand_name):r.stand_name;if(v==='Mountain America Stadium'&&isHiddenInactiveStand2026(n))return;if(!seen.has(n))seen.set(n,v||'Other');});
+  const out=[...seen].map(([name,venue])=>({name,venue})).sort((a,b)=>(a.venue==='Mountain America Stadium'?0:1)-(b.venue==='Mountain America Stadium'?0:1)||a.venue.localeCompare(b.venue)||standSort(a.name,b.name));
+  state._allVenueStands={at:Date.now(),rows:out};
+  return out;
+}
+async function coverageResolveStand(kind,stand){const venue=await coverageVenueForStand(stand),areas=await coverageGetAreas(venue),matched=areas.filter(a=>(a.stands||[]).some(s=>canonicalStandName2026(s).toLowerCase()===canonicalStandName2026(stand).toLowerCase())),keys=new Set(matched.map(a=>a.area_key)),assignments=await coverageGetAssignments(stadiumDay(),''),teamForKind=kind==='stock'?'warehouse':kind==='food'?'food':'it',canonStand=canonicalStandName2026(stand).toLowerCase(),people=assignments.filter(a=>(a.area_keys||[]).some(k=>keys.has(k))||((a.direct_stands||[]).some(x=>x===stand||canonicalStandName2026(x).toLowerCase()===canonStand)));return {venue,areas:matched,all:people,support:people.filter(a=>a.team==='support'),operational:people.filter(a=>a.team===teamForKind)};}
 // Everyone running a stand today: Stand Leads, NPO Leads, and staff with lead
 // tools at stands with no Stand Lead, plus supervisors scheduled there.
 async function notifyStandPeople(stand,title,body){
@@ -15746,33 +15759,33 @@ async function whCovOpen(emp){
 }
 function whCovClose(){const ed=document.getElementById('whcov-editor'),sel=document.getElementById('whcov-person');if(ed)ed.style.display='none';if(sel)sel.value='';}
 async function whCovCopyLast(){
-  const prev=await sb('game_day_assignments?team=eq.warehouse&venue=eq.Mountain%20America%20Stadium&event_date=lt.'+localISODate()+'&select=event_date&order=event_date.desc&limit=1').catch(()=>({_err:true}));
+  const prev=await sb('game_day_assignments?team=eq.warehouse&venue=eq.Mountain%20America%20Stadium&event_date=lt.'+stadiumDay()+'&select=event_date&order=event_date.desc&limit=1').catch(()=>({_err:true}));
   if(!Array.isArray(prev)||!prev.length)return toast('No earlier game plan found','error');
   const d=prev[0].event_date;
   const rows=(await coverageGetAssignments(d,'Mountain America Stadium')).filter(x=>x.team==='warehouse'&&_whCovPeople.some(p=>String(p.employee_id)===String(x.employee_id)));
   if(!rows.length)return toast('Nobody from '+d+' is still on the team','error');
   if(!(await confirmAction('Give '+rows.length+' people the same areas and stands they had on '+d+'. You can change anyone after.',{title:'Copy last game\'s plan?',confirmLabel:'Copy plan'})))return;
-  await withLock(evtBtn(),'Copying…',async()=>{let ok=0;for(const r of rows){if(await coverageSaveAssignment({event_date:localISODate(),venue:'Mountain America Stadium',employee_id:r.employee_id,name:r.name,role:r.role,team:'warehouse',area_keys:r.area_keys||[],direct_stands:r.direct_stands||[],notify_requests:true,updated_at:new Date().toISOString()}))ok++;}toast('✅ Copied '+ok+' people from '+d);await warehouseCoverageCurrent();});
+  await withLock(evtBtn(),'Copying…',async()=>{let ok=0;for(const r of rows){if(await coverageSaveAssignment({event_date:stadiumDay(),venue:'Mountain America Stadium',employee_id:r.employee_id,name:r.name,role:r.role,team:'warehouse',area_keys:r.area_keys||[],direct_stands:r.direct_stands||[],notify_requests:true,updated_at:new Date().toISOString()}))ok++;}toast('✅ Copied '+ok+' people from '+d);await warehouseCoverageCurrent();});
 }
 async function warehouseCoverageRenderAreas(){const areas=await coverageGetAreas('Mountain America Stadium'),el=document.getElementById('whcov-areas');_whCovAreas=areas;const me=(document.getElementById('whcov-person')||{}).value||'';if(el)el.innerHTML=areas.map(a=>{const n=_whCovRows.filter(r=>String(r.employee_id)!==String(me)&&(r.area_keys||[]).includes(a.area_key)).length;return '<button class="coverage-area-chip '+(_whCovSelected.includes(a.area_key)?'selected':'')+'" onclick="warehouseCoverageToggle(\''+escapeAttr(a.area_key)+'\')">'+escapeHtml(a.area_name)+(n?' <b style="opacity:.7">· '+n+'</b>':'')+'</button>';}).join('');}
 function warehouseCoverageToggle(k){if(_whCovSelected.includes(k))_whCovSelected=_whCovSelected.filter(x=>x!==k);else _whCovSelected.push(k);warehouseCoverageRenderAreas();}
 // Today's actual stand list — same source the stock-count dropdown and
 // the old dead Zone Assignments tool both used, just kept local here.
-async function whCovLoadStandsList(){const today=localISODate();const todayRows=await sb('schedule?event_date=eq.'+today+'&is_test=neq.true&select=location').catch(()=>({_err:true}));let stands=[];if(!todayRows._err&&Array.isArray(todayRows)&&todayRows.length)stands=[...new Set(todayRows.map(r=>r.location).filter(Boolean))];stands=filterCurrentMountainAmericaStands2026(stands);// Warehouse delivers to every stand, not just the ones on today's schedule.
-stands=[...new Set([...stands,...mountainAmericaStandNames2026()])];_whCovStandsList=stands.sort(standSort);}
-function whCovRenderStands(){const c=document.getElementById('whcov-stands-list');if(!c)return;const q=(document.getElementById('whcov-stand-search')||{value:''}).value.toLowerCase().trim();const list=_whCovStandsList.filter(s=>!q||s.toLowerCase().indexOf(q)>=0).sort((a,b)=>(_whCovSelectedStands.includes(b)?1:0)-(_whCovSelectedStands.includes(a)?1:0));if(!list.length){c.innerHTML='<div style="font-size:11px;color:var(--text-3);padding:6px 0">No stands match.</div>';return;}c.innerHTML=list.map(s=>{const checked=_whCovSelectedStands.includes(s)?'checked':'';return '<label style="display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px"><input type="checkbox" '+checked+' onchange="whCovToggleStand(this,\''+s.replace(/'/g,"\\'")+'\')"> '+escapeHtml(s)+'</label>';}).join('');}
+async function whCovLoadStandsList(){const all=await allVenueStands();_whCovStandVenue={};all.forEach(x=>{_whCovStandVenue[x.name]=x.venue;});_whCovStandsList=all.map(x=>x.name);}
+let _whCovStandVenue={};
+function whCovRenderStands(){const c=document.getElementById('whcov-stands-list');if(!c)return;const q=(document.getElementById('whcov-stand-search')||{value:''}).value.toLowerCase().trim();const list=_whCovStandsList.filter(s=>!q||s.toLowerCase().indexOf(q)>=0);if(!list.length){c.innerHTML='<div style="font-size:11px;color:var(--text-3);padding:6px 0">No stands match.</div>';return;}let lastV='';c.innerHTML=list.map(s=>{const v=_whCovStandVenue[s]||'';const head=v!==lastV?'<div style="font-size:10px;font-weight:800;letter-spacing:1px;color:var(--text-2);padding:8px 2px 2px">'+escapeHtml((VENUE_SHORT[v]||v).toUpperCase())+'</div>':'';lastV=v;const checked=_whCovSelectedStands.includes(s)?'checked':'';return head+'<label style="display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px"><input type="checkbox" '+checked+' onchange="whCovToggleStand(this,\''+s.replace(/'/g,"\\'")+'\')"> '+escapeHtml(s)+'</label>';}).join('');}
 function whCovToggleStand(cb,stand){if(cb.checked){if(!_whCovSelectedStands.includes(stand))_whCovSelectedStands.push(stand);}else{_whCovSelectedStands=_whCovSelectedStands.filter(s=>s!==stand);}}
-async function warehouseCoveragePersonChanged(){_whCovSelected=[];_whCovSelectedStands=[];const emp=document.getElementById('whcov-person').value;if(!emp){warehouseCoverageRenderAreas();whCovRenderStands();return;}const rows=await coverageGetAssignments(localISODate(),'Mountain America Stadium'),r=rows.find(x=>String(x.employee_id)===String(emp)&&x.team==='warehouse');if(r){_whCovSelected=(r.area_keys||[]).slice();_whCovSelectedStands=(r.direct_stands||[]).slice();}warehouseCoverageRenderAreas();whCovRenderStands();}
-async function warehouseCoverageSave(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person','error');if(!_whCovSelected.length&&!_whCovSelectedStands.length)return toast('Choose at least one area or stand','error');const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));if(await coverageSaveAssignment({event_date:localISODate(),venue:'Mountain America Stadium',employee_id:emp,name:p?p.name:'',role:p?p.role:'warehouse_employee',team:'warehouse',area_keys:_whCovSelected,direct_stands:_whCovSelectedStands,notify_requests:true,updated_at:new Date().toISOString()})){toast('✅ Saved — '+(p?p.name:'')+' covers '+(_whCovSelected.length+_whCovSelectedStands.length)+' area/stand choice(s)');whCovClose();warehouseCoverageCurrent();}else toast('Could not save coverage','error');}
-async function warehouseCoverageClear(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person first','error');if(!(await confirmAction('They\'ll go back to seeing every stand/request until reassigned.',{title:'Remove this person\'s coverage?',confirmLabel:'Remove'})))return;if(await coverageDeleteAssignment(localISODate(),'Mountain America Stadium',emp,'warehouse')){_whCovSelected=[];_whCovSelectedStands=[];whCovClose();toast('Coverage removed');warehouseCoverageCurrent();}else toast('Could not remove coverage','error');}
-async function warehouseCoverageCurrent(){_whCovRows=(await coverageGetAssignments(localISODate(),'Mountain America Stadium')).filter(x=>x.team==='warehouse');_whCovAreas=await coverageGetAreas('Mountain America Stadium');whCovRenderPeople();}
+async function warehouseCoveragePersonChanged(){_whCovSelected=[];_whCovSelectedStands=[];const emp=document.getElementById('whcov-person').value;if(!emp){warehouseCoverageRenderAreas();whCovRenderStands();return;}const rows=await coverageGetAssignments(stadiumDay(),'Mountain America Stadium'),r=rows.find(x=>String(x.employee_id)===String(emp)&&x.team==='warehouse');if(r){_whCovSelected=(r.area_keys||[]).slice();_whCovSelectedStands=(r.direct_stands||[]).slice();}warehouseCoverageRenderAreas();whCovRenderStands();}
+async function warehouseCoverageSave(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person','error');if(!_whCovSelected.length&&!_whCovSelectedStands.length)return toast('Choose at least one area or stand','error');const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));if(await coverageSaveAssignment({event_date:stadiumDay(),venue:'Mountain America Stadium',employee_id:emp,name:p?p.name:'',role:p?p.role:'warehouse_employee',team:'warehouse',area_keys:_whCovSelected,direct_stands:_whCovSelectedStands,notify_requests:true,updated_at:new Date().toISOString()})){toast('✅ Saved — '+(p?p.name:'')+' covers '+(_whCovSelected.length+_whCovSelectedStands.length)+' area/stand choice(s)');whCovClose();warehouseCoverageCurrent();}else toast('Could not save coverage','error');}
+async function warehouseCoverageClear(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person first','error');if(!(await confirmAction('They\'ll go back to seeing every stand/request until reassigned.',{title:'Remove this person\'s coverage?',confirmLabel:'Remove'})))return;if(await coverageDeleteAssignment(stadiumDay(),'Mountain America Stadium',emp,'warehouse')){_whCovSelected=[];_whCovSelectedStands=[];whCovClose();toast('Coverage removed');warehouseCoverageCurrent();}else toast('Could not remove coverage','error');}
+async function warehouseCoverageCurrent(){_whCovRows=(await coverageGetAssignments(stadiumDay(),'Mountain America Stadium')).filter(x=>x.team==='warehouse');_whCovAreas=await coverageGetAreas('Mountain America Stadium');whCovRenderPeople();}
 // "My Stands" filter and new-request push routing both resolve through
 // this — coverage first (area + direct stand, today's game), falling back
 // to the legacy zone_assignments table only if nothing was ever migrated
 // there, same fallback order resolveWarehouseAssigneesForStand() already
 // used for push routing. No assignment anywhere = null = show everything,
 // same contract as before this existed.
-async function getMyWarehouseCoverageStands(employeeId){if(!employeeId)return null;const rows=await coverageGetAssignments(localISODate(),'Mountain America Stadium').catch(()=>[]);const row=(rows||[]).find(r=>String(r.employee_id)===String(employeeId)&&r.team==='warehouse');if(row){const expanded=await coverageExpandAssignmentStands([row]);if(expanded.stands.length)return expanded.stands;}const res=await api('getMyZoneStands',{employeeId});return (res.ok&&res.stands&&res.stands.length)?res.stands:null;}
+async function getMyWarehouseCoverageStands(employeeId){if(!employeeId)return null;const rows=await coverageGetAssignments(stadiumDay(),'Mountain America Stadium').catch(()=>[]);const row=(rows||[]).find(r=>String(r.employee_id)===String(employeeId)&&r.team==='warehouse');if(row){const expanded=await coverageExpandAssignmentStands([row]);if(expanded.stands.length)return expanded.stands;}const res=await api('getMyZoneStands',{employeeId});return (res.ok&&res.stands&&res.stands.length)?res.stands:null;}
 function supportOpsScopeLabel(){if(state.supportOpsScope==='__my__')return state.supportMyCoverageLabel||'My coverage';return state.supportOpsScope||'All stands';}
 
 
@@ -18783,9 +18796,15 @@ async function chatLoadMyStands() {
   }
   state._chatMyStands = mine;
   if (!state._chatAllStands || state._chatAllStandsDay !== stadiumDay()) {
-    const rows = await sb('schedule?is_test=neq.true&event_date=eq.' + stadiumDay() + '&select=location').catch(()=>({_err:true}));
-    const sheets = await invSheetStands();
-    state._chatAllStands = Array.isArray(rows) ? [...new Set(rows.map(r => r.location).filter(st => st && (!sheets || sheets.has(st))))].sort((a,b) => a.localeCompare(b, undefined, {numeric:true})) : [];
+    // Every stand at every venue — not just the ones on today's schedule.
+    const [rows, all, leads] = await Promise.all([
+      sb('schedule?is_test=neq.true&event_date=eq.' + stadiumDay() + '&select=location').catch(()=>({_err:true})),
+      allVenueStands(),
+      standLeadsIndex().catch(()=>({}))
+    ]);
+    state._chatTodayStands = new Set(Array.isArray(rows) ? rows.map(r => canonicalStandName2026(r.location)) : []);
+    state._chatLeadStands = new Set(Object.keys(leads || {}).map(canonicalStandName2026));
+    state._chatAllStands = all;
     state._chatAllStandsDay = stadiumDay();
   }
 }
@@ -18811,8 +18830,13 @@ function chatRenderInbox() {
   const myNoMsg = [...mine].filter(st => !last[st]).sort();
   if (myNoMsg.length) html += '<div class="section-title">My stands</div>' + myNoMsg.map(row).join('');
   if (!html) html = '<div class="empty"><div class="empty-icon">💬</div><p>No messages yet today.</p></div>';
-  const opts = (state._chatAllStands || []).map(st => '<option value="' + escapeAttr(st) + '">' + escapeHtml(st) + '</option>').join('');
-  html += '<div class="card" style="padding:12px;margin-top:12px"><div style="font-size:12px;font-weight:800;margin-bottom:6px">Message a stand</div>' +
+  const all = state._chatAllStands || [], leadSet = state._chatLeadStands || new Set();
+  const opt = x => '<option value="' + escapeAttr(x.name) + '">' + escapeHtml(x.name) + (leadSet.has(x.name) ? ' · lead on today' : '') + '</option>';
+  const withLead = all.filter(x => leadSet.has(x.name));
+  const venues = [...new Set(all.map(x => x.venue))];
+  const opts = (withLead.length ? '<optgroup label="Lead signed up today">' + withLead.map(opt).join('') + '</optgroup>' : '') +
+    venues.map(v => '<optgroup label="' + escapeAttr(VENUE_SHORT[v] || v) + ' — all stands">' + all.filter(x => x.venue === v).map(opt).join('') + '</optgroup>').join('');
+  html += '<div class="card" style="padding:12px;margin-top:12px"><div style="font-size:12px;font-weight:800;margin-bottom:6px">Message a stand</div><div style="font-size:11px;color:var(--text-2);margin-bottom:6px">All ' + all.length + ' stands. Stands with no lead on today\'s schedule see the message when someone runs the stand.</div>' +
     '<select class="form-input" id="chat-new-stand" style="margin:0 0 8px"><option value="">— Choose a stand —</option>' + opts + '</select>' +
     '<button class="btn btn-primary" style="margin:0" onclick="const v=document.getElementById(\'chat-new-stand\').value;if(v)chatOpenThread(v);else toast(\'Choose a stand\',\'error\')">Open chat</button></div>';
   if (isMgr) html += '<div class="card" style="padding:12px;margin-top:10px"><div style="font-size:12px;font-weight:800;margin-bottom:6px">Download chat record</div>' +

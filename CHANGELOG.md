@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-30-team-2
+- **Every stand at every venue** in Chat → "Message a stand" and in Assign & Team: all Mountain America stands, plus DFA 111/143/191 and Sun Devil Soccer Stadium, grouped by venue (DFA Warehouse and inactive stands are left out). Before, both lists only showed stands on today's schedule. In Chat, stands with a lead on today are listed first and marked "lead on today".
+- **DFA and Soccer requests reach the right warehouse person.** Stock-request routing only looked at assignments saved under the stand's own venue, but Assign & Team saves everything on one row, so a DFA stand assigned in Assign & Team never routed. Routing now checks every venue and compares stand names consistently.
+- Warehouse coverage uses the game day, not the calendar day, so assignments keep working after midnight.
+
 ## 2026-09-30-team-1
 - **Sign-in forgives sloppy names.** The ID digits are still required, but the name only has to be recognisably the person: any capitals or spacing, accents, "First Last" or "Last, First", the first 3+ letters of the last name ("Bent", "Gaona"), one word of a two-word last name ("Cazares", "Gampler"), one typo ("Bently"), or the first name alone when that's the only match. One or two letters are still rejected, and if two people match it asks for the full last name. This covers workers, warehouse (60000), managers (90000), premium (70000) and food staff.
 - **Warehouse Supervisor has every Warehouse Manager power** and still shows **WAREHOUSE SUPERVISOR** in the header. Two leftover manager-only checks were fixed: revoking or restoring golf-cart drivers and uploading the warehouse roster (the button was showing, but the action said "Not authorized").
