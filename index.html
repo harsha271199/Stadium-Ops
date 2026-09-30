@@ -422,6 +422,11 @@
   body.has-float-btn .screen.active .content{padding-bottom:88px}
   .float-contact .fc-badge{background:#fff;color:var(--aramark-red);border-radius:999px;min-width:20px;height:20px;padding:0 6px;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center}
   .float-contact .fc-badge.on{display:inline-flex}
+  .float-contact.has-unread{animation:fcPulse 1.6s ease-in-out infinite}
+  @keyframes fcPulse{0%,100%{box-shadow:0 4px 16px rgba(228,0,43,.34)}50%{box-shadow:0 0 0 8px rgba(228,0,43,.18),0 4px 16px rgba(228,0,43,.34)}}
+  .chat-quick.chat-to{flex-wrap:wrap;overflow:visible;align-items:center}
+  .chat-to .chip.selected{background:var(--asu-maroon);color:#fff;border-color:var(--asu-maroon)}
+  .chat-inbox-row.unread{border-left:4px solid var(--aramark-red)}
   .chat-unread-pill{display:inline-block;background:var(--aramark-red);color:#fff;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:900;margin-left:4px}
   .chat-tabs{display:flex;gap:8px;margin-bottom:12px}
   .chat-tabs .chip{flex:1;justify-content:center}
@@ -1837,10 +1842,6 @@
         <span class="icon">💬</span>
         <span class="text"><div>Stand Chat <span class="chat-unread-pill" style="display:none"></span></div><div class="sub">Message Stand Leads &amp; NPO Leads</div></span>
       </button>
-      <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAlertsCheck()">
-        <span class="icon">📲</span>
-        <span class="text"><div>Who has alerts on</div><div class="sub">Today's leads, supervisors, warehouse, food, IT</div></span>
-      </button>
       <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goStandTransferRecord()">
         <span class="icon">🔄</span>
         <span class="text"><div>Stand Transfer Record</div><div class="sub">Today's stand-to-stand transfers</div></span>
@@ -2782,7 +2783,7 @@
           <span class="icon">💬</span>
           <span class="text"><div>Stand Chat <span class="chat-unread-pill" style="display:none"></span></div><div class="sub">Message Stand Leads &amp; NPO Leads</div></span>
         </button>
-        <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAlertsCheck()">
+        <button class="big-action" id="mgr-alerts-check-btn" style="border-left:4px solid var(--asu-maroon);display:none" onclick="goAlertsCheck()">
           <span class="icon">📲</span>
           <span class="text"><div>Who has alerts on</div><div class="sub">Today's leads, supervisors, warehouse, food, IT</div></span>
         </button>
@@ -3697,10 +3698,12 @@
     </div>
     <div id="chat-inbox"></div>
     <div id="chat-thread-wrap" style="display:none">
-      <div class="notice info" style="font-size:11px;margin-bottom:10px">Messages are seen by this stand's leads, its Supervisors and Managers, and are deleted automatically after 14 days. Don't share phone numbers or personal info here.</div>
+      <div class="card" id="chat-who" style="padding:9px 12px;margin-bottom:10px;font-size:12px;line-height:1.6"></div>
       <div class="chat-thread" id="chat-thread"></div>
       <div class="chat-compose">
+        <div class="chat-quick chat-to" id="chat-to"></div>
         <div class="chat-quick" id="chat-quick"></div>
+        <div style="font-size:10px;color:var(--text-3);margin:2px 0 6px">Only the person/level you pick gets the alert. Everyone on this stand's chain can read it. Deleted after 14 days.</div>
         <div class="chat-compose-row">
           <textarea class="form-input" id="chat-input" rows="1" maxlength="1000" placeholder="Type a message…" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
           <button class="btn btn-primary" id="chat-send-btn" onclick="chatSend()">Send</button>
@@ -4279,7 +4282,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-30-team-2';
+const BUILD_TAG = '2026-09-30-chat-2';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10129,6 +10132,7 @@ async function setupMgrSimpleHome(){
   const acct=state.staffAccount;if(!acct||acct.group!=='manager')return;
   const role=acct.role||'manager';
   const label=role==='admin'?'ADMIN':role==='support_manager'?'SUPPORT MANAGER':'MANAGER';
+  { const ac=document.getElementById('mgr-alerts-check-btn'); if(ac) ac.style.display=role==='admin'?'':'none'; } // alerts check: Admin only
   const first=String(acct.name||label).includes(',')
     ? String(acct.name).split(',')[1].trim().split(' ')[0]
     : String(acct.name||label).split(' ')[0];
@@ -13849,8 +13853,8 @@ function renderContactBar() {
 function updateFloatingContactVisibility(){
   const btn=document.getElementById('float-contact-btn'); if(!btn)return;
   const loggedIn=!!(state.user||state.staffAccount);
-  const blocked=['screen-login','screen-npo-login','screen-npo-stand-picker','screen-chat'].includes(state.currentScreen);
-  const chat=!!chatSide();
+  const blocked=['screen-login','screen-npo-login','screen-npo-stand-picker','screen-chat','screen-pin','screen-golfcart'].includes(state.currentScreen)||(state.currentScreen==='screen-bedcheck'&&!chatLevel());
+  const chat=!!chatLevel();
   const ic=document.getElementById('fc-icon'),lb=document.getElementById('fc-label');
   if(ic)ic.textContent=chat?'💬':'📞';
   if(lb)lb.textContent=chat?'Chat':'Contacts';
@@ -16057,7 +16061,7 @@ function maybeAutoPromptPush(role) {
 
 // Leaders' view of who can actually receive push alerts today.
 function goAlertsCheck() {
-  if (!(isManagerOpsSession() || isSupervisorSession())) return toast('Managers and Supervisors only', 'error');
+  if (!isAdminSession()) return toast('Admin only', 'error');
   showScreen('screen-alerts-check');
 }
 async function loadAlertsCheck() {
@@ -16300,11 +16304,8 @@ async function checkOverdueRequests() {
   showScreen = function(id) {
     _base(id);
     if (id === 'screen-bedcheck' || id === 'screen-warehouse' || id === 'screen-kitchen') startEtaChecker();
-    var floatBtn = document.getElementById('float-contact-btn');
-    if (floatBtn) {
-      var noFloat = ['screen-login','screen-npo-login','screen-pin','screen-bedcheck','screen-golfcart'];
-      floatBtn.classList.toggle('visible', noFloat.indexOf(id) === -1 && Array.isArray(_contacts) && _contacts.length > 0);
-    }
+    // One rule for the floating Chat / Contacts button (see updateFloatingContactVisibility).
+    updateFloatingContactVisibility();
   };
 })();
 
@@ -18696,82 +18697,176 @@ async function invtRemindAll() {
 }
 
 // ============ STAND CHAT ============
-// Replaces phone calls between Stand Leads / NPO Leads and their Supervisors.
-// One conversation per stand per game day (stand_chat). Stand side = the
-// stand's lead(s); leader side = Supervisors assigned to the stand and any
-// Manager (who can read and reply everywhere). Delivery = push notification +
-// polling only while a thread is open (no Realtime connections). Rows are
-// deleted automatically after 14 days by the stand_chat_cleanup_14d cron job.
-function chatSide() {
-  if (isManagerOpsSession() || isSupervisorSession()) return 'leader';
-  const u = state.user;
-  // Anyone running a stand: Stand Leads, NPO Leads, and staff with lead tools
-  // at stands that have no Stand Lead (portables, temporary access).
-  if (u && u.role === 'lead') return 'stand';
+// One conversation per stand per game day (stand_chat), so everyone always
+// knows which stand is talking. Four levels, lowest to highest:
+//   crew  – people running a portable / NPO members (no Stand Lead at the stand)
+//   lead  – the Stand Lead / NPO Lead for the stand, or the lead scheduled at an
+//           area ("West Portables") that contains the stand
+//   sup   – Supervisors covering the stand (coverage, schedule, or its area)
+//   mgr   – Managers / Admin
+// Every message is addressed TO one level (to_level). Only that level is
+// alerted; everyone in the stand's chain can read the thread. Default is the
+// next level (up for crew/leads, down for supervisors/managers), and a reply
+// goes back to whoever wrote last. If nobody is on today at the chosen level,
+// it moves up one level. Delivery = push + 20 s badge polling (5 s while a
+// thread is open). Rows are deleted after 14 days (stand_chat_cleanup_14d).
+const CHAT_LEVELS = ['crew','lead','sup','mgr'];
+function chatNice(n) { n = String(n||'').split(' (')[0]; return n.includes(',') ? (n.split(',')[1].trim().split(' ')[0] + ' ' + n.split(',')[0].trim()) : n; }
+function chatFirst(n) { return chatNice(n).split(' ')[0]; }
+const CHAT_LEVEL_LABEL = {crew:'Stand crew', lead:'Stand Lead', sup:'Supervisor', mgr:'Manager'};
+function chatLevel() {
+  if (isManagerOpsSession()) return 'mgr';
+  if (isSupervisorSession()) return 'sup';
+  const u = state.user; if (!u) return null;
+  if (u.isNpo) return u.npoIsLead ? 'lead' : 'crew';
+  if (u.role === 'lead') return u.leadAccessGranted ? 'crew' : 'lead';
   return null;
 }
+function chatSide() { const l = chatLevel(); return !l ? null : (l === 'crew' || l === 'lead') ? 'stand' : 'leader'; }
 function chatMe() {
-  const who = getRequesterIdentity();
-  const u = state.user;
-  const label = isManagerOpsSession() ? 'Manager' : isSupervisorSession() ? 'Supervisor' : (u && u.isNpo ? (u.npoIsLead ? 'NPO Lead' : 'NPO') : (u && u.leadAccessGranted ? 'Stand staff' : 'Stand Lead'));
-  return {id:String(who.empId||''), name:who.name||'', role:label};
+  const who = getRequesterIdentity(), u = state.user, lvl = chatLevel();
+  let role = CHAT_LEVEL_LABEL[lvl] || '';
+  if (u && u.isNpo) role = u.npoIsLead ? 'NPO Lead' : 'NPO';
+  return {id:String(who.empId||''), name:who.name||'', role, level:lvl};
 }
 function chatReadKey(stand) { return 'chat_read_' + chatMe().id + '_' + stadiumDay() + '_' + stand; }
 function chatGetRead(stand) { try { return Number(localStorage.getItem(chatReadKey(stand)) || 0); } catch(e) { return 0; } }
 function chatSetRead(stand, id) { try { if (id > chatGetRead(stand)) localStorage.setItem(chatReadKey(stand), String(id)); } catch(e) {} }
-function floatContactTap() { if (chatSide()) goChat(); else showContactPopup(); }
+function floatContactTap() { if (chatLevel()) goChat(); else showContactPopup(); }
 
-// Today's message index (id, stand, side, sender, body, time) — loaded once,
-// then only newer rows are fetched.
+// Areas (name -> stands) and who is on at each level, cached for a minute.
+async function chatAreas() {
+  const c = state._chatAreasCache; if (c && Date.now() - c.at < 600000) return c.rows;
+  const rows = (await coverageGetAreas('Mountain America Stadium').catch(()=>[])) || [];
+  state._chatAreasCache = {at:Date.now(), rows};
+  return rows;
+}
+function chatAreasFor(areas, stand) { const c = canonicalStandName2026(stand); return areas.filter(a => (a.stands||[]).some(s => canonicalStandName2026(s) === c)).map(a => a.area_name); }
+async function chatDirectory() {
+  const c = state._chatDir; if (c && c.day === stadiumDay() && Date.now() - c.at < 60000) return c;
+  const [idx, mgrs, sups] = await Promise.all([
+    standLeadsIndex().catch(()=>({})),
+    sb('staff_accounts?is_active=eq.true&role=in.(manager,admin)&select=employee_id,name').catch(()=>({_err:true})),
+    sb('schedule?is_test=neq.true&event_date=eq.' + stadiumDay() + '&role=ilike.*supervisor*&select=employee_id,worker_name,location').catch(()=>({_err:true}))
+  ]);
+  state._chatDir = {day:stadiumDay(), at:Date.now(), idx:idx||{}, mgrs:Array.isArray(mgrs)?mgrs:[], sups:Array.isArray(sups)?sups:[]};
+  return state._chatDir;
+}
+async function chatPeopleFor(stand) {
+  const [dir, areas, cov] = await Promise.all([chatDirectory(), chatAreas(), coverageResolveStand('chat', stand).catch(()=>({support:[]}))]);
+  const inAreas = chatAreasFor(areas, stand), canon = canonicalStandName2026(stand);
+  const at = key => dir.idx[key] || [];
+  const here = Object.keys(dir.idx).filter(k => canonicalStandName2026(k) === canon).flatMap(at);
+  const uniq = list => { const m = new Map(); list.forEach(p => { if (p.id && !m.has(p.id)) m.set(p.id, p); }); return [...m.values()]; };
+  const crew = uniq(here.filter(p => p.kind === 'access'));
+  const lead = uniq(here.filter(p => p.kind === 'lead' || p.kind === 'npo').concat(inAreas.flatMap(a => at(a).filter(p => p.kind === 'lead'))));
+  const sup = uniq((cov.support||[]).map(p => ({id:String(p.employee_id||''), name:p.name||'Supervisor'}))
+    .concat(dir.sups.filter(r => canonicalStandName2026(r.location) === canon || inAreas.includes(r.location)).map(r => ({id:String(r.employee_id||''), name:r.worker_name||'Supervisor'}))));
+  const mgr = uniq(dir.mgrs.map(m => ({id:String(m.employee_id), name:m.name||'Manager'})));
+  return {crew, lead, sup, mgr, areas:inAreas};
+}
+// Stands this person talks for / looks after.
+async function chatMyStands() {
+  const lvl = chatLevel(), u = state.user || {}, out = new Set();
+  if (lvl === 'crew' || lvl === 'lead') {
+    const areas = await chatAreas();
+    const a = areas.find(x => x.area_name === u.stand);
+    if (a) (a.stands||[]).forEach(s => out.add(canonicalStandName2026(s))); else if (u.stand) out.add(u.stand);
+    (u.supervisorStands||[]).forEach(s => out.add(s));
+  } else if (lvl === 'sup') {
+    const z = await getMyZoneStandsCached().catch(()=>null);
+    (z || []).forEach(x => out.add(x));
+    (state._supAreaStands || []).forEach(x => out.add(x));
+    (u.supervisorStands || []).forEach(x => out.add(x));
+  }
+  return out;
+}
+
+// Today's message index — loaded once, then only newer rows.
 async function chatSyncIndex() {
-  const day = stadiumDay();
+  const day = stadiumDay(), lvl = chatLevel();
   if (!state._chatIdx || state._chatIdx.day !== day) state._chatIdx = {day, rows:[], maxId:0};
-  const ix = state._chatIdx, side = chatSide();
-  let q = 'stand_chat?event_date=eq.' + day + '&id=gt.' + ix.maxId + '&select=id,stand,side,sender_id,sender_name,sender_role,body,created_at&order=id.asc&limit=500';
-  if (side === 'stand') q += '&stand=eq.' + encodeURIComponent(state.user.stand);
+  const ix = state._chatIdx;
+  let q = 'stand_chat?event_date=eq.' + day + '&id=gt.' + ix.maxId + '&select=id,stand,side,sender_id,sender_name,sender_role,sender_level,to_level,body,created_at&order=id.asc&limit=500';
+  if (lvl === 'crew' || lvl === 'lead') {
+    if (!state._chatMyStands || state._chatMyStandsDay !== day) { state._chatMyStands = await chatMyStands(); state._chatMyStandsDay = day; }
+    const list = [...state._chatMyStands]; if (!list.length) return false;
+    q += '&stand=in.(' + list.map(s => '"' + encodeURIComponent(String(s).replace(/"/g,'')) + '"').join(',') + ')';
+  }
   const rows = await sb(q).catch(()=>({_err:true}));
   if (!Array.isArray(rows)) return false;
   rows.forEach(r => { ix.rows.push(r); if (r.id > ix.maxId) ix.maxId = r.id; });
   return true;
 }
+// A message counts for me when it was addressed to my level (old messages
+// without a level: anything from the other side), at a stand I look after.
+function chatIsForMe(r) {
+  const me = chatMe(); if (!me.level || String(r.sender_id) === me.id) return false;
+  if (r.to_level) {
+    if (r.to_level !== me.level) return false;
+  } else if (r.side === chatSide()) return false;
+  if (me.level === 'sup') { const mine = state._chatMyStands; if (mine && mine.size && !mine.has(r.stand)) return false; }
+  return true;
+}
 function chatUnreadFor(stand) {
   const ix = state._chatIdx; if (!ix) return 0;
-  const side = chatSide(), me = chatMe().id, read = chatGetRead(stand);
-  return ix.rows.filter(r => r.stand === stand && r.id > read && r.side !== side && String(r.sender_id) !== me).length;
+  const read = chatGetRead(stand);
+  return ix.rows.filter(r => r.stand === stand && r.id > read && chatIsForMe(r)).length;
 }
 function chatUnreadTotal() {
   const ix = state._chatIdx; if (!ix) return 0;
-  const stands = [...new Set(ix.rows.map(r => r.stand))];
-  return stands.reduce((n, st) => n + chatUnreadFor(st), 0);
+  return [...new Set(ix.rows.map(r => r.stand))].reduce((n, st) => n + chatUnreadFor(st), 0);
 }
 function chatPaintBadges() {
   const n = chatUnreadTotal();
   const b = document.getElementById('fc-badge');
   if (b) { b.textContent = n > 99 ? '99+' : String(n); b.classList.toggle('on', n > 0); }
+  const fb = document.getElementById('float-contact-btn'); if (fb) fb.classList.toggle('has-unread', n > 0);
   document.querySelectorAll('.chat-unread-pill').forEach(p => { p.textContent = n; p.style.display = n > 0 ? '' : 'none'; });
 }
+// New message for me while the app is open → banner that opens that stand.
+function chatBannerNew() {
+  const ix = state._chatIdx; if (!ix) return;
+  const seenKey = 'chat_banner_' + chatMe().id + '_' + stadiumDay();
+  let seen = 0; try { seen = Number(localStorage.getItem(seenKey) || 0); } catch(e) {}
+  const fresh = ix.rows.filter(r => r.id > seen && r.id > chatGetRead(r.stand) && chatIsForMe(r));
+  if (!ix._bannerPrimed) { ix._bannerPrimed = true; if (!seen) { try { localStorage.setItem(seenKey, String(ix.maxId)); } catch(e) {} return; } }
+  if (!fresh.length) return;
+  try { localStorage.setItem(seenKey, String(ix.maxId)); } catch(e) {}
+  const r = fresh[fresh.length - 1];
+  if (state.currentScreen === 'screen-chat' && state._chatStand === r.stand) return;
+  showNotificationBanner('💬 ' + r.stand, chatNice(r.sender_name) + (r.sender_role ? ' (' + r.sender_role + ')' : '') + ': ' + r.body + (fresh.length > 1 ? '  · +' + (fresh.length - 1) + ' more' : ''), 'info');
+  const bn = document.getElementById('notif-banner'); if (bn) bn.onclick = () => { bn.remove(); goChat(r.stand); };
+}
 async function chatPollBadge() {
-  if (!chatSide() || document.hidden) return;
+  if (!chatLevel() || document.hidden) return;
   if (await chatSyncIndex()) {
     chatPaintBadges();
+    chatBannerNew();
     if (state.currentScreen === 'screen-chat' && !state._chatStand) chatRenderInbox();
   }
 }
 setInterval(chatPollBadge, 20000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) chatPollBadge(); });
 
 async function goChat(stand) {
-  const side = chatSide();
-  if (!side) return toast('Chat is for Stand Leads, NPO Leads, Supervisors and Managers', 'error');
+  const lvl = chatLevel();
+  if (!lvl) return toast('Chat is for stand crews, Stand Leads, Supervisors and Managers', 'error');
   if (state.currentScreen !== 'screen-chat') state._chatReturn = state.currentScreen;
   showScreen('screen-chat');
+  updateFloatingContactVisibility();
   chatShowTab('chat');
-  if (side === 'stand') return chatOpenThread(state.user.stand);
   if (stand) return chatOpenThread(stand);
+  if (lvl === 'crew' || lvl === 'lead') {
+    state._chatMyStands = await chatMyStands(); state._chatMyStandsDay = stadiumDay();
+    // One stand → straight into it. A lead over several portables gets a list.
+    if (state._chatMyStands.size <= 1) return chatOpenThread([...state._chatMyStands][0] || (state.user && state.user.stand));
+  }
   state._chatStand = null;
   document.getElementById('chat-thread-wrap').style.display = 'none';
   document.getElementById('chat-inbox').style.display = '';
-  document.getElementById('chat-title').textContent = 'Stand Chat';
-  document.getElementById('chat-sub').textContent = 'Today · Stand Leads & NPO Leads';
+  document.getElementById('chat-title').textContent = '💬 Chat';
+  document.getElementById('chat-sub').textContent = lvl === 'lead' ? 'Your stands · today' : 'Today · every stand';
   document.getElementById('chat-inbox').innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   await Promise.all([chatSyncIndex(), chatLoadMyStands()]);
   chatRenderInbox();
@@ -18781,28 +18876,19 @@ function chatShowTab(t) {
   document.getElementById('chat-tab-chat').classList.toggle('selected', t === 'chat');
 }
 function chatBack() {
-  if (state._chatStand && chatSide() === 'leader') return goChat();
+  const lvl = chatLevel();
+  const multi = lvl === 'sup' || lvl === 'mgr' || (state._chatMyStands && state._chatMyStands.size > 1);
+  if (state._chatStand && multi) return goChat();
   if (state._chatThreadTimer) { clearInterval(state._chatThreadTimer); state._chatThreadTimer = null; }
   state._chatStand = null;
   const ret = state._chatReturn;
   if (ret && ret !== 'screen-chat' && document.getElementById(ret)) showScreen(ret); else goRoleHome();
 }
 async function chatLoadMyStands() {
-  const mine = new Set();
-  if (isSupervisorSession()) {
-    const z = await getMyZoneStandsCached().catch(()=>null);
-    (z || []).forEach(x => mine.add(x));
-    (state.user && state.user.supervisorStands || []).forEach(x => mine.add(x));
-  }
-  state._chatMyStands = mine;
+  state._chatMyStands = await chatMyStands(); state._chatMyStandsDay = stadiumDay();
   if (!state._chatAllStands || state._chatAllStandsDay !== stadiumDay()) {
     // Every stand at every venue — not just the ones on today's schedule.
-    const [rows, all, leads] = await Promise.all([
-      sb('schedule?is_test=neq.true&event_date=eq.' + stadiumDay() + '&select=location').catch(()=>({_err:true})),
-      allVenueStands(),
-      standLeadsIndex().catch(()=>({}))
-    ]);
-    state._chatTodayStands = new Set(Array.isArray(rows) ? rows.map(r => canonicalStandName2026(r.location)) : []);
+    const [all, leads] = await Promise.all([allVenueStands(), standLeadsIndex().catch(()=>({}))]);
     state._chatLeadStands = new Set(Object.keys(leads || {}).map(canonicalStandName2026));
     state._chatAllStands = all;
     state._chatAllStandsDay = stadiumDay();
@@ -18810,67 +18896,107 @@ async function chatLoadMyStands() {
 }
 function chatRenderInbox() {
   const el = document.getElementById('chat-inbox'); if (!el) return;
-  const ix = state._chatIdx || {rows:[]}, mine = state._chatMyStands || new Set();
+  const ix = state._chatIdx || {rows:[]}, mine = state._chatMyStands || new Set(), lvl = chatLevel();
   const last = {};
   ix.rows.forEach(r => { last[r.stand] = r; });
-  const withMsgs = Object.keys(last).sort((a,b) => last[b].id - last[a].id);
-  const isMgr = isManagerOpsSession();
   const row = st => {
     const l = last[st], u = chatUnreadFor(st);
     const t = l ? new Date(l.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
-    return '<div class="card chat-inbox-row" onclick="chatOpenThread(this.dataset.s)" data-s="' + escapeAttr(st) + '"><div style="min-width:0"><div class="cname">' + escapeHtml(st) + (mine.has(st) ? ' <span style="font-size:10px;color:var(--asu-maroon)">· MY STAND</span>' : '') + '</div>' +
-      '<div class="cprev">' + (l ? escapeHtml((l.sender_name||'') + ': ' + l.body) : 'No messages yet — tap to start') + '</div></div>' +
+    const to = l && l.to_level ? ' → ' + CHAT_LEVEL_LABEL[l.to_level] : '';
+    return '<div class="card chat-inbox-row' + (u ? ' unread' : '') + '" onclick="chatOpenThread(this.dataset.s)" data-s="' + escapeAttr(st) + '"><div style="min-width:0"><div class="cname">' + escapeHtml(st) + (mine.has(st) && lvl !== 'lead' ? ' <span style="font-size:10px;color:var(--asu-maroon)">· MY STAND</span>' : '') + '</div>' +
+      '<div class="cprev">' + (l ? escapeHtml(chatNice(l.sender_name) + to + ': ' + l.body) : 'No messages yet — tap to start') + '</div></div>' +
       '<div style="text-align:right;flex:0 0 auto"><div style="font-size:10px;color:var(--text-2)">' + t + '</div>' + (u ? '<span class="chat-unread-pill">' + u + '</span>' : '') + '</div></div>';
   };
+  // A lead only sees their own stands; supervisors/managers see today's traffic.
+  const scope = lvl === 'lead' ? [...mine] : Object.keys(last);
+  const unread = scope.filter(st => chatUnreadFor(st) > 0).sort((a,b) => (last[b]?last[b].id:0) - (last[a]?last[a].id:0));
+  const rest = scope.filter(st => !chatUnreadFor(st) && last[st]).sort((a,b) => last[b].id - last[a].id);
+  const quiet = [...mine].filter(st => !last[st]).sort((a,b) => standSort(a,b));
   let html = '';
-  const unreadFirst = withMsgs.filter(st => chatUnreadFor(st) > 0);
-  const readRest = withMsgs.filter(st => !chatUnreadFor(st));
-  if (unreadFirst.length) html += '<div class="section-title">New messages</div>' + unreadFirst.map(row).join('');
-  if (readRest.length) html += '<div class="section-title">Today\'s conversations</div>' + readRest.map(row).join('');
-  const myNoMsg = [...mine].filter(st => !last[st]).sort();
-  if (myNoMsg.length) html += '<div class="section-title">My stands</div>' + myNoMsg.map(row).join('');
+  if (unread.length) html += '<div class="section-title">🔴 New for you</div>' + unread.map(row).join('');
+  if (rest.length) html += '<div class="section-title">Today\'s conversations</div>' + rest.map(row).join('');
+  if (quiet.length) html += '<div class="section-title">' + (lvl === 'lead' ? 'Your stands' : 'My stands') + '</div>' + quiet.map(row).join('');
   if (!html) html = '<div class="empty"><div class="empty-icon">💬</div><p>No messages yet today.</p></div>';
-  const all = state._chatAllStands || [], leadSet = state._chatLeadStands || new Set();
-  const opt = x => '<option value="' + escapeAttr(x.name) + '">' + escapeHtml(x.name) + (leadSet.has(x.name) ? ' · lead on today' : '') + '</option>';
-  const withLead = all.filter(x => leadSet.has(x.name));
-  const venues = [...new Set(all.map(x => x.venue))];
-  const opts = (withLead.length ? '<optgroup label="Lead signed up today">' + withLead.map(opt).join('') + '</optgroup>' : '') +
-    venues.map(v => '<optgroup label="' + escapeAttr(VENUE_SHORT[v] || v) + ' — all stands">' + all.filter(x => x.venue === v).map(opt).join('') + '</optgroup>').join('');
-  html += '<div class="card" style="padding:12px;margin-top:12px"><div style="font-size:12px;font-weight:800;margin-bottom:6px">Message a stand</div><div style="font-size:11px;color:var(--text-2);margin-bottom:6px">All ' + all.length + ' stands. Stands with no lead on today\'s schedule see the message when someone runs the stand.</div>' +
-    '<select class="form-input" id="chat-new-stand" style="margin:0 0 8px"><option value="">— Choose a stand —</option>' + opts + '</select>' +
-    '<button class="btn btn-primary" style="margin:0" onclick="const v=document.getElementById(\'chat-new-stand\').value;if(v)chatOpenThread(v);else toast(\'Choose a stand\',\'error\')">Open chat</button></div>';
-  if (isMgr) html += '<div class="card" style="padding:12px;margin-top:10px"><div style="font-size:12px;font-weight:800;margin-bottom:6px">Download chat record</div>' +
+  if (lvl === 'sup' || lvl === 'mgr') {
+    const all = state._chatAllStands || [], leadSet = state._chatLeadStands || new Set();
+    const opt = x => '<option value="' + escapeAttr(x.name) + '">' + escapeHtml(x.name) + (leadSet.has(x.name) ? ' · lead on today' : '') + '</option>';
+    const withLead = all.filter(x => leadSet.has(x.name));
+    const venues = [...new Set(all.map(x => x.venue))];
+    const opts = (withLead.length ? '<optgroup label="Lead on today">' + withLead.map(opt).join('') + '</optgroup>' : '') +
+      venues.map(v => '<optgroup label="' + escapeAttr(VENUE_SHORT[v] || v) + ' — all stands">' + all.filter(x => x.venue === v).map(opt).join('') + '</optgroup>').join('');
+    html += '<div class="card" style="padding:12px;margin-top:12px"><div style="font-size:12px;font-weight:800;margin-bottom:6px">Message any stand</div>' +
+      '<select class="form-input" id="chat-new-stand" style="margin:0 0 8px" onchange="if(this.value)chatOpenThread(this.value)"><option value="">— Choose a stand (' + all.length + ') —</option>' + opts + '</select></div>';
+  }
+  if (lvl === 'mgr') html += '<div class="card" style="padding:12px;margin-top:10px"><div style="font-size:12px;font-weight:800;margin-bottom:6px">Download chat record</div>' +
     '<div style="font-size:11px;color:var(--text-2);margin-bottom:8px">All stands for one game day as a spreadsheet (CSV). Messages are kept 14 days.</div>' +
     '<input type="date" class="form-input" id="chat-dl-date" value="' + stadiumDay() + '" style="margin:0 0 8px"><button class="btn btn-ghost" style="margin:0" onclick="chatDownload()">⬇ Download</button></div>';
   el.innerHTML = html;
 }
 
 const CHAT_QUICK = {
-  stand: ['Need a Supervisor at the stand', 'Need change / cash drop', 'Need ice', 'Line is long — need help', 'POS / register problem', 'Count Out done ✓'],
-  leader: ['On my way', 'Sending help now', 'Got it 👍', 'Put in a Stock Request', 'Please finish Count Out', 'Call me on the radio']
+  crew: ['Need ice', 'Need change / cash drop', 'Line is long — need help', 'POS / register problem', 'Running low on stock', 'Need a break'],
+  lead: ['Need a Supervisor at the stand', 'Need change / cash drop', 'Need ice', 'Line is long — need help', 'POS / register problem', 'Count Out done ✓'],
+  sup: ['On my way', 'Sending help now', 'Got it 👍', 'Put in a Stock Request', 'Please finish Count Out', 'Call me on the radio'],
+  mgr: ['On my way', 'Sending help now', 'Got it 👍', 'Put in a Stock Request', 'Please finish Count Out', 'Call me on the radio']
 };
+// Who can I address from here, and who by default.
+function chatToOptions(people) {
+  const me = chatLevel();
+  const allowed = {crew:['lead','sup'], lead:['crew','sup','mgr'], sup:['crew','lead','mgr'], mgr:['crew','lead','sup']}[me] || [];
+  return allowed.filter(l => l !== 'crew' || (people && people.crew.length));
+}
+function chatDefaultTo(th) {
+  const me = chatMe(), opts = chatToOptions(th.people);
+  const lastIn = [...th.rows].reverse().find(r => String(r.sender_id) !== me.id && r.sender_level && r.sender_level !== me.level);
+  if (lastIn && opts.includes(lastIn.sender_level)) return lastIn.sender_level;
+  const p = th.people || {crew:[],lead:[],sup:[],mgr:[]};
+  const pick = order => order.find(l => opts.includes(l) && p[l] && p[l].length) || order.find(l => opts.includes(l));
+  if (me.level === 'crew') return pick(['lead','sup']);
+  if (me.level === 'lead') return pick(['sup','mgr']);
+  if (me.level === 'sup') return pick(['lead','crew','mgr']);
+  return pick(['sup','lead','crew']);
+}
+function chatRenderTo() {
+  const th = state._chatThread, el = document.getElementById('chat-to'); if (!th || !el) return;
+  if (!th.people) { el.innerHTML = '<span style="font-size:11px;color:var(--text-3)">Loading who is on…</span>'; return; }
+  const opts = chatToOptions(th.people);
+  if (!th.to || !opts.includes(th.to)) th.to = chatDefaultTo(th);
+  const n = l => (th.people && th.people[l] ? th.people[l].length : 0);
+  el.innerHTML = '<span style="font-size:11px;font-weight:800;color:var(--text-2);margin-right:2px">TO</span>' + opts.map(l =>
+    '<button class="chip' + (th.to === l ? ' selected' : '') + '" onclick="chatSetTo(\'' + l + '\')">' + CHAT_LEVEL_LABEL[l] + (l === 'mgr' ? '' : n(l) ? ' · ' + (n(l) === 1 ? escapeHtml(chatFirst(th.people[l][0].name)) : n(l)) : ' · none on') + '</button>').join('');
+}
+function chatSetTo(l) { const th = state._chatThread; if (!th) return; th.to = l; th._toTouched = true; chatRenderTo(); }
 async function chatOpenThread(stand) {
   if (!stand) return;
   state._chatStand = stand;
   document.getElementById('chat-inbox').style.display = 'none';
   document.getElementById('chat-thread-wrap').style.display = '';
   document.getElementById('chat-title').textContent = '💬 ' + stand;
-  document.getElementById('chat-sub').textContent = chatSide() === 'stand' ? 'Your Supervisors & Managers' : 'Stand Lead / NPO Lead · today';
-  document.getElementById('chat-quick').innerHTML = (CHAT_QUICK[chatSide()] || []).map(q => '<button class="chip" onclick="chatSend(this.dataset.q)" data-q="' + escapeAttr(q) + '">' + escapeHtml(q) + '</button>').join('');
+  document.getElementById('chat-sub').textContent = 'You: ' + (chatMe().role || '') + ' · today';
+  document.getElementById('chat-quick').innerHTML = (CHAT_QUICK[chatLevel()] || []).map(q => '<button class="chip" onclick="chatSend(this.dataset.q)" data-q="' + escapeAttr(q) + '">' + escapeHtml(q) + '</button>').join('');
   document.getElementById('chat-thread').innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
-  state._chatThread = {stand, rows:[], maxId:0, pending:[]};
+  const th = state._chatThread = {stand, rows:[], maxId:0, pending:[], people:null, to:null};
+  const toEl = document.getElementById('chat-to'); if (toEl) toEl.innerHTML = '';
+  chatPeopleFor(stand).then(p => { if (state._chatThread !== th) return; th.people = p; if (!th._toTouched) th.to = null; chatRenderTo(); chatRenderWho(); }).catch(()=>{});
   await chatLoadThread(true);
   if (state._chatThreadTimer) clearInterval(state._chatThreadTimer);
   state._chatThreadTimer = setInterval(() => { if (!document.hidden) chatLoadThread(false); }, 5000);
 }
+function chatRenderWho() {
+  const th = state._chatThread, el = document.getElementById('chat-who'); if (!th || !el || !th.people) return;
+  const p = th.people, names = l => p[l].length ? p[l].map(x => escapeHtml(chatNice(x.name))).slice(0, 3).join(', ') + (p[l].length > 3 ? ' +' + (p[l].length - 3) : '') : '<span style="color:var(--text-3)">none on today</span>';
+  el.innerHTML = (p.crew.length ? '<div>👥 Crew: ' + names('crew') + '</div>' : '') + '<div>⭐ Stand Lead: ' + names('lead') + (p.areas.length && p.lead.length ? ' <span style="color:var(--text-3)">(' + escapeHtml(p.areas.join(', ')) + ')</span>' : '') + '</div><div>🧭 Supervisor: ' + names('sup') + '</div>';
+}
 async function chatLoadThread(first) {
   const th = state._chatThread; if (!th || th.stand !== state._chatStand) return;
-  const rows = await sb('stand_chat?event_date=eq.' + stadiumDay() + '&stand=eq.' + encodeURIComponent(th.stand) + '&id=gt.' + th.maxId + '&select=id,stand,side,sender_id,sender_name,sender_role,body,created_at,client_id&order=id.asc&limit=500').catch(()=>({_err:true}));
+  const rows = await sb('stand_chat?event_date=eq.' + stadiumDay() + '&stand=eq.' + encodeURIComponent(th.stand) + '&id=gt.' + th.maxId + '&select=id,stand,side,sender_id,sender_name,sender_role,sender_level,to_level,body,created_at,client_id&order=id.asc&limit=500').catch(()=>({_err:true}));
   if (th !== state._chatThread) return;
   if (!Array.isArray(rows)) { if (first) document.getElementById('chat-thread').innerHTML = '<div class="notice">Could not load messages — check your connection.</div>'; return; }
   if (!rows.length && !first) return;
+  const hadIncoming = rows.some(r => String(r.sender_id) !== chatMe().id);
   rows.forEach(r => { th.rows.push(r); if (r.id > th.maxId) th.maxId = r.id; th.pending = th.pending.filter(p => p.client_id !== r.client_id); });
   chatRenderThread();
+  if (hadIncoming && !th._toTouched) { th.to = null; chatRenderTo(); }
   if (th.maxId) chatSetRead(th.stand, th.maxId);
   if (state._chatIdx) { rows.forEach(r => { if (r.id > state._chatIdx.maxId) { state._chatIdx.rows.push(r); state._chatIdx.maxId = r.id; } }); }
   chatPaintBadges();
@@ -18883,50 +19009,53 @@ function chatRenderThread() {
   el.innerHTML = all.length ? all.map(r => {
     const mine = String(r.sender_id) === me;
     const t = r.created_at ? new Date(r.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : 'sending…';
-    return '<div class="chat-msg ' + (mine ? 'mine' : 'theirs') + (r._pending ? ' pending' : '') + '"><div class="cmeta">' + (mine ? 'You' : escapeHtml((r.sender_name||'') + ' · ' + (r.sender_role||''))) + ' · ' + t + '</div>' + escapeHtml(r.body) + '</div>';
-  }).join('') : '<div class="empty"><div class="empty-icon">💬</div><p>No messages yet. Say hi or tap a quick message below.</p></div>';
+    const to = r.to_level ? ' → ' + CHAT_LEVEL_LABEL[r.to_level] : '';
+    return '<div class="chat-msg ' + (mine ? 'mine' : 'theirs') + (r._pending ? ' pending' : '') + '"><div class="cmeta">' + (mine ? 'You' : escapeHtml(chatNice(r.sender_name) + ' · ' + (r.sender_role||''))) + escapeHtml(to) + ' · ' + t + '</div>' + escapeHtml(r.body) + '</div>';
+  }).join('') : '<div class="empty"><div class="empty-icon">💬</div><p>No messages yet. Pick who it\'s for, then type or tap a quick message.</p></div>';
   if (nearBottom || all.length <= 12) window.scrollTo(0, document.body.scrollHeight);
 }
 async function chatSend(quick) {
-  const th = state._chatThread, side = chatSide();
-  if (!th || !side) return;
+  const th = state._chatThread, me = chatMe();
+  if (!th || !me.level) return;
   const input = document.getElementById('chat-input');
   const body = String(quick || input.value || '').trim().slice(0, 1000);
   if (!body) return;
-  const me = chatMe();
-  const row = {event_date:stadiumDay(), stand:th.stand, sender_id:me.id, sender_name:me.name, sender_role:me.role, side, body, client_id:genUUID()};
+  if (!th.people) th.people = await chatPeopleFor(th.stand).catch(()=>null);
+  let to = th.to || chatDefaultTo(th), note = '';
+  // Nobody on today at that level → the next level up gets it.
+  const p = th.people;
+  if (p && to !== 'mgr' && !(p[to] && p[to].length)) {
+    const up = CHAT_LEVELS.slice(CHAT_LEVELS.indexOf(to) + 1).find(l => l !== me.level && (l === 'mgr' || (p[l] && p[l].length)));
+    if (up) { note = 'No ' + CHAT_LEVEL_LABEL[to] + ' on today — sent to ' + CHAT_LEVEL_LABEL[up]; to = up; }
+  }
+  const row = {event_date:stadiumDay(), stand:th.stand, sender_id:me.id, sender_name:me.name, sender_role:me.role, side:chatSide(), sender_level:me.level, to_level:to, body, client_id:genUUID()};
   if (!quick) { input.value = ''; input.style.height = 'auto'; }
   th.pending.push({...row, _pending:true});
   chatRenderThread();
   window.scrollTo(0, document.body.scrollHeight);
   const r = await sb('stand_chat', {method:'POST', headers:{Prefer:'return=minimal'}, body:JSON.stringify(row)}).catch(()=>({_err:true}));
   if (r && r._err) {
-    th.pending = th.pending.filter(p => p.client_id !== row.client_id);
+    th.pending = th.pending.filter(x => x.client_id !== row.client_id);
     chatRenderThread();
     if (!quick) input.value = body;
     return toast('Message not sent — check your connection and try again', 'error');
   }
   if (r && r._queued) toast('📤 No signal — message will send when WiFi returns');
-  chatNotify(th.stand, side, me, body);
+  else if (note) toast(note);
+  chatNotify(th.stand, to, me, body);
   chatLoadThread(false);
 }
-async function chatNotify(stand, side, me, body) {
-  const ids = new Set();
-  if (side === 'stand') {
-    (await standLeaderIds(stand)).forEach(id => ids.add(id));
-    if (!ids.size) {
-      const mgrs = await sb('staff_accounts?is_active=eq.true&role=in.(manager,admin)&select=employee_id').catch(()=>({_err:true}));
-      if (Array.isArray(mgrs)) mgrs.forEach(m => ids.add(String(m.employee_id)));
-    }
-  } else {
-    const idx = await standLeadsIndex();
-    (idx[stand] || []).forEach(p => ids.add(p.id));
-    const th = state._chatThread;
-    if (th && th.stand === stand) th.rows.filter(r => r.side === 'stand').forEach(r => ids.add(String(r.sender_id)));
-  }
+// Only the addressed level is alerted. The stand name leads the title so a
+// lead over several portables knows at a glance which one is asking.
+async function chatNotify(stand, to, me, body) {
+  const p = await chatPeopleFor(stand).catch(()=>null);
+  const ids = new Set(((p && p[to]) || []).map(x => x.id));
+  // Crew/leads who already wrote in this thread hear the reply too.
+  const th = state._chatThread;
+  if (th && th.stand === stand && (to === 'crew' || to === 'lead')) th.rows.filter(r => r.sender_level === to).forEach(r => ids.add(String(r.sender_id)));
   ids.delete(me.id); ids.delete('');
-  const title = '💬 ' + stand + ' — ' + me.name;
-  const text = body.length > 140 ? body.slice(0, 137) + '…' : body;
+  const title = '💬 ' + stand;
+  const text = chatNice(me.name) + ' (' + me.role + '): ' + (body.length > 130 ? body.slice(0, 127) + '…' : body);
   ids.forEach(id => sendPushTo(id, title, text));
 }
 async function chatDownload() {

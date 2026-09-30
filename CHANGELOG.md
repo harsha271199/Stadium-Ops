@@ -4,6 +4,27 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-30-chat-2
+- **"Who has alerts on" is Admin only.** It's gone from the Manager, Support Manager and Supervisor screens, and the screen itself refuses anyone but Admin.
+- **Chat follows the chain of command.** There is still one conversation per stand per game day, so the stand name is always the thread title and leads every alert ("💬 205P Bar S Sausage"). Four levels:
+  - **Stand crew:** people running a portable with no Stand Lead there, and NPO members.
+  - **Stand Lead:** the stand's lead or NPO Lead, or the lead scheduled at an area like "West Portables", who covers every stand in that area.
+  - **Supervisor:** coverage, scheduled at the stand, or scheduled at its area.
+  - **Manager:** Managers and Admin.
+- **One level gets each alert.** Every message has a **TO** choice: crew → Stand Lead / Supervisor; Stand Lead → crew / Supervisor / Manager; Supervisor → crew / Stand Lead / Manager; Manager → any. Only the chosen level is alerted (one lead over 5–6 portables gets only their portables' messages). The default is the next level, and replies go back to whoever wrote last. If nobody is on at the chosen level, the message moves up one level and the sender is told.
+- **Who is on this stand:** each conversation shows the crew, Stand Lead (and their area) and Supervisor for that stand. Every bubble shows who sent it and who it was for ("Pam Qaport · Stand crew → Stand Lead").
+- **Lists:**
+  - A lead over several portables gets a list of their stands, with 🔴 New for you on top.
+  - Supervisors and Managers see today's conversations plus "Message any stand".
+  - Unread counts only include messages sent to your level.
+- **Floating 💬 Chat button:**
+  - Now shows for crew, leads, supervisors and managers. The Manager home no longer hides it, and it's hidden on the chat screen itself.
+  - The unread count pulses.
+  - A new message while the app is open shows a banner naming the stand, and tapping it opens that conversation.
+  - Opening the app runs a check straight away.
+- Names show as "First Last".
+- DB: `stand_chat.sender_level` and `stand_chat.to_level` added (migration `stand_chat_levels`, optional columns — older builds keep working).
+
 ## 2026-09-30-team-2
 - **Every stand at every venue** in Chat → "Message a stand" and in Assign & Team: all Mountain America stands, plus DFA 111/143/191 and Sun Devil Soccer Stadium, grouped by venue (DFA Warehouse and inactive stands are left out). Before, both lists only showed stands on today's schedule. In Chat, stands with a lead on today are listed first and marked "lead on today".
 - **DFA and Soccer requests reach the right warehouse person.** Stock-request routing only looked at assignments saved under the stand's own venue, but Assign & Team saves everything on one row, so a DFA stand assigned in Assign & Team never routed. Routing now checks every venue and compares stand names consistently.
