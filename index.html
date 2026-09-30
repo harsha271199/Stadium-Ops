@@ -304,6 +304,9 @@
 
   /* WAREHOUSE MANAGER — status stat chips (Needs your attention row) */
   .wh-stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:7px}
+  .food-stat-row{grid-template-columns:repeat(5,1fr);gap:5px}
+  .food-stat-row .wh-stat-chip{padding-left:2px;padding-right:2px;cursor:pointer}
+  .food-stat-row .wh-stat-chip span{font-size:9px;letter-spacing:.2px}
   .wh-stat-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 6px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border);text-align:center;cursor:pointer}
   .wh-stat-chip b{font-size:19px;font-weight:800;color:var(--text)}
   .wh-stat-chip span{font-size:9.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.02em}
@@ -3616,6 +3619,7 @@
     <div id="kitchen-preview-notice" class="notice warning" style="display:none;font-size:11px">Preview mode: Kitchen tables/accounts are not live yet. This screen uses local demo data on this device until the included migration is intentionally applied.</div>
     <div id="kitchen-coverage-bar" class="first-game-help" style="display:none;margin-bottom:9px"></div>
     <div id="food-alert-status" style="margin-bottom:9px"></div>
+    <div id="food-mgr-strip" style="display:none;margin-bottom:12px"></div>
     <div class="tab-bar" id="kitchen-tabs">
       <div class="tab-item active" id="kitchen-tab-queue" onclick="kitchenTab(this,'queue')">📥 Available Jobs <span class="badge-count" id="kitchen-queue-count">0</span></div>
       <div class="tab-item" id="kitchen-tab-runs" onclick="kitchenTab(this,'runs')">🚚 My Jobs <span class="badge-count" id="kitchen-run-count">0</span></div>
@@ -4277,7 +4281,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-30-alerts-1';
+const BUILD_TAG = '2026-09-30-food-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -14690,7 +14694,7 @@ function renderFoodCoverageBar(){
   const role=state.staffAccount&&state.staffAccount.role||'';
   const runner=['food_runner','kitchen_runner'].includes(role);
   const coord=['food_manager','kitchen_coordinator'].includes(role);
-  if(coord){el.style.display='block';el.innerHTML='<b>Game-day view:</b> all-stadium food queue · prepare → ready → runner pickup → delivered.';return;}
+  if(coord){el.style.display='none';el.innerHTML='';return;}
   if(!runner){el.style.display='none';return;}
   el.style.display='block';
   const areas=state.foodCoverageAreas||[],stands=state.foodCoverageStands||[];
@@ -14738,6 +14742,13 @@ function renderKitchenForRole(){
   const profileScope=document.getElementById('food-profile-scope');if(profileScope)profileScope.textContent=runner?'Assigned deliveries · pickup → delivered':coord?'All-stadium coordination · prepare → ready → delivered':'All-stadium food delivery monitor';
   const avatar=document.getElementById('food-profile-avatar');if(avatar)avatar.textContent=runner?'🏃':'🍽️';
   const areas=document.getElementById('food-profile-runner-areas');if(areas)areas.style.display=coord?'':'none';
+  // Food Manager: one "Right now" strip + the order list. The profile card,
+  // one-tab bar and explainer banners repeated what the header already says.
+  const card=document.getElementById('food-profile-card');if(card)card.style.display=coord?'none':'';
+  const head=card&&card.querySelector('.food-profile-head');if(head)head.style.display='none';
+  const acts=card&&card.querySelector('.food-profile-actions');if(acts)acts.style.display='none';
+  const strip=document.getElementById('food-mgr-strip');if(strip)strip.style.display=coord?'':'none';
+  const tabs=document.getElementById('kitchen-tabs');if(tabs)tabs.style.display=coord?'none':'';
   const exit=document.getElementById('kitchen-exit-btn');if(exit)exit.textContent=_kitchenMonitorReturn==='screen-bedcheck'?'← Back':'Sign out';
   updateFoodProfileAlertState();
 
@@ -14848,10 +14859,10 @@ async function renderKitchenQueue(rows){
     else if(cov.length&&state.foodShowAll)active.sort((a,b)=>(cov.includes(canonicalStandName2026(b.stand))?1:0)-(cov.includes(canonicalStandName2026(a.stand))?1:0));
     const count=document.getElementById('kitchen-queue-count');if(count)count.textContent=active.length;
     if(!active.length){
-      el.innerHTML='<div class="notice info" style="margin-bottom:10px"><b>Available Jobs</b> are food deliveries that no runner owns yet. Jobs assigned to you are under <b>My Jobs</b>.</div><div class="empty"><div class="empty-icon">✅</div><p>No unclaimed food deliveries right now.</p></div>';
+      el.innerHTML='<div class="empty"><div class="empty-icon">✅</div><p>No unclaimed food deliveries right now.<br><span style="font-size:12px">Jobs you claimed are under My Jobs.</span></p></div>';
       return;
     }
-    el.innerHTML='<div class="notice info" style="margin-bottom:10px"><b>Available Jobs</b> = unclaimed deliveries. Tap Claim and it moves to <b>My Jobs</b>.</div>'+active.map(r=>`<div class="food-runner-card">
+    el.innerHTML=active.map(r=>`<div class="food-runner-card">
       <div class="stand">${escapeHtml(r.stand)}</div>
       <div class="items">${kitchenItemsText(r)}</div>
       <div class="meta">${kitchenStatusLabel(r.status)} · ${kitchenEtaText(r)}<br>Requested by ${escapeHtml(r.requested_by||'')}</div>
@@ -14867,44 +14878,47 @@ async function renderKitchenQueue(rows){
   const dueSoon=active.filter(r=>{if(!r.eta_deadline)return false;const ms=new Date(r.eta_deadline).getTime()-now;return ms>=0&&ms<=10*60000;});
   const ready=active.filter(r=>r.status==='ready');
   const moving=active.filter(r=>r.status==='on_the_way');
-  const unclaimed=active.filter(r=>!r.assigned_runner_id);
-  const needsAttention=unclaimed.length+overdue.length+dueSoon.length;
-  // Real UX fix — this is the actual reason the Food Manager stopped using
-  // the app mid-game: every single order used to require manually picking
-  // a runner from an always-visible dropdown, even though a runner already
-  // covering that stand's area is now auto-assigned at submission (see
-  // submitKitchenRequest). Assigned orders just show who has it — the
-  // manager's job during a busy game is to glance for the RARE case
-  // (unclaimed, no runner covers that area) and step in only there.
-  // Unclaimed orders sort first so that glance is fast.
-  active.sort((a,b)=>(a.assigned_runner_id?1:0)-(b.assigned_runner_id?1:0));
-  const mgrSummary='<div class="notice info" style="margin-bottom:10px"><b>Food queue</b> · Assigned orders are handled by that runner — you only need to act on 🔴 Unclaimed ones or to reassign.</div>';
-  if(!active.length){el.innerHTML=mgrSummary+'<div class="empty"><div class="empty-icon">✅</div><p>Food delivery queue is clear.</p></div>';return;}
+  const late=r=>!!(r.eta_deadline&&new Date(r.eta_deadline).getTime()<now);
+  const isCook=r=>r.status==='open'||r.status==='preparing';
+  const counts={need:active.filter(r=>!r.assigned_runner_id).length,cook:active.filter(isCook).length,ready:ready.length,way:moving.length,late:overdue.length};
+  const f=state._foodFilter||'all';
+  const chip=(k,n,label,cls)=>'<div class="wh-stat-chip'+(n?' '+cls:'')+'" onclick="foodSetFilter(\''+k+'\')" style="'+(f===k?'outline:2px solid var(--asu-maroon);':'')+'"><b>'+n+'</b><span>'+label+'</span></div>';
+  const strip=document.getElementById('food-mgr-strip');
+  if(strip)strip.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-2)">RIGHT NOW'+(f!=='all'?' · <a href="#" onclick="foodSetFilter(\'all\');return false" style="color:var(--asu-maroon)">show all</a>':'')+'</div>'+
+    '<button onclick="foodManagerOpenRunnerAreas()" style="border:1px solid var(--border);background:var(--bg-card);border-radius:999px;padding:5px 11px;font-size:12px;font-weight:800;cursor:pointer;color:var(--text)">👥 Runner Areas</button></div>'+
+    '<div class="wh-stat-row food-stat-row">'+chip('need',counts.need,'Need runner','urgent')+chip('cook',counts.cook,'To cook','warn')+chip('ready',counts.ready,'Ready','info')+chip('way',counts.way,'On the way','info')+chip('late',counts.late,'Late','urgent')+'</div>';
+  if(!active.length){el.innerHTML='<div class="empty"><div class="empty-icon">✅</div><p>No open food requests.</p></div>';return;}
   const runners=await kitchenGetRunners();
-  el.innerHTML=mgrSummary+active.map(r=>{
+  const card=r=>{
     const opts=runners.map(x=>`<option value="${escapeAttr(x.employee_id)}" ${String(x.employee_id)===String(r.assigned_runner_id)?'selected':''}>${escapeHtml(x.name)}</option>`).join('');
-    let actions='';
-    if(r.status==='open')actions=`<button class="btn btn-primary" onclick="kitchenSetStatus('${r.id}','preparing')" style="margin-top:8px">👨‍🍳 Preparing</button>`;
-    else if(r.status==='preparing')actions=`<button class="btn btn-primary" onclick="kitchenSetStatus('${r.id}','ready')" style="margin-top:8px">✅ Food Ready — Notify Runner</button>`;
-    const assignRowId='kf-assign-'+r.id;
-    const assignedTag=r.assigned_runner_id
-      ? `<span style="font-size:11px;font-weight:800;color:var(--success)">🏃 ${escapeHtml(r.assigned_runner_name||'Assigned')}</span>`
-      : `<span style="font-size:11px;font-weight:800;color:#DC2626">🔴 Unclaimed</span>`;
-    return `<div class="food-runner-card">
-      <div style="display:flex;justify-content:space-between;gap:8px"><div class="stand">${escapeHtml(r.stand)}</div><div style="font-size:10px;font-weight:850">${kitchenStatusLabel(r.status)}</div></div>
+    let action='';
+    if(r.status==='open')action=`<button class="btn btn-primary" onclick="kitchenSetStatus('${r.id}','preparing')" style="margin-top:8px">👨‍🍳 Start cooking</button>`;
+    else if(r.status==='preparing')action=`<button class="btn btn-primary" onclick="kitchenSetStatus('${r.id}','ready')" style="margin-top:8px">✅ Food ready — tell the runner</button>`;
+    const rowId='kf-assign-'+r.id, lt=late(r);
+    const runnerTag=r.assigned_runner_id
+      ? `<span style="font-weight:800;color:var(--success)">🏃 ${escapeHtml(r.assigned_runner_name||'Runner')}</span>`
+      : `<span style="font-weight:800;color:#DC2626">No runner yet</span>`;
+    return `<div class="food-runner-card" style="${lt?'border-left-color:#DC2626':''}">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div class="stand">${escapeHtml(r.stand)}</div><div style="font-size:12px;font-weight:800;white-space:nowrap;color:${lt?'#DC2626':'var(--text-2)'}">${kitchenEtaText(r)}</div></div>
       <div class="items">${kitchenItemsText(r)}</div>
-      <div class="meta">${kitchenEtaText(r)} · requested by ${escapeHtml(r.requested_by||'')}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px">
-        ${assignedTag}
-        <button class="prem-move-btn" onclick="document.getElementById('${assignRowId}').classList.toggle('open')" aria-label="Reassign" style="width:32px;height:32px;font-size:13px">↔</button>
-      </div>
-      <div class="prem-move-row${r.assigned_runner_id?'':' open'}" id="${assignRowId}">
-        <select class="form-input" onchange="kitchenAssignRunner('${r.id}',this.value,this.options[this.selectedIndex].text)" style="margin:0;font-size:13px"><option value="">— Unclaimed —</option>${opts}</select>
-      </div>
-      ${actions}
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:12px">${runnerTag}<span style="color:var(--text-2)">${kitchenStatusLabel(r.status)}</span></div>
+      <a href="#" onclick="document.getElementById('${rowId}').classList.toggle('open');return false" style="display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:var(--asu-maroon)">${r.assigned_runner_id?'Change runner':'Pick a runner'}</a>
+      <div class="prem-move-row${r.assigned_runner_id?'':' open'}" id="${rowId}"><select class="form-input" onchange="kitchenAssignRunner('${r.id}',this.value,this.options[this.selectedIndex].text)" style="margin:6px 0 0;font-size:13px"><option value="">— No runner —</option>${opts}</select></div>
+      ${r.note?'<div class="req-wh-msg">💬 '+escapeHtml(r.note)+'</div>':''}
+      ${action}
     </div>`;
-  }).join('');
+  };
+  const filters={need:r=>!r.assigned_runner_id,cook:isCook,ready:r=>r.status==='ready',way:r=>r.status==='on_the_way',late};
+  if(f!=='all'){
+    const list=active.filter(filters[f]||(()=>true));
+    el.innerHTML=list.length?list.map(card).join(''):'<div class="empty"><div class="empty-icon">✅</div><p>Nothing here right now.</p></div>';
+    return;
+  }
+  // Grouped in the order the manager acts: assign → cook → hand over → watch.
+  const groups=[['🔴 Needs a runner',r=>!r.assigned_runner_id],['👨‍🍳 To cook',r=>r.assigned_runner_id&&isCook(r)],['✅ Ready for pickup',r=>r.assigned_runner_id&&r.status==='ready'],['🏃 On the way',r=>r.assigned_runner_id&&r.status==='on_the_way']];
+  el.innerHTML=groups.map(([title,fn])=>{const list=active.filter(fn);return list.length?'<div class="section-title" style="margin-top:12px">'+title+' · '+list.length+'</div>'+list.map(card).join(''):'';}).join('');
 }
+function foodSetFilter(k){state._foodFilter=(state._foodFilter===k?'all':k);loadKitchenConsole();}
 async function kitchenClaimForRunner(id,a){
   if(String(id).startsWith('preview-')||_kitchenPreview){
     const rows=kitchenLocalRequests();

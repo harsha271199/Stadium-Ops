@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-30-food-1
+- **Food Manager screen redesigned — one clean list, nothing in the way.** Removed the profile card, the single "Orders" tab bar, the coverage banner and the long runner explainers.
+  - **Right Now** strip at the top: Need runner / To cook / Ready / On the way / Late. Tap a number to show only those orders; tap it again (or "show all") to see everything. **👥 Runner Areas** sits next to it.
+  - Orders are grouped in the order the manager acts on them: 🔴 Needs a runner → 👨‍🍳 To cook → ✅ Ready for pickup → 🏃 On the way.
+  - Each card shows the stand, time left (red when late), items, the runner and status, and **one** button ("👨‍🍳 Start cooking" or "✅ Food ready — tell the runner"). The runner dropdown is hidden behind "Change runner" and only opens by itself when nobody is assigned.
+- Food Runner screen unchanged apart from the shorter coverage card.
+
 ## 2026-09-30-alerts-1
 - **Game-day alerts screen.** Phones only show the "Allow notifications" prompt after a real tap — the old automatic request 1.5 s after sign-in was ignored or silently blocked by iPhone and newer Android Chrome. After sign-in, leaders, supervisors, warehouse, food, IT and managers (not regular workers) now get one screen per day until alerts are on:
   - not asked yet → one big **🔔 Turn on alerts** button (a real tap, so the phone's Allow prompt appears);
