@@ -4162,26 +4162,22 @@
     <div><div class="page-title">👥 Assign & Team</div><div class="page-sub">Coverage — who delivers where today</div></div>
   </div>
   <div class="content">
-    <div class="card wh-coverage-card" id="wh-coverage-card" style="padding:14px">
-      <div style="font-weight:850;font-size:13px">🗺️ Warehouse game-day coverage</div>
-      <div style="font-size:9px;color:var(--text-2);margin:3px 0 8px">One place for both ways to assign someone: pick an area (a group of stands) and/or specific stand(s) directly. Either drives "My Stands" and routes new stock request alerts straight to them — no separate tools, one save.</div>
-      <div class="wh-coverage-grid">
-        <div>
-          <label class="form-label" style="margin-top:0">Warehouse person</label>
-          <select class="form-input" id="whcov-person" onchange="warehouseCoveragePersonChanged()"><option>Loading…</option></select>
-          <label class="form-label">Area(s) — a group of stands</label>
-          <div class="coverage-area-chips" id="whcov-areas"></div>
-          <label class="form-label">Specific stand(s) — today's game only, in addition to any area above</label>
-          <input class="form-input" type="text" id="whcov-stand-search" placeholder="🔍 Search today's stands…" oninput="whCovRenderStands()" style="margin-bottom:6px">
-          <div id="whcov-stands-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 8px"></div>
-          <button class="btn btn-primary" onclick="warehouseCoverageSave()" style="margin-top:8px">Save coverage</button>
-          <button class="btn btn-ghost" onclick="warehouseCoverageClear()" style="margin-top:6px;border-color:#DC2626;color:#DC2626">Remove this person's coverage</button>
-        </div>
-        <div>
-          <div style="font-size:9px;font-weight:850;margin-bottom:5px">TODAY'S WAREHOUSE PLAN</div>
-          <div class="coverage-current" id="whcov-current"></div>
-        </div>
+    <div id="wh-coverage-card">
+      <div id="whcov-summary" style="margin-bottom:10px"></div>
+      <input class="form-input" type="text" id="whcov-people-search" placeholder="🔍 Find a person" oninput="whCovRenderPeople()" style="margin-bottom:8px">
+      <div id="whcov-people"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+      <div class="card" id="whcov-editor" style="display:none;padding:12px;margin:-4px 0 12px;border:2px solid var(--asu-maroon)">
+        <select id="whcov-person" style="display:none" onchange="warehouseCoveragePersonChanged()"></select>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:850;font-size:14px" id="whcov-editor-name">—</div><button class="btn btn-ghost" onclick="whCovClose()" style="width:auto;margin:0;padding:5px 10px;font-size:12px">Close</button></div>
+        <label class="form-label">Areas <span style="font-weight:600;color:var(--text-3)">(number = people already there)</span></label>
+        <div class="coverage-area-chips" id="whcov-areas"></div>
+        <label class="form-label">Extra stands</label>
+        <input class="form-input" type="text" id="whcov-stand-search" placeholder="🔍 Stand name or number" oninput="whCovRenderStands()" style="margin-bottom:6px">
+        <div id="whcov-stands-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 8px"></div>
+        <button class="btn btn-primary" onclick="warehouseCoverageSave()" style="margin-top:10px">✅ Save</button>
+        <button class="btn btn-ghost" onclick="warehouseCoverageClear()" style="margin-top:6px;border-color:#DC2626;color:#DC2626">Take off all stands</button>
       </div>
+      <div class="coverage-current" id="whcov-current" style="display:none"></div>
     </div>
   </div>
 </div>
@@ -4283,7 +4279,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-30-food-2';
+const BUILD_TAG = '2026-09-30-team-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4906,6 +4902,35 @@ function canGrantTeamStandAccess(){
 function urgNorm(u){ const x=(u||'').toLowerCase(); if(x.includes('urg'))return'URGENT'; if(x.includes('soon'))return'Soon'; return'Normal'; }
 
 // ============ MAIN API ROUTER ============
+// Forgiving name check for sign-in. The ID digits are the real check; the
+// name just has to be recognisably that person. Tier 1 = exact (last name,
+// "Last, First", "First Last"); tier 2 = close (first 3+ letters of the last
+// name, one word of a two-word last name, one typo, extra letters after the
+// last name); tier 3 = first name only. Best tier wins; a tie between two
+// different people asks for the full last name.
+function loginFold(x){return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+function loginEdit1(a,b){if(a===b)return true;if(Math.abs(a.length-b.length)>1)return false;let i=0,j=0,d=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue;}if(++d>1)return false;if(a.length>b.length)i++;else if(b.length>a.length)j++;else{i++;j++;}}return d+(a.length-i)+(b.length-j)<=1;}
+function loginNameTier(entered,fullName){
+  const L=x=>loginFold(x).replace(/[^a-z]/g,'');
+  const e=L(entered);if(e.length<2)return 0;
+  const nm=String(fullName||'').trim();
+  const lastRaw=nm.includes(',')?nm.split(',')[0]:nm.split(/\s+/).pop();
+  const firstRaw=nm.includes(',')?nm.split(',').slice(1).join(' '):nm.split(/\s+/).slice(0,-1).join(' ');
+  const last=L(lastRaw),first=L(firstRaw);if(!last)return 0;
+  if(e===last||e===last+first||e===first+last)return 1;
+  if(e.length>=3&&last.startsWith(e))return 2;
+  if(loginFold(lastRaw).split(/[^a-z]+/).filter(t=>t.length>=3).includes(e))return 2;
+  if(e.startsWith(last)&&last.length>=3)return 2;
+  if(last.length>=5&&loginEdit1(e,last))return 2;
+  if(first&&e.length>=3&&(e===first||first.split(/\s+/)[0]===e))return 3;
+  return 0;
+}
+function loginPickByName(rows,entered,nameOf,idOf){
+  let best=0,hits=[];
+  (rows||[]).forEach(r=>{const t=loginNameTier(entered,nameOf(r));if(!t)return;if(!best||t<best){best=t;hits=[r];}else if(t===best)hits.push(r);});
+  const people=new Set(hits.map(r=>String(idOf(r))));
+  return {rows:hits,people:people.size,tier:best};
+}
 async function api(action, data) {
   data = data || {};
   try {
@@ -4955,15 +4980,8 @@ async function api(action, data) {
         const entered=norm(secret);
         const aliases=(Array.isArray(rows)?rows:[]).filter(r=>String(r.employee_id||'').endsWith('60000'));
         if(!aliases.length)return {ok:false,error:'Warehouse login is unavailable — contact Admin'};
-        const matches=aliases.filter(r=>{
-          const nm=String(r.name||'').trim();
-          const parts=nm.includes(',')?nm.split(',').map(x=>x.trim()):[];
-          const last=norm(parts.length?parts[0]:nm.split(/\s+/).pop());
-          const first=norm(parts.length?parts.slice(1).join(' '):nm.split(/\s+/).slice(0,-1).join(' '));
-          const natural=norm((first+' '+last).trim());
-          const comma=norm(nm);
-          return entered===last||entered===natural||entered===comma;
-        });
+        const pick=loginPickByName(aliases,secret,r=>r.name,r=>r.employee_id);
+        const matches=pick.people>1?pick.rows:pick.rows.slice(0,1);
         if(matches.length===1){
           const acct=matches[0];
           return {ok:true,isStaffSmart:true,staffAccount:{
@@ -4974,7 +4992,7 @@ async function api(action, data) {
             sharedWarehouseLogin:true
           }};
         }
-        if(matches.length>1)return {ok:false,error:'More than one warehouse employee has that last name — enter your full name'};
+        if(matches.length>1)return {ok:false,error:'More than one warehouse person matches "'+secret+'" — type your full last name'};
         return {ok:false,error:'Warehouse login not recognized — contact your manager'};
       }
 
@@ -4990,15 +5008,8 @@ async function api(action, data) {
         const entered=norm(secret);
         const aliases=(Array.isArray(rows)?rows:[]).filter(r=>String(r.employee_id||'').endsWith('70000'));
         if(!aliases.length)return {ok:false,error:'Premium login is unavailable — contact Admin'};
-        const matches=aliases.filter(r=>{
-          const nm=String(r.name||'').trim();
-          const parts=nm.includes(',')?nm.split(',').map(x=>x.trim()):[];
-          const last=norm(parts.length?parts[0]:nm.split(/\s+/).pop());
-          const first=norm(parts.length?parts.slice(1).join(' '):nm.split(/\s+/).slice(0,-1).join(' '));
-          const natural=norm((first+' '+last).trim());
-          const comma=norm(nm);
-          return entered===last||entered===natural||entered===comma;
-        });
+        const pick=loginPickByName(aliases,secret,r=>r.name,r=>r.employee_id);
+        const matches=pick.people>1?pick.rows:pick.rows.slice(0,1);
         if(matches.length===1){
           const acct=matches[0];
           return {ok:true,isStaffSmart:true,staffAccount:{
@@ -5009,7 +5020,7 @@ async function api(action, data) {
             sharedPremiumLogin:true
           }};
         }
-        if(matches.length>1)return {ok:false,error:'More than one Premium account has that last name — enter your full name'};
+        if(matches.length>1)return {ok:false,error:'More than one Premium person matches "'+secret+'" — type your full last name'};
         return {ok:false,error:'Premium login not recognized — contact your manager'};
       }
 
@@ -5040,18 +5051,10 @@ async function api(action, data) {
           const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
           const entered=norm(secret);
           const lastNameRows=staffRows.filter(r=>['manager','support_manager','food_manager','food_runner'].includes(r.role));
-          const matches=lastNameRows.filter(r=>{
-            const nm=String(r.name||'').trim();
-            const parts=nm.includes(',')?nm.split(',').map(x=>x.trim()):[];
-            const last=norm(parts.length?parts[0]:nm.split(/\s+/).pop());
-            const first=norm(parts.length?parts.slice(1).join(' '):nm.split(/\s+/).slice(0,-1).join(' '));
-            const commaForm=norm(nm);
-            const naturalForm=norm((first+' '+last).trim());
-            return entered===last || entered===commaForm || entered===naturalForm;
-          });
-          if(matches.length===1)acct=matches[0];
-          else if(matches.length>1){
-            return {ok:false,error:'More than one account has that last name — enter your full name'};
+          const pick=loginPickByName(lastNameRows,secret,r=>r.name,r=>r.employee_id);
+          if(pick.people===1)acct=pick.rows[0];
+          else if(pick.people>1){
+            return {ok:false,error:'More than one account matches "'+secret+'" — type your full last name'};
           }
         }
         if(!acct && staffRows.length && /^\d{4}$/.test(secret)){
@@ -5070,17 +5073,16 @@ async function api(action, data) {
       const rows = await sb('schedule?employee_id=like.*' + encodeURIComponent(idInput) + '&select=*');
       if (rows._err) return { ok:false, error:'Network — try again' };
       if (!rows.length) return { ok:false, error:"ID not found in today's schedule" };
-      // Full last name required (letters only, so "Van Gampler", "vangampler"
-      // and "Van Gampler Matthew" all work). It used to accept any prefix, so
-      // an ID plus ONE letter signed someone in.
       const letters = x => String(x||'').toLowerCase().replace(/[^a-z]/g,'');
       const entered = letters(data.lastName);
       if (!entered) return { ok:false, error:'Enter your last name' };
-      const candidates = rows.filter(r => {
-        const nameLast = letters(String(r.worker_name||'').split(',')[0]);
-        return !!nameLast && (entered === nameLast || entered === letters(r.worker_name) || entered.startsWith(nameLast));
-      });
-      if (!candidates.length) return { ok:false, error:"Last name doesn't match ID" };
+      // Forgiving match (see loginNameTier): "Gaona", "gaona de cazares",
+      // "Bently" and "Flenard Bentley" all find the right person; one or two
+      // letters never do.
+      const pickRows = loginPickByName(rows, data.lastName, r => r.worker_name, r => r.employee_id);
+      if (pickRows.people > 1) return { ok:false, error:'Two people match that ID and name — type your full last name' };
+      const candidates = pickRows.rows;
+      if (!candidates.length) return { ok:false, error:"Last name doesn't match ID — type your last name as it is on the schedule" };
       // The same real person now correctly has one row PER event (not one
       // row total — see fix_schedule_multi_event.sql), so someone who's
       // worked several events over the season may have several matching
@@ -11691,13 +11693,19 @@ async function mtLoadAssignees() {
   // show up there). Listed first so it's the fast, obvious choice.
   const me = state.staffAccount;
   const meOption = me ? '<option value="'+escapeAttr(me.empId)+'|'+escapeAttr(me.name)+'">🙋 Myself ('+escapeHtml(me.name)+') — deliver it yourself</option>' : '';
-  sel.innerHTML = '<option value="">Leave unassigned (self-serve claim)</option>' + meOption +
-    rows.map(r => {
+  const opt = r => {
       const n = counts[r.employee_id] || 0;
       const load = n === 0 ? 'no open tasks' : n + ' open task' + (n === 1 ? '' : 's');
       const tag = r.role === 'warehouse_supervisor' ? ' (Supervisor)' : '';
       return '<option value="'+escapeAttr(r.employee_id)+'|'+escapeAttr(r.name)+'">'+escapeHtml(r.name)+tag+' — '+load+'</option>';
-    }).join('');
+    };
+  // With a big crew, people on today's roster come first.
+  const roster = await sb('warehouse_roster?event_date=eq.'+stadiumDay()+'&select=name').catch(()=>({_err:true}));
+  const key = n => loginFold(n).replace(/[^a-z]/g,'');
+  const today = new Set(Array.isArray(roster) ? roster.map(x => key(x.name)) : []);
+  const working = rows.filter(r => today.has(key(r.name))), rest = rows.filter(r => !today.has(key(r.name)));
+  sel.innerHTML = '<option value="">Leave unassigned (self-serve claim)</option>' + meOption +
+    (working.length ? '<optgroup label="Working today">' + working.map(opt).join('') + '</optgroup><optgroup label="Everyone else">' + rest.map(opt).join('') + '</optgroup>' : rows.map(opt).join(''));
 }
 
 async function mtApplyStandCoverageOwner(stand) {
@@ -13423,7 +13431,7 @@ async function adminToggleDriver(id, active) {
   // (and plain Manager/Admin) only. The function itself is the actual
   // gate, not just the missing button.
   const role = state.staffAccount && state.staffAccount.role;
-  if (role !== 'warehouse_manager' && role !== 'manager' && role !== 'admin') return toast('Not authorized', 'error');
+  if (!['warehouse_manager','warehouse_supervisor','manager','admin'].includes(role)) return toast('Not authorized', 'error');
   await sb('cart_drivers?id=eq.' + id, { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ is_active: active }) });
   adminLoadDrivers();
 }
@@ -15687,18 +15695,77 @@ async function coverageImportFootballPlan(){const date=document.getElementById('
 // which resolveWarehouseAssigneesForStand() and getMyWarehouseCoverageStands()
 // already know how to expand together — no other code needed to change.
 let _whCovPeople=[],_whCovSelected=[],_whCovSelectedStands=[],_whCovStandsList=[];
-async function warehouseCoverageInit(){const card=document.getElementById('wh-coverage-card');if(!card)return;const rows=await sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor)&is_active=eq.true&select=employee_id,name,role&order=name.asc').catch(()=>({_err:true}));_whCovPeople=!rows._err&&Array.isArray(rows)?rows:[];const sel=document.getElementById('whcov-person');if(sel)sel.innerHTML='<option value="">— Select warehouse person —</option>'+_whCovPeople.map(p=>'<option value="'+escapeAttr(p.employee_id)+'">'+escapeHtml(p.name)+'</option>').join('');await whCovLoadStandsList();await warehouseCoverageRenderAreas();whCovRenderStands();await warehouseCoverageCurrent();}
-async function warehouseCoverageRenderAreas(){const areas=await coverageGetAreas('Mountain America Stadium'),el=document.getElementById('whcov-areas');if(el)el.innerHTML=areas.map(a=>'<button class="coverage-area-chip '+(_whCovSelected.includes(a.area_key)?'selected':'')+'" onclick="warehouseCoverageToggle(\''+escapeAttr(a.area_key)+'\')">'+escapeHtml(a.area_name)+'</button>').join('');}
+async function warehouseCoverageInit(){const card=document.getElementById('wh-coverage-card');if(!card)return;
+  const [rows,roster]=await Promise.all([
+    sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor)&is_active=eq.true&select=employee_id,name,role&order=name.asc').catch(()=>({_err:true})),
+    sb('warehouse_roster?event_date=eq.'+stadiumDay()+'&select=name').catch(()=>({_err:true}))
+  ]);
+  _whCovPeople=!rows._err&&Array.isArray(rows)?rows:[];
+  const key=n=>loginFold(n).replace(/[^a-z]/g,'');
+  _whCovRoster=new Set(Array.isArray(roster)?roster.map(r=>key(r.name)):[]);
+  const sel=document.getElementById('whcov-person');if(sel)sel.innerHTML='<option value=""></option>'+_whCovPeople.map(p=>'<option value="'+escapeAttr(p.employee_id)+'">'+escapeHtml(p.name)+'</option>').join('');
+  whCovClose();
+  await whCovLoadStandsList();await warehouseCoverageCurrent();}
+let _whCovRoster=new Set(),_whCovRows=[],_whCovAreas=[],_whCovShowOthers=false;
+function whCovSummaryText(r){const names=(r.area_keys||[]).map(k=>{const a=_whCovAreas.find(x=>x.area_key===k);return a?a.area_name:k;});const parts=[...names,...(r.direct_stands||[])];return parts.join(' · ');}
+// Assign & Team, built for a big crew: everyone is a card, grouped by what
+// still needs doing (working today with no stands first), with search.
+// Tap a card to edit that person right under it.
+function whCovRenderPeople(){
+  const el=document.getElementById('whcov-people');if(!el)return;
+  {const ed0=document.getElementById('whcov-editor');if(ed0&&el.contains(ed0))el.after(ed0);} // keep the editor out of the list we are about to redraw
+  const q=loginFold((document.getElementById('whcov-people-search')||{}).value||'').trim();
+  const key=n=>loginFold(n).replace(/[^a-z]/g,'');
+  const hasRoster=_whCovRoster.size>0;
+  const rowOf=p=>_whCovRows.find(x=>String(x.employee_id)===String(p.employee_id));
+  let people=_whCovPeople.filter(p=>!q||loginFold(p.name).includes(q));
+  const working=p=>!hasRoster||_whCovRoster.has(key(p.name));
+  const todo=people.filter(p=>working(p)&&!rowOf(p)),done=people.filter(p=>working(p)&&rowOf(p)),others=people.filter(p=>!working(p));
+  const card=p=>{const r=rowOf(p),txt=r?whCovSummaryText(r):'';const sup=p.role==='warehouse_supervisor';
+    return '<div class="food-runner-card" id="whcov-card-'+escapeAttr(p.employee_id)+'" onclick="whCovOpen(\''+escapeAttr(p.employee_id)+'\')" style="cursor:pointer;padding:10px 12px;margin-bottom:7px;'+(r?'':'border-left-color:#F59E0B')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0"><div style="font-weight:800;font-size:14px">'+escapeHtml(p.name)+(sup?' <span style="font-size:10px;font-weight:800;color:var(--asu-maroon)">SUPERVISOR</span>':'')+'</div><div style="font-size:12px;margin-top:2px;color:'+(r?'var(--text-2)':'#B45309')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(txt||'No stands yet — tap to assign')+'</div></div><span style="font-size:12px;font-weight:800;color:var(--asu-maroon);flex-shrink:0">Edit ›</span></div></div>';};
+  const sec=(t,list)=>list.length?'<div class="section-title" style="margin-top:10px">'+t+' · '+list.length+'</div>'+list.map(card).join(''):'';
+  let html=sec(hasRoster?'⚠️ Working today — no stands yet':'⚠️ No stands yet',todo)+sec(hasRoster?'✅ Working today — assigned':'✅ Assigned',done);
+  if(others.length)html+=q||_whCovShowOthers?sec('Not on today\'s roster',others):'<button class="btn btn-ghost" onclick="_whCovShowOthers=true;whCovRenderPeople()" style="margin-top:8px">Show '+others.length+' people not on today\'s roster</button>';
+  el.innerHTML=html||'<div class="empty"><p>No one matches.</p></div>';
+  const sum=document.getElementById('whcov-summary');
+  if(sum){const all=_whCovPeople.filter(working),n=all.filter(p=>rowOf(p)).length;
+    sum.innerHTML='<div class="wh-stat-row"><div class="wh-stat-chip'+(all.length-n?' warn':'')+'"><b>'+(all.length-n)+'</b><span>No stands</span></div><div class="wh-stat-chip"><b>'+n+'</b><span>Assigned</span></div><div class="wh-stat-chip"><b>'+all.length+'</b><span>'+(hasRoster?'Working today':'Warehouse team')+'</span></div></div>'+
+      (!_whCovRows.length?'<button class="btn btn-primary" onclick="whCovCopyLast()" style="margin-top:8px">📋 Copy last game\'s plan</button>':'');}
+  const ed=document.getElementById('whcov-editor'),open=document.getElementById('whcov-person');
+  if(ed&&open&&open.value){const c=document.getElementById('whcov-card-'+open.value);if(c)c.after(ed);else whCovClose();}
+}
+async function whCovOpen(emp){
+  const sel=document.getElementById('whcov-person'),ed=document.getElementById('whcov-editor');if(!sel||!ed)return;
+  if(sel.value===String(emp)&&ed.style.display!=='none'){whCovClose();return;}
+  sel.value=emp;const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));
+  document.getElementById('whcov-editor-name').textContent=p?p.name:emp;
+  const c=document.getElementById('whcov-card-'+emp);if(c)c.after(ed);ed.style.display='';
+  const ss=document.getElementById('whcov-stand-search');if(ss)ss.value='';
+  await warehouseCoveragePersonChanged();
+  if(c&&c.scrollIntoView)c.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function whCovClose(){const ed=document.getElementById('whcov-editor'),sel=document.getElementById('whcov-person');if(ed)ed.style.display='none';if(sel)sel.value='';}
+async function whCovCopyLast(){
+  const prev=await sb('game_day_assignments?team=eq.warehouse&venue=eq.Mountain%20America%20Stadium&event_date=lt.'+localISODate()+'&select=event_date&order=event_date.desc&limit=1').catch(()=>({_err:true}));
+  if(!Array.isArray(prev)||!prev.length)return toast('No earlier game plan found','error');
+  const d=prev[0].event_date;
+  const rows=(await coverageGetAssignments(d,'Mountain America Stadium')).filter(x=>x.team==='warehouse'&&_whCovPeople.some(p=>String(p.employee_id)===String(x.employee_id)));
+  if(!rows.length)return toast('Nobody from '+d+' is still on the team','error');
+  if(!(await confirmAction('Give '+rows.length+' people the same areas and stands they had on '+d+'. You can change anyone after.',{title:'Copy last game\'s plan?',confirmLabel:'Copy plan'})))return;
+  await withLock(evtBtn(),'Copying…',async()=>{let ok=0;for(const r of rows){if(await coverageSaveAssignment({event_date:localISODate(),venue:'Mountain America Stadium',employee_id:r.employee_id,name:r.name,role:r.role,team:'warehouse',area_keys:r.area_keys||[],direct_stands:r.direct_stands||[],notify_requests:true,updated_at:new Date().toISOString()}))ok++;}toast('✅ Copied '+ok+' people from '+d);await warehouseCoverageCurrent();});
+}
+async function warehouseCoverageRenderAreas(){const areas=await coverageGetAreas('Mountain America Stadium'),el=document.getElementById('whcov-areas');_whCovAreas=areas;const me=(document.getElementById('whcov-person')||{}).value||'';if(el)el.innerHTML=areas.map(a=>{const n=_whCovRows.filter(r=>String(r.employee_id)!==String(me)&&(r.area_keys||[]).includes(a.area_key)).length;return '<button class="coverage-area-chip '+(_whCovSelected.includes(a.area_key)?'selected':'')+'" onclick="warehouseCoverageToggle(\''+escapeAttr(a.area_key)+'\')">'+escapeHtml(a.area_name)+(n?' <b style="opacity:.7">· '+n+'</b>':'')+'</button>';}).join('');}
 function warehouseCoverageToggle(k){if(_whCovSelected.includes(k))_whCovSelected=_whCovSelected.filter(x=>x!==k);else _whCovSelected.push(k);warehouseCoverageRenderAreas();}
 // Today's actual stand list — same source the stock-count dropdown and
 // the old dead Zone Assignments tool both used, just kept local here.
-async function whCovLoadStandsList(){const today=localISODate();const todayRows=await sb('schedule?event_date=eq.'+today+'&is_test=neq.true&select=location').catch(()=>({_err:true}));let stands=[];if(!todayRows._err&&Array.isArray(todayRows)&&todayRows.length)stands=[...new Set(todayRows.map(r=>r.location).filter(Boolean))];stands=filterCurrentMountainAmericaStands2026(stands);if(!stands.length)stands=mountainAmericaStandNames2026().slice();_whCovStandsList=stands.sort(standSort);}
-function whCovRenderStands(){const c=document.getElementById('whcov-stands-list');if(!c)return;const q=(document.getElementById('whcov-stand-search')||{value:''}).value.toLowerCase().trim();const list=_whCovStandsList.filter(s=>!q||s.toLowerCase().indexOf(q)>=0);if(!list.length){c.innerHTML='<div style="font-size:11px;color:var(--text-3);padding:6px 0">No stands found for today.</div>';return;}c.innerHTML=list.map(s=>{const checked=_whCovSelectedStands.includes(s)?'checked':'';return '<label style="display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px"><input type="checkbox" '+checked+' onchange="whCovToggleStand(this,\''+s.replace(/'/g,"\\'")+'\')"> '+escapeHtml(s)+'</label>';}).join('');}
+async function whCovLoadStandsList(){const today=localISODate();const todayRows=await sb('schedule?event_date=eq.'+today+'&is_test=neq.true&select=location').catch(()=>({_err:true}));let stands=[];if(!todayRows._err&&Array.isArray(todayRows)&&todayRows.length)stands=[...new Set(todayRows.map(r=>r.location).filter(Boolean))];stands=filterCurrentMountainAmericaStands2026(stands);// Warehouse delivers to every stand, not just the ones on today's schedule.
+stands=[...new Set([...stands,...mountainAmericaStandNames2026()])];_whCovStandsList=stands.sort(standSort);}
+function whCovRenderStands(){const c=document.getElementById('whcov-stands-list');if(!c)return;const q=(document.getElementById('whcov-stand-search')||{value:''}).value.toLowerCase().trim();const list=_whCovStandsList.filter(s=>!q||s.toLowerCase().indexOf(q)>=0).sort((a,b)=>(_whCovSelectedStands.includes(b)?1:0)-(_whCovSelectedStands.includes(a)?1:0));if(!list.length){c.innerHTML='<div style="font-size:11px;color:var(--text-3);padding:6px 0">No stands match.</div>';return;}c.innerHTML=list.map(s=>{const checked=_whCovSelectedStands.includes(s)?'checked':'';return '<label style="display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px"><input type="checkbox" '+checked+' onchange="whCovToggleStand(this,\''+s.replace(/'/g,"\\'")+'\')"> '+escapeHtml(s)+'</label>';}).join('');}
 function whCovToggleStand(cb,stand){if(cb.checked){if(!_whCovSelectedStands.includes(stand))_whCovSelectedStands.push(stand);}else{_whCovSelectedStands=_whCovSelectedStands.filter(s=>s!==stand);}}
 async function warehouseCoveragePersonChanged(){_whCovSelected=[];_whCovSelectedStands=[];const emp=document.getElementById('whcov-person').value;if(!emp){warehouseCoverageRenderAreas();whCovRenderStands();return;}const rows=await coverageGetAssignments(localISODate(),'Mountain America Stadium'),r=rows.find(x=>String(x.employee_id)===String(emp)&&x.team==='warehouse');if(r){_whCovSelected=(r.area_keys||[]).slice();_whCovSelectedStands=(r.direct_stands||[]).slice();}warehouseCoverageRenderAreas();whCovRenderStands();}
-async function warehouseCoverageSave(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person','error');if(!_whCovSelected.length&&!_whCovSelectedStands.length)return toast('Choose at least one area or stand','error');const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));if(await coverageSaveAssignment({event_date:localISODate(),venue:'Mountain America Stadium',employee_id:emp,name:p?p.name:'',role:p?p.role:'warehouse_employee',team:'warehouse',area_keys:_whCovSelected,direct_stands:_whCovSelectedStands,notify_requests:true,updated_at:new Date().toISOString()})){toast('✅ Warehouse coverage saved — '+(_whCovSelected.length+_whCovSelectedStands.length)+' area/stand assignment(s)');warehouseCoverageCurrent();}else toast('Could not save coverage','error');}
-async function warehouseCoverageClear(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person first','error');if(!(await confirmAction('They\'ll go back to seeing every stand/request until reassigned.',{title:'Remove this person\'s coverage?',confirmLabel:'Remove'})))return;if(await coverageDeleteAssignment(localISODate(),'Mountain America Stadium',emp,'warehouse')){_whCovSelected=[];_whCovSelectedStands=[];warehouseCoverageRenderAreas();whCovRenderStands();toast('Coverage removed');warehouseCoverageCurrent();}else toast('Could not remove coverage','error');}
-async function warehouseCoverageCurrent(){const el=document.getElementById('whcov-current');if(!el)return;const rows=(await coverageGetAssignments(localISODate(),'Mountain America Stadium')).filter(x=>x.team==='warehouse'),ar=await coverageGetAreas('Mountain America Stadium');el.innerHTML=rows.length?rows.map(r=>{const areaNames=(r.area_keys||[]).map(k=>{const a=ar.find(x=>x.area_key===k);return a?a.area_name:k;});const parts=[...areaNames,...(r.direct_stands||[])];return '<div class="coverage-current-row"><div class="coverage-current-name">'+escapeHtml(r.name||r.employee_id)+'</div><div class="coverage-current-meta">'+escapeHtml(parts.join(' · ')||'No area/stand')+'</div></div>';}).join(''):'<div style="padding:8px;font-size:8px;color:var(--text-3)">No warehouse coverage assigned yet.</div>';}
+async function warehouseCoverageSave(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person','error');if(!_whCovSelected.length&&!_whCovSelectedStands.length)return toast('Choose at least one area or stand','error');const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));if(await coverageSaveAssignment({event_date:localISODate(),venue:'Mountain America Stadium',employee_id:emp,name:p?p.name:'',role:p?p.role:'warehouse_employee',team:'warehouse',area_keys:_whCovSelected,direct_stands:_whCovSelectedStands,notify_requests:true,updated_at:new Date().toISOString()})){toast('✅ Saved — '+(p?p.name:'')+' covers '+(_whCovSelected.length+_whCovSelectedStands.length)+' area/stand choice(s)');whCovClose();warehouseCoverageCurrent();}else toast('Could not save coverage','error');}
+async function warehouseCoverageClear(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person first','error');if(!(await confirmAction('They\'ll go back to seeing every stand/request until reassigned.',{title:'Remove this person\'s coverage?',confirmLabel:'Remove'})))return;if(await coverageDeleteAssignment(localISODate(),'Mountain America Stadium',emp,'warehouse')){_whCovSelected=[];_whCovSelectedStands=[];whCovClose();toast('Coverage removed');warehouseCoverageCurrent();}else toast('Could not remove coverage','error');}
+async function warehouseCoverageCurrent(){_whCovRows=(await coverageGetAssignments(localISODate(),'Mountain America Stadium')).filter(x=>x.team==='warehouse');_whCovAreas=await coverageGetAreas('Mountain America Stadium');whCovRenderPeople();}
 // "My Stands" filter and new-request push routing both resolve through
 // this — coverage first (area + direct stand, today's game), falling back
 // to the legacy zone_assignments table only if nothing was ever migrated
@@ -19503,7 +19570,7 @@ function renderWarehouseForRole() {
   // role below, but harmless to leave set.
   const invTab = document.getElementById('wh-tab-inventory');
   const cartTab = document.getElementById('wh-tab-cart');
-  if (invTab) invTab.style.display = isWhMgr ? 'block' : 'none';
+  if (invTab) invTab.style.display = (isWhMgr || isWhSup) ? 'block' : 'none';
   // Golf Cart hidden from all access for now.
   if (cartTab) cartTab.style.display = 'none';
 
@@ -19717,7 +19784,7 @@ async function adminUploadWarehouseRoster(prefix) {
   // Supervisor's own button was removed, and the function itself is the
   // actual gate, not just the missing button.
   const role = state.staffAccount && state.staffAccount.role;
-  if (!['warehouse_manager', 'manager', 'admin'].includes(role)) return toast('Not authorized', 'error');
+  if (!['warehouse_manager', 'warehouse_supervisor', 'manager', 'admin'].includes(role)) return toast('Not authorized', 'error');
   prefix = prefix || 'wh-roster';
   const f = document.getElementById(prefix + '-file').files[0];
   const st = document.getElementById(prefix + '-upload-status');

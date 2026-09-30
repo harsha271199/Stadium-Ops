@@ -4,6 +4,17 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-30-team-1
+- **Sign-in forgives sloppy names.** The ID digits are still required, but the name only has to be recognisably the person: any capitals or spacing, accents, "First Last" or "Last, First", the first 3+ letters of the last name ("Bent", "Gaona"), one word of a two-word last name ("Cazares", "Gampler"), one typo ("Bently"), or the first name alone when that's the only match. One or two letters are still rejected, and if two people match it asks for the full last name. This covers workers, warehouse (60000), managers (90000), premium (70000) and food staff.
+- **Warehouse Supervisor has every Warehouse Manager power** and still shows **WAREHOUSE SUPERVISOR** in the header. Two leftover manager-only checks were fixed: revoking or restoring golf-cart drivers and uploading the warehouse roster (the button was showing, but the action said "Not authorized").
+- **Assign & Team rebuilt for a big crew.**
+  - Top row: No stands / Assigned / Working today.
+  - A search box, then everyone as a card, grouped as "Working today — no stands yet" first, then assigned. People not on today's roster are tucked behind a button.
+  - Tapping a person opens their areas and stands right under their card; area chips show how many people already cover that area.
+  - **📋 Copy last game's plan** gives everyone the same areas and stands as the last game in one tap.
+- **Every stadium stand is listed** in Assign & Team. It used to list only stands on today's schedule, so a small schedule showed 2 stands.
+- Create Transfer → Assign to: people on today's roster are listed first.
+
 ## 2026-09-30-food-2
 - **Food orders now run by themselves, like the warehouse.** The Food Manager gives each runner their stands once, and every order from those stands goes straight to that runner. The manager doesn't have to press anything per order.
   - **Food Manager** has two tabs: **🍽️ Orders** and **👥 Assign Runners**.
