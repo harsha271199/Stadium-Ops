@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-30-warehouse-1
+Warehouse Manager / Supervisor / Employee — faster, simpler screens.
+- **Less than half the network traffic.** Each warehouse phone made 18 requests a minute (up to 150 transfers downloaded twice every 10 s, plus a separate stock-request query for the manager list). Now one shared download per refresh (`whOpenTransfers`, cleared on any write so lists never go stale), only the list on screen is rebuilt, refresh every 15 s, and no refresh while the phone is locked: **8 requests a minute** for all three roles.
+- **"Right now" strip** on Manager and Supervisor home: Waiting · On the way · Overdue · To verify · To approve (+ Unassigned for the manager). Each number opens the right list. Built from data already loaded — no extra requests.
+- **Supervisor home:** *Deliveries* (the same stand-by-stand list employees use, all stands, delivery work only) and *Sign-offs* (only what waits on their signature/approval) replace the old Transfers / Requests tiles, which showed the same work twice. Request history and "new request for a stand" are one tap below. Tiles show live counts ("1 to sign", "2 requested · 1 transfer").
+- **Manager home:** tiles in order of use — Approvals (turns red when something waits), All Transfers ("1 to sign" etc.), Create Transfer, Assign & Team, My Team, Golf Cart, Stand Transfer Report. The All Transfers list takes today's stand requests from data already loaded instead of a second query.
+- **Employee cards** show what to bring (the requested items) and an **ASSIGNED TO YOU** tag on transfers the manager assigned to them; assigned work sorts to the top. Finished stands leave the list immediately.
+- Leaders' "Deliveries" list no longer includes finished or waiting-for-signature transfers.
+- First-game tips updated to the new tiles; header shows "Auto-refresh 15s".
+
 ## 2026-09-30-qa-fixes-1
 Fixes from the simulated game-day QA run (report: "Stadium Ops Game-Day QA Report").
 - **Stock requests save on the first try again, with their ETA.** The `client_uuid` unique indexes were *partial* (`WHERE client_uuid IS NOT NULL`), which Postgres/PostgREST cannot use for `on_conflict`, so every stock request failed twice and only saved through a fallback that fired because the regex `/eta/` matched the word "d**eta**ils" in the error JSON — and that fallback stripped `eta_deadline`/`eta_minutes`. Migration `qa_fixes_client_uuid_active_sessions_roster_phone` replaces them with plain unique constraints on `stock_requests`, `kitchen_requests`, `transfers` and `stock_ledger` (NULLs still allowed). Fallbacks now test `sbErrText(r)` (the error's message/details/hint) instead of the raw response body. Food requests and ledger writes now upsert on `client_uuid`, so a weak-WiFi retry returns the row already saved instead of a duplicate.

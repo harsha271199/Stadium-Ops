@@ -3781,7 +3781,7 @@
       <div>
         <div class="brand-logo"><span class="a-text">aramark</span><span class="a-figure"></span></div>
         <div class="brand-sub" style="color:var(--aramark-red)" id="wh-role-label">WAREHOUSE</div>
-        <div class="brand-venue" id="wh-name">Auto-refresh 10s</div>
+        <div class="brand-venue" id="wh-name">Auto-refresh 15s</div>
       </div>
     </div>
     <div class="header-actions">
@@ -3826,6 +3826,7 @@
 
     <!-- Warehouse Manager tile menu — populated in renderWarehouseForRole().
          Empty/hidden for Employee/Supervisor. -->
+    <div id="wh-live-strip" style="display:none;margin-bottom:12px"></div>
     <div id="wh-mgr-tiles-slot" style="display:none"></div>
 
     <!-- Shown only when a manager has tapped into one of the shared panes
@@ -4244,7 +4245,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-30-qa-fixes-1';
+const BUILD_TAG = '2026-09-30-warehouse-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4285,7 +4286,7 @@ function showScreen(id) {
   clearInterval(state.refreshInterval);
   updateFloatingContactVisibility();
   if (id === 'screen-submenu-requests') prepareRequestHub();
-  if (id === 'screen-warehouse') { loadWarehouse(); state.refreshInterval = setInterval(loadWarehouse, 10000); }
+  if (id === 'screen-warehouse') { loadWarehouse(); state.refreshInterval = setInterval(loadWarehouse, 15000); }
   if (id === 'screen-kitchen') { loadKitchenConsole(); state.refreshInterval = setInterval(loadKitchenConsole, 10000); }
   if (id === 'screen-my-kitchen') { loadMyKitchenRequests(); state.refreshInterval = setInterval(loadMyKitchenRequests, 12000); }
   if (id === 'screen-all-live') { loadAllStandsLive(); state.refreshInterval = setInterval(loadAllStandsLive, 15000); }
@@ -4447,6 +4448,7 @@ async function sb(path, opts = {}, tries = 2) {
     'Content-Type': 'application/json'
   }, opts.headers || {});
   const isWrite = opts.method && ['POST','PATCH','PUT','DELETE'].includes(opts.method);
+  if (isWrite && /^transfer/.test(path) && typeof state !== 'undefined') state._whTfCache = null;
   for (let attempt = 1; attempt <= tries; attempt++) {
     try {
       const ctrl = new AbortController();
@@ -4482,6 +4484,19 @@ async function sb(path, opts = {}, tries = 2) {
   }
 }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+// One download of the warehouse's open transfers per refresh, shared by every
+// warehouse list and badge (it used to be fetched 2-4 times every 10 seconds).
+// Any write to transfers clears it, so a list never shows a stale state after
+// someone claims or finishes a delivery.
+async function whOpenTransfers(force){
+  const c=state._whTfCache;
+  if(!force&&c&&Date.now()-c.at<5000)return c.rows;
+  const rows=await sb('transfers?status=neq.confirmed&wh_confirmed_at=is.null&order=created_at.desc&limit=150&select=*').catch(()=>({_err:true}));
+  if(!rows||rows._err||!Array.isArray(rows))return rows&&rows._err?rows:{_err:true};
+  state._whTfCache={at:Date.now(),rows};
+  return rows;
+}
+function whPaneShown(id){const e=document.getElementById(id);return !!(e&&e.offsetParent!==null);}
 // The human-readable part of a failed sb() call. r.msg is the raw response
 // body, so testing it with a regex also matches the JSON key names — e.g.
 // /eta/ matched the word "details" in every PostgREST error, which is how
@@ -6621,7 +6636,7 @@ async function doLogin() {
         // Just "Auto-refresh 10s" — the name+role used to repeat here AND
         // right below in the role-profile-strip's own title, a literal
         // duplicate with nothing else added.
-        const n=document.getElementById('wh-name');if(n)n.textContent='Auto-refresh 10s';
+        const n=document.getElementById('wh-name');if(n)n.textContent='Auto-refresh 15s';
         renderWarehouseForRole();
         if(!resumePendingQrAfterLogin())showScreen('screen-warehouse');
       }else if(state.staffAccount.group==='food'){
@@ -7033,7 +7048,7 @@ async function submitPin() {
       maybeAutoPromptPush(state.staffAccount.role);
       if (state.pinTarget === 'warehouse') {
         state.whName = res.name;  // kept for backward compatibility — many existing functions read this directly
-        document.getElementById('wh-name').textContent = 'Auto-refresh 10s';
+        document.getElementById('wh-name').textContent = 'Auto-refresh 15s';
         renderWarehouseForRole();
         if(!resumePendingQrAfterLogin())showScreen('screen-warehouse');
       } else if (state.pinTarget === 'kitchen') {
@@ -11513,7 +11528,7 @@ function whHubTransferGo() {
 // panes and load functions the Employee/Supervisor tab-bar uses, just
 // with a "back to menu" affordance instead of a visible tab strip, since
 // the manager's tab-bar is hidden entirely (see renderWarehouseForRole).
-const WH_MGR_PANE_TITLES = { transfers: '🚚 All Transfers', requests: '📥 Requests', inventory: '📄 Stand Transfer Report', cart: '⛳ Golf Cart', roster: '👥 My Team' };
+const WH_MGR_PANE_TITLES = { todeliver: '📦 Deliveries', transfers: '🚚 All Transfers', requests: '📥 Requests', inventory: '📄 Stand Transfer Report', cart: '⛳ Golf Cart', roster: '👥 My Team' };
 function whMgrOpenPane(mode) {
   const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
   const panesWrap = document.getElementById('wh-panes-wrap');
@@ -11522,6 +11537,7 @@ function whMgrOpenPane(mode) {
   if (tilesSlot) tilesSlot.style.display = 'none';
   if (panesWrap) panesWrap.style.display = 'block';
   if (backbar) backbar.style.display = 'flex';
+  const strip = document.getElementById('wh-live-strip'); if (strip) strip.style.display = 'none';
   if (backbarTitle) backbarTitle.textContent = WH_MGR_PANE_TITLES[mode] || 'Menu';
   // Always switch the pane, even if no hidden tab element exists for this
   // mode — that dependency is exactly what left the wrong pane's content
@@ -11535,6 +11551,8 @@ function whMgrBackToMenu() {
   if (tilesSlot) tilesSlot.style.display = '';
   if (panesWrap) panesWrap.style.display = 'none';
   if (backbar) backbar.style.display = 'none';
+  whRenderLiveStrip();
+  loadWhTransfers();
 }
 
 async function mtLoadStands() {
@@ -19213,9 +19231,9 @@ function renderWarehouseForRole() {
   if (actions) { actions.innerHTML = ''; actions.style.display = 'none'; }
   if (helpText) {
     helpText.innerHTML = isWhMgr
-      ? '<b>First game:</b> watch Transfers and Requests. Planning/assignment tools are collapsed so they stay out of the way.'
+      ? '<b>First game:</b> the Right Now numbers are live — tap one to open it. Approvals turns red when a delivery waits on you.'
       : isWhSup
-        ? '<b>First game:</b> Requests opens first. Help anything waiting, and use Transfers when a planned delivery needs verification.'
+        ? '<b>First game:</b> Deliveries is every stand waiting for stock. Sign-offs is only what waits on your signature.'
         : '<b>First game:</b> tap the next stand, deliver what is listed, and finish. The app handles the "on the way" update for you.';
   }
   // Takes up real space on a phone screen — once someone's dismissed it,
@@ -19281,11 +19299,15 @@ function renderWarehouseForRole() {
     tilesSlot.className = 'action-tiles';
     tilesSlot.style.cssText = 'margin-bottom:4px';
     tilesSlot.innerHTML =
-      '<div class="action-tile tile-red" onclick="whMgrOpenPane(\'transfers\')">' +
-        '<span class="tile-icon">🚚</span><div class="tile-label">Transfers</div><div class="tile-sub" id="wh-sup-tile-transfers-sub">Deliveries to verify</div>' +
+      // Deliveries = the same stand-by-stand list employees work from (stock
+      // requests + planned transfers merged); Sign-offs = only what waits on
+      // the supervisor's signature or approval. Replaces the old Transfers /
+      // Requests pair, which showed the same work twice in two formats.
+      '<div class="action-tile tile-red" onclick="whMgrOpenPane(\'todeliver\')">' +
+        '<span class="tile-icon">📦</span><div class="tile-label">Deliveries</div><div class="tile-sub" id="wh-sup-tile-deliveries-sub">Stands waiting for stock</div>' +
       '</div>' +
-      '<div class="action-tile" onclick="whMgrOpenPane(\'requests\')">' +
-        '<span class="tile-icon">📥</span><div class="tile-label">Requests</div><div class="tile-sub" id="wh-sup-tile-requests-sub">Stock requests from stands</div>' +
+      '<div class="action-tile" onclick="whMgrOpenPane(\'transfers\')">' +
+        '<span class="tile-icon">✍️</span><div class="tile-label">Sign-offs</div><div class="tile-sub" id="wh-sup-tile-transfers-sub">Deliveries to verify</div>' +
       '</div>' +
       // Real feature, per direct request: Supervisor can't clock in 400+
       // warehouse staff one at a time — same "leader checks their own
@@ -19303,9 +19325,12 @@ function renderWarehouseForRole() {
       // review — all of that is Manager-only now.
       '<div class="action-tile" onclick="goGolfCart()">' +
         '<span class="tile-icon"><svg width="32" height="30" style="vertical-align:-6px"><use href="#gc-icon"/></svg></span><div class="tile-label">Golf Cart</div><div class="tile-sub">Take or return a key</div>' +
-      '</div>';
+      '</div>' +
       // Real change, per direct correction: Stand Transfer Report removed
       // from Supervisor — Manager only, no exceptions.
+      '<div class="action-tile" onclick="whMgrOpenPane(\'requests\')" style="grid-column:1/-1;padding:10px 12px;min-height:0;flex-direction:row;gap:8px;justify-content:flex-start">' +
+        '<span style="font-size:18px">📥</span><div class="tile-label" style="margin:0;font-size:13px">Request history · new request for a stand</div>' +
+      '</div>';
     whSupSyncTileBadges();
     whBuildRosterPane();
     return;
@@ -19327,34 +19352,28 @@ function renderWarehouseForRole() {
   tilesSlot.className = 'action-tiles';
   tilesSlot.style.cssText = 'margin-bottom:4px';
   tilesSlot.innerHTML =
-    '<div class="action-tile tile-red" onclick="showScreen(\'screen-wh-create-transfer\')">' +
-      '<span class="tile-icon">🚚</span><div class="tile-label">Create Transfer</div><div class="tile-sub">Send stock — self or assign</div>' +
-    '</div>' +
-    '<div class="action-tile" onclick="whMgrOpenPane(\'transfers\')">' +
-      '<span class="tile-icon">📦</span><div class="tile-label">All Transfers</div><div class="tile-sub">Deliveries + stand requests — one list</div>' +
-    '</div>' +
-    // Manager gets everything Supervisor's My Team tile does, same shared
-    // pane — outranks Supervisor so nothing here is Supervisor-only.
-    // Placed right after All Transfers to match where it sits on
-    // Supervisor's own menu (right after Requests).
-    '<div class="action-tile" onclick="whMgrOpenPane(\'roster\')">' +
-      '<span class="tile-icon">👥</span><div class="tile-label">My Team</div><div class="tile-sub" id="wh-tile-roster-sub">Check in/out · today\'s crew</div>' +
-    '</div>' +
+    // Most-used first: Approvals (turns red when something waits), the one
+    // list of all delivery work, then planning tools, then reports.
     '<div class="action-tile" id="wh-tile-approvals" onclick="showScreen(\'screen-wh-approvals\')">' +
       '<span class="tile-icon">✅</span><div class="tile-label">Approvals</div><div class="tile-sub" id="wh-tile-approvals-sub">Loading…</div>' +
     '</div>' +
-    '<div class="action-tile" onclick="whMgrOpenPane(\'inventory\')">' +
-      '<span class="tile-icon">📄</span><div class="tile-label">Stand Transfer Report</div><div class="tile-sub">End-of-day, per stand</div>' +
+    '<div class="action-tile" onclick="whMgrOpenPane(\'transfers\')">' +
+      '<span class="tile-icon">📦</span><div class="tile-label">All Transfers</div><div class="tile-sub" id="wh-sup-tile-transfers-sub">Deliveries + stand requests — one list</div>' +
     '</div>' +
-    // Real fix, per direct request: Golf Cart re-enabled — the whole
-    // checkout/return/issue-flag/repair-confirm system was already built
-    // and working, it was just switched off with no entry point. Driver
-    // approval + the "needs review" flagged-cart list live in this pane.
+    '<div class="action-tile" onclick="showScreen(\'screen-wh-create-transfer\')">' +
+      '<span class="tile-icon">🚚</span><div class="tile-label">Create Transfer</div><div class="tile-sub">Send stock — self or assign</div>' +
+    '</div>' +
+    '<div class="action-tile" onclick="showScreen(\'screen-wh-team\')">' +
+      '<span class="tile-icon">🗺️</span><div class="tile-label">Assign & Team</div><div class="tile-sub">Who covers which stands today</div>' +
+    '</div>' +
+    '<div class="action-tile" onclick="whMgrOpenPane(\'roster\')">' +
+      '<span class="tile-icon">👥</span><div class="tile-label">My Team</div><div class="tile-sub" id="wh-tile-roster-sub">Check in/out · today\'s crew</div>' +
+    '</div>' +
     '<div class="action-tile" id="wh-tile-cart" onclick="whMgrOpenPane(\'cart\')">' +
       '<span class="tile-icon"><svg width="32" height="30" style="vertical-align:-6px"><use href="#gc-icon"/></svg></span><div class="tile-label">Golf Cart</div><div class="tile-sub" id="wh-tile-cart-sub">Drivers + flagged issues</div>' +
     '</div>' +
-    '<div class="action-tile" onclick="showScreen(\'screen-wh-team\')">' +
-      '<span class="tile-icon">👥</span><div class="tile-label">Assign & Team</div><div class="tile-sub">Who covers what today</div>' +
+    '<div class="action-tile" onclick="whMgrOpenPane(\'inventory\')">' +
+      '<span class="tile-icon">📄</span><div class="tile-label">Stand Transfer Report</div><div class="tile-sub">End-of-day, per stand</div>' +
     '</div>';
   whUpdateApprovalsTile();
   whUpdateCartTile();
@@ -20366,7 +20385,11 @@ async function loadWarehouse() {
   // Golf Cart hidden from all access for now.
   if (myCartTab) myCartTab.style.display = 'none';
 
-  const res = await api('getStockRequests', {});
+  // A locked phone doesn't need a refresh every 15 s; the next one after it
+  // wakes up catches up (the push notification is what wakes them).
+  if (document.hidden && state._whLoadedOnce) return;
+  state._whLoadedOnce = true;
+  const [res] = await Promise.all([api('getStockRequests', {}), whOpenTransfers()]);
   state.wRequests = res.requests || [];
   renderOpsAlertStatus('warehouse');
   opsNewJobAlert('warehouse',state.wRequests);
@@ -20374,7 +20397,8 @@ async function loadWarehouse() {
   renderWarehouse();
   if (!state._whStandsLoaded) whLoadStandsDropdown();
   loadWhTransfers();
-  if (state.staffAccount && state.staffAccount.role === 'warehouse_manager') refreshWarehouseManagerStats();
+  whRenderLiveStrip();
+  if (whPaneShown('wh-todeliver-list') && !isEmployee) loadWhToDeliver();
 
   // "To Deliver" is Employee-only and the default landing tab for them —
   // Manager/Supervisor keep using Transfers/Requests separately, since
@@ -20468,11 +20492,12 @@ async function loadWhToDeliver() {
   const myId = state.staffAccount && state.staffAccount.empId;
   const myName = state.whName || (state.staffAccount && state.staffAccount.name) || '';
   const role = (state.staffAccount && state.staffAccount.role) || 'warehouse_employee';
-  const transferRows = await sb('transfers?status=neq.confirmed&order=created_at.desc&limit=150&select=*').catch(()=>({_err:true}));
+  const transferRows = await whOpenTransfers();
+  const deliveryWork = t => t.status === 'pending' || t.status === 'delivering';
   const transfers = (!transferRows._err && Array.isArray(transferRows))
     ? (role === 'warehouse_employee'
-        ? transferRows.filter(t => (t.status === 'pending' || t.status === 'delivering') && (t.assigned_to_id === myId || t.delivered_by === myName || !t.assigned_to_id))
-        : transferRows)
+        ? transferRows.filter(t => deliveryWork(t) && (t.assigned_to_id === myId || t.delivered_by === myName || !t.assigned_to_id))
+        : transferRows.filter(deliveryWork))
     : [];
 
   // First-game clarity: every employee can see unclaimed work, but once
@@ -20493,7 +20518,7 @@ async function loadWhToDeliver() {
   });
 
   const byStand = {};
-  const get = stand => (byStand[stand] = byStand[stand] || { stand, transferId:null, requests:[], urgent:false, mine:false, eta:null });
+  const get = stand => (byStand[stand] = byStand[stand] || { stand, transferId:null, transferMine:false, requests:[], urgent:false, mine:false, eta:null });
   transfers.forEach(t => { const x=get(t.stand); const mine=String(t.assigned_to_id||'')===String(myId||''); if(!x.transferId||(!x.transferMine&&mine)){x.transferId=t.id;x.transferMine=mine;} });
   requests.forEach(r => {
     const s=get(r.stand); s.requests.push(r);
@@ -20501,7 +20526,9 @@ async function loadWhToDeliver() {
     if(r.status==='On the way'&&r.claimedBy===myName)s.mine=true;
     if(r.etaDeadline){const d=new Date(r.etaDeadline).getTime();if(Number.isFinite(d)&&(!s.eta||d<s.eta))s.eta=d;}
   });
-  const list = Object.values(byStand).sort((a,b) => (b.urgent-a.urgent) || (b.mine-a.mine) || a.stand.localeCompare(b.stand));
+  const list = Object.values(byStand).sort((a,b) => (b.urgent-a.urgent) || ((b.mine||b.transferMine)-(a.mine||a.transferMine)) || standSort(a.stand,b.stand));
+  const dsub = document.getElementById('wh-sup-tile-deliveries-sub');
+  if (dsub) dsub.textContent = list.length ? list.length + ' stand' + (list.length===1?'':'s') + ' waiting' : 'All caught up ✅';
 
   const badge = document.getElementById('wh-todeliver-count');
   if (badge) badge.textContent = list.length;
@@ -20523,9 +20550,12 @@ async function loadWhToDeliver() {
           ? '📥 Stock requested · Tap to claim + start delivery'
           : '🚚 Planned transfer · Tap to open';
     const etaRow=s.eta?stockEtaHtml({etaDeadline:new Date(s.eta).toISOString(),status:'Pending'}):'';
+    const bring=s.requests.map(r=>r.items).filter(Boolean).join('; ');
+    const bringRow=bring?'<div style="font-size:11px;color:var(--text-2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(bring.length>90?bring.slice(0,88)+'…':bring)+'</div>':'';
+    const tag=s.transferMine?'<span style="display:inline-block;font-size:10px;font-weight:800;color:#fff;background:var(--asu-maroon);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px">ASSIGNED TO YOU</span>':'';
     return `<div class="delivery-card${s.urgent?' urgent':''}${s.mine?' mine':''}" onclick="whStartDeliveryForStand('${escapeAttr(s.stand)}',${s.transferId || 'null'})">
       <span style="font-size:28px">📦</span>
-      <div style="flex:1;min-width:0">${urgentBadge}<div style="font-weight:750;font-size:14px">${escapeHtml(s.stand)}</div><div class="delivery-status">${sub}</div>${etaRow}</div>
+      <div style="flex:1;min-width:0">${urgentBadge}<div style="font-weight:750;font-size:14px">${escapeHtml(s.stand)}${tag}</div><div class="delivery-status">${sub}</div>${bringRow}${etaRow}</div>
       <span style="font-size:22px;color:var(--text-2)">›</span>
     </div>`;
   }).join('');
@@ -20702,8 +20732,7 @@ async function loadWhTransfers() {
   const tfFilter = state._whTransferFilter;
   const dateInput = document.getElementById('wh-tf-date');
   if (dateInput && !dateInput.value) dateInput.value = state._whTransferFilterDate || localISODate();
-  let query = 'transfers?status=neq.confirmed&order=created_at.desc&limit=150&select=*';
-  const rawRows = await sb(query).catch(()=>({_err:true}));
+  const rawRows = await whOpenTransfers();
   const badge = document.getElementById('wh-transfer-count');
   if (rawRows._err) { el.innerHTML = '<div class="notice" style="background:rgba(220,38,38,0.08);color:#DC2626;font-size:12px">Could not load transfers. Run transfers.sql in Supabase.</div>'; return; }
   // Real bug: `status=neq.confirmed` isn't enough on its own — a stand
@@ -20763,6 +20792,10 @@ async function loadWhTransfers() {
 
   if (badge) badge.textContent = visible.length;
   whSupSyncTileBadges();
+  // Leaders on the tile menu only need the badge counts computed below the
+  // list; skip the per-item and request look-ups until the list is on screen.
+  const listShown = whPaneShown('wh-transfers-list');
+  if (!listShown && role !== 'warehouse_employee') { whTransferTileSub(visible, role, myId); return; }
   if (!visible.length) {
     el.innerHTML = '<div class="empty" style="padding:30px"><div class="empty-icon">🚚</div><p style="color:var(--text-2)">' +
       (role === 'warehouse_employee' ? 'Nothing assigned to you, and nothing open to claim right now.' : 'No open transfers right now.') + '</p></div>';
@@ -20791,13 +20824,11 @@ async function loadWhTransfers() {
   let requestCardsHtml = '';
   if (role === 'warehouse_manager') {
     const standsAlreadyShown = new Set(visible.map(t => t.stand));
-    const openReqs = await sb("stock_requests?status=in.(open,claimed)&order=created_at.desc&select=*").catch(() => ({ _err: true }));
-    if (!openReqs._err && Array.isArray(openReqs)) {
+    // Today's open requests are already loaded by loadWarehouse (state.wRequests).
+    const openReqs = (state.wRequests || []).filter(r => r.status === 'Pending' || r.status === 'On the way')
+      .map(r => ({ id:r.id, stand:r.stand, requested_by:r.requestedBy, claimed_by:r.claimedBy, status:r.status === 'Pending' ? 'open' : 'claimed' }));
+    {
       let reqRows = openReqs;
-      if (tfFilter === 'date') {
-        const day = state._whTransferFilterDate || localISODate();
-        reqRows = reqRows.filter(r => String(r.created_at || '').slice(0, 10) === day);
-      }
       reqRows = reqRows.filter(r => !standsAlreadyShown.has(r.stand));
       requestCardsHtml = reqRows.map(r => {
         const standJs = escapeAttr(r.stand);
@@ -20902,18 +20933,55 @@ async function loadWhTransfers() {
   });
   el.innerHTML = requestCardsHtml + listHtml;
   // Tile sub-label for Supervisor/Manager: say what needs THEM, not just a count.
-  if (isLeader) {
-    const needSign = sortedVisible.filter(t => bucketOf(t) === 0).length;
-    const mine = sortedVisible.filter(t => bucketOf(t) === 1).length;
-    const ready = sortedVisible.filter(t => bucketOf(t) === 2).length;
-    const parts = [];
-    if (needSign) parts.push(needSign + ' to sign');
-    if (mine) parts.push(mine + ' for you');
-    if (ready) parts.push(ready + ' to approve');
-    state._whTileSub = parts.length ? parts.join(' · ') : null;
-    const tsub = document.getElementById('wh-sup-tile-transfers-sub');
-    if (tsub) tsub.textContent = state._whTileSub || (sortedVisible.length + ' open');
-  }
+  if (isLeader) whTransferTileSub(sortedVisible, role, myId);
+}
+// "3 to sign · 1 for you · 2 to approve" on the Supervisor/Manager tile.
+function whTransferTileSub(rows, role, myId) {
+  const own = t => tsIsMyOwnDelivery(t);
+  const needSign = rows.filter(t => t.status === 'delivered' && !t.wh_confirmed_at && (role === 'warehouse_manager' || !own(t))).length;
+  const mine = rows.filter(t => t.assigned_to_id === myId && (t.status === 'pending' || t.status === 'delivering')).length;
+  const ready = rows.filter(t => t.status === 'verified' && !t.wh_confirmed_at && (role === 'warehouse_manager' || !own(t))).length;
+  const parts = [];
+  if (needSign) parts.push(needSign + ' to sign');
+  if (mine) parts.push(mine + ' for you');
+  if (ready) parts.push(ready + ' to approve');
+  state._whTileSub = parts.length ? parts.join(' · ') : null;
+  const tsub = document.getElementById('wh-sup-tile-transfers-sub');
+  if (tsub) tsub.textContent = state._whTileSub || 'Nothing waiting on you ✅';
+}
+// "Right now" strip for Warehouse Manager / Supervisor: what needs doing,
+// built from data this refresh already loaded (no extra requests).
+function whRenderLiveStrip() {
+  const el = document.getElementById('wh-live-strip'); if (!el) return;
+  const role = (state.staffAccount && state.staffAccount.role) || '';
+  const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
+  const onMenu = tilesSlot && tilesSlot.style.display !== 'none';
+  if (!['warehouse_manager','warehouse_supervisor'].includes(role) || !onMenu) { el.style.display = 'none'; return; }
+  const reqs = state.wRequests || [];
+  const c = state._whTfCache; const tfs = (c && Array.isArray(c.rows)) ? c.rows : [];
+  const now = Date.now();
+  const waiting = reqs.filter(r => r.status === 'Pending').length;
+  const onWay = reqs.filter(r => r.status === 'On the way').length + tfs.filter(t => t.status === 'delivering').length;
+  const overdue = reqs.filter(r => (r.status === 'Pending' || r.status === 'On the way') && r.etaDeadline && new Date(r.etaDeadline).getTime() < now).length;
+  const unassigned = tfs.filter(t => t.status === 'pending' && !t.assigned_to_id).length;
+  const toVerify = tfs.filter(t => t.status === 'delivered').length;
+  const toApprove = tfs.filter(t => t.status === 'verified').length;
+  const dsub = document.getElementById('wh-sup-tile-deliveries-sub');
+  const openTf = tfs.filter(t => t.status === 'pending' || t.status === 'delivering').length;
+  if (dsub) dsub.textContent = (waiting + openTf) ? (waiting + ' requested · ' + openTf + ' transfer' + (openTf === 1 ? '' : 's')) : 'All caught up ✅';
+  const isMgr = role === 'warehouse_manager';
+  const workPane = isMgr ? "whMgrOpenPane('transfers')" : "whMgrOpenPane('todeliver')";
+  const signPane = isMgr ? "showScreen('screen-wh-approvals')" : "whMgrOpenPane('transfers')";
+  const chip = (n, label, cls, go) => '<div class="wh-stat-chip' + (n ? ' ' + cls : '') + '" onclick="' + go + '"><b>' + n + '</b><span>' + label + '</span></div>';
+  el.style.display = '';
+  el.innerHTML = '<div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-2);margin-bottom:6px">RIGHT NOW</div><div class="wh-stat-row">' +
+    chip(waiting, 'Waiting', 'warn', workPane) +
+    chip(onWay, 'On the way', 'info', workPane) +
+    chip(overdue, 'Overdue', 'urgent', workPane) +
+    chip(toVerify, 'To verify', 'info', signPane) +
+    chip(toApprove, 'To approve', 'urgent', signPane) +
+    (isMgr ? chip(unassigned, 'Unassigned', 'warn', "whMgrOpenPane('transfers')") : '') +
+    '</div>';
 }
 
 // Warehouse supervisor/manager physically checks the delivery, then confirms
@@ -22542,7 +22610,7 @@ async function init() {
   const path = window.location.pathname.toLowerCase().replace(/\/$/, '');
   if (path === '/warehouse' || path === '/warehouse/index.html') {
     if (state.staffAccount && state.staffAccount.group === 'warehouse') {
-      document.getElementById('wh-name').textContent = 'Auto-refresh 10s';
+      document.getElementById('wh-name').textContent = 'Auto-refresh 15s';
       renderWarehouseForRole();
       showScreen('screen-warehouse');
       return;
@@ -22591,7 +22659,7 @@ async function init() {
     }
     if (state.staffAccount && state.staffAccount.group === 'warehouse') {
       const nameEl = document.getElementById('wh-name');
-      if (nameEl) nameEl.textContent = 'Auto-refresh 10s';
+      if (nameEl) nameEl.textContent = 'Auto-refresh 15s';
       renderWarehouseForRole();
       showScreen('screen-warehouse');
       return;
