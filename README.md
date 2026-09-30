@@ -3,7 +3,7 @@
 Game-day concessions operations for Aramark Sports + Entertainment at Arizona State University.
 
 **Live:** [asu-aramark.netlify.app](https://asu-aramark.netlify.app)
-**Current build:** `2026-09-29-food-stands-1` (shown on the login screen footer — check it against the live site after every deploy)
+**Current build:** `2026-09-30-inventory-chat-1` (shown on the login screen footer — check it against the live site after every deploy)
 
 Replaces paper checklists, inventory count sheets, stock requests and break time sheets with a phone app that works in a stadium concourse on bad WiFi.
 
@@ -143,6 +143,8 @@ Tables worth knowing:
 | `npo_groups` / `npo_members` | Volunteer groups. `npo_groups.stand` is comma-joined for multi-stand groups. |
 | `staff_accounts` | Manager/Warehouse/Food/Tech/Admin logins — `employee_id`, `pin`, `role`. Anyone with the app's own publishable key can read/write this directly; app-level role checks (not RLS) are the only thing stopping a lower-tier session from editing it. |
 | `zone_assignments` | Generic stand-assignment table, keyed by `role` (`warehouse`, `supervisor`). Powers each person's "My Stands" filter and routes push notifications to whoever's actually covering that stand. |
+| `stand_chat` | Stand Chat messages (one conversation per stand per game day). Auto-deleted after 14 days by the `stand_chat_cleanup_14d` pg_cron job — Managers can download a day's chat as CSV before then. |
+| `stand_sheet_stands` | View: distinct stands that have a stand sheet (= stands that must do inventory). |
 | `kitchen_runner_assignments` | Same idea as `zone_assignments`, specifically for Food Runner coverage areas (Food Manager → Runner Areas). Drives the "suggested runner" hint and the direct heads-up push when a request comes in for that runner's area. |
 
 Handy checks:

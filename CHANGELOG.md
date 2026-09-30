@@ -4,6 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-30-inventory-chat-1
+- **Stand Leads can't leave the stand until inventory is done.** "Leave this stand" for a Stand Lead or NPO Lead is locked until that stand's **Count In and Count Out** are both submitted today; the message offers a button straight into the missing count. Regular workers, students, bartenders with temporary lead access and NPO members are not affected. Stands with no stand sheet are never locked. Pay clock-out is still the Kronos clock — this is the "done at my stand" step.
+  - **Override:** a Supervisor or Manager can still clock a lead out (sick, emergency) after a warning; the attendance note records `[INVENTORY OVERRIDE — missing …]` under their name. A Stand Lead cannot clock out another Stand Lead while inventory is missing.
+  - If the app can't reach the server, the lead can still leave after a warning — the Manager tracker shows the gap.
+- **Inventory Tracker** (Manager + Supervisor home): Count In X/Y and Count Out X/Y for today's stands, "Missing Count Out / Missing Count In / All" filters, the Stand Lead / NPO Lead name per stand, **🔔 Remind** per stand and **Remind every stand shown** (push to the leads and the stand's Supervisors), a shortcut to open the missing count, and a list of lead overrides.
+- **Stand Chat** replaces phone calls between Stand Leads / NPO Leads and Supervisors. One conversation per stand per game day. The stand side sends to the Supervisors assigned to that stand (Admin Coverage + scheduled supervisors); if none, to Managers. Managers see and reply to every stand, and can download a day's chat as CSV. Push notification on every message, unread badge on the floating button, quick-message buttons, messages checked every 5 s only while a conversation is open (no Realtime connections). Messages delete automatically after 14 days (pg_cron job). The floating 📞 button becomes 💬 Chat for these roles; emergency numbers stay inside it. Everyone else keeps 📞 Contacts.
+- DB: new table `stand_chat`, view `stand_sheet_stands`, cron job `stand_chat_cleanup_14d` (migration `stand_chat_and_inventory_tracker`).
+
 ## 2026-09-29-food-stands-1
 - **Food Manager → Runner Areas now also works by individual stand.** Pick whole areas (tap again to remove all of them), or tap single stands using the new filter box. Area buttons light up only when every stand in the area is selected; a "N selected" count shows the total. "Today's Food coverage" lists full areas plus any extra individual stands. Data is unchanged (`kitchen_runner_assignments.stands`), so existing assignments load as-is.
 
