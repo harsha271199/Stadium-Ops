@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-30-warehouse-2
+- **Warehouse Supervisor now has the Warehouse Manager's full access** and the same home screen: Right Now strip, Approvals, Deliveries, All Transfers, Create Transfer, Assign & Team, My Team, Golf Cart (driver approvals + "needs review" + Mark repaired), Stand Transfer Report, roster upload, and request history.
+- **Sign-off is one step: "Verify & approve".** Any leader who could sign could also approve right after, so the second tap added no second person. The old separate Approve button still works for anything already verified. A leader may sign off their own delivery; the screen says so and every other leader gets a push ("… signed off their own delivery"). Every sign-off notifies the other leaders.
+- **Golf cart: "🔧 Report a cart problem"** on the key board for every warehouse role (employee, supervisor, manager — same buttons). Pick the cart, say what's wrong; an available cart goes out of service at once, managers and supervisors get a push, and it appears under "needs review" until a leader taps "Mark repaired & back in service".
+- **NPO Group Sign-in is a full-size button** right under the main Sign in (was a small text link at the bottom).
+- Warehouse refresh back to every **10 s** (the shared download from warehouse-1 keeps it at 12 requests/min, down from 18).
+
 ## 2026-09-30-warehouse-1
 Warehouse Manager / Supervisor / Employee — faster, simpler screens.
 - **Less than half the network traffic.** Each warehouse phone made 18 requests a minute (up to 150 transfers downloaded twice every 10 s, plus a separate stock-request query for the manager list). Now one shared download per refresh (`whOpenTransfers`, cleared on any write so lists never go stale), only the list on screen is rebuilt, refresh every 15 s, and no refresh while the phone is locked: **8 requests a minute** for all three roles.
