@@ -3213,6 +3213,22 @@
         <details style="margin-top:9px"><summary style="cursor:pointer;font-size:10px;font-weight:850;padding:7px 0">⚙️ Area → stand mapping</summary><div class="coverage-box" style="margin-top:5px"><div class="coverage-box-sub">Map real stands into the stable area names once. Then game assignments can change without selecting 15 stands every week.</div><label class="form-label" style="margin-top:0">Area</label><select class="form-input" id="cov-area-select" onchange="coverageAdminRenderAreaStands()"></select><input class="form-input" id="cov-area-search" placeholder="🔍 Search stands…" oninput="coverageAdminRenderAreaStands()" style="margin-bottom:6px"><div class="coverage-stand-list" id="cov-area-stands"></div><button class="btn btn-ghost" onclick="coverageUseObviousMatches()" style="margin-top:6px">✨ Suggest obvious stand-name matches</button><button class="btn btn-primary" onclick="coverageAdminSaveArea()" style="margin-top:5px">Save area mapping</button></div></details>
       </div>
 
+      <div class="v11-admin-section" id="admin-chat-routing">
+        <div class="v11-admin-title">💬 Chat — who answers each stand</div>
+        <div class="v11-admin-sub">By default the app works it out from the schedule: the stand's Stand Lead (or the lead scheduled at its area, e.g. West Portables), the Supervisor scheduled there or at its area, and all Managers. Pin a person here and only they get that stand's messages for that level. Tap a stand to change it.</div>
+        <div class="v11-2col"><div><label class="form-label" style="margin-top:0">Game date</label><input class="form-input" type="date" id="cr-date" onchange="chatRouteLoad()" style="margin:0"></div><div><label class="form-label" style="margin-top:0">Find a stand</label><input class="form-input" id="cr-search" placeholder="🔍 Name, number, DFA…" oninput="chatRouteRender()" style="margin:0"></div></div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin:8px 0 4px"><input type="checkbox" id="cr-pinned-only" onchange="chatRouteRender()"> Only stands with a pinned person</label>
+        <div id="cr-list" style="max-height:520px;overflow:auto;margin-top:6px"><div style="font-size:11px;color:var(--text-3)">Loading…</div></div>
+        <div class="card" id="cr-editor" style="display:none;padding:12px;margin:6px 0 10px;border:2px solid var(--asu-maroon)">
+          <div style="display:flex;justify-content:space-between;align-items:center"><b id="cr-ed-stand" style="font-size:14px">—</b><button class="btn btn-ghost" onclick="chatRouteClose()" style="width:auto;margin:0;padding:5px 10px;font-size:12px">Close</button></div>
+          <label class="form-label">⭐ Stand Lead</label><select class="form-input" id="cr-lead" style="margin:0"></select>
+          <label class="form-label">🧭 Supervisor</label><select class="form-input" id="cr-sup" style="margin:0"></select>
+          <label class="form-label">👔 Manager</label><select class="form-input" id="cr-mgr" style="margin:0"></select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin:10px 0 0" id="cr-area-wrap"><input type="checkbox" id="cr-area"> <span id="cr-area-label">Use for every stand in this area</span></label>
+          <button class="btn btn-primary" onclick="chatRouteSave()" style="margin-top:10px">✅ Save</button>
+        </div>
+      </div>
+
       <div class="v11-admin-section">
         <div class="v11-admin-title">🧭 Temporary Stand Lead → Multi-Stand Coverage</div>
         <div class="v11-admin-sub">Give an actual Stand Lead temporary coverage for selected stands on this game date. The assignment saves to Supabase and is limited to only the stands checked here.</div>
@@ -4282,7 +4298,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-30-chat-2';
+const BUILD_TAG = '2026-09-30-chat-3';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10983,7 +10999,7 @@ function mgrV10OpenTool(tab){
     adminLoadNpo();adminLoadDrivers();saLoadStands();populateRollStandSelect();
     const gd=document.getElementById('gdc-date');if(gd&&!gd.value)gd.value=localISODate();
     const sd=document.getElementById('sla-date');if(sd&&!sd.value)sd.value=localISODate();
-    adminPopulateGameContentVenues().then(adminLoadGameContent);adminLoadAreaLeadPeople();coverageAdminInit();
+    adminPopulateGameContentVenues().then(adminLoadGameContent);adminLoadAreaLeadPeople();coverageAdminInit();chatRouteInit();
   }
   window.scrollTo(0,0);
 }
@@ -11391,7 +11407,7 @@ function mgrTab(el, tab) {
   if (tab === 'transfers') { loadMgrTransfers(); }
   if (tab === 'refunds') { loadMgrRefunds(); }
   if (tab === 'times') { loadTimesheet(); }
-  if (tab === 'admin') { adminLoadNpo(); adminLoadDrivers(); saLoadStands(); adminAccessLoad(); coverageAdminInit(); populateRollStandSelect(); }
+  if (tab === 'admin') { adminLoadNpo(); adminLoadDrivers(); saLoadStands(); adminAccessLoad(); coverageAdminInit(); chatRouteInit(); populateRollStandSelect(); }
 }
 
 
@@ -18552,8 +18568,8 @@ function standStatusComplete(s) {
 // with the Stand Lead / NPO Lead name and a push reminder. Stands without a
 // stand sheet have nothing to count and are left out.
 // Today's leads per stand: scheduled Stand Leads + NPO Leads of groups at that stand.
-async function standLeadsIndex() {
-  const day = stadiumDay();
+async function standLeadsIndex(dayArg) {
+  const day = dayArg || stadiumDay();
   const [sched, groups, portables, temp] = await Promise.all([
     sb('schedule?is_test=neq.true&event_date=eq.' + day + '&select=employee_id,worker_name,location,role').catch(()=>({_err:true})),
     sb('npo_groups?is_active=eq.true&select=id,group_name,stand').catch(()=>({_err:true})),
@@ -18718,6 +18734,7 @@ function chatLevel() {
   if (isManagerOpsSession()) return 'mgr';
   if (isSupervisorSession()) return 'sup';
   const u = state.user; if (!u) return null;
+  if (state._chatAssignedLead && state._chatAssignedLead.length) return 'lead';
   if (u.isNpo) return u.npoIsLead ? 'lead' : 'crew';
   if (u.role === 'lead') return u.leadAccessGranted ? 'crew' : 'lead';
   return null;
@@ -18742,28 +18759,63 @@ async function chatAreas() {
   return rows;
 }
 function chatAreasFor(areas, stand) { const c = canonicalStandName2026(stand); return areas.filter(a => (a.stands||[]).some(s => canonicalStandName2026(s) === c)).map(a => a.area_name); }
-async function chatDirectory() {
-  const c = state._chatDir; if (c && c.day === stadiumDay() && Date.now() - c.at < 60000) return c;
-  const [idx, mgrs, sups] = await Promise.all([
-    standLeadsIndex().catch(()=>({})),
+// Admin can pin who answers a stand (Admin → "Chat — who answers each stand").
+// Stored in game_day_assignments: team 'stand_lead' = Stand Lead; team
+// 'support' = Supervisor, or Manager when the row's role is a manager role.
+function chatAsgLevel(a) { if (a.team === 'stand_lead') return 'lead'; if (a.team === 'support') return ['manager','support_manager','admin'].includes(String(a.role||'')) ? 'mgr' : 'sup'; return null; }
+async function chatDirectory(dayArg) {
+  const day = dayArg || stadiumDay();
+  state._chatDirs = state._chatDirs || {};
+  const c = state._chatDirs[day]; if (c && Date.now() - c.at < 60000) return c;
+  const [idx, mgrs, sups, asg, slim] = await Promise.all([
+    standLeadsIndex(day).catch(()=>({})),
     sb('staff_accounts?is_active=eq.true&role=in.(manager,admin)&select=employee_id,name').catch(()=>({_err:true})),
-    sb('schedule?is_test=neq.true&event_date=eq.' + stadiumDay() + '&role=ilike.*supervisor*&select=employee_id,worker_name,location').catch(()=>({_err:true}))
+    sb('schedule?is_test=neq.true&event_date=eq.' + day + '&role=ilike.*supervisor*&select=employee_id,worker_name,location').catch(()=>({_err:true})),
+    coverageGetAssignments(day, '').catch(()=>[]),
+    sb('staff_stand_access?event_date=eq.' + day + '&is_active=eq.true&access_level=eq.supervisor_limited&select=employee_id,worker_name,stands').catch(()=>({_err:true}))
   ]);
-  state._chatDir = {day:stadiumDay(), at:Date.now(), idx:idx||{}, mgrs:Array.isArray(mgrs)?mgrs:[], sups:Array.isArray(sups)?sups:[]};
-  return state._chatDir;
+  const d = {day, at:Date.now(), idx:idx||{}, mgrs:Array.isArray(mgrs)?mgrs:[], sups:Array.isArray(sups)?sups:[], asg:(Array.isArray(asg)?asg:[]).filter(a => chatAsgLevel(a)), slim:Array.isArray(slim)?slim:[]};
+  state._chatDirs[day] = d;
+  return d;
 }
-async function chatPeopleFor(stand) {
-  const [dir, areas, cov] = await Promise.all([chatDirectory(), chatAreas(), coverageResolveStand('chat', stand).catch(()=>({support:[]}))]);
-  const inAreas = chatAreasFor(areas, stand), canon = canonicalStandName2026(stand);
+function chatDirReset() { state._chatDirs = {}; }
+// Who is on each level for a stand. An Admin assignment for a level replaces
+// the automatic people for that level (stand-level beats area-level).
+async function chatPeopleFor(stand, dayArg) {
+  const [dir, areas] = await Promise.all([chatDirectory(dayArg), chatAreas()]);
+  const canon = canonicalStandName2026(stand);
+  const myAreas = areas.filter(a => (a.stands||[]).some(s => canonicalStandName2026(s) === canon));
+  const inAreas = myAreas.map(a => a.area_name), keys = new Set(myAreas.map(a => a.area_key));
   const at = key => dir.idx[key] || [];
   const here = Object.keys(dir.idx).filter(k => canonicalStandName2026(k) === canon).flatMap(at);
   const uniq = list => { const m = new Map(); list.forEach(p => { if (p.id && !m.has(p.id)) m.set(p.id, p); }); return [...m.values()]; };
+  const explicit = lvl => {
+    const rows = dir.asg.filter(a => chatAsgLevel(a) === lvl);
+    const direct = rows.filter(a => (a.direct_stands||[]).some(x => canonicalStandName2026(x) === canon));
+    const use = direct.length ? direct : rows.filter(a => (a.area_keys||[]).some(k => keys.has(k)));
+    return use.map(a => ({id:String(a.employee_id), name:a.name || '', assigned:true, via:direct.length ? 'stand' : 'area'}));
+  };
   const crew = uniq(here.filter(p => p.kind === 'access'));
-  const lead = uniq(here.filter(p => p.kind === 'lead' || p.kind === 'npo').concat(inAreas.flatMap(a => at(a).filter(p => p.kind === 'lead'))));
-  const sup = uniq((cov.support||[]).map(p => ({id:String(p.employee_id||''), name:p.name||'Supervisor'}))
-    .concat(dir.sups.filter(r => canonicalStandName2026(r.location) === canon || inAreas.includes(r.location)).map(r => ({id:String(r.employee_id||''), name:r.worker_name||'Supervisor'}))));
-  const mgr = uniq(dir.mgrs.map(m => ({id:String(m.employee_id), name:m.name||'Manager'})));
-  return {crew, lead, sup, mgr, areas:inAreas};
+  const autoLead = uniq(here.filter(p => p.kind === 'lead' || p.kind === 'npo')
+    .concat(inAreas.flatMap(a => at(a).filter(p => p.kind === 'lead')))
+    .concat(dir.slim.filter(r => (r.stands||[]).some(x => canonicalStandName2026(x) === canon)).map(r => ({id:String(r.employee_id), name:r.worker_name || 'Stand Lead'}))));
+  const autoSup = uniq(dir.sups.filter(r => canonicalStandName2026(r.location) === canon || inAreas.includes(r.location)).map(r => ({id:String(r.employee_id||''), name:r.worker_name||'Supervisor'})));
+  const autoMgr = uniq(dir.mgrs.map(m => ({id:String(m.employee_id), name:m.name||'Manager'})));
+  const eL = uniq(explicit('lead')), eS = uniq(explicit('sup')), eM = uniq(explicit('mgr'));
+  return {crew, lead:eL.length ? eL : autoLead, sup:eS.length ? eS : autoSup, mgr:eM.length ? eM : autoMgr, areas:inAreas, pinned:{lead:!!eL.length, sup:!!eS.length, mgr:!!eM.length}};
+}
+// A worker the Admin pinned as a stand's Stand Lead answers that stand's chat.
+async function chatRefreshAssigned() {
+  const u = state.user; if (!u || !u.empId) { state._chatAssignedLead = null; return; }
+  const c = state._chatAssignedAt; if (c && Date.now() - c < 60000) return;
+  state._chatAssignedAt = Date.now();
+  const dir = await chatDirectory().catch(()=>null); if (!dir) return;
+  const mine = dir.asg.filter(a => a.team === 'stand_lead' && String(a.employee_id) === String(u.empId));
+  if (!mine.length) { state._chatAssignedLead = null; return; }
+  const ex = await coverageExpandAssignmentStands(mine).catch(()=>({stands:[]}));
+  const before = !!(state._chatAssignedLead && state._chatAssignedLead.length);
+  state._chatAssignedLead = [...new Set([...(ex.stands||[]), ...mine.flatMap(a => a.direct_stands||[])].map(canonicalStandName2026))];
+  if (!before) { state._chatMyStands = null; updateFloatingContactVisibility(); }
 }
 // Stands this person talks for / looks after.
 async function chatMyStands() {
@@ -18773,6 +18825,7 @@ async function chatMyStands() {
     const a = areas.find(x => x.area_name === u.stand);
     if (a) (a.stands||[]).forEach(s => out.add(canonicalStandName2026(s))); else if (u.stand) out.add(u.stand);
     (u.supervisorStands||[]).forEach(s => out.add(s));
+    (state._chatAssignedLead||[]).forEach(s => out.add(s));
   } else if (lvl === 'sup') {
     const z = await getMyZoneStandsCached().catch(()=>null);
     (z || []).forEach(x => out.add(x));
@@ -18839,7 +18892,9 @@ function chatBannerNew() {
   const bn = document.getElementById('notif-banner'); if (bn) bn.onclick = () => { bn.remove(); goChat(r.stand); };
 }
 async function chatPollBadge() {
-  if (!chatLevel() || document.hidden) return;
+  if (document.hidden) return;
+  if (state.user) await chatRefreshAssigned().catch(()=>{});
+  if (!chatLevel()) return;
   if (await chatSyncIndex()) {
     chatPaintBadges();
     chatBannerNew();
@@ -18985,7 +19040,8 @@ async function chatOpenThread(stand) {
 function chatRenderWho() {
   const th = state._chatThread, el = document.getElementById('chat-who'); if (!th || !el || !th.people) return;
   const p = th.people, names = l => p[l].length ? p[l].map(x => escapeHtml(chatNice(x.name))).slice(0, 3).join(', ') + (p[l].length > 3 ? ' +' + (p[l].length - 3) : '') : '<span style="color:var(--text-3)">none on today</span>';
-  el.innerHTML = (p.crew.length ? '<div>👥 Crew: ' + names('crew') + '</div>' : '') + '<div>⭐ Stand Lead: ' + names('lead') + (p.areas.length && p.lead.length ? ' <span style="color:var(--text-3)">(' + escapeHtml(p.areas.join(', ')) + ')</span>' : '') + '</div><div>🧭 Supervisor: ' + names('sup') + '</div>';
+  const pin = l => p.pinned && p.pinned[l] ? ' <span style="font-size:10px;color:var(--asu-maroon);font-weight:800">📌 set by Admin</span>' : '';
+  el.innerHTML = (p.crew.length ? '<div>👥 Crew: ' + names('crew') + '</div>' : '') + '<div>⭐ Stand Lead: ' + names('lead') + pin('lead') + (!p.pinned.lead && p.areas.length && p.lead.length ? ' <span style="color:var(--text-3)">(' + escapeHtml(p.areas.join(', ')) + ')</span>' : '') + '</div><div>🧭 Supervisor: ' + names('sup') + pin('sup') + '</div>' + (p.pinned.mgr ? '<div>👔 Manager: ' + names('mgr') + pin('mgr') + '</div>' : '');
 }
 async function chatLoadThread(first) {
   const th = state._chatThread; if (!th || th.stand !== state._chatStand) return;
@@ -19057,6 +19113,104 @@ async function chatNotify(stand, to, me, body) {
   const title = '💬 ' + stand;
   const text = chatNice(me.name) + ' (' + me.role + '): ' + (body.length > 130 ? body.slice(0, 127) + '…' : body);
   ids.forEach(id => sendPushTo(id, title, text));
+}
+// ============ ADMIN — CHAT ROUTING (who answers each stand) ============
+let _crStands=[],_crPeople={lead:[],sup:[],mgr:[]},_crResolved={},_crEditing=null;
+function chatRouteDay(){const d=document.getElementById('cr-date');return (d&&d.value)||stadiumDay();}
+async function chatRouteInit(){const d=document.getElementById('cr-date');if(!d)return;if(!d.value)d.value=stadiumDay();await chatRouteLoad();}
+async function chatRouteLoad(){
+  if(!isAdminSession())return;
+  const day=chatRouteDay(),el=document.getElementById('cr-list');{const ed=document.getElementById('cr-editor');if(ed&&el&&el.contains(ed)){el.after(ed);ed.style.display='none';}}if(el)el.innerHTML='<div style="font-size:11px;color:var(--text-3)">Loading…</div>';
+  chatDirReset();
+  const [stands,sched,mgrs]=await Promise.all([
+    allVenueStands(),
+    sb('schedule?is_test=neq.true&event_date=eq.'+day+'&select=employee_id,worker_name,role,location').catch(()=>({_err:true})),
+    sb('staff_accounts?is_active=eq.true&role=in.(manager,support_manager,admin)&select=employee_id,name,role&order=name.asc').catch(()=>({_err:true}))
+  ]);
+  _crStands=stands;
+  const rows=Array.isArray(sched)?sched:[];
+  const pick=re=>{const m=new Map();rows.filter(r=>re.test(String(r.role||''))).forEach(r=>{if(!m.has(String(r.employee_id)))m.set(String(r.employee_id),{id:String(r.employee_id),name:r.worker_name,where:r.location});});return [...m.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name)));};
+  _crPeople={lead:pick(/stand lead/i),sup:pick(/supervisor/i),mgr:(Array.isArray(mgrs)?mgrs:[]).map(m=>({id:String(m.employee_id),name:m.name,role:m.role}))};
+  _crResolved={};
+  await Promise.all(stands.map(async x=>{_crResolved[x.name]=await chatPeopleFor(x.name,day).catch(()=>null);}));
+  chatRouteRender();
+}
+function chatRouteRender(){
+  const el=document.getElementById('cr-list');if(!el)return;
+  const ed=document.getElementById('cr-editor');if(ed&&el.contains(ed))el.after(ed);
+  const q=loginFold((document.getElementById('cr-search')||{}).value||'').trim(),pinnedOnly=(document.getElementById('cr-pinned-only')||{}).checked;
+  const nm=l=>l&&l.length?l.map(x=>escapeHtml(chatNice(x.name))).slice(0,2).join(', ')+(l.length>2?' +'+(l.length-2):''):'<span style="color:#B45309">nobody</span>';
+  let lastV='';
+  const list=_crStands.filter(x=>(!q||loginFold(x.name+' '+(VENUE_SHORT[x.venue]||x.venue)).includes(q))&&(!pinnedOnly||(_crResolved[x.name]&&Object.values(_crResolved[x.name].pinned).some(Boolean))));
+  el.innerHTML=list.length?list.map(x=>{
+    const p=_crResolved[x.name]||{lead:[],sup:[],mgr:[],pinned:{}},pin=l=>p.pinned&&p.pinned[l]?'📌':'';
+    const head=x.venue!==lastV?'<div class="section-title" style="margin-top:8px">'+escapeHtml(VENUE_SHORT[x.venue]||x.venue)+'</div>':'';lastV=x.venue;
+    return head+'<div class="card" id="cr-card-'+escapeAttr(x.name.replace(/[^a-z0-9]/gi,'_'))+'" onclick="chatRouteEdit(this.dataset.s)" data-s="'+escapeAttr(x.name)+'" style="padding:9px 11px;margin-bottom:6px;cursor:pointer;font-size:12px">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:13px">'+escapeHtml(x.name)+'</b><span style="color:var(--asu-maroon);font-weight:800">Edit ›</span></div>'+
+      '<div style="color:var(--text-2);margin-top:3px;line-height:1.5">⭐ '+pin('lead')+nm(p.lead)+' · 🧭 '+pin('sup')+nm(p.sup)+' · 👔 '+(p.pinned&&p.pinned.mgr?'📌'+nm(p.mgr):'all managers')+'</div></div>';
+  }).join(''):'<div style="font-size:11px;color:var(--text-3)">No stands match.</div>';
+  if(_crEditing){const c=document.getElementById('cr-card-'+_crEditing.replace(/[^a-z0-9]/gi,'_'));if(c&&ed){c.after(ed);ed.style.display='';}}
+}
+async function chatRouteEdit(stand){
+  const ed=document.getElementById('cr-editor');if(!ed)return;
+  if(_crEditing===stand&&ed.style.display!=='none')return chatRouteClose();
+  _crEditing=stand;
+  const p=_crResolved[stand]||await chatPeopleFor(stand,chatRouteDay());
+  document.getElementById('cr-ed-stand').textContent=stand;
+  const opts=(l,autoLabel)=>{const cur=p.pinned&&p.pinned[l]&&p[l][0]?p[l][0].id:'';return '<option value="">'+autoLabel+'</option>'+_crPeople[l].map(x=>'<option value="'+escapeAttr(x.id)+'"'+(x.id===cur?' selected':'')+'>'+escapeHtml(chatNice(x.name))+(x.where?' · '+escapeHtml(x.where):x.role?' · '+escapeHtml(String(x.role).replace(/_/g,' ')):'')+'</option>').join('');};
+  const autoTxt=(l,none)=>'Automatic'+(p.pinned&&p.pinned[l]?'':' — '+(p[l]&&p[l].length?p[l].map(x=>chatNice(x.name)).slice(0,2).join(', '):none));
+  document.getElementById('cr-lead').innerHTML=opts('lead',autoTxt('lead','nobody scheduled'));
+  document.getElementById('cr-sup').innerHTML=opts('sup',autoTxt('sup','nobody scheduled'));
+  document.getElementById('cr-mgr').innerHTML=opts('mgr','Automatic — all managers');
+  const areas=await chatAreas(),a=areas.find(z=>(z.stands||[]).some(s=>canonicalStandName2026(s)===canonicalStandName2026(stand)));
+  const aw=document.getElementById('cr-area-wrap');document.getElementById('cr-area').checked=false;
+  if(aw){aw.style.display=a?'flex':'none';aw.dataset.key=a?a.area_key:'';document.getElementById('cr-area-label').textContent=a?'Use for every stand in '+a.area_name+' ('+(a.stands||[]).length+' stands)':'';}
+  chatRouteRender();
+  const c=document.getElementById('cr-card-'+stand.replace(/[^a-z0-9]/gi,'_'));if(c&&c.scrollIntoView)c.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function chatRouteClose(){_crEditing=null;const ed=document.getElementById('cr-editor');if(ed)ed.style.display='none';}
+async function chatRouteSetLevel(day,stand,level,personId,areaKey){
+  const canon=canonicalStandName2026(stand),venue='Mountain America Stadium',team=level==='lead'?'stand_lead':'support';
+  const areas=await chatAreas(),area=areaKey?areas.find(a=>a.area_key===areaKey):null,inArea=new Set(area?(area.stands||[]).map(canonicalStandName2026):[]);
+  const cur=await chatDirectory(day);
+  // Take this stand (or the whole area) away from whoever had it at this level.
+  for(const a of cur.asg.filter(x=>chatAsgLevel(x)===level)){
+    let ds=(a.direct_stands||[]).slice(),ak=(a.area_keys||[]).slice(),n0=ds.length+ak.length;
+    ds=ds.filter(x=>canonicalStandName2026(x)!==canon&&!(area&&inArea.has(canonicalStandName2026(x))));
+    if(area)ak=ak.filter(k=>k!==areaKey);
+    if(ds.length+ak.length===n0)continue;
+    if(String(a.employee_id)===String(personId))continue; // re-added below
+    if(!ds.length&&!ak.length){if(!(await coverageDeleteAssignment(day,a.venue,a.employee_id,a.team)))return false;}
+    else if(!(await coverageSaveAssignment({...a,direct_stands:ds,area_keys:ak,updated_at:new Date().toISOString()})))return false;
+  }
+  if(!personId)return true;
+  const mine=cur.asg.find(x=>chatAsgLevel(x)===level&&String(x.employee_id)===String(personId));
+  const person=_crPeople[level].find(x=>x.id===String(personId))||{name:''};
+  let ds=mine?(mine.direct_stands||[]).slice():[],ak=mine?(mine.area_keys||[]).slice():[];
+  if(area){if(!ak.includes(areaKey))ak.push(areaKey);ds=ds.filter(x=>!inArea.has(canonicalStandName2026(x)));}
+  else if(!ds.some(x=>canonicalStandName2026(x)===canon))ds.push(stand);
+  const role=level==='lead'?'stand_lead':level==='sup'?'supervisor':(person.role||'manager');
+  return coverageSaveAssignment({event_date:day,venue:mine?mine.venue:venue,employee_id:String(personId),name:person.name||(mine&&mine.name)||'',role,team,area_keys:ak,direct_stands:ds,notify_requests:true,updated_at:new Date().toISOString()});
+}
+async function chatRouteSave(){
+  if(!isAdminSession())return toast('Admin only','error');
+  const stand=_crEditing;if(!stand)return;
+  const day=chatRouteDay(),aw=document.getElementById('cr-area-wrap'),areaKey=document.getElementById('cr-area').checked&&aw?aw.dataset.key:'';
+  const p=_crResolved[stand]||{pinned:{}};
+  await withLock(evtBtn(),'Saving…',async()=>{
+    let ok=true;
+    for(const l of ['lead','sup','mgr']){
+      const v=document.getElementById('cr-'+l).value;
+      const was=p.pinned&&p.pinned[l]&&p[l][0]?p[l][0].id:'';
+      if(v===was&&!areaKey)continue;
+      if(!v&&!was&&!areaKey)continue;
+      ok=(await chatRouteSetLevel(day,stand,l,v,areaKey))&&ok;
+      chatDirReset();
+    }
+    if(!ok)return toast('Could not save — '+(_coverageLastError||'try again'),'error');
+    toast('✅ Saved — '+(areaKey?'whole area':stand));
+    chatRouteClose();await chatRouteLoad();
+  });
 }
 async function chatDownload() {
   if (!isManagerOpsSession()) return toast('Managers only', 'error');

@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-30-chat-3
+- **Admin → "💬 Chat — who answers each stand".** Every stand at every venue is listed with who answers it today: ⭐ Stand Lead, 🧭 Supervisor, 👔 Manager.
+  - **Automatic by default**, worked out from the schedule: the stand's lead, or the lead scheduled at its area such as "West Portables"; the supervisor scheduled at the stand or its area; all managers. A Stand Lead given multi-stand coverage in "Temporary Stand Lead → Multi-Stand Coverage" also counts as lead for those stands.
+  - **Pin a person:** tap a stand to pick a Stand Lead (today's scheduled Stand Leads), Supervisor (today's scheduled supervisors) or Manager, or leave it "Automatic". "Use for every stand in this area" applies the pick to the whole area. A pinned person replaces the automatic people for that level, so only they get that stand's messages. A pin on one stand beats a pin on its area. "📌 set by Admin" shows in the stand's chat.
+  - **Pinned Stand Leads:** a lead pinned to other stands gets those stands in their chat list. A worker pinned as Stand Lead gets chat as a lead.
+  - **Storage:** pins are saved in `game_day_assignments` (team `stand_lead`, or `support` with role supervisor/manager). Managers placed on areas in the Coverage Plan now count as that stand's Manager, not its Supervisor. No database change.
+
 ## 2026-09-30-chat-2
 - **"Who has alerts on" is Admin only.** It's gone from the Manager, Support Manager and Supervisor screens, and the screen itself refuses anyone but Admin.
 - **Chat follows the chain of command.** There is still one conversation per stand per game day, so the stand name is always the thread title and leads every alert ("💬 205P Bar S Sausage"). Four levels:
