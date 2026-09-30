@@ -4,6 +4,18 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-30-alerts-1
+- **Game-day alerts screen.** Phones only show the "Allow notifications" prompt after a real tap — the old automatic request 1.5 s after sign-in was ignored or silently blocked by iPhone and newer Android Chrome. After sign-in, leaders, supervisors, warehouse, food, IT and managers (not regular workers) now get one screen per day until alerts are on:
+  - not asked yet → one big **🔔 Turn on alerts** button (a real tap, so the phone's Allow prompt appears);
+  - blocked → step-by-step unblock instructions for iPhone / Android / computer, then "check again";
+  - iPhone in Safari → **Add to Home Screen** steps (iPhone only delivers alerts to the Home Screen app);
+  - on → **📲 Send me a test alert** to prove it end to end.
+  The 🔕 bell and every "Notifications blocked" banner now open the same screen.
+- **"Who has alerts on"** for Managers and Supervisors: today's Stand Leads, NPO Leads, people running portable stands, supervisors, warehouse, food, IT and managers, with ❌ / ✅ from `push_subscriptions`, so someone can walk over and fix it before gates open.
+- **Supervisors scheduled at an area** ("West Portables") now start on a real stand in that area, with "Your area: West Portables (14 stands). Pick the stand you are at." The area's stands also count as their My Stands (Stand Status, chat).
+- **IT tells the stand:** the Stand Lead / NPO Lead / people running the stand get "🔧 IT is on the way" when a tech claims the ticket and "✅ IT issue fixed" when it's resolved.
+- Long overdue times read in hours ("3h 21m overdue" instead of "201m").
+
 ## 2026-09-30-warehouse-2
 - **Warehouse Supervisor now has the Warehouse Manager's full access** and the same home screen: Right Now strip, Approvals, Deliveries, All Transfers, Create Transfer, Assign & Team, My Team, Golf Cart (driver approvals + "needs review" + Mark repaired), Stand Transfer Report, roster upload, and request history.
 - **Sign-off is one step: "Verify & approve".** Any leader who could sign could also approve right after, so the second tap added no second person. The old separate Approve button still works for anything already verified. A leader may sign off their own delivery; the screen says so and every other leader gets a push ("… signed off their own delivery"). Every sign-off notifies the other leaders.

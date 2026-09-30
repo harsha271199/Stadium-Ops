@@ -1756,6 +1756,7 @@
       <div class="working-stand-control" id="supervisor-working-stand-control" style="display:none">
         <div class="ws-label">Working stand</div>
         <select class="form-input" id="supervisor-working-stand-select" onchange="supervisorWorkingStandChanged()"></select>
+        <div id="supervisor-area-note" style="font-size:11px;font-weight:700;color:var(--asu-maroon);margin-top:4px"></div>
         <div class="working-stand-help">Choose once. Checks, Inventory, Food Safety, Stock, Team and IT follow this stand.</div>
       </div>
       <div class="v11-area-lead" id="area-lead-control">
@@ -1830,6 +1831,10 @@
       <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goChat()">
         <span class="icon">💬</span>
         <span class="text"><div>Stand Chat <span class="chat-unread-pill" style="display:none"></span></div><div class="sub">Message Stand Leads &amp; NPO Leads</div></span>
+      </button>
+      <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAlertsCheck()">
+        <span class="icon">📲</span>
+        <span class="text"><div>Who has alerts on</div><div class="sub">Today's leads, supervisors, warehouse, food, IT</div></span>
       </button>
       <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goStandTransferRecord()">
         <span class="icon">🔄</span>
@@ -2772,6 +2777,10 @@
           <span class="icon">💬</span>
           <span class="text"><div>Stand Chat <span class="chat-unread-pill" style="display:none"></span></div><div class="sub">Message Stand Leads &amp; NPO Leads</div></span>
         </button>
+        <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAlertsCheck()">
+          <span class="icon">📲</span>
+          <span class="text"><div>Who has alerts on</div><div class="sub">Today's leads, supervisors, warehouse, food, IT</div></span>
+        </button>
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goStandTransferRecord()">
           <span class="icon">🔄</span>
           <span class="text"><div>Stand Transfer Record</div><div class="sub">Today's stand-to-stand transfers</div></span>
@@ -3657,6 +3666,18 @@
   </div>
 </div>
 
+<!-- ============ ALERTS CHECK (who has push on) ============ -->
+<div class="screen" id="screen-alerts-check">
+  <div class="page-header">
+    <div class="back-btn" role="button" tabindex="0" aria-label="Back" onclick="goRoleHome()">←</div>
+    <div><div class="page-title">Who has alerts on</div><div class="page-sub">Phones that can get game-day push alerts</div></div>
+  </div>
+  <div class="content">
+    <div class="notice info" style="font-size:12px;margin-bottom:12px">People marked ❌ have never turned alerts on from a signed-in phone. Ask them to tap the 🔕 bell in the app and choose <b>Allow</b> (iPhone: add the app to the Home Screen first).</div>
+    <div id="alerts-check-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+  </div>
+</div>
+
 <!-- ============ STAND CHAT ============ -->
 <div class="screen" id="screen-chat">
   <div class="page-header">
@@ -4256,7 +4277,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-30-warehouse-2';
+const BUILD_TAG = '2026-09-30-alerts-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4305,6 +4326,7 @@ function showScreen(id) {
   if (id === 'screen-all-stock') { loadAllStockReqs(); state.refreshInterval = setInterval(loadAllStockReqs, 15000); }
   if (id === 'screen-all-checks') { loadAllChecksStatus(); state.refreshInterval = setInterval(loadAllChecksStatus, 15000); }
   if (id === 'screen-transfer-record') { loadStandTransferRecord(); }
+  if (id === 'screen-alerts-check') loadAlertsCheck();
   if (id === 'screen-inv-tracker') { loadInvTracker(); state.refreshInterval = setInterval(loadInvTracker, 30000); }
   if (id !== 'screen-chat' && state._chatThreadTimer) { clearInterval(state._chatThreadTimer); state._chatThreadTimer = null; }
   if (id === 'screen-wh-create-transfer') { mtResetTransferForm(); mtLoadStands(); mtLoadAssignees(); }
@@ -6558,12 +6580,14 @@ function mapStock(r){
     assignedToNames:Array.isArray(meta.assigned_to_names) ? meta.assigned_to_names : []
   };
 }
+// "45m", "2h 10m" — a 5,000-minute number is unreadable at a glance.
+function fmtMins(m) { m = Math.max(0, Math.round(m)); if (m < 90) return m + 'm'; const h = Math.floor(m / 60), r = m % 60; return h + 'h' + (r ? ' ' + r + 'm' : ''); }
 function stockEtaInfo(r) {
   if (!r || !r.etaDeadline || r.status === 'Fulfilled') return null;
   const ms = new Date(r.etaDeadline).getTime() - Date.now();
   if (!Number.isFinite(ms)) return null;
   const mins = Math.ceil(Math.abs(ms) / 60000);
-  if (ms < 0) return { late:true, mins, text:'⚠️ ' + mins + 'm overdue' };
+  if (ms < 0) return { late:true, mins, text:'⚠️ ' + fmtMins(mins) + ' overdue' };
   if (ms <= 5*60000) return { late:false, soon:true, mins, text:'⏱ ' + Math.max(0,mins) + 'm left' };
   return { late:false, soon:false, mins, text:'⏱ ' + mins + 'm left' };
 }
@@ -7220,7 +7244,7 @@ function supportOpenRequests(){ const s=requireSupportStand(); if(!s)return; sta
 
 function getSupervisorWorkingStand() {
   if (!isSupervisorSession()) return '';
-  return state.activeStand || state.user.stand || '';
+  return state.activeStand || (Array.isArray(state._supAreaStands) ? '' : state.user.stand) || '';
 }
 
 function getOperationalStand(who) {
@@ -7260,7 +7284,23 @@ async function setupSupervisorWorkingStand(){
     if(area)area.style.display='none';
     return;
   }
-  const stand=getSupervisorWorkingStand()||state.user.stand;
+  let stand=getSupervisorWorkingStand()||state.user.stand;
+  // ReadyOn schedules supervisors at an AREA ("West Portables"), not a stand.
+  // Map the area to its real stands and start on the first one, instead of
+  // pointing Checks / Inventory / Stock at a stand that doesn't exist.
+  if(!isLimitedAreaLead()&&state._supAreaFor!==state.user.stand){
+    state._supAreaFor=state.user.stand;state._supAreaStands=null;
+    const real=await sb('stands?stand_name=eq.'+encodeURIComponent(state.user.stand)+'&select=stand_name&limit=1').catch(()=>({_err:true}));
+    if(Array.isArray(real)&&!real.length){
+      const ar=await sb('coverage_areas?area_name=ilike.'+encodeURIComponent(state.user.stand)+'&select=stands').catch(()=>({_err:true}));
+      const areaStands=Array.isArray(ar)?[...new Set(ar.flatMap(a=>a.stands||[]))].sort(standSort):[];
+      state._supAreaStands=areaStands;
+      if(!state.activeStand||state.activeStand===state.user.stand){
+        state.activeStand=areaStands[0]||'';
+        stand=state.activeStand;
+      }
+    }
+  }
   if(!state.activeStand)state.activeStand=stand;
 
   if(isLimitedAreaLead()){
@@ -7277,8 +7317,10 @@ async function setupSupervisorWorkingStand(){
     if(wrap)wrap.style.display='block';
     await populateStandPicker('supervisor-working-stand-select',stand);
     if(sel)sel.value=stand;
+    const note=document.getElementById('supervisor-area-note');
+    if(note)note.textContent=state._supAreaStands?(state._supAreaStands.length?'Your area: '+state.user.stand+' ('+state._supAreaStands.length+' stands). Pick the stand you are at.':state.user.stand+' is an area, not a stand — pick the stand you are at.'):'';
   }
-  setSupervisorActiveStand(stand,{silent:true});
+  if(stand)setSupervisorActiveStand(stand,{silent:true});
 }
 function areaLeadStandChanged(){
   const sel=document.getElementById('area-lead-stand-select');
@@ -13865,7 +13907,7 @@ function maybeShowContactPopup() {
   setTimeout(()=>{
     // A fast game-day user may already be inside Stock/Food/Checks after
     // 1.2 seconds. Never cover an active task with a surprise modal.
-    if(state.currentScreen==='screen-home' && !document.getElementById('contact-popup-overlay')){
+    if(state.currentScreen==='screen-home' && !document.getElementById('contact-popup-overlay') && !document.getElementById('alerts-setup-overlay')){
       showContactPopup();
     }
   },1200);
@@ -14369,7 +14411,7 @@ function kitchenLocalAssignments(){try{return JSON.parse(localStorage.getItem(KI
 function kitchenSaveLocalAssignments(rows){localStorage.setItem(KITCHEN_PREVIEW_ASSIGN_KEY,JSON.stringify(rows));}
 function kitchenIsMissing(r){return !!(r&&r._err&&(r.status===404||String(r.error||'').toLowerCase().includes('kitchen_')));}
 function kitchenStatusLabel(s){return ({open:'📥 Requested',preparing:'👨‍🍳 Preparing',ready:'✅ Ready',on_the_way:'🏃 On the way',delivered:'✅ Delivered',cancelled:'Cancelled'})[s]||s||'Requested';}
-function kitchenEtaText(r){if(!r||!r.eta_deadline)return ''; const ms=new Date(r.eta_deadline).getTime()-Date.now(); if(ms<=0)return '🔴 '+Math.max(1,Math.round(-ms/60000))+'m overdue'; return '⏱ '+Math.max(1,Math.ceil(ms/60000))+'m left';}
+function kitchenEtaText(r){if(!r||!r.eta_deadline)return ''; const ms=new Date(r.eta_deadline).getTime()-Date.now(); if(ms<=0)return '🔴 '+fmtMins(Math.max(1,Math.round(-ms/60000)))+' overdue'; return '⏱ '+Math.max(1,Math.ceil(ms/60000))+'m left';}
 function kitchenItemsText(r){const a=r&&r.items_json&&Array.isArray(r.items_json.items)?r.items_json.items:[];return a.map(x=>escapeHtml(x.itemName)+' ×'+Number(x.qty||0)).join(' · ')||escapeHtml(r.items||'Food');}
 
 async function kitchenFetchRequests(){
@@ -15562,6 +15604,15 @@ async function coverageGetAllMyAssignments(empId,date){const rows=await coverage
 async function coverageExpandAssignmentStands(assignments){const stands=new Set(),names=[];for(const a of assignments||[]){const ar=await coverageGetAreas(a.venue);(a.area_keys||[]).forEach(k=>{const x=ar.find(z=>z.area_key===k);if(x){names.push(x.area_name);(x.stands||[]).forEach(s=>stands.add(s));}});(a.direct_stands||[]).forEach(s=>stands.add(s));}return {stands:[...stands],areaNames:[...new Set(names)]};}
 async function coverageVenueForStand(stand){if(!stand)return 'Mountain America Stadium';state._coverageVenueCache=state._coverageVenueCache||{};const canon=canonicalStandName2026(stand);if(state._coverageVenueCache[canon])return state._coverageVenueCache[canon];let rows=await sb('stands?stand_name=eq.'+encodeURIComponent(canon)+'&select=venue&limit=1').catch(()=>({_err:true}));if((rows._err||!rows[0])&&canon!==String(stand)){rows=await sb('stands?stand_name=eq.'+encodeURIComponent(stand)+'&select=venue&limit=1').catch(()=>({_err:true}));}const v=!rows._err&&rows[0]&&rows[0].venue?rows[0].venue:'Mountain America Stadium';state._coverageVenueCache[canon]=v;return v;}
 async function coverageResolveStand(kind,stand){const venue=await coverageVenueForStand(stand),areas=await coverageGetAreas(venue),matched=areas.filter(a=>(a.stands||[]).some(s=>canonicalStandName2026(s).toLowerCase()===canonicalStandName2026(stand).toLowerCase())),keys=new Set(matched.map(a=>a.area_key)),assignments=await coverageGetAssignments(stadiumDay(),venue),teamForKind=kind==='stock'?'warehouse':kind==='food'?'food':'it',people=assignments.filter(a=>(a.area_keys||[]).some(k=>keys.has(k))||((a.direct_stands||[]).includes(stand)));return {venue,areas:matched,all:people,support:people.filter(a=>a.team==='support'),operational:people.filter(a=>a.team===teamForKind)};}
+// Everyone running a stand today: Stand Leads, NPO Leads, and staff with lead
+// tools at stands with no Stand Lead, plus supervisors scheduled there.
+async function notifyStandPeople(stand,title,body){
+  const ids=new Set();
+  const idx=await standLeadsIndex().catch(()=>({}));
+  (idx[stand]||[]).forEach(p=>{if(p.id)ids.add(String(p.id));});
+  (await notifyStandLeadsAndSupervisors(stand,title,body).catch(()=>[])).forEach(id=>ids.delete(String(id)));
+  ids.forEach(id=>sendPushTo(id,title,body));
+}
 async function notifyStandLeadsAndSupervisors(stand,title,body){
   const day=stadiumDay();
   const rows=await sb('schedule?event_date=eq.'+encodeURIComponent(day)+'&location=eq.'+encodeURIComponent(stand)+'&select=employee_id,role').catch(()=>({_err:true}));
@@ -15715,9 +15766,7 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function requestPushPermission() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    toast('Push notifications not supported on this browser', 'error'); return false;
-  }
+  if (!alertsSupported() || Notification.permission === 'denied') { showAlertsSetup(true); return false; }
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
     toast('Notification permission denied — tap "Allow" when prompted', 'error');
@@ -15745,6 +15794,7 @@ async function requestPushPermission() {
     }).catch(()=>{}); // fail silently if table not set up yet
     toast('✅ Push notifications enabled!');
     updatePushButtonState();renderFoodAlertStatus();renderOpsAlertStatus('warehouse');renderOpsAlertStatus('tech');
+    if (document.getElementById('alerts-setup-overlay')) showAlertsSetup(true);
     return true;
   } catch(e) {
     toast('Could not enable push — try again', 'error');
@@ -15764,7 +15814,7 @@ function renderOpsAlertStatus(kind){
   const el=document.getElementById(id);if(!el)return;
   const supported=('Notification' in window)&&('serviceWorker' in navigator)&&('PushManager' in window);
   if(!supported){
-    el.innerHTML='<div class="notice warning"><b>🔕 Phone alerts unavailable.</b> Keep this screen open for live in-app alerts.</div>';
+    el.innerHTML='<div class="notice warning"><b>🔕 Phone alerts not set up.</b> <a href="#" onclick="showAlertsSetup(true);return false" style="font-weight:800">How to turn them on ›</a></div>';
     return;
   }
   if(Notification.permission==='granted'){
@@ -15773,7 +15823,7 @@ function renderOpsAlertStatus(kind){
     // just eats screen space for something already confirmed once.
     el.innerHTML='';
   }else if(Notification.permission==='denied'){
-    el.innerHTML='<div class="notice warning"><b>🔕 Notifications blocked.</b> Allow notifications in browser/site settings before game day.</div>';
+    el.innerHTML='<div class="notice warning"><b>🔕 Notifications blocked.</b> <a href="#" onclick="showAlertsSetup(true);return false" style="font-weight:800">How to unblock ›</a></div>';
   }else{
     el.innerHTML='<button class="btn btn-primary" onclick="requestPushPermission()" style="margin:0">🔔 Turn On Game-Day Alerts</button>';
   }
@@ -15809,13 +15859,13 @@ function renderFoodAlertStatus(){
   if(!['food_manager','kitchen_coordinator','food_runner','kitchen_runner'].includes(role)){el.innerHTML='';return;}
   const supported=('Notification' in window)&&('serviceWorker' in navigator)&&('PushManager' in window);
   if(!supported){
-    el.innerHTML='<div class="notice warning"><b>🔕 Phone alerts unavailable in this browser.</b><br>Keep this screen open for live in-app alerts.</div>';
+    el.innerHTML='<div class="notice warning"><b>🔕 Phone alerts not set up.</b> <a href="#" onclick="showAlertsSetup(true);return false" style="font-weight:800">How to turn them on ›</a></div>';
     return;
   }
   if(Notification.permission==='granted'){
     el.innerHTML='<div class="notice success" style="padding:8px 10px"><b>🔔 Game-day alerts ON</b> · You can leave this screen and still receive assigned/ready/due alerts.</div>';
   }else if(Notification.permission==='denied'){
-    el.innerHTML='<div class="notice warning"><b>🔕 Notifications blocked by browser.</b><br>Allow notifications in browser/site settings before game day.</div>';
+    el.innerHTML='<div class="notice warning"><b>🔕 Notifications blocked.</b> <a href="#" onclick="showAlertsSetup(true);return false" style="font-weight:800">How to unblock ›</a></div>';
   }else{
     el.innerHTML='<button class="btn btn-primary" onclick="requestPushPermission()" style="margin:0">🔔 Turn On Game-Day Alerts</button>';
   }
@@ -15872,16 +15922,115 @@ async function syncPushSubscriptionIdentity() {
 }
 function maybeAutoPromptPush(role) {
   if ('Notification' in window && Notification.permission === 'granted') { syncPushSubscriptionIdentity(); }
-  if (!('Notification' in window) || Notification.permission !== 'default') { updatePushButtonState(); return; }
+  if ('Notification' in window && Notification.permission === 'granted') { updatePushButtonState(); return; }
   // Used to only prompt a handful of roles (warehouse/manager/tech/
   // supervisor) — but a plain Stand Lead genuinely receives real pushes
   // too (their own stock request getting fulfilled), so limiting the
   // reminder to those roles meant most people never got asked at all,
   // silently missing notifications meant for them.
-  const key = 'push_prompted_' + new Date().toDateString();
-  if (localStorage.getItem(key)) { updatePushButtonState(); return; }
-  localStorage.setItem(key, '1');
-  setTimeout(() => { requestPushPermission(); }, 1500); // small delay after login, not instant
+  updatePushButtonState();
+  if (!alertsNeededForRole()) return;
+  // Phones only show the Allow prompt after a real tap (iPhone and newer
+  // Android Chrome ignore or silently block a request made on a timer), so
+  // this opens a screen with one big button instead of asking directly.
+  const key = 'alerts_sheet_' + new Date().toDateString();
+  let seen = false; try { seen = !!localStorage.getItem(key); } catch (e) {}
+  if (seen) return;
+  try { localStorage.setItem(key, '1'); } catch (e) {}
+  setTimeout(() => showAlertsSetup(false), 1200);
+}
+
+// Leaders' view of who can actually receive push alerts today.
+function goAlertsCheck() {
+  if (!(isManagerOpsSession() || isSupervisorSession())) return toast('Managers and Supervisors only', 'error');
+  showScreen('screen-alerts-check');
+}
+async function loadAlertsCheck() {
+  const el = document.getElementById('alerts-check-list'); if (!el) return;
+  const day = stadiumDay();
+  const [sched, staff, subs, leads] = await Promise.all([
+    sb('schedule?is_test=neq.true&event_date=eq.' + day + '&select=employee_id,worker_name,location,role').catch(()=>({_err:true})),
+    sb('staff_accounts?is_active=eq.true&role=in.(warehouse_manager,warehouse_supervisor,warehouse_employee,food_manager,food_runner,kitchen_runner,kitchen_coordinator,tech,manager,support_manager)&select=employee_id,name,role').catch(()=>({_err:true})),
+    sb('push_subscriptions?select=user_id').catch(()=>({_err:true})),
+    standLeadsIndex().catch(()=>({}))
+  ]);
+  if (!Array.isArray(subs)) { el.innerHTML = '<div class="notice">Could not load — try again</div>'; return; }
+  const on = new Set(subs.map(x => String(x.user_id || '')));
+  const people = new Map();
+  const add = (id, name, what) => { id = String(id || ''); if (id && !people.has(id)) people.set(id, { id, name: name || id, what }); };
+  if (Array.isArray(sched)) sched.filter(r => /stand lead|supervisor/i.test(String(r.role || ''))).forEach(r => add(r.employee_id, r.worker_name, (/supervisor/i.test(r.role) ? 'Supervisor' : 'Stand Lead') + ' · ' + (r.location || '')));
+  Object.entries(leads || {}).forEach(([st, list]) => list.forEach(p => add(p.id, p.name, (p.kind === 'npo' ? 'NPO Lead' : p.kind === 'access' ? 'Runs stand' : 'Stand Lead') + ' · ' + st)));
+  const label = { warehouse_manager:'Warehouse Manager', warehouse_supervisor:'Warehouse Supervisor', warehouse_employee:'Warehouse', food_manager:'Food Manager', food_runner:'Food Runner', kitchen_runner:'Food Runner', kitchen_coordinator:'Food', tech:'IT', manager:'Manager', support_manager:'Manager' };
+  if (Array.isArray(staff)) staff.forEach(a => add(a.employee_id, a.name, label[a.role] || a.role));
+  const all = [...people.values()].sort((a, b) => a.what.localeCompare(b.what) || a.name.localeCompare(b.name));
+  const off = all.filter(p => !on.has(p.id)), yes = all.filter(p => on.has(p.id));
+  const row = (p, ok) => '<div class="card" style="padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;align-items:center"><div style="min-width:0"><div style="font-weight:700;font-size:13px">' + escapeHtml(p.name) + '</div><div style="font-size:11px;color:var(--text-2)">' + escapeHtml(p.what) + '</div></div><div style="font-size:18px">' + (ok ? '✅' : '❌') + '</div></div>';
+  el.innerHTML = '<div class="status-summary-grid" style="margin-bottom:12px"><div class="status-summary-card"><div class="n" style="color:' + (off.length ? '#DC2626' : '#00A651') + '">' + off.length + '</div><div class="t">Alerts off</div></div><div class="status-summary-card"><div class="n" style="color:#00A651">' + yes.length + '</div><div class="t">Alerts on</div></div></div>' +
+    (off.length ? '<div class="section-title">❌ Alerts off</div>' + off.map(p => row(p, false)).join('') : '') +
+    (yes.length ? '<div class="section-title">✅ Alerts on</div>' + yes.map(p => row(p, true)).join('') : '');
+}
+
+// ============ GAME-DAY ALERTS SETUP ============
+// Web push can't be switched on by the app: the person has to tap Allow, and
+// on iPhone only an app added to the Home Screen can receive it. This sheet
+// walks each person to a working state and sends a test alert to prove it.
+function alertsSupported() { return typeof window.Notification !== 'undefined' && ('serviceWorker' in navigator) && typeof window.PushManager !== 'undefined'; }
+function isIOSDevice() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+function isStandaloneApp() { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
+function alertsNeededForRole() {
+  if (state.staffAccount) return true;                       // warehouse, food, IT, managers, premium
+  const u = state.user; if (!u) return false;
+  return u.role === 'lead' || u.role === 'supervisor';       // leads, NPO leads, supervisors, lead-access staff
+}
+function alertsState() {
+  if (!alertsSupported()) return isIOSDevice() && !isStandaloneApp() ? 'ios-install' : 'unsupported';
+  return Notification.permission === 'granted' ? 'on' : Notification.permission === 'denied' ? 'blocked' : 'ask';
+}
+function closeAlertsSetup() { const o = document.getElementById('alerts-setup-overlay'); if (o) o.remove(); }
+function showAlertsSetup(force) {
+  const st = alertsState();
+  if (st === 'on' && !force) return;
+  closeAlertsSetup();
+  const steps = t => '<ol style="margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.7">' + t.map(x => '<li>' + x + '</li>').join('') + '</ol>';
+  const android = /Android/i.test(navigator.userAgent);
+  let body = '';
+  if (st === 'ask') {
+    body = '<div style="font-size:15px;line-height:1.5">Get a buzz on your phone for new requests, deliveries, chat messages and sign-offs — even with the app closed.</div>' +
+      '<button class="btn btn-primary" onclick="requestPushPermission()" style="margin-top:16px;min-height:56px;font-size:17px">🔔 Turn on alerts</button>' +
+      '<div style="font-size:12px;color:var(--text-2);margin-top:8px;text-align:center">Your phone will ask — tap <b>Allow</b>.</div>';
+  } else if (st === 'on') {
+    body = '<div style="font-size:15px;line-height:1.5">✅ Alerts are on for this phone.</div>' +
+      '<button class="btn btn-primary" onclick="sendTestAlert(this)" style="margin-top:16px;min-height:52px">📲 Send me a test alert</button>';
+  } else if (st === 'blocked') {
+    body = '<div style="font-size:15px;line-height:1.5">Alerts were blocked on this phone. Turn them back on once:</div>' +
+      (isIOSDevice() ? steps(['Open the iPhone <b>Settings</b> app', 'Tap <b>Notifications</b>', 'Find <b>Stadium Ops</b> and turn on <b>Allow Notifications</b>'])
+        : android ? steps(['Tap the <b>⋮</b> menu (or the 🔒 next to the address)', 'Tap <b>Site settings</b> → <b>Notifications</b>', 'Choose <b>Allow</b>, then come back here'])
+        : steps(['Click the 🔒 next to the address', 'Set <b>Notifications</b> to <b>Allow</b>', 'Reload this page'])) +
+      '<button class="btn btn-primary" onclick="location.reload()" style="margin-top:16px;min-height:52px">I did it — check again</button>';
+  } else if (st === 'ios-install') {
+    body = '<div style="font-size:15px;line-height:1.5">On iPhone, alerts only work from the Home Screen app. One-time setup:</div>' +
+      steps(['Tap the <b>Share</b> button <span style="font-size:18px">⬆️</span> at the bottom of Safari', 'Tap <b>Add to Home Screen</b>, then <b>Add</b>', 'Open <b>Stadium Ops</b> from the new icon and sign in', 'Tap <b>🔔 Turn on alerts</b> → <b>Allow</b>']);
+  } else {
+    body = '<div style="font-size:15px;line-height:1.5">This browser can\'t get phone alerts. Open the app in <b>Chrome</b> (Android) or add it to the <b>Home Screen</b> from Safari (iPhone). Until then, keep this screen open for in-app alerts.</div>';
+  }
+  const el = document.createElement('div');
+  el.id = 'alerts-setup-overlay';
+  el.className = 'contact-popup-overlay';
+  el.innerHTML = '<div class="contact-popup" style="max-width:460px">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="font-size:19px;font-weight:800">🔔 Game-day alerts</div>' +
+    '<button onclick="closeAlertsSetup()" aria-label="Close" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-2)">×</button></div>' + body +
+    (st === 'on' ? '<button class="btn btn-ghost" onclick="closeAlertsSetup()" style="margin-top:8px">Done</button>' : '<button class="btn btn-ghost" onclick="closeAlertsSetup()" style="margin-top:8px">Not now</button>') +
+    '</div>';
+  document.body.appendChild(el);
+}
+async function sendTestAlert(btn) {
+  const who = getRequesterIdentity();
+  if (!who.empId) return toast('Sign in first', 'error');
+  await withLock(btn, 'Sending…', async () => {
+    await syncPushSubscriptionIdentity();
+    sendPushTo(who.empId, '✅ Stadium Ops alerts work', 'This phone will get game-day alerts.');
+    toast('📲 Test sent — it should pop up in a few seconds', 'success', 6000);
+  });
 }
 
 // In-app notification banner (works without Web Push)
@@ -15935,7 +16084,7 @@ async function checkOverdueStockRequests() {
       const minsOver=Math.max(1,Math.round((now-deadline)/60000));
       const progress=r.status==='On the way' ? ('On the way with '+(r.claimedBy||'warehouse')) : 'Still unclaimed';
       const title='🚨 Stock ETA missed — '+r.stand;
-      const body=minsOver+'m overdue · '+progress+' · '+(r.items||'').slice(0,90);
+      const body=fmtMins(minsOver)+' overdue · '+progress+' · '+(r.items||'').slice(0,90);
       showNotificationBanner(title,body,'urgent');
       // Used to blast EVERY manager/admin/warehouse_manager in the building
       // for every single overdue stand, stadium-wide — with unrealistic
@@ -15991,7 +16140,7 @@ async function checkOverdueFoodRequests() {
       const progress=kitchenEtaProgress(r);
       const plainItems=(r.items||'Food request').slice(0,90);
       const title='🚨 Food ETA missed — '+r.stand;
-      const body=minsOver+'m overdue · '+progress+' · '+plainItems;
+      const body=fmtMins(minsOver)+' overdue · '+progress+' · '+plainItems;
 
       showNotificationBanner(title,body,'urgent');
 
@@ -18164,6 +18313,7 @@ async function getMyZoneStandsCached() {
   const mine = await coverageGetAllMyAssignments(state.user.empId, stadiumDay()).catch(()=>[]);
   const expanded = await coverageExpandAssignmentStands(mine.filter(x=>x.team==='support'));
   if (expanded.stands.length) { state._myZoneStands = expanded.stands; return state._myZoneStands; }
+  if (Array.isArray(state._supAreaStands) && state._supAreaStands.length) { state._myZoneStands = state._supAreaStands.slice(); return state._myZoneStands; }
   const res = await api('getMyZoneStands', { employeeId: state.user.empId });
   state._myZoneStands = (res.ok && res.stands) ? res.stands : null;
   return state._myZoneStands;
@@ -19227,7 +19377,11 @@ async function claimIT(id) {
   const msg = prompt('Message for the stand (optional)\n\nExample: "Bringing replacement POS in 5 min"');
   if(msg===null)return;
   const res = await api('updateITIssue', { issueId: id, status: 'On the way', claimedBy: acct.name, techMessage: msg || '' });
-  if (res.ok || res.simulated) { toast('🔧 Claimed — moved to My Jobs'); state.tTab='mine'; await loadTech(); }
+  if (res.ok || res.simulated) {
+    const row=(state.tIssues||[]).find(x=>String(x.id)===String(id));
+    if(row&&row.stand)notifyStandPeople(row.stand,'🔧 IT is on the way',acct.name+' · '+(row.category||'IT issue')+(msg?' — '+msg:''));
+    toast('🔧 Claimed — moved to My Jobs'); state.tTab='mine'; await loadTech();
+  }
   else { toast(res.error || 'Could not claim — another Tech may have taken it', 'error'); loadTech(); }
 }
 
@@ -19237,7 +19391,10 @@ async function resolveIT(id) {
   const note = prompt('Resolution note (what fixed it?):\n\nExample: "Rebooted POS, working fine now"');
   if (note === null) return;
   const res = await api('updateITIssue', { issueId: id, status: 'Resolved', resolutionNote: note || '' });
-  if (res.ok || res.simulated) { toast('✅ IT job resolved'); await loadTech(); }
+  if (res.ok || res.simulated) {
+    notifyStandPeople(row.stand,'✅ IT issue fixed',(row.category||'IT issue')+(note?' — '+note:''));
+    toast('✅ IT job resolved'); await loadTech();
+  }
   else { toast(res.error || 'Could not resolve — try again', 'error'); loadTech(); }
 }
 
