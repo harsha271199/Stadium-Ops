@@ -4,6 +4,17 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-30-food-2
+- **Food orders now run by themselves, like the warehouse.** The Food Manager gives each runner their stands once, and every order from those stands goes straight to that runner. The manager doesn't have to press anything per order.
+  - **Food Manager** has two tabs: **🍽️ Orders** and **👥 Assign Runners**.
+    - Orders is watch-only. Right Now shows *No runner / Waiting / On the way / Late / Delivered*, and tapping a number filters the list.
+    - The list is grouped into 🔴 No runner — pick one, ⚠️ Slow (a runner hasn't left after 10 min), ⏳ Waiting for the runner, and 🏃 On the way.
+    - The only action is **↔ Change runner**. The old runner gets an "Order moved" alert, the new one gets the order.
+    - The Start cooking / Food ready buttons are gone.
+  - **Assign Runners** lists every runner with their stands (or "No stands yet"). Tap one to edit their areas or stands, **Save stands**, or **Take this runner off all stands**.
+  - **Food Runner** opens on **My Jobs**. Each order has one button at a time: **🏃 On my way** (the stand is told), then **✅ Delivered to Stand** (the stand is told and the manager sees it under Delivered). Runners no longer wait for the manager to mark food ready. The runner stats box is gone; the tab counts show the same thing.
+  - The food screens only show orders from the current game (last 18 h). Seven orders left open since the Sept 6 game no longer clutter the list.
+
 ## 2026-09-30-food-1
 - **Food Manager screen redesigned — one clean list, nothing in the way.** Removed the profile card, the single "Orders" tab bar, the coverage banner and the long runner explainers.
   - **Right Now** strip at the top: Need runner / To cook / Ready / On the way / Late. Tap a number to show only those orders; tap it again (or "show all") to see everything. **👥 Runner Areas** sits next to it.
