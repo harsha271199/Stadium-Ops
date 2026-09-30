@@ -3,7 +3,7 @@
 Game-day concessions operations for Aramark Sports + Entertainment at Arizona State University.
 
 **Live:** [asu-aramark.netlify.app](https://asu-aramark.netlify.app)
-**Current build:** `2026-09-30-inventory-chat-1` (shown on the login screen footer — check it against the live site after every deploy)
+**Current build:** `2026-09-30-qa-fixes-1` (shown on the login screen footer — check it against the live site after every deploy)
 
 Replaces paper checklists, inventory count sheets, stock requests and break time sheets with a phone app that works in a stadium concourse on bad WiFi.
 
@@ -120,6 +120,9 @@ These are all real bugs that reached production:
 - Surface errors on screen. Nobody has devtools open on a concourse.
 - A menu that hides a button from the wrong role is not the same as blocking the action. The function the button calls needs its own role check too — otherwise it's still reachable directly (e.g. from the browser console) by anyone signed in, regardless of role.
 - `.catch(()=>({_err:true}))` on an `sb()` call is silent by design — great for not crashing the UI, but it also means a typo'd column name in a `select=` (PostgREST returns HTTP 400 for an unknown column) can make a whole feature quietly do nothing, forever, with zero visible error. If a check that should sometimes fire never seems to, verify the actual query against the live schema before assuming the logic is wrong.
+- A unique index used for `on_conflict` must be a plain unique constraint, never a partial index (`... WHERE x IS NOT NULL`). PostgREST can't match a partial index, so every upsert fails — plain unique constraints already allow many NULLs.
+- Never regex-test `r.msg` on a failed `sb()` call: it's the whole JSON body, so `/eta/` matches the key `"details"`. Use `sbErrText(r)`.
+- A table with row security ON and no policy refuses every read and write silently. Run Supabase's security advisor after any schema change.
 - `escapeHtml()` a field even when you're sure it's "just an internal note" — the risk isn't the person who typed it, it's that a *different role* reads it back on their own screen later.
 
 ---

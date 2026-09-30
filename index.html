@@ -4244,7 +4244,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-30-inventory-chat-1';
+const BUILD_TAG = '2026-09-30-qa-fixes-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4482,6 +4482,14 @@ async function sb(path, opts = {}, tries = 2) {
   }
 }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+// The human-readable part of a failed sb() call. r.msg is the raw response
+// body, so testing it with a regex also matches the JSON key names — e.g.
+// /eta/ matched the word "details" in every PostgREST error, which is how
+// stock requests silently lost their ETA column.
+function sbErrText(r){
+  const raw=String((r&&r.msg)||'');
+  try{const j=JSON.parse(raw);return [j.message,j.details,j.hint].filter(Boolean).join(' ');}catch(e){return raw;}
+}
 
 // Local date helpers (phones are on stadium local time)
 // Canonical "what day is it at the stadium" — Arizona is UTC-7 year-round (no DST),
@@ -4776,7 +4784,7 @@ async function logMovement(mv) {
     note: mv.note || ''
   };
   // Prefer:resolution=ignore-duplicates makes retries safe (unique client_uuid)
-  const r = await sb('stock_ledger', {
+  const r = await sb('stock_ledger?on_conflict=client_uuid', {
     method:'POST',
     headers:{ Prefer:'resolution=ignore-duplicates,return=minimal' },
     body: JSON.stringify(row)
@@ -4900,8 +4908,7 @@ async function api(action, data) {
           const first=norm(parts.length?parts.slice(1).join(' '):nm.split(/\s+/).slice(0,-1).join(' '));
           const natural=norm((first+' '+last).trim());
           const comma=norm(nm);
-          return entered===last||entered===natural||entered===comma||
-            (entered.length>=3&&last.startsWith(entered));
+          return entered===last||entered===natural||entered===comma;
         });
         if(matches.length===1){
           const acct=matches[0];
@@ -4936,8 +4943,7 @@ async function api(action, data) {
           const first=norm(parts.length?parts.slice(1).join(' '):nm.split(/\s+/).slice(0,-1).join(' '));
           const natural=norm((first+' '+last).trim());
           const comma=norm(nm);
-          return entered===last||entered===natural||entered===comma||
-            (entered.length>=3&&last.startsWith(entered));
+          return entered===last||entered===natural||entered===comma;
         });
         if(matches.length===1){
           const acct=matches[0];
@@ -4987,8 +4993,7 @@ async function api(action, data) {
             const first=norm(parts.length?parts.slice(1).join(' '):nm.split(/\s+/).slice(0,-1).join(' '));
             const commaForm=norm(nm);
             const naturalForm=norm((first+' '+last).trim());
-            return entered===last || entered===commaForm || entered===naturalForm ||
-              (entered.length>=3 && last.startsWith(entered));
+            return entered===last || entered===commaForm || entered===naturalForm;
           });
           if(matches.length===1)acct=matches[0];
           else if(matches.length>1){
@@ -5011,10 +5016,15 @@ async function api(action, data) {
       const rows = await sb('schedule?employee_id=like.*' + encodeURIComponent(idInput) + '&select=*');
       if (rows._err) return { ok:false, error:'Network — try again' };
       if (!rows.length) return { ok:false, error:"ID not found in today's schedule" };
-      const last = (data.lastName||'').trim().toLowerCase();
+      // Full last name required (letters only, so "Van Gampler", "vangampler"
+      // and "Van Gampler Matthew" all work). It used to accept any prefix, so
+      // an ID plus ONE letter signed someone in.
+      const letters = x => String(x||'').toLowerCase().replace(/[^a-z]/g,'');
+      const entered = letters(data.lastName);
+      if (!entered) return { ok:false, error:'Enter your last name' };
       const candidates = rows.filter(r => {
-        const nameLast = (r.worker_name||'').split(',')[0].trim().toLowerCase();
-        return !last || !nameLast || nameLast.startsWith(last) || last.startsWith(nameLast);
+        const nameLast = letters(String(r.worker_name||'').split(',')[0]);
+        return !!nameLast && (entered === nameLast || entered === letters(r.worker_name) || entered.startsWith(nameLast));
       });
       if (!candidates.length) return { ok:false, error:"Last name doesn't match ID" };
       // The same real person now correctly has one row PER event (not one
@@ -5025,13 +5035,16 @@ async function api(action, data) {
       // TWO rows both dated today — picking "today's row" needs to know
       // WHICH shift is actually happening right now, not just grab
       // whichever one the query returned first.
-      const today = localISODate();
-      const todaysRows = candidates.filter(r => r.event_date === today);
+      // Only today's shift (or, before 6 AM, last night's game) can sign in.
+      // It used to fall back to the person's most recent schedule row, so
+      // someone not working today landed on their last game's stand.
+      const today = localISODate(), gameDay = stadiumDay();
+      const todaysRows = candidates.filter(r => r.event_date === today || r.event_date === gameDay);
       let match = candidates.find(r => r.is_test);
       if (!match && todaysRows.length) {
         match = todaysRows.length === 1 ? todaysRows[0] : pickCurrentShift(todaysRows);
       }
-      if (!match) match = candidates.sort((a,b) => (b.event_date||'').localeCompare(a.event_date||''))[0];
+      if (!match) return { ok:false, error:"You're not on today's schedule — ask your Stand Lead or Supervisor to add you as a walk-in" };
 
       // Portable/outside stands (bartender carts, off-site booths) often
       // have no dedicated Stand Lead physically present. For a NON-MAIN
@@ -5200,16 +5213,16 @@ async function api(action, data) {
       structured.meta = Object.assign({}, structured.meta || {}, {eta_minutes:etaMins, eta_deadline:etaDeadline});
       const body = { client_uuid:data.clientUuid||genUUID(), stand:data.stand, requested_by:data.requestedBy, requested_by_id:data.empId||'', items:itemsTxt, urgency:urgNorm(data.urgency), status:'open', note:data.notes||'', eta_minutes:etaMins, eta_deadline:etaDeadline, items_json:structured };
       let r = await sb('stock_requests?on_conflict=client_uuid', { method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify(body) });
-      if(r._err && /client_uuid/i.test(r.msg||'')){
+      if(r._err && /client_uuid/i.test(sbErrText(r))){
         // Transitional fallback only if the additive migration has not been applied yet.
         delete body.client_uuid;
         r = await sb('stock_requests', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
       }
-      if (r._err && body.items_json && /items_json/i.test(r.msg || '')) {
+      if (r._err && body.items_json && /items_json/i.test(sbErrText(r))) {
         delete body.items_json;
         r = await sb('stock_requests', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
       }
-      if (r._err && /eta/i.test(r.msg || '')) {
+      if (r._err && /eta_(minutes|deadline)/i.test(sbErrText(r))) {
         delete body.eta_minutes; delete body.eta_deadline;
         if (!body.items_json) body.items_json = {items:[],other:'',meta:{eta_minutes:etaMins,eta_deadline:etaDeadline}};
         r = await sb('stock_requests', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
@@ -6086,7 +6099,7 @@ async function api(action, data) {
       }
       const body = { stand:data.stand, submitted_by:data.submittedBy||data.name, phase:data.phase, counts:data.counts||{}, notes:data.notes||'', entry_date:today };
       let r = await sb('inventory_entries', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
-      if (r._err && /entry_date/i.test(r.msg || '')) {
+      if (r._err && /entry_date/i.test(sbErrText(r))) {
         delete body.entry_date;
         r = await sb('inventory_entries', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
       }
@@ -7739,7 +7752,15 @@ async function markBreakEnd() {
   });
 }
 async function confirmLeave() {
-  if (invLockApplies()) {
+  const lockMode = invLockMode();
+  let lastNote = '';
+  if (lockMode === 'last') {
+    // Stand with no Stand Lead (portables, temporary access): whoever leaves
+    // LAST is the one who has to finish inventory.
+    const others = await invOthersStillWorking(state.user.stand);
+    if (others && others.length) lastNote = '\n\n' + others.length + ' other' + (others.length === 1 ? ' is' : 's are') + ' still working here — whoever leaves last must finish Count Out.';
+  }
+  if (lockMode === 'lead' || (lockMode === 'last' && !lastNote)) {
     const stand = state.user.stand;
     const miss = await invMissingPhases(stand);
     if (miss === null) {
@@ -7747,12 +7768,13 @@ async function confirmLeave() {
       return markLeft();
     }
     if (miss.length) {
-      const go = await confirmAction(stand + ' still needs: ' + miss.join(' and ') + '.\n\nStand Leads must finish inventory before leaving the stand. If you cannot (sick, emergency), ask your Supervisor or Manager to clock you out.', {title:'Finish inventory first', confirmLabel:'Open ' + miss[0]});
+      const who = lockMode === 'last' ? 'You are the last one working here, so you' : 'Stand Leads';
+      const go = await confirmAction(stand + ' still needs: ' + miss.join(' and ') + '.\n\n' + who + ' must finish inventory before leaving the stand. If you cannot (sick, emergency), ask your Supervisor or Manager to clock you out.', {title:'Finish inventory first', confirmLabel:'Open ' + miss[0]});
       if (go) invOpenPhase(stand, miss[0]);
       return;
     }
   }
-  if (!(await confirmAction('Only do this at end of shift OR if you’re moving to another stand.', {title:'Leave this stand?', confirmLabel:'Leave stand', danger:true}))) return;
+  if (!(await confirmAction('Only do this at end of shift OR if you’re moving to another stand.' + lastNote, {title:'Leave this stand?', confirmLabel:'Leave stand', danger:true}))) return;
   markLeft();
 }
 
@@ -7762,11 +7784,28 @@ async function confirmLeave() {
 // In and Count Out are both submitted today. Stands with no stand sheet (no
 // inventory to count) are never locked. Supervisors/Managers can still clock
 // a lead out — that is logged as an inventory override.
-function invLockApplies() {
+// 'lead' = always locked (scheduled Stand Lead, NPO Lead).
+// 'last' = locked only for the last person still working at the stand —
+//          stands run without a Stand Lead, where everyone scheduled gets
+//          lead tools (portables, NPO self-access, temporary stand access).
+// null   = never locked (regular workers, who have no inventory screen).
+function invLockMode() {
   const u = state.user;
-  if (!u || u.role !== 'lead') return false;
-  if (u.isNpo) return !!u.npoIsLead;
-  return !u.leadAccessGranted;
+  if (!u || u.role !== 'lead') return null;
+  if (u.isNpo) return u.npoIsLead ? 'lead' : 'last';
+  return u.leadAccessGranted ? 'last' : 'lead';
+}
+function invLockApplies() { return !!invLockMode(); }
+// Other people whose latest status at this stand today is working / on break.
+// null = could not check (treated as "you may be last").
+async function invOthersStillWorking(stand) {
+  const me = String(state.user && state.user.empId || '');
+  const days = [...new Set([localISODate(), stadiumDay()])].join(',');
+  const rows = await sb('attendance?stand=eq.' + encodeURIComponent(stand) + '&entry_date=in.(' + days + ')&order=id.desc&select=employee_id,status').catch(()=>({_err:true}));
+  if (!Array.isArray(rows)) return null;
+  const latest = {};
+  rows.forEach(r => { const id = String(r.employee_id||''); if (id && !(id in latest)) latest[id] = r.status; });
+  return Object.keys(latest).filter(id => id !== me && ['working','break','active'].includes(latest[id]));
 }
 // [] = nothing missing (or stand has no inventory), ['Count In',...] = missing, null = could not check.
 async function invMissingPhases(stand) {
@@ -14312,14 +14351,15 @@ async function kitchenFetchRequests(){
 }
 async function kitchenCreate(row){
   row={...row,client_uuid:row.client_uuid||genUUID()};
-  // Normal insert: client_uuid is not UNIQUE in the live DB, so never use
-  // on_conflict=client_uuid here.
-  let r=await sb('kitchen_requests',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)}).catch(()=>({_err:true,status:0,msg:'Network error'}));
+  // client_uuid is a real unique constraint (migration
+  // qa_fixes_client_uuid_active_sessions_roster_phone), so a retry of the same
+  // form returns the row already saved instead of creating a second request.
+  let r=await sb('kitchen_requests?on_conflict=client_uuid',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(row)}).catch(()=>({_err:true,status:0,msg:'Network error'}));
 
   // One compatibility retry with only columns known to exist in the live table.
   // This protects game-day ordering from stale PostgREST schema cache / optional
   // field mismatches without creating duplicate requests after a successful insert.
-  if(r&&r._err && /column|schema|client_uuid|items_json/i.test(String(r.msg||r.error||''))){
+  if(r&&r._err && !/duplicate key/i.test(sbErrText(r)) && /column|schema|client_uuid|items_json|ON CONFLICT/i.test(sbErrText(r)||String(r.error||''))){
     const safe={
       stand:row.stand,requested_by:row.requested_by,requested_by_id:row.requested_by_id||'',
       items:row.items,note:row.note||'',urgency:row.urgency||'Normal',
@@ -18170,13 +18210,20 @@ function standStatusComplete(s) {
 // Today's leads per stand: scheduled Stand Leads + NPO Leads of groups at that stand.
 async function standLeadsIndex() {
   const day = stadiumDay();
-  const [sched, groups] = await Promise.all([
-    sb('schedule?is_test=neq.true&event_date=eq.' + day + '&role=ilike.*stand%20lead*&select=employee_id,worker_name,location').catch(()=>({_err:true})),
-    sb('npo_groups?is_active=eq.true&select=id,group_name,stand').catch(()=>({_err:true}))
+  const [sched, groups, portables, temp] = await Promise.all([
+    sb('schedule?is_test=neq.true&event_date=eq.' + day + '&select=employee_id,worker_name,location,role').catch(()=>({_err:true})),
+    sb('npo_groups?is_active=eq.true&select=id,group_name,stand').catch(()=>({_err:true})),
+    sb('stands?lead_access_for_all=eq.true&select=stand_name').catch(()=>({_err:true})),
+    sb('staff_stand_access?event_date=eq.' + day + '&is_active=eq.true&access_level=eq.stand_lead_temp&select=employee_id,worker_name,stands').catch(()=>({_err:true}))
   ]);
   const idx = {};
   const add = (stand, p) => { stand = String(stand||'').trim(); if (!stand) return; (idx[stand] = idx[stand] || []); if (!idx[stand].some(x => x.id === p.id)) idx[stand].push(p); };
-  if (Array.isArray(sched)) sched.forEach(r => add(r.location, {id:String(r.employee_id||''), name:r.worker_name||'Stand Lead', kind:'lead'}));
+  const rows = Array.isArray(sched) ? sched : [];
+  rows.filter(r => /stand lead/i.test(String(r.role||''))).forEach(r => add(r.location, {id:String(r.employee_id||''), name:r.worker_name||'Stand Lead', kind:'lead'}));
+  // Stands with no Stand Lead are run by the people who get lead tools there.
+  const portable = new Set(Array.isArray(portables) ? portables.map(x => x.stand_name) : []);
+  rows.filter(r => portable.has(r.location) && !idx[r.location] && !/supervisor/i.test(String(r.role||''))).forEach(r => add(r.location, {id:String(r.employee_id||''), name:r.worker_name||'Staff', kind:'access'}));
+  if (Array.isArray(temp)) temp.forEach(t => (t.stands||[]).forEach(st => add(st, {id:String(t.employee_id||''), name:(t.worker_name||'Staff') + ' (stand access)', kind:'access'})));
   if (Array.isArray(groups) && groups.length) {
     const ids = groups.map(g => g.id).join(',');
     const mem = await sb('npo_members?is_active=eq.true&is_lead=eq.true&group_id=in.(' + ids + ')&select=id,group_id,member_name').catch(()=>({_err:true}));
@@ -18250,13 +18297,13 @@ function renderInvTracker() {
   const reminded = state._invtReminded || {};
   let html = list.length ? list.map(r => {
     const i = rows.indexOf(r);
-    const leadTxt = r.leads.length ? r.leads.map(x => escapeHtml(x.name)).join(', ') : '<span style="color:#D97706">No lead on schedule</span>';
+    const leadTxt = r.leads.length ? r.leads.map(x => escapeHtml(x.name)).join(', ') : '<span style="color:#D97706">No Stand Lead — Supervisor responsible</span>';
     const done = r.countIn && r.countOut;
     const ago = reminded[r.stand] ? ' · reminded ' + Math.max(0, Math.round((Date.now() - reminded[r.stand]) / 60000)) + 'm ago' : '';
     return '<div class="card" style="padding:12px;margin-bottom:8px;border-left:4px solid ' + (done ? '#00A651' : '#DC2626') + '">' +
       '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div style="font-weight:700;font-size:14px">' + escapeHtml(r.stand) + '</div>' +
       (done ? '' : '<button class="btn btn-ghost" style="width:auto;padding:6px 10px;margin:0;font-size:12px" onclick="invtRemind(' + i + ')">🔔 Remind</button>') + '</div>' +
-      '<div style="font-size:12px;color:var(--text-2);margin:4px 0 6px">Lead: ' + leadTxt + '<span style="font-size:11px">' + ago + '</span></div>' +
+      '<div style="font-size:12px;color:var(--text-2);margin:4px 0 6px">Runs it: ' + leadTxt + '<span style="font-size:11px">' + ago + '</span></div>' +
       chip('Count In', r.countIn) + chip('Count Out', r.countOut) +
       (done ? '' : '<div style="margin-top:6px"><button class="btn btn-ghost" style="width:auto;padding:4px 10px;margin:0;font-size:11px" onclick="invtOpen(' + i + ')">Open ' + (r.countIn ? 'Count Out' : 'Count In') + ' for this stand ›</button></div>') +
       '</div>';
@@ -18275,6 +18322,11 @@ async function invtSendReminder(r) {
   const who = getRequesterIdentity();
   const ids = new Set(r.leads.map(x => x.id).filter(Boolean));
   (await standLeaderIds(r.stand)).forEach(id => { if (id !== String(who.empId)) ids.add(id); });
+  // No lead and no supervisor covering this stand: tell the managers.
+  if (!ids.size) {
+    const mgrs = await sb('staff_accounts?is_active=eq.true&role=in.(manager,admin)&select=employee_id').catch(()=>({_err:true}));
+    if (Array.isArray(mgrs)) mgrs.forEach(m => { if (String(m.employee_id) !== String(who.empId)) ids.add(String(m.employee_id)); });
+  }
   ids.forEach(id => sendPushTo(id, '📦 Inventory not done — ' + r.stand, 'Please complete ' + missing + ' now. Stand Leads cannot leave the stand until it is submitted. — ' + (who.name || 'Manager')));
   state._invtReminded = state._invtReminded || {};
   state._invtReminded[r.stand] = Date.now();
@@ -18310,12 +18362,15 @@ async function invtRemindAll() {
 function chatSide() {
   if (isManagerOpsSession() || isSupervisorSession()) return 'leader';
   const u = state.user;
-  if (u && u.role === 'lead' && (u.isNpo ? u.npoIsLead : !u.leadAccessGranted)) return 'stand';
+  // Anyone running a stand: Stand Leads, NPO Leads, and staff with lead tools
+  // at stands that have no Stand Lead (portables, temporary access).
+  if (u && u.role === 'lead') return 'stand';
   return null;
 }
 function chatMe() {
   const who = getRequesterIdentity();
-  const label = isManagerOpsSession() ? 'Manager' : isSupervisorSession() ? 'Supervisor' : (state.user && state.user.isNpo ? 'NPO Lead' : 'Stand Lead');
+  const u = state.user;
+  const label = isManagerOpsSession() ? 'Manager' : isSupervisorSession() ? 'Supervisor' : (u && u.isNpo ? (u.npoIsLead ? 'NPO Lead' : 'NPO') : (u && u.leadAccessGranted ? 'Stand staff' : 'Stand Lead'));
   return {id:String(who.empId||''), name:who.name||'', role:label};
 }
 function chatReadKey(stand) { return 'chat_read_' + chatMe().id + '_' + stadiumDay() + '_' + stand; }
@@ -19476,7 +19531,7 @@ async function adminUploadWarehouseRoster(prefix) {
       if (!empId || !name) return;
       parsed.push({
         event_date: d, role: get(r, col.role), name: name, employee_id: empId,
-        phone: get(r, col.phone), work_schedule_type: get(r, col.work_schedule_type),
+        phone: null, work_schedule_type: get(r, col.work_schedule_type),
         start_time: get(r, col.start_time), end_time: get(r, col.end_time)
       });
     });
@@ -21536,7 +21591,7 @@ async function tsAddItem() {
 // completing matters more than the audit note.
 async function patchTransferWithOptionalNote(idQuery, body, prefer) {
   const res = await sb('transfers?'+idQuery, { method:'PATCH', headers:{Prefer:prefer||'return=minimal'}, body: JSON.stringify(body) });
-  if (res && res._err && /note/.test(res.msg||'') && ('note' in body)) {
+  if (res && res._err && /note/.test(sbErrText(res)) && ('note' in body)) {
     const { note, ...withoutNote } = body;
     return await sb('transfers?'+idQuery, { method:'PATCH', headers:{Prefer:prefer||'return=minimal'}, body: JSON.stringify(withoutNote) });
   }

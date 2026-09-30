@@ -4,6 +4,20 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-09-30-qa-fixes-1
+Fixes from the simulated game-day QA run (report: "Stadium Ops Game-Day QA Report").
+- **Stock requests save on the first try again, with their ETA.** The `client_uuid` unique indexes were *partial* (`WHERE client_uuid IS NOT NULL`), which Postgres/PostgREST cannot use for `on_conflict`, so every stock request failed twice and only saved through a fallback that fired because the regex `/eta/` matched the word "d**eta**ils" in the error JSON — and that fallback stripped `eta_deadline`/`eta_minutes`. Migration `qa_fixes_client_uuid_active_sessions_roster_phone` replaces them with plain unique constraints on `stock_requests`, `kitchen_requests`, `transfers` and `stock_ledger` (NULLs still allowed). Fallbacks now test `sbErrText(r)` (the error's message/details/hint) instead of the raw response body. Food requests and ledger writes now upsert on `client_uuid`, so a weak-WiFi retry returns the row already saved instead of a duplicate.
+- **"Already being counted by X" warning works for the first time.** `active_sessions` had row security on with no policy, so every read and write was refused silently (0 rows ever). Added the same open policy the other tables use.
+- **Warehouse roster phone numbers removed.** They were never shown in the app but were readable with the public key. Existing numbers cleared, uploads no longer store them, row security turned on.
+- **Login is stricter.**
+  - Workers must type their full last name (letters only compared, so "Van Gampler" / "vangampler" both work); it used to accept any prefix — ID + one letter signed in.
+  - Only today's schedule (or last night's game before 6 AM) can sign in. It used to fall back to the person's most recent schedule, so someone not working today landed on an old stand.
+  - Warehouse (60000), Premium (70000), Manager/Support Manager and Food last-name logins no longer accept the first 3 letters of a last name.
+- **Stands without a Stand Lead are covered.**
+  - Inventory lock: at portable stands (and temporary / NPO self-access), whoever leaves **last** must finish Count Out; earlier leavers see "N others still working here — whoever leaves last must finish Count Out".
+  - Stand Chat is open to anyone running a stand with lead tools (shown as "Stand staff").
+  - Inventory Tracker / reminders / chat pushes now include the people running stands with no Stand Lead; a reminder that would reach nobody goes to managers. Tracker label: "No Stand Lead — Supervisor responsible".
+
 ## 2026-09-30-inventory-chat-1
 - **Stand Leads can't leave the stand until inventory is done.** "Leave this stand" for a Stand Lead or NPO Lead is locked until that stand's **Count In and Count Out** are both submitted today; the message offers a button straight into the missing count. Regular workers, students, bartenders with temporary lead access and NPO members are not affected. Stands with no stand sheet are never locked. Pay clock-out is still the Kronos clock — this is the "done at my stand" step.
   - **Override:** a Supervisor or Manager can still clock a lead out (sick, emergency) after a warning; the attendance note records `[INVENTORY OVERRIDE — missing …]` under their name. A Stand Lead cannot clock out another Stand Lead while inventory is missing.
