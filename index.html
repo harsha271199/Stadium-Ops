@@ -414,6 +414,7 @@
   /* ── FLOATING CONTACT BUTTON ── */
   .float-contact{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom));right:14px;z-index:800;background:var(--aramark-red);color:#fff;border:none;border-radius:999px;min-width:52px;height:48px;padding:0 14px;font-size:15px;font-weight:850;cursor:pointer;box-shadow:0 4px 16px rgba(228,0,43,0.34);display:none;align-items:center;justify-content:center;gap:7px;font-family:inherit}
   .float-contact.visible{display:flex}
+  body.has-float-btn .screen.active .content{padding-bottom:88px}
   .float-contact .fc-badge{background:#fff;color:var(--aramark-red);border-radius:999px;min-width:20px;height:20px;padding:0 6px;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center}
   .float-contact .fc-badge.on{display:inline-flex}
   .chat-unread-pill{display:inline-block;background:var(--aramark-red);color:#fff;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:900;margin-left:4px}
@@ -13798,6 +13799,7 @@ function updateFloatingContactVisibility(){
   if(ic)ic.textContent=chat?'💬':'📞';
   if(lb)lb.textContent=chat?'Chat':'Contacts';
   btn.classList.toggle('visible',loggedIn&&!blocked&&(chat||_contacts.length>0));
+  document.body.classList.toggle('has-float-btn',btn.classList.contains('visible'));
   btn.classList.toggle('active',!!document.getElementById('contact-popup-overlay'));
 }
 
@@ -16112,8 +16114,8 @@ async function gcShowReport() {
   const keys = await sb('cart_keys?select=key_number,status&order=key_number.asc').catch(() => ({ _err: true }));
   const list = Array.isArray(keys) && keys.length ? keys : [1, 2, 3, 4].map(k => ({ key_number: k, status: '' }));
   document.getElementById('gc-report-keys').innerHTML = list.map(k =>
-    '<button class="chip" data-k="' + k.key_number + '" onclick="gcPickReportKey(' + k.key_number + ',this)" style="justify-content:center;min-height:52px;flex-direction:column;font-weight:800">Cart ' + k.key_number +
-    '<span style="font-size:10px;font-weight:600;color:var(--text-2)">' + (k.status === 'flagged' ? 'out of service' : k.status === 'checked_out' ? 'in use' : k.status ? 'available' : '') + '</span></button>').join('');
+    '<button class="chip" data-k="' + k.key_number + '" onclick="gcPickReportKey(' + k.key_number + ',this)" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:56px;padding:6px 4px;margin:0;font-weight:800;line-height:1.2">Cart ' + k.key_number +
+    '<span style="display:block;font-size:10px;font-weight:600;color:var(--text-2)">' + (k.status === 'flagged' ? 'out of service' : k.status === 'checked_out' ? 'in use' : k.status ? 'available' : '') + '</span></button>').join('');
 }
 function gcPickReportKey(k, btn) {
   _gcReportKey = k;
