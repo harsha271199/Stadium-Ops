@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-01-chat-4
+- **Chat request buttons cut to 4: 💵 Refund · 😠 Customer complaint · 🏷️ Comp / price · 🆘 SOS**, under "NEED A SUPERVISOR FOR…". Anything else, people just type. The stand side's quick-message row ("Need a Supervisor at the stand", etc.) is gone.
+- **Requests show as cards:** a colored header ("💵 REFUND REQUEST"), who asked and their role, 📍 the stand, the typed detail, and the status (⏳ Waiting for a reply → 🏃 Sue is on the way → ✅ Handled by Sue). Supervisors and Managers get **🏃 On my way** / **✅ Done** buttons right on the card, which reply to the person who asked. Replies show as "↩ Re: Refund request".
+- **Chat layout:** received messages on the left with the sender's initials (colored by role), name and role; yours on the right; consecutive messages grouped; small times; a "Today" divider.
+- **Warehouse Leaders group:** the member/alert box and alert line are gone. Every message needs a stand: "📍 Which stand? (required)" with a searchable list ("229" finds 229 Sun Devil Burger & Tenders). The stand shows as a tag on the message and in the alert ("🏭 Warehouse · 229 Sun Devil…").
+- **My Team cards:** initials circle, name, role and shift, a status pill (Working / On break / Not arrived / Absent / Checked out) with a matching colored edge, "🟢 In 4:02 PM · ⏹ Out —", one large main button (✓ Check in / ⏹ Check out / ✓ Back from break), and smaller buttons for Absent, Break, Move and Feedback.
+
 ## 2026-10-01-alerts-2
 - **Managers are only alerted for things that need a manager, and only on days they've signed in.** A new `on_duty` table records who opened the app each game day (it cleans itself up after 30 days). "Managers" in alerts now means managers signed in today, so a test on a weekday no longer buzzes every manager's phone.
   - **No longer alerts managers:**

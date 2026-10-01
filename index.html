@@ -338,6 +338,24 @@
   .prem-row-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .prem-row-meta{font-size:10.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .prem-row-actions{display:flex;align-items:center;gap:5px;flex-shrink:0}
+  .mt-card{background:var(--bg-card);border:1px solid var(--border);border-left:5px solid #D1D5DB;border-radius:14px;padding:12px;margin:0 0 10px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mt-card.st-working{border-left-color:#16A34A}.mt-card.st-break{border-left-color:#2563EB}.mt-card.st-scheduled{border-left-color:#F59E0B}.mt-card.st-absent{border-left-color:#DC2626}.mt-card.st-left{border-left-color:#6B7280}
+  .mt-top{display:flex;align-items:center;gap:10px}
+  .mt-av{width:40px;height:40px;border-radius:50%;color:#fff;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;flex:0 0 40px}
+  .mt-info{flex:1;min-width:0}
+  .mt-name{font-size:15px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mt-meta{font-size:11.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mt-pill{font-size:11px;font-weight:800;border-radius:99px;padding:4px 10px;white-space:nowrap}
+  .mt-times{display:flex;gap:14px;margin:8px 0 0 50px;font-size:12px;font-weight:700;color:var(--text-3)}
+  .mt-times .on{color:var(--text)}
+  .mt-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .mt-btn{display:inline-flex;align-items:center;gap:5px;height:42px;padding:0 11px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text);font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit}
+  .mt-btn span{font-size:14px}
+  .mt-btn:active{transform:scale(.97)}
+  .mt-btn.go{background:#16A34A;border-color:#16A34A;color:#fff;flex:1 1 90px;justify-content:center;height:42px;font-size:14px}
+  .mt-btn.dark{background:#111827;border-color:#111827;color:#fff;flex:1 1 90px;justify-content:center;height:42px;font-size:14px}
+  .mt-btn.blue{background:#2563EB;border-color:#2563EB;color:#fff;flex:1 1 90px;justify-content:center;height:42px;font-size:14px}
+  .mt-btn.neg{border-color:#FCA5A5;color:#B91C1C;background:#FEF2F2}
   .team-row{flex-wrap:wrap}
   .team-row .prem-row-info{flex:1 1 100%}
   .team-inout{font-size:11px;font-weight:700;color:var(--text-2);margin-top:2px}
@@ -436,7 +454,41 @@
   .chat-to .chip.selected{background:var(--asu-maroon);color:#fff;border-color:var(--asu-maroon)}
   .chat-inbox-row.unread{border-left:4px solid var(--aramark-red)}
   .chat-req{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
-  .chat-req button{border:1px solid var(--border);background:var(--bg-card);border-radius:10px;padding:7px 3px;font-size:10.5px;font-weight:800;color:var(--text);cursor:pointer;line-height:1.2;font-family:inherit}
+  .cm-day{align-self:center;font-size:11px;font-weight:800;color:var(--text-3);background:var(--bg-elevated);padding:3px 12px;border-radius:99px;margin:2px 0 4px}
+  .cm-row{display:flex;gap:8px;align-items:flex-end}
+  .cm-row.mine{justify-content:flex-end}
+  .cm-row.grouped{margin-top:-5px}
+  .cm-row.pending{opacity:.55}
+  .cm-av{width:32px;height:32px;border-radius:50%;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 32px;letter-spacing:.3px}
+  .cm-av.ghost{visibility:hidden}
+  .cb{max-width:78%;padding:8px 12px 6px;border-radius:18px;font-size:14.5px;line-height:1.4;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .cb.theirs{background:var(--bg-card);border:1px solid var(--border);border-bottom-left-radius:6px}
+  .cb.mine{background:var(--asu-maroon);color:#fff;border-bottom-right-radius:6px}
+  .cb.reply.theirs{border-left:4px solid #16A34A}
+  .cb-name{font-size:12.5px;font-weight:800;margin-bottom:2px}
+  .cb-role{font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;margin-left:4px}
+  .cb-stand{display:inline-block;font-size:11.5px;font-weight:800;background:rgba(15,118,110,.12);color:#0F766E;border-radius:7px;padding:2px 7px;margin:1px 0 4px}
+  .cb.mine .cb-stand{background:rgba(255,255,255,.22);color:#fff}
+  .cb-text{white-space:pre-wrap;word-wrap:break-word}
+  .cb-re{font-size:11px;font-weight:800;opacity:.7;margin-bottom:1px}
+  .cb-time{font-size:10px;opacity:.65;text-align:right;margin-top:3px}
+  .rq-card{width:84%;max-width:340px;border-radius:16px;overflow:hidden;border:2px solid var(--rq);background:var(--bg-card);box-shadow:0 3px 10px rgba(0,0,0,.08)}
+  .rq-head{background:var(--rq);color:#fff;font-size:12.5px;font-weight:900;letter-spacing:.6px;padding:8px 12px}
+  .rq-esc{background:#fff;color:var(--rq);border-radius:6px;padding:1px 6px;font-size:10px;margin-left:4px}
+  .rq-body{padding:10px 12px;font-size:13.5px;line-height:1.5;color:var(--text)}
+  .rq-stand{font-weight:800}
+  .rq-detail{background:var(--rqbg);border-radius:9px;padding:7px 9px;margin:6px 0;color:#111;font-weight:600}
+  .rq-status{font-size:12.5px;font-weight:800;margin-top:5px}
+  .rq-status.done{color:#15803D}.rq-status.way{color:#2563EB}.rq-status.open{color:#B45309}
+  .rq-time{font-size:10.5px;color:var(--text-3);margin-top:3px}
+  .rq-acts{display:flex;gap:6px;margin-top:9px}
+  .rq-acts button{flex:1;height:38px;border-radius:10px;border:1.5px solid var(--rq);background:var(--rqbg);color:#111;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .rq-card .chat-esc{width:100%;margin-top:8px;height:36px}
+  .chat-req-label{grid-column:1/-1;font-size:10.5px;font-weight:800;letter-spacing:.8px;color:var(--text-3)}
+  .chat-to .chip{border-radius:12px}
+  #chat-stand-wrap .form-input{margin:0 0 8px;font-weight:700}
+  .chat-req button{border:1px solid var(--border);background:var(--bg-card);border-radius:12px;padding:8px 3px 7px;font-size:11px;font-weight:800;color:var(--text);cursor:pointer;line-height:1.2;font-family:inherit;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .chat-req button:active{transform:scale(.97)}
   .chat-req button span{display:block;font-size:18px;margin-bottom:2px}
   .chat-msg.req{border:2px solid #F59E0B}
   .chat-esc{display:inline-block;margin-top:6px;font-size:11px;font-weight:800;color:#fff;background:#B45309;border:none;border-radius:8px;padding:5px 9px;cursor:pointer}
@@ -3734,6 +3786,7 @@
         <div class="chat-quick chat-to" id="chat-to"></div>
         <div id="chat-to-note" style="font-size:11px;font-weight:700;color:var(--asu-maroon);margin:0 0 6px"></div>
         <div class="chat-quick" id="chat-quick"></div>
+        <div id="chat-stand-wrap" style="display:none"><input class="form-input" id="chat-stand" list="chat-stand-list" placeholder="📍 Which stand? (required)" autocomplete="off"><datalist id="chat-stand-list"></datalist></div>
         <div class="chat-compose-row">
           <textarea class="form-input" id="chat-input" rows="1" maxlength="1000" placeholder="Type a message…" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
           <button class="btn btn-primary" id="chat-send-btn" onclick="chatSend()">Send</button>
@@ -4312,7 +4365,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-10-01-alerts-2';
+const BUILD_TAG = '2026-10-01-chat-4';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9655,26 +9708,33 @@ function renderMyTeamList() {
     const canClockOut = w.status === 'working' && canManageThis;
     const readOnlyNote = !canManageThis && mapRole(w.role)!=='worker' ? '<div style="font-size:9px;color:var(--text-3);font-weight:700;padding:0 12px 6px">View only · equal or higher role</div>' : '';
     const tm = x => x ? new Date(x).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
-    const inOut = (w.inAt || w.outAt) ? `<div class="team-inout">${w.inAt ? '🟢 In ' + tm(w.inAt) : ''}${w.outAt ? ' · ⏹ Out ' + tm(w.outAt) : (w.status==='working' ? ' · still here' : '')}</div>` : '';
-    const B = (cls, fn, label, aria) => `<button class="tbtn ${cls}" onclick="${fn}(${i})" aria-label="${aria}">${label}</button>`;
-    let acts = '';
+    const st = w.status === 'working' && w.onBreak ? 'break' : w.status;
+    const pill = {working:['Working','#15803D','#DCFCE7'], break:['On break','#1D4ED8','#DBEAFE'], scheduled:['Not arrived','#B45309','#FEF3C7'], absent:['Absent','#B91C1C','#FEE2E2'], left:['Checked out','#374151','#E5E7EB']}[st] || ['—','#374151','#E5E7EB'];
+    const ini = (()=>{const n=String(w.name||'');const p=n.includes(',')?[n.split(',')[1].trim(),n.split(',')[0].trim()]:n.split(' ');return ((p[0]||'?')[0]+((p[1]||'')[0]||'')).toUpperCase();})();
+    const B = (cls, fn, icon, label) => `<button class="mt-btn ${cls}" onclick="event.stopPropagation();${fn}(${i})"><span>${icon}</span>${label}</button>`;
+    let main = '', more = '';
     if (canManageThis) {
-      if (w.status === 'scheduled' || w.status === 'absent') acts += B('in', 'teamCheckIn', '✓ Check in', 'Check in');
-      if (w.status === 'working' && !w.onBreak) acts += B('out', 'teamClockOut', '⏹ Check out', 'Check out') + B('', 'teamBreakStart', '☕ Break', 'Start break');
-      if (w.status === 'working' && w.onBreak) acts += B('in', 'teamBreakEnd', '✓ Back from break', 'End break');
-      if (w.status === 'left') acts += B('', 'teamResume', '↩ Back on shift', 'Resume');
-      if (w.status === 'scheduled') acts += B('abs', 'teamMarkAbsent', '✕ Absent', 'Mark absent');
-      if (w.status === 'absent') acts += B('', 'teamClearAbsent', '↩ Undo absent', 'Clear absent');
-      if (leadershipCanMove && !w.isNpo) acts += B('', 'leadershipMoveTeamWorker', '↔ Move', 'Move stand');
-      if (!w.isNpo) acts += B('', 'toggleFb', '⭐ Feedback', 'Feedback');
+      if (st === 'scheduled') { main = B('go', 'teamCheckIn', '✓', 'Check in'); more += B('neg', 'teamMarkAbsent', '✕', 'Absent'); }
+      else if (st === 'absent') { main = B('go', 'teamCheckIn', '✓', 'Check in'); more += B('', 'teamClearAbsent', '↩', 'Undo absent'); }
+      else if (st === 'working') { main = B('dark', 'teamClockOut', '⏹', 'Check out'); more += B('', 'teamBreakStart', '☕', 'Break'); }
+      else if (st === 'break') { main = B('blue', 'teamBreakEnd', '✓', 'Back from break'); }
+      else if (st === 'left') { more += B('', 'teamResume', '↩', 'Back on shift'); }
+      if (leadershipCanMove && !w.isNpo) more += B('', 'leadershipMoveTeamWorker', '↔', 'Move');
+      if (!w.isNpo) more += B('', 'toggleFb', '⭐', 'Feedback');
     }
-    rowsHtml += `<div class="prem-row team-row ${rowCls}" id="my-team-row-${i}">
-      <div class="prem-row-info">
-        <div class="prem-row-name">${escapeHtml(w.name)} ${statusTag}</div>
-        <div class="prem-row-meta">${escapeHtml(w.role || '')}${w.isNpo?'':' · ID '+escapeHtml(w.empId)} · ${w.isNpo?'Approved NPO roster':((w.startTime || '—')+'–'+(w.endTime || '—'))}</div>
-        ${inOut}
+    const shift = w.isNpo ? 'NPO roster' : ((w.startTime || '—') + '–' + (w.endTime || '—'));
+    const times = `<div class="mt-times"><span class="${w.inAt?'on':''}">🟢 In ${w.inAt ? tm(w.inAt) : '—'}</span><span class="${w.outAt?'on':''}">⏹ Out ${w.outAt ? tm(w.outAt) : (st==='working'||st==='break' ? 'still here' : '—')}</span></div>`;
+    rowsHtml += `<div class="mt-card st-${st}" id="my-team-row-${i}">
+      <div class="mt-top">
+        <div class="mt-av" style="background:${pill[1]}">${escapeHtml(ini)}</div>
+        <div class="mt-info">
+          <div class="mt-name">${escapeHtml(w.name)}</div>
+          <div class="mt-meta">${escapeHtml(w.role || '')} · ${escapeHtml(shift)}</div>
+        </div>
+        <span class="mt-pill" style="color:${pill[1]};background:${pill[2]}">${pill[0]}</span>
       </div>
-      ${acts ? `<div class="team-acts">${acts}</div>` : ''}
+      ${times}
+      ${main || more ? `<div class="mt-acts">${main}${more}</div>` : ''}
     </div>`;
     if (readOnlyNote) rowsHtml += readOnlyNote;
     if (mapRole(w.role)==='worker' && canGrantTeamStandAccess()) {
@@ -19045,7 +19105,7 @@ function chatRenderInbox() {
 }
 
 // Things only a Supervisor/Manager can do — one tap sends a marked request.
-const CHAT_REQUESTS = [['💵','Refund'],['❌','Void / wrong order'],['💰','Cash drop / change'],['🏷️','Comp / price'],['😠','Guest complaint'],['🔑','Manager override'],['🧹','Spill / cleanup'],['🆘','Supervisor now']];
+const CHAT_REQUESTS = [['💵','Refund'],['😠','Customer complaint'],['🏷️','Comp / price'],['🆘','SOS']];
 async function chatRequest(kind) {
   const th = state._chatThread; if (!th) return;
   if (!th.people) th.people = await chatPeopleFor(th.stand).catch(()=>null);
@@ -19062,8 +19122,8 @@ function chatEscalate(id) {
 }
 const CHAT_QUICK = {
   whl: ['On my way', '✅ Done', 'Got it 👍', 'Need a golf cart', 'Short on staff', 'Call me on the radio'],
-  crew: ['Need ice', 'Need change / cash drop', 'Line is long — need help', 'POS / register problem', 'Running low on stock', 'Need a break'],
-  lead: ['Need a Supervisor at the stand', 'Need change / cash drop', 'Need ice', 'Line is long — need help', 'POS / register problem', 'Count Out done ✓'],
+  crew: [],
+  lead: [],
   sup: ['On my way', '✅ Done', 'Got it 👍', 'Sending help now', 'Put in a Stock Request', 'Call me on the radio'],
   mgr: ['On my way', '✅ Done', 'Got it 👍', 'Sending help now', 'Approved', 'Call me on the radio']
 };
@@ -19086,7 +19146,7 @@ function chatDefaultTo(th) {
 }
 function chatRenderTo() {
   const th = state._chatThread, el = document.getElementById('chat-to'); if (!th || !el) return;
-  if (th.people && th.people.group) { el.innerHTML = ''; const nt = document.getElementById('chat-to-note'); if (nt) { const n = th.people.group.filter(x => x.on && x.id !== chatMe().id).length; nt.textContent = n ? '🔔 ' + n + ' warehouse leader' + (n === 1 ? '' : 's') + ' signed in today will get an alert' : '🔕 No other warehouse leader signed in today — they\'ll see it when they open the app'; } return; }
+  if (th.people && th.people.group) { el.innerHTML = ''; const nt = document.getElementById('chat-to-note'); if (nt) nt.textContent = ''; return; }
   if (!th.people) { el.innerHTML = '<span style="font-size:11px;color:var(--text-3)">Loading who is on…</span>'; return; }
   const opts = chatToOptions(th.people);
   if (!th.to || !opts.includes(th.to)) th.to = chatDefaultTo(th);
@@ -19107,12 +19167,21 @@ async function chatOpenThread(stand) {
   document.getElementById('chat-title').textContent = '💬 ' + stand;
   document.getElementById('chat-sub').textContent = 'You: ' + (chatMe().role || '') + ' · today';
   const reqEl = document.getElementById('chat-req');
-  if (reqEl) reqEl.innerHTML = (chatLevel() === 'crew' || chatLevel() === 'lead') ? CHAT_REQUESTS.map(([ic, t]) => '<button onclick="chatRequest(this.dataset.t)" data-t="' + escapeAttr(t) + '"><span>' + ic + '</span>' + escapeHtml(t) + '</button>').join('') : '';
+  if (reqEl) reqEl.innerHTML = (chatLevel() === 'crew' || chatLevel() === 'lead') ? '<div class="chat-req-label">NEED A SUPERVISOR FOR…</div>' + CHAT_REQUESTS.map(([ic, t]) => '<button onclick="chatRequest(this.dataset.t)" data-t="' + escapeAttr(t) + '"><span>' + ic + '</span>' + escapeHtml(t) + '</button>').join('') : '';
   document.getElementById('chat-quick').innerHTML = (CHAT_QUICK[chatLevel()] || []).map(q => '<button class="chip" onclick="chatSend(this.dataset.q)" data-q="' + escapeAttr(q) + '">' + escapeHtml(q) + '</button>').join('');
   document.getElementById('chat-thread').innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   const th = state._chatThread = {stand, rows:[], maxId:0, pending:[], people:null, to:null};
   const toEl = document.getElementById('chat-to'); if (toEl) toEl.innerHTML = '';
-  if (chatIsGroup(stand)) { document.getElementById('chat-title').textContent = '🏭 Warehouse Leaders'; chatGroupPeople().then(p => { if (state._chatThread !== th) return; th.people = p; chatRenderTo(); chatRenderWho(); }); }
+  const sw = document.getElementById('chat-stand-wrap'), whoEl = document.getElementById('chat-who');
+  if (sw) sw.style.display = chatIsGroup(stand) ? '' : 'none';
+  if (whoEl) whoEl.style.display = chatIsGroup(stand) ? 'none' : '';
+  if (chatIsGroup(stand)) {
+    document.getElementById('chat-title').textContent = '🏭 Warehouse Leaders';
+    document.getElementById('chat-sub').textContent = 'Warehouse Managers & Supervisors';
+    const si = document.getElementById('chat-stand'); if (si) si.value = '';
+    allVenueStands().then(all => { const dl = document.getElementById('chat-stand-list'); if (dl) dl.innerHTML = all.map(x => '<option value="' + escapeAttr(x.name) + '">').join(''); });
+    chatGroupPeople().then(p => { if (state._chatThread !== th) return; th.people = p; chatRenderTo(); });
+  }
   else chatPeopleFor(stand).then(p => { if (state._chatThread !== th) return; th.people = p; if (!th._toTouched) th.to = null; chatRenderTo(); chatRenderWho(); }).catch(()=>{});
   await chatLoadThread(true);
   if (state._chatThreadTimer) clearInterval(state._chatThreadTimer);
@@ -19148,29 +19217,97 @@ async function chatLoadThread(first) {
   if (state._chatIdx) { rows.forEach(r => { if (r.id > state._chatIdx.maxId) { state._chatIdx.rows.push(r); state._chatIdx.maxId = r.id; } }); }
   chatPaintBadges();
 }
+// Conversation view: received on the left with initials + name + role,
+// mine on the right, consecutive messages grouped. Requests render as cards
+// that say who asked, from which stand, and whether someone is handling it.
+const CHAT_REQ_STYLE = {
+  'Refund':             {icon:'💵', color:'#15803D', bg:'#DCFCE7'},
+  'Customer complaint': {icon:'😠', color:'#C2410C', bg:'#FFEDD5'},
+  'Comp / price':       {icon:'🏷️', color:'#7C3AED', bg:'#EDE9FE'},
+  'SOS':                {icon:'🆘', color:'#DC2626', bg:'#FEE2E2'}
+};
+const CHAT_ROLE_COLOR = {crew:'#0EA5E9', lead:'#D97706', sup:'#7C3AED', mgr:'#8C1D40', whl:'#0F766E'};
+function chatInitials(n) { const p = chatNice(n).split(' ').filter(Boolean); return ((p[0]||'?')[0] + (p[1] ? p[1][0] : '')).toUpperCase(); }
+function chatParseReq(body) {
+  let b = String(body || ''), escalated = false;
+  if (b.startsWith('⬆ No answer from the Supervisor — ')) { escalated = true; b = b.slice('⬆ No answer from the Supervisor — '.length); }
+  const m = b.match(/^🙋 REQUEST · ([^—]+?)(?: — ([\s\S]*))?$/);
+  if (!m) return null;
+  return {kind:m[1].trim(), detail:(m[2]||'').trim(), escalated};
+}
+function chatParseStandTag(body) { const m = String(body||'').match(/^📍 (.+?) — ([\s\S]*)$/); return m ? {stand:m[1], text:m[2]} : null; }
+function chatReqStatus(th, r, kind) {
+  const later = th.rows.filter(x => x.id > r.id && String(x.sender_id) !== String(r.sender_id) && String(x.body||'').startsWith('↩ ' + kind));
+  const done = later.find(x => /✅/.test(x.body)), way = later.find(x => /🏃/.test(x.body));
+  if (done) return '<div class="rq-status done">✅ Handled by ' + escapeHtml(chatFirst(done.sender_name)) + '</div>';
+  if (way) return '<div class="rq-status way">🏃 ' + escapeHtml(chatFirst(way.sender_name)) + ' is on the way</div>';
+  return '<div class="rq-status open">⏳ Waiting for a reply</div>';
+}
+function chatReplyReq(id, what) {
+  const th = state._chatThread; if (!th) return;
+  const r = th.rows.find(x => String(x.id) === String(id)); if (!r) return;
+  const q = chatParseReq(r.body); if (!q) return;
+  if (r.sender_level && chatToOptions(th.people).includes(r.sender_level)) { th.to = r.sender_level; th._toTouched = true; chatRenderTo(); }
+  chatSend('↩ ' + q.kind + ' — ' + what);
+}
 function chatRenderThread() {
   const th = state._chatThread, el = document.getElementById('chat-thread'); if (!th || !el) return;
-  const me = chatMe().id;
+  const me = chatMe(), lead = me.level === 'sup' || me.level === 'mgr';
   const all = th.rows.concat(th.pending);
   const nearBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 120);
-  el.innerHTML = all.length ? all.map(r => {
-    const mine = String(r.sender_id) === me;
-    const t = r.created_at ? new Date(r.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : 'sending…';
-    const to = r.to_level ? ' → ' + CHAT_LEVEL_LABEL[r.to_level] : '';
-    const isReq = /^🙋 REQUEST/.test(String(r.body||''));
-    // My request to a Supervisor with no answer for 3 minutes → offer Managers.
-    let esc = '';
-    if (mine && isReq && r.to_level === 'sup' && r.id && Date.now() - new Date(r.created_at).getTime() > 180000 && !th.rows.some(x => x.id > r.id && String(x.sender_id) !== me)) esc = '<br><button class="chat-esc" onclick="chatEscalate(' + r.id + ')">⬆ No answer yet — send to Managers</button>';
-    return '<div class="chat-msg ' + (mine ? 'mine' : 'theirs') + (isReq ? ' req' : '') + (r._pending ? ' pending' : '') + '"><div class="cmeta">' + (mine ? 'You' : escapeHtml(chatNice(r.sender_name) + ' · ' + (r.sender_role||''))) + escapeHtml(to) + ' · ' + t + '</div>' + escapeHtml(r.body) + esc + '</div>';
-  }).join('') : '<div class="empty"><div class="empty-icon">💬</div><p>No messages yet. Pick who it\'s for, then type or tap a quick message.</p></div>';
+  const tm = r => r.created_at ? new Date(r.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : 'sending…';
+  let prev = null;
+  const html = all.map(r => {
+    const mine = String(r.sender_id) === me.id;
+    const grouped = prev && String(prev.sender_id) === String(r.sender_id) && r.created_at && prev.created_at && (new Date(r.created_at) - new Date(prev.created_at) < 180000);
+    prev = r;
+    const lvl = r.sender_level || (chatIsGroup(r.stand) ? 'whl' : (r.side === 'stand' ? 'lead' : 'sup'));
+    const col = CHAT_ROLE_COLOR[lvl] || '#6B7280';
+    const to = r.to_level && !mine ? '' : (r.to_level ? 'to ' + CHAT_LEVEL_LABEL[r.to_level] + ' · ' : '');
+    const req = chatParseReq(r.body);
+    let inner;
+    if (req) {
+      const st = CHAT_REQ_STYLE[req.kind] || {icon:'🙋', color:'#B45309', bg:'#FEF3C7'};
+      let esc = '';
+      if (mine && !req.escalated && r.to_level === 'sup' && r.id && Date.now() - new Date(r.created_at).getTime() > 180000 && !th.rows.some(x => x.id > r.id && String(x.sender_id) !== me.id)) esc = '<button class="chat-esc" onclick="chatEscalate(' + r.id + ')">⬆ No answer yet — send to Managers</button>';
+      const acts = lead && !mine && r.id ? '<div class="rq-acts"><button onclick="chatReplyReq(' + r.id + ',\'🏃 On my way\')">🏃 On my way</button><button onclick="chatReplyReq(' + r.id + ',\'✅ Done\')">✅ Done</button></div>' : '';
+      inner = '<div class="rq-card" style="--rq:' + st.color + ';--rqbg:' + st.bg + '">' +
+        '<div class="rq-head">' + st.icon + ' ' + escapeHtml(req.kind.toUpperCase()) + ' REQUEST' + (req.escalated ? ' <span class="rq-esc">⬆ ESCALATED</span>' : '') + '</div>' +
+        '<div class="rq-body"><div class="rq-who">' + (mine ? 'You asked' : '<b>' + escapeHtml(chatNice(r.sender_name)) + '</b> · ' + escapeHtml(r.sender_role || '')) + '</div>' +
+        '<div class="rq-stand">📍 ' + escapeHtml(r.stand) + '</div>' +
+        (req.detail ? '<div class="rq-detail">' + escapeHtml(req.detail) + '</div>' : '') +
+        (r.id ? chatReqStatus(th, r, req.kind) : '') +
+        '<div class="rq-time">' + to + tm(r) + '</div>' + acts + esc + '</div></div>';
+    } else {
+      const tag = chatParseStandTag(r.body);
+      const text = tag ? tag.text : String(r.body||'');
+      const rm = text.match(/^↩ (.+?) — ([\s\S]*)$/), reply = !!rm;
+      inner = '<div class="cb ' + (mine ? 'mine' : 'theirs') + (reply ? ' reply' : '') + '">' +
+        (!mine && !grouped ? '<div class="cb-name" style="color:' + col + '">' + escapeHtml(chatNice(r.sender_name)) + ' <span class="cb-role">' + escapeHtml(r.sender_role || '') + '</span></div>' : '') +
+        (tag ? '<div class="cb-stand">📍 ' + escapeHtml(tag.stand) + '</div>' : '') +
+        (rm ? '<div class="cb-re">↩ Re: ' + escapeHtml(rm[1]) + ' request</div>' : '') + '<div class="cb-text">' + escapeHtml(rm ? rm[2] : text) + '</div><div class="cb-time">' + to + tm(r) + '</div></div>';
+    }
+    const av = !mine ? (grouped ? '<div class="cm-av ghost"></div>' : '<div class="cm-av" style="background:' + col + '">' + escapeHtml(chatInitials(r.sender_name)) + '</div>') : '';
+    return '<div class="cm-row ' + (mine ? 'mine' : 'theirs') + (grouped ? ' grouped' : '') + (r._pending ? ' pending' : '') + '">' + av + inner + '</div>';
+  }).join('');
+  el.innerHTML = all.length ? '<div class="cm-day">Today</div>' + html : '<div class="empty"><div class="empty-icon">💬</div><p>No messages yet.</p></div>';
   if (nearBottom || all.length <= 12) window.scrollTo(0, document.body.scrollHeight);
 }
 async function chatSend(quick) {
   const th = state._chatThread, me = chatMe();
   if (!th || !me.level) return;
   const input = document.getElementById('chat-input');
-  const body = String(quick || input.value || '').trim().slice(0, 1000);
+  let body = String(quick || input.value || '').trim().slice(0, 1000);
   if (!body) return;
+  if (chatIsGroup(th.stand)) {
+    const si = document.getElementById('chat-stand'), raw = String(si && si.value || '').trim();
+    if (!raw) { if (si) si.focus(); return toast('Pick the stand first — which stand is this about?', 'error'); }
+    const all = await allVenueStands(), low = raw.toLowerCase();
+    const hit = all.find(x => x.name.toLowerCase() === low) || all.find(x => x.name.toLowerCase().startsWith(low)) || all.find(x => x.name.toLowerCase().includes(low));
+    if (!hit) { if (si) si.focus(); return toast('Stand not found — pick it from the list', 'error'); }
+    if (si) si.value = hit.name;
+    body = ('📍 ' + hit.name + ' — ' + body).slice(0, 1000);
+  }
   // Who's on duty can change minutes before a message to Managers — always check fresh.
   if (!chatIsGroup(th.stand) && (th.to === 'mgr' || !th.people || !(th.people.mgr && th.people.mgr.length))) { chatDirReset(); th.people = await chatPeopleFor(th.stand).catch(()=>th.people); chatRenderWho(); }
   if (!th.people) th.people = chatIsGroup(th.stand) ? await chatGroupPeople() : await chatPeopleFor(th.stand).catch(()=>null);
@@ -19202,7 +19339,7 @@ async function chatSend(quick) {
 // Only the addressed level is alerted. The stand name leads the title so a
 // lead over several portables knows at a glance which one is asking.
 async function chatNotify(stand, to, me, body) {
-  if (chatIsGroup(stand)) { const g = await chatGroupPeople(); g.group.filter(x => x.on && x.id !== me.id).forEach(x => sendPushTo(x.id, '🏭 Warehouse Leaders', chatNice(me.name) + ': ' + (body.length > 130 ? body.slice(0, 127) + '…' : body))); return; }
+  if (chatIsGroup(stand)) { const g = await chatGroupPeople(), tag = chatParseStandTag(body), txt = tag ? tag.text : body; g.group.filter(x => x.on && x.id !== me.id).forEach(x => sendPushTo(x.id, '🏭 Warehouse · ' + (tag ? tag.stand : 'Leaders'), chatNice(me.name) + ': ' + (txt.length > 130 ? txt.slice(0, 127) + '…' : txt))); return; }
   const p = await chatPeopleFor(stand).catch(()=>null);
   const ids = new Set(((p && p[to]) || []).map(x => x.id));
   // Crew/leads who already wrote in this thread hear the reply too.
@@ -19210,7 +19347,8 @@ async function chatNotify(stand, to, me, body) {
   if (th && th.stand === stand && (to === 'crew' || to === 'lead')) th.rows.filter(r => r.sender_level === to).forEach(r => ids.add(String(r.sender_id)));
   ids.delete(me.id); ids.delete('');
   const isReq = /^🙋 REQUEST/.test(body);
-  const title = (isReq ? '🙋 ' + body.replace(/^🙋 REQUEST · /,'').split(' — ')[0].toUpperCase() + ' · ' : '💬 Message · ') + stand;
+  const rq = chatParseReq(body), isReply = /^↩ /.test(body);
+  const title = (rq ? (CHAT_REQ_STYLE[rq.kind] ? CHAT_REQ_STYLE[rq.kind].icon : '🙋') + ' ' + rq.kind.toUpperCase() + (rq.escalated ? ' (escalated)' : '') + ' · ' : isReply ? '↩ Reply · ' : '💬 Message · ') + stand;
   const text = chatNice(me.name) + ' (' + me.role + '): ' + (body.length > 130 ? body.slice(0, 127) + '…' : body);
   ids.forEach(id => sendPushTo(id, title, text));
 }
