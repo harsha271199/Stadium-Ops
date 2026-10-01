@@ -338,6 +338,14 @@
   .prem-row-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .prem-row-meta{font-size:10.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .prem-row-actions{display:flex;align-items:center;gap:5px;flex-shrink:0}
+  .team-row{flex-wrap:wrap}
+  .team-row .prem-row-info{flex:1 1 100%}
+  .team-inout{font-size:11px;font-weight:700;color:var(--text-2);margin-top:2px}
+  .team-acts{display:flex;flex-wrap:wrap;gap:6px;width:100%;margin-top:6px}
+  .tbtn{height:34px;padding:0 11px;border-radius:9px;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit}
+  .tbtn.in{background:#16A34A;border-color:#16A34A;color:#fff}
+  .tbtn.out{background:#1F2937;border-color:#1F2937;color:#fff}
+  .tbtn.abs{border-color:#DC2626;color:#DC2626}
   .prem-status-btn{width:40px;height:40px;border-radius:10px;border:none;font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--shadow);transition:transform .12s ease,box-shadow .12s ease,background .12s ease}
   .prem-status-btn:active{transform:scale(0.82)}
   .prem-status-btn.p{background:var(--bg-elevated);color:#00A651}
@@ -427,6 +435,11 @@
   .chat-quick.chat-to{flex-wrap:wrap;overflow:visible;align-items:center}
   .chat-to .chip.selected{background:var(--asu-maroon);color:#fff;border-color:var(--asu-maroon)}
   .chat-inbox-row.unread{border-left:4px solid var(--aramark-red)}
+  .chat-req{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+  .chat-req button{border:1px solid var(--border);background:var(--bg-card);border-radius:10px;padding:7px 3px;font-size:10.5px;font-weight:800;color:var(--text);cursor:pointer;line-height:1.2;font-family:inherit}
+  .chat-req button span{display:block;font-size:18px;margin-bottom:2px}
+  .chat-msg.req{border:2px solid #F59E0B}
+  .chat-esc{display:inline-block;margin-top:6px;font-size:11px;font-weight:800;color:#fff;background:#B45309;border:none;border-radius:8px;padding:5px 9px;cursor:pointer}
   .chat-unread-pill{display:inline-block;background:var(--aramark-red);color:#fff;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:900;margin-left:4px}
   .chat-tabs{display:flex;gap:8px;margin-bottom:12px}
   .chat-tabs .chip{flex:1;justify-content:center}
@@ -3717,9 +3730,10 @@
       <div class="card" id="chat-who" style="padding:9px 12px;margin-bottom:10px;font-size:12px;line-height:1.6"></div>
       <div class="chat-thread" id="chat-thread"></div>
       <div class="chat-compose">
+        <div class="chat-req" id="chat-req"></div>
         <div class="chat-quick chat-to" id="chat-to"></div>
+        <div id="chat-to-note" style="font-size:11px;font-weight:700;color:var(--asu-maroon);margin:0 0 6px"></div>
         <div class="chat-quick" id="chat-quick"></div>
-        <div style="font-size:10px;color:var(--text-3);margin:2px 0 6px">Only the person/level you pick gets the alert. Everyone on this stand's chain can read it. Deleted after 14 days.</div>
         <div class="chat-compose-row">
           <textarea class="form-input" id="chat-input" rows="1" maxlength="1000" placeholder="Type a message…" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
           <button class="btn btn-primary" id="chat-send-btn" onclick="chatSend()">Send</button>
@@ -4298,7 +4312,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-09-30-chat-3';
+const BUILD_TAG = '2026-10-01-alerts-2';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5947,6 +5961,11 @@ async function api(action, data) {
         return String(a.worker_name||'').localeCompare(String(b.worker_name||''));
       });
       const latest = {}; if(!att._err) latestByEmp(att).forEach(a=>latest[a.employee_id]=a);
+      // First check-in and last check-out today, for the In / Out times on My Team.
+      const inAt = {}, outAt = {};
+      if(!att._err && Array.isArray(att)) att.forEach(a=>{const id=a.employee_id,t=a.created_at||a.updated_at;if(!t)return;
+        if(a.status==='working'&&(!inAt[id]||t<inAt[id]))inAt[id]=t;
+        if(a.status==='ended'&&!/absent/i.test(String(a.notes||''))&&(!outAt[id]||t>outAt[id]))outAt[id]=t;});
       let team = roster.map(s=>{
         const a = latest[s.employee_id];
         let status='scheduled';
@@ -5957,7 +5976,7 @@ async function api(action, data) {
           else status='working';
         }
         return { empId:s.employee_id, name:s.worker_name, role:s.role, startTime:s.start_time, endTime:s.end_time,
-          status, onBreak: a?a.status==='break':false };
+          status, onBreak: a?a.status==='break':false, inAt: inAt[s.employee_id]||'', outAt: status==='left'?(outAt[s.employee_id]||''):'' };
       });
 
       // V11.11.37 — SUPERVISOR MY TEAM MUST INCLUDE NPO ROSTERS.
@@ -8914,13 +8933,10 @@ async function submitStock() {
       const etaLabel = etaMins ? (' · due in '+etaMins+'m') : '';
       if (assignedIds.length) {
         assignedIds.forEach(id => sendPushTo(id,'📥 New request for your stand',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):'')));
-        // Real gap found in the warehouse audit: when a stand had coverage, only the
-        // routed people were told — the Supervisor and Warehouse Manager heard
-        // nothing about a new request unless they happened to be routed too.
-        sb('staff_accounts?role=in.(warehouse_supervisor,warehouse_manager)&is_active=eq.true&select=employee_id').then(ls=>{ if(!ls._err&&Array.isArray(ls)) ls.filter(l=>!assignedIds.map(String).includes(String(l.employee_id))).forEach(l=>sendPushTo(l.employee_id,'📥 New stock request',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):''))); }).catch(()=>{});
+        // Covered stand: only the routed people are buzzed. Leaders watch the live strip; they hear about it if it runs late.
       }
       else sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor,warehouse_manager)&is_active=eq.true&select=employee_id').then(whs=>{ if(!whs._err&&Array.isArray(whs)) whs.forEach(w=>sendPushTo(w.employee_id,'📥 New stock request',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):''))); }).catch(()=>{});
-      const supportRoute=await coverageNotifyRequest('stock',targetStand,'📦 Stock request in your coverage',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,70):''),false);
+      const supportRoute=[]; // managers are not buzzed for every new request (late ones escalate)
       const routeLabel = assignedNames.length ? (' → '+assignedNames.join(', ')) : '';
       const monitorLabel=supportRoute.length?(' · '+supportRoute.length+' coverage manager'+(supportRoute.length===1?'':'s')+' notified'):'';
       toast(res.queued ? '📤 Queued — will send when WiFi returns' : '🚨 Sent to warehouse'+routeLabel+monitorLabel+'!');
@@ -8956,13 +8972,14 @@ function goRefund() {
   showScreen('screen-refund');
 }
 async function refundNotifySupervisors(stand,amount,customer){
-  const today=stadiumDay();
-  const sched=await sb('schedule?shift_date=eq.'+encodeURIComponent(today)+'&role=eq.'+encodeURIComponent('Concessions Supervisor')+'&select=employee_id,name').catch(()=>({_err:true}));
-  const ids=new Set();if(!sched._err&&Array.isArray(sched))sched.forEach(x=>{if(x.employee_id)ids.add(String(x.employee_id));});
-  // Fallback/visibility for management if no supervisor schedule row is available.
-  if(!ids.size){const mgrs=await sb('staff_accounts?is_active=eq.true&role=in.(manager,admin)&select=employee_id').catch(()=>({_err:true}));if(!mgrs._err&&Array.isArray(mgrs))mgrs.forEach(x=>{if(x.employee_id)ids.add(String(x.employee_id));});}
-  const title='💵 Refund help needed · '+stand;
-  const body='$'+Number(amount||0).toFixed(2)+(customer?' · '+customer:'')+' · tap Pending Refunds';
+  // Was querying a column that doesn't exist (shift_date), so it always fell
+  // back to buzzing every manager. Now: the stand's Supervisor(s) (same rules
+  // as chat, incl. Admin pins), then on-duty managers only if there are none.
+  const p=await chatPeopleFor(stand).catch(()=>null);
+  const ids=new Set(((p&&p.sup)||[]).map(x=>String(x.id)).filter(Boolean));
+  const title='💵 REFUND · '+stand;
+  const body='$'+Number(amount||0).toFixed(2)+(customer?' · '+customer:'')+' · open Pending Refunds';
+  if(!ids.size)return notifyManagersOnDuty(title,body);
   ids.forEach(id=>sendPushTo(id,title,body));
   return ids.size;
 }
@@ -9637,22 +9654,27 @@ function renderMyTeamList() {
     const canManageThis = canManageTeamRole(w.role);
     const canClockOut = w.status === 'working' && canManageThis;
     const readOnlyNote = !canManageThis && mapRole(w.role)!=='worker' ? '<div style="font-size:9px;color:var(--text-3);font-weight:700;padding:0 12px 6px">View only · equal or higher role</div>' : '';
-    rowsHtml += `<div class="prem-row ${rowCls}" id="my-team-row-${i}">
+    const tm = x => x ? new Date(x).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
+    const inOut = (w.inAt || w.outAt) ? `<div class="team-inout">${w.inAt ? '🟢 In ' + tm(w.inAt) : ''}${w.outAt ? ' · ⏹ Out ' + tm(w.outAt) : (w.status==='working' ? ' · still here' : '')}</div>` : '';
+    const B = (cls, fn, label, aria) => `<button class="tbtn ${cls}" onclick="${fn}(${i})" aria-label="${aria}">${label}</button>`;
+    let acts = '';
+    if (canManageThis) {
+      if (w.status === 'scheduled' || w.status === 'absent') acts += B('in', 'teamCheckIn', '✓ Check in', 'Check in');
+      if (w.status === 'working' && !w.onBreak) acts += B('out', 'teamClockOut', '⏹ Check out', 'Check out') + B('', 'teamBreakStart', '☕ Break', 'Start break');
+      if (w.status === 'working' && w.onBreak) acts += B('in', 'teamBreakEnd', '✓ Back from break', 'End break');
+      if (w.status === 'left') acts += B('', 'teamResume', '↩ Back on shift', 'Resume');
+      if (w.status === 'scheduled') acts += B('abs', 'teamMarkAbsent', '✕ Absent', 'Mark absent');
+      if (w.status === 'absent') acts += B('', 'teamClearAbsent', '↩ Undo absent', 'Clear absent');
+      if (leadershipCanMove && !w.isNpo) acts += B('', 'leadershipMoveTeamWorker', '↔ Move', 'Move stand');
+      if (!w.isNpo) acts += B('', 'toggleFb', '⭐ Feedback', 'Feedback');
+    }
+    rowsHtml += `<div class="prem-row team-row ${rowCls}" id="my-team-row-${i}">
       <div class="prem-row-info">
         <div class="prem-row-name">${escapeHtml(w.name)} ${statusTag}</div>
         <div class="prem-row-meta">${escapeHtml(w.role || '')}${w.isNpo?'':' · ID '+escapeHtml(w.empId)} · ${w.isNpo?'Approved NPO roster':((w.startTime || '—')+'–'+(w.endTime || '—'))}</div>
+        ${inOut}
       </div>
-      <div class="prem-row-actions">
-        ${(w.status === 'scheduled' || w.status === 'absent') && canManageThis ? `<button class="prem-status-btn p" onclick="teamCheckIn(${i})" aria-label="Mark present">✓</button>` : ''}
-        ${w.status !== 'absent' && canManageThis ? `<button class="prem-status-btn a" onclick="teamMarkAbsent(${i})" aria-label="Mark absent">✕</button>` : ''}
-        ${w.status === 'absent' && canManageThis ? `<button class="prem-move-btn" onclick="teamClearAbsent(${i})" aria-label="Clear absent">↩</button>` : ''}
-        ${w.status === 'working' && !w.onBreak && canManageThis ? `<button class="prem-move-btn" onclick="teamBreakStart(${i})" aria-label="Start break">☕</button>` : ''}
-        ${w.status === 'working' && w.onBreak && canManageThis ? `<button class="prem-status-btn p on" onclick="teamBreakEnd(${i})" aria-label="End break">✓</button>` : ''}
-        ${canClockOut ? `<button class="prem-move-btn" onclick="teamClockOut(${i})" aria-label="Clock out">⏹</button>` : ''}
-        ${w.status === 'left' && canManageThis ? `<button class="prem-move-btn" onclick="teamResume(${i})" aria-label="Resume">↩</button>` : ''}
-        ${leadershipCanMove && !w.isNpo && canManageThis ? `<button class="prem-move-btn" onclick="leadershipMoveTeamWorker(${i})" aria-label="Move stand">↔</button>` : ''}
-        ${canManageThis && !w.isNpo ? `<button class="prem-move-btn" onclick="toggleFb(${i})" aria-label="Feedback">⭐</button>` : ''}
-      </div>
+      ${acts ? `<div class="team-acts">${acts}</div>` : ''}
     </div>`;
     if (readOnlyNote) rowsHtml += readOnlyNote;
     if (mapRole(w.role)==='worker' && canGrantTeamStandAccess()) {
@@ -9852,7 +9874,8 @@ async function teamClockOut(i) {
   const reason = prompt(
     'Clock out ' + w.name + ' from ' + stand + '?\n\n' +
     'You must provide a reason:\n' +
-    '(e.g. End of shift, Left early, No show, Sent home, Medical, Supervisor request)'
+    '(e.g. End of shift, Left early, No show, Sent home, Medical, Supervisor request)',
+    'End of shift'
   );
   if (reason === null) return; // cancelled
   if (!reason.trim()) return toast('A reason is required to clock out a worker', 'error');
@@ -14677,7 +14700,7 @@ async function submitKitchenRequest(){
   if(!_kitchenPreview){
     const foodMgrs=await sb('staff_accounts?role=in.(food_manager,kitchen_coordinator)&is_active=eq.true&select=employee_id').catch(()=>({_err:true}));
     if(!foodMgrs._err&&Array.isArray(foodMgrs)&&foodMgrs.length){
-      foodMgrs.forEach(x=>sendPushTo(x.employee_id,'🍽️ New food request · '+stand,row.items.slice(0,90)+' · '+kitchenEtaText(row)+(autoAssignName?' · auto-assigned to '+autoAssignName:' · unclaimed')));
+      if(!autoAssignId)foodMgrs.forEach(x=>sendPushTo(x.employee_id,'🍽️ Food order needs a runner · '+stand,row.items.slice(0,90)+' · '+kitchenEtaText(row)+(autoAssignName?' · auto-assigned to '+autoAssignName:' · unclaimed')));
     }
     if(autoAssignId){
       // Real assignment now, not just a heads-up — this is the request
@@ -15879,6 +15902,37 @@ const VERIFY_LOGIN_FUNCTION_URL = SUPA_URL + '/functions/v1/verify-staff-login';
 // happened (a transfer being created, etc.) from completing. If this
 // function isn't deployed yet, this just fails silently and the app
 // behaves exactly as it does today.
+// ============ WHO GETS ALERTS ============
+// Managers are alerted only for things that need a manager (a message sent
+// to Managers, a refund with no supervisor, a late order, a stand with no
+// lead or supervisor) and only on days they have signed in — so a test on a
+// Wednesday never buzzes the whole management team. on_duty = who has
+// opened the app today (game day, 6 AM cut-over).
+async function markOnDuty() {
+  const a = state.staffAccount, u = state.user;
+  const who = a ? {id:a.empId, name:a.name, role:a.role} : (u && u.empId ? {id:u.empId, name:u.name, role:isSupervisorSession() ? 'supervisor' : (u.role || 'worker')} : null);
+  if (!who || !who.id) return;
+  const key = who.id + '|' + stadiumDay();
+  if (state._onDutyKey === key && Date.now() - (state._onDutyAt || 0) < 600000) return;
+  state._onDutyKey = key; state._onDutyAt = Date.now();
+  sb('on_duty?on_conflict=day,employee_id', {method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'}, body:JSON.stringify({day:stadiumDay(), employee_id:String(who.id), name:who.name||'', role:who.role||'', last_seen:new Date().toISOString()})}).catch(()=>{});
+}
+setInterval(markOnDuty, 120000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) markOnDuty(); });
+async function managersOnDuty() {
+  const rows = await sb('on_duty?day=eq.' + stadiumDay() + '&role=in.(manager,admin,support_manager)&select=employee_id,name,role').catch(()=>({_err:true}));
+  return Array.isArray(rows) ? rows : [];
+}
+async function notifyManagersOnDuty(title, body, exceptId) {
+  const ms = await managersOnDuty();
+  ms.forEach(m => { if (String(m.employee_id) !== String(exceptId||'')) sendPushTo(m.employee_id, title, body); });
+  return ms.length;
+}
+// One device claims a late-order alert; the others skip it (no duplicates).
+async function claimEtaEscalation(table, id) {
+  const r = await sb(table + '?id=eq.' + encodeURIComponent(id) + '&eta_escalated_at=is.null', {method:'PATCH', headers:{Prefer:'return=representation'}, body:JSON.stringify({eta_escalated_at:new Date().toISOString()})}).catch(()=>({_err:true}));
+  return Array.isArray(r) && r.length > 0;
+}
 function sendPushTo(userId, title, body) {
   if (!userId) return;
   if (BUILD_TAG.includes('preview')) { state._previewPushLog=state._previewPushLog||[]; state._previewPushLog.push({userId,title,body,at:new Date().toISOString()}); console.info('[preview push]',userId,title,body); return; }
@@ -16216,9 +16270,10 @@ async function checkOverdueStockRequests() {
       if (!r.etaDeadline || r.etaEscalatedAt) continue;
       const deadline=new Date(r.etaDeadline).getTime();
       if (!Number.isFinite(deadline) || now<=deadline) continue;
+      if (!(await claimEtaEscalation('stock_requests', raw.id))) continue;
       const minsOver=Math.max(1,Math.round((now-deadline)/60000));
       const progress=r.status==='On the way' ? ('On the way with '+(r.claimedBy||'warehouse')) : 'Still unclaimed';
-      const title='🚨 Stock ETA missed — '+r.stand;
+      const title='⏰ LATE · Stock · '+r.stand;
       const body=fmtMins(minsOver)+' overdue · '+progress+' · '+(r.items||'').slice(0,90);
       showNotificationBanner(title,body,'urgent');
       // Used to blast EVERY manager/admin/warehouse_manager in the building
@@ -16271,18 +16326,19 @@ async function checkOverdueFoodRequests() {
       const deadline=new Date(r.eta_deadline).getTime();
       if(!Number.isFinite(deadline)||now<=deadline)continue;
 
+      if (!(await claimEtaEscalation('kitchen_requests', r.id))) continue;
       const minsOver=Math.max(1,Math.round((now-deadline)/60000));
       const progress=kitchenEtaProgress(r);
       const plainItems=(r.items||'Food request').slice(0,90);
-      const title='🚨 Food ETA missed — '+r.stand;
+      const title='⏰ LATE · Food · '+r.stand;
       const body=fmtMins(minsOver)+' overdue · '+progress+' · '+plainItems;
 
       showNotificationBanner(title,body,'urgent');
 
       const recipients=new Set();
 
-      // Stadium Managers/Admin always know when a Food ETA is missed.
-      const leaders=await sb('staff_accounts?is_active=eq.true&role=in.(manager,admin,food_manager,kitchen_coordinator)&select=employee_id').catch(()=>({_err:true}));
+      // Food Managers own late food; stadium managers only via their coverage area.
+      const leaders=await sb('staff_accounts?is_active=eq.true&role=in.(food_manager,kitchen_coordinator)&select=employee_id').catch(()=>({_err:true}));
       if(!leaders._err&&Array.isArray(leaders)){
         leaders.forEach(x=>{if(x.employee_id)recipients.add(String(x.employee_id));});
       }
@@ -16322,6 +16378,7 @@ async function checkOverdueRequests() {
     if (id === 'screen-bedcheck' || id === 'screen-warehouse' || id === 'screen-kitchen') startEtaChecker();
     // One rule for the floating Chat / Contacts button (see updateFloatingContactVisibility).
     updateFloatingContactVisibility();
+    markOnDuty();
   };
 })();
 
@@ -16852,9 +16909,6 @@ async function gcSubmitInspection() {
       sb('staff_accounts?role=eq.warehouse_manager&is_active=eq.true&select=employee_id').then(mgrs => {
         if (!mgrs._err && Array.isArray(mgrs)) mgrs.forEach(m => sendPushTo(m.employee_id, '🚫 Cart ' + _gcSelectedKey + ' flagged', (comments || 'Issue found on pre-use inspection') + ' — reported by ' + _gcUser.name));
       }).catch(() => {});
-      sb('staff_accounts?role=eq.manager&is_active=eq.true&select=employee_id').then(mgrs => {
-        if (!mgrs._err && Array.isArray(mgrs)) mgrs.forEach(m => sendPushTo(m.employee_id, '🚫 Cart ' + _gcSelectedKey + ' flagged', (comments || 'Issue found on pre-use inspection') + ' — reported by ' + _gcUser.name));
-      }).catch(() => {});
     }
   });
   if (flagged) {
@@ -16942,9 +16996,6 @@ function notifyCartManagers(title, body) {
   // (stand) manager heard about a flagged cart, meaning a supervisor
   // covering the warehouse solo had no idea a cart went out of service.
   sb('staff_accounts?role=in.(warehouse_manager,warehouse_supervisor)&is_active=eq.true&select=employee_id').then(mgrs => {
-    if (!mgrs._err && Array.isArray(mgrs)) mgrs.forEach(m => sendPushTo(m.employee_id, title, body));
-  }).catch(() => {});
-  sb('staff_accounts?role=eq.manager&is_active=eq.true&select=employee_id').then(mgrs => {
     if (!mgrs._err && Array.isArray(mgrs)) mgrs.forEach(m => sendPushTo(m.employee_id, title, body));
   }).catch(() => {});
 }
@@ -18683,10 +18734,7 @@ async function invtSendReminder(r) {
   const ids = new Set(r.leads.map(x => x.id).filter(Boolean));
   (await standLeaderIds(r.stand)).forEach(id => { if (id !== String(who.empId)) ids.add(id); });
   // No lead and no supervisor covering this stand: tell the managers.
-  if (!ids.size) {
-    const mgrs = await sb('staff_accounts?is_active=eq.true&role=in.(manager,admin)&select=employee_id').catch(()=>({_err:true}));
-    if (Array.isArray(mgrs)) mgrs.forEach(m => { if (String(m.employee_id) !== String(who.empId)) ids.add(String(m.employee_id)); });
-  }
+  if (!ids.size) (await managersOnDuty()).forEach(m => { if (String(m.employee_id) !== String(who.empId)) ids.add(String(m.employee_id)); });
   ids.forEach(id => sendPushTo(id, '📦 Inventory not done — ' + r.stand, 'Please complete ' + missing + ' now. Stand Leads cannot leave the stand until it is submitted. — ' + (who.name || 'Manager')));
   state._invtReminded = state._invtReminded || {};
   state._invtReminded[r.stand] = Date.now();
@@ -18727,10 +18775,14 @@ async function invtRemindAll() {
 // it moves up one level. Delivery = push + 20 s badge polling (5 s while a
 // thread is open). Rows are deleted after 14 days (stand_chat_cleanup_14d).
 const CHAT_LEVELS = ['crew','lead','sup','mgr'];
+// Warehouse Managers + Warehouse Supervisors share one group conversation.
+const WH_GROUP = 'Warehouse Leaders';
+function chatIsGroup(stand) { return stand === WH_GROUP; }
 function chatNice(n) { n = String(n||'').split(' (')[0]; return n.includes(',') ? (n.split(',')[1].trim().split(' ')[0] + ' ' + n.split(',')[0].trim()) : n; }
 function chatFirst(n) { return chatNice(n).split(' ')[0]; }
 const CHAT_LEVEL_LABEL = {crew:'Stand crew', lead:'Stand Lead', sup:'Supervisor', mgr:'Manager'};
 function chatLevel() {
+  if (state.staffAccount && ['warehouse_manager','warehouse_supervisor'].includes(state.staffAccount.role)) return 'whl';
   if (isManagerOpsSession()) return 'mgr';
   if (isSupervisorSession()) return 'sup';
   const u = state.user; if (!u) return null;
@@ -18742,7 +18794,7 @@ function chatLevel() {
 function chatSide() { const l = chatLevel(); return !l ? null : (l === 'crew' || l === 'lead') ? 'stand' : 'leader'; }
 function chatMe() {
   const who = getRequesterIdentity(), u = state.user, lvl = chatLevel();
-  let role = CHAT_LEVEL_LABEL[lvl] || '';
+  let role = lvl === 'whl' ? (state.staffAccount.role === 'warehouse_manager' ? 'Warehouse Manager' : 'Warehouse Supervisor') : (CHAT_LEVEL_LABEL[lvl] || '');
   if (u && u.isNpo) role = u.npoIsLead ? 'NPO Lead' : 'NPO';
   return {id:String(who.empId||''), name:who.name||'', role, level:lvl};
 }
@@ -18769,7 +18821,7 @@ async function chatDirectory(dayArg) {
   const c = state._chatDirs[day]; if (c && Date.now() - c.at < 60000) return c;
   const [idx, mgrs, sups, asg, slim] = await Promise.all([
     standLeadsIndex(day).catch(()=>({})),
-    sb('staff_accounts?is_active=eq.true&role=in.(manager,admin)&select=employee_id,name').catch(()=>({_err:true})),
+    sb('on_duty?day=eq.' + day + '&role=in.(manager,admin,support_manager)&select=employee_id,name').catch(()=>({_err:true})),
     sb('schedule?is_test=neq.true&event_date=eq.' + day + '&role=ilike.*supervisor*&select=employee_id,worker_name,location').catch(()=>({_err:true})),
     coverageGetAssignments(day, '').catch(()=>[]),
     sb('staff_stand_access?event_date=eq.' + day + '&is_active=eq.true&access_level=eq.supervisor_limited&select=employee_id,worker_name,stands').catch(()=>({_err:true}))
@@ -18841,6 +18893,8 @@ async function chatSyncIndex() {
   if (!state._chatIdx || state._chatIdx.day !== day) state._chatIdx = {day, rows:[], maxId:0};
   const ix = state._chatIdx;
   let q = 'stand_chat?event_date=eq.' + day + '&id=gt.' + ix.maxId + '&select=id,stand,side,sender_id,sender_name,sender_role,sender_level,to_level,body,created_at&order=id.asc&limit=500';
+  if (lvl === 'whl') q += '&stand=eq.' + encodeURIComponent(WH_GROUP);
+  else q += '&stand=neq.' + encodeURIComponent(WH_GROUP);
   if (lvl === 'crew' || lvl === 'lead') {
     if (!state._chatMyStands || state._chatMyStandsDay !== day) { state._chatMyStands = await chatMyStands(); state._chatMyStandsDay = day; }
     const list = [...state._chatMyStands]; if (!list.length) return false;
@@ -18855,6 +18909,7 @@ async function chatSyncIndex() {
 // without a level: anything from the other side), at a stand I look after.
 function chatIsForMe(r) {
   const me = chatMe(); if (!me.level || String(r.sender_id) === me.id) return false;
+  if (me.level === 'whl' || chatIsGroup(r.stand)) return me.level === 'whl' && chatIsGroup(r.stand);
   if (r.to_level) {
     if (r.to_level !== me.level) return false;
   } else if (r.side === chatSide()) return false;
@@ -18911,6 +18966,7 @@ async function goChat(stand) {
   showScreen('screen-chat');
   updateFloatingContactVisibility();
   chatShowTab('chat');
+  if (lvl === 'whl') return chatOpenThread(WH_GROUP);
   if (stand) return chatOpenThread(stand);
   if (lvl === 'crew' || lvl === 'lead') {
     state._chatMyStands = await chatMyStands(); state._chatMyStandsDay = stadiumDay();
@@ -18932,7 +18988,7 @@ function chatShowTab(t) {
 }
 function chatBack() {
   const lvl = chatLevel();
-  const multi = lvl === 'sup' || lvl === 'mgr' || (state._chatMyStands && state._chatMyStands.size > 1);
+  const multi = lvl === 'sup' || lvl === 'mgr' || (lvl !== 'whl' && state._chatMyStands && state._chatMyStands.size > 1);
   if (state._chatStand && multi) return goChat();
   if (state._chatThreadTimer) { clearInterval(state._chatThreadTimer); state._chatThreadTimer = null; }
   state._chatStand = null;
@@ -18988,11 +19044,28 @@ function chatRenderInbox() {
   el.innerHTML = html;
 }
 
+// Things only a Supervisor/Manager can do — one tap sends a marked request.
+const CHAT_REQUESTS = [['💵','Refund'],['❌','Void / wrong order'],['💰','Cash drop / change'],['🏷️','Comp / price'],['😠','Guest complaint'],['🔑','Manager override'],['🧹','Spill / cleanup'],['🆘','Supervisor now']];
+async function chatRequest(kind) {
+  const th = state._chatThread; if (!th) return;
+  if (!th.people) th.people = await chatPeopleFor(th.stand).catch(()=>null);
+  const input = document.getElementById('chat-input'), extra = String(input.value || '').trim();
+  input.value = '';
+  th.to = th.people && th.people.sup && th.people.sup.length ? 'sup' : 'mgr'; th._toTouched = true; chatRenderTo();
+  chatSend('🙋 REQUEST · ' + kind + (extra ? ' — ' + extra : ''));
+}
+function chatEscalate(id) {
+  const th = state._chatThread; if (!th) return;
+  const r = th.rows.find(x => String(x.id) === String(id)); if (!r) return;
+  th.to = 'mgr'; th._toTouched = true; chatRenderTo();
+  chatSend('⬆ No answer from the Supervisor — ' + r.body);
+}
 const CHAT_QUICK = {
+  whl: ['On my way', '✅ Done', 'Got it 👍', 'Need a golf cart', 'Short on staff', 'Call me on the radio'],
   crew: ['Need ice', 'Need change / cash drop', 'Line is long — need help', 'POS / register problem', 'Running low on stock', 'Need a break'],
   lead: ['Need a Supervisor at the stand', 'Need change / cash drop', 'Need ice', 'Line is long — need help', 'POS / register problem', 'Count Out done ✓'],
-  sup: ['On my way', 'Sending help now', 'Got it 👍', 'Put in a Stock Request', 'Please finish Count Out', 'Call me on the radio'],
-  mgr: ['On my way', 'Sending help now', 'Got it 👍', 'Put in a Stock Request', 'Please finish Count Out', 'Call me on the radio']
+  sup: ['On my way', '✅ Done', 'Got it 👍', 'Sending help now', 'Put in a Stock Request', 'Call me on the radio'],
+  mgr: ['On my way', '✅ Done', 'Got it 👍', 'Sending help now', 'Approved', 'Call me on the radio']
 };
 // Who can I address from here, and who by default.
 function chatToOptions(people) {
@@ -19013,12 +19086,17 @@ function chatDefaultTo(th) {
 }
 function chatRenderTo() {
   const th = state._chatThread, el = document.getElementById('chat-to'); if (!th || !el) return;
+  if (th.people && th.people.group) { el.innerHTML = ''; const nt = document.getElementById('chat-to-note'); if (nt) { const n = th.people.group.filter(x => x.on && x.id !== chatMe().id).length; nt.textContent = n ? '🔔 ' + n + ' warehouse leader' + (n === 1 ? '' : 's') + ' signed in today will get an alert' : '🔕 No other warehouse leader signed in today — they\'ll see it when they open the app'; } return; }
   if (!th.people) { el.innerHTML = '<span style="font-size:11px;color:var(--text-3)">Loading who is on…</span>'; return; }
   const opts = chatToOptions(th.people);
   if (!th.to || !opts.includes(th.to)) th.to = chatDefaultTo(th);
   const n = l => (th.people && th.people[l] ? th.people[l].length : 0);
-  el.innerHTML = '<span style="font-size:11px;font-weight:800;color:var(--text-2);margin-right:2px">TO</span>' + opts.map(l =>
-    '<button class="chip' + (th.to === l ? ' selected' : '') + '" onclick="chatSetTo(\'' + l + '\')">' + CHAT_LEVEL_LABEL[l] + (l === 'mgr' ? '' : n(l) ? ' · ' + (n(l) === 1 ? escapeHtml(chatFirst(th.people[l][0].name)) : n(l)) : ' · none on') + '</button>').join('');
+  const icon = {crew:'👥', lead:'⭐', sup:'🧭', mgr:'👔'};
+  const label = l => icon[l] + ' ' + (n(l) === 1 ? escapeHtml(chatFirst(th.people[l][0].name)) + ' <small>(' + CHAT_LEVEL_LABEL[l] + ')</small>' : (l === 'mgr' ? 'Managers' : CHAT_LEVEL_LABEL[l]) + (n(l) ? ' · ' + n(l) : ' · none on'));
+  el.innerHTML = '<span style="font-size:11px;font-weight:800;color:var(--text-2);margin-right:2px">SEND TO</span>' + opts.map(l =>
+    '<button class="chip' + (th.to === l ? ' selected' : '') + '" onclick="chatSetTo(\'' + l + '\')">' + label(l) + '</button>').join('');
+  const note = document.getElementById('chat-to-note');
+  if (note) { const who = th.people[th.to] || []; note.textContent = who.length ? '🔔 Only ' + (who.length <= 2 ? who.map(x => chatNice(x.name)).join(' & ') : who.length + ' ' + (th.to === 'mgr' ? 'managers on duty' : CHAT_LEVEL_LABEL[th.to] + 's')) + ' will get an alert' : (th.to === 'mgr' ? '🔕 No manager has signed in today — they\'ll see it when they open the app' : '🔕 Nobody at this level today — it goes up one level'); }
 }
 function chatSetTo(l) { const th = state._chatThread; if (!th) return; th.to = l; th._toTouched = true; chatRenderTo(); }
 async function chatOpenThread(stand) {
@@ -19028,20 +19106,33 @@ async function chatOpenThread(stand) {
   document.getElementById('chat-thread-wrap').style.display = '';
   document.getElementById('chat-title').textContent = '💬 ' + stand;
   document.getElementById('chat-sub').textContent = 'You: ' + (chatMe().role || '') + ' · today';
+  const reqEl = document.getElementById('chat-req');
+  if (reqEl) reqEl.innerHTML = (chatLevel() === 'crew' || chatLevel() === 'lead') ? CHAT_REQUESTS.map(([ic, t]) => '<button onclick="chatRequest(this.dataset.t)" data-t="' + escapeAttr(t) + '"><span>' + ic + '</span>' + escapeHtml(t) + '</button>').join('') : '';
   document.getElementById('chat-quick').innerHTML = (CHAT_QUICK[chatLevel()] || []).map(q => '<button class="chip" onclick="chatSend(this.dataset.q)" data-q="' + escapeAttr(q) + '">' + escapeHtml(q) + '</button>').join('');
   document.getElementById('chat-thread').innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   const th = state._chatThread = {stand, rows:[], maxId:0, pending:[], people:null, to:null};
   const toEl = document.getElementById('chat-to'); if (toEl) toEl.innerHTML = '';
-  chatPeopleFor(stand).then(p => { if (state._chatThread !== th) return; th.people = p; if (!th._toTouched) th.to = null; chatRenderTo(); chatRenderWho(); }).catch(()=>{});
+  if (chatIsGroup(stand)) { document.getElementById('chat-title').textContent = '🏭 Warehouse Leaders'; chatGroupPeople().then(p => { if (state._chatThread !== th) return; th.people = p; chatRenderTo(); chatRenderWho(); }); }
+  else chatPeopleFor(stand).then(p => { if (state._chatThread !== th) return; th.people = p; if (!th._toTouched) th.to = null; chatRenderTo(); chatRenderWho(); }).catch(()=>{});
   await chatLoadThread(true);
   if (state._chatThreadTimer) clearInterval(state._chatThreadTimer);
-  state._chatThreadTimer = setInterval(() => { if (!document.hidden) chatLoadThread(false); }, 5000);
+  state._chatThreadTimer = setInterval(() => { if (document.hidden) return; chatLoadThread(false); const t = state._chatThread; if (t && t.rows.some(r => /^🙋 REQUEST/.test(r.body||'') && String(r.sender_id) === chatMe().id)) chatRenderThread(); }, 5000);
+}
+async function chatGroupPeople() {
+  const [all, duty] = await Promise.all([
+    sb('staff_accounts?is_active=eq.true&role=in.(warehouse_manager,warehouse_supervisor)&select=employee_id,name,role&order=role.desc,name.asc').catch(()=>({_err:true})),
+    sb('on_duty?day=eq.' + stadiumDay() + '&role=in.(warehouse_manager,warehouse_supervisor)&select=employee_id').catch(()=>({_err:true}))
+  ]);
+  const on = new Set(Array.isArray(duty) ? duty.map(d => String(d.employee_id)) : []);
+  const people = (Array.isArray(all) ? all : []).map(a => ({id:String(a.employee_id), name:a.name, role:a.role, on:on.has(String(a.employee_id))}));
+  return {group:people, crew:[], lead:[], sup:[], mgr:[], areas:[], pinned:{}};
 }
 function chatRenderWho() {
   const th = state._chatThread, el = document.getElementById('chat-who'); if (!th || !el || !th.people) return;
+  if (th.people.group) { el.innerHTML = '<div style="font-weight:800;margin-bottom:2px">🏭 Group — Warehouse Managers & Supervisors</div>' + th.people.group.map(x => '<span style="display:inline-block;margin:2px 8px 0 0">' + (x.on ? '🟢' : '⚪') + ' ' + escapeHtml(chatNice(x.name)) + ' <small style="color:var(--text-3)">' + (x.role === 'warehouse_manager' ? 'Mgr' : 'Sup') + '</small></span>').join('') + '<div style="font-size:10px;color:var(--text-3);margin-top:3px">🟢 signed in today — gets the alert</div>'; return; }
   const p = th.people, names = l => p[l].length ? p[l].map(x => escapeHtml(chatNice(x.name))).slice(0, 3).join(', ') + (p[l].length > 3 ? ' +' + (p[l].length - 3) : '') : '<span style="color:var(--text-3)">none on today</span>';
   const pin = l => p.pinned && p.pinned[l] ? ' <span style="font-size:10px;color:var(--asu-maroon);font-weight:800">📌 set by Admin</span>' : '';
-  el.innerHTML = (p.crew.length ? '<div>👥 Crew: ' + names('crew') + '</div>' : '') + '<div>⭐ Stand Lead: ' + names('lead') + pin('lead') + (!p.pinned.lead && p.areas.length && p.lead.length ? ' <span style="color:var(--text-3)">(' + escapeHtml(p.areas.join(', ')) + ')</span>' : '') + '</div><div>🧭 Supervisor: ' + names('sup') + pin('sup') + '</div>' + (p.pinned.mgr ? '<div>👔 Manager: ' + names('mgr') + pin('mgr') + '</div>' : '');
+  el.innerHTML = (p.crew.length ? '<div>👥 Crew: ' + names('crew') + '</div>' : '') + '<div>⭐ Stand Lead: ' + names('lead') + pin('lead') + (!p.pinned.lead && p.areas.length && p.lead.length ? ' <span style="color:var(--text-3)">(' + escapeHtml(p.areas.join(', ')) + ')</span>' : '') + '</div><div>🧭 Supervisor: ' + names('sup') + pin('sup') + '</div><div>👔 Manager: ' + (p.mgr.length ? names('mgr') + pin('mgr') : '<span style="color:var(--text-3)">none signed in today</span>') + '</div>';
 }
 async function chatLoadThread(first) {
   const th = state._chatThread; if (!th || th.stand !== state._chatStand) return;
@@ -19066,7 +19157,11 @@ function chatRenderThread() {
     const mine = String(r.sender_id) === me;
     const t = r.created_at ? new Date(r.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : 'sending…';
     const to = r.to_level ? ' → ' + CHAT_LEVEL_LABEL[r.to_level] : '';
-    return '<div class="chat-msg ' + (mine ? 'mine' : 'theirs') + (r._pending ? ' pending' : '') + '"><div class="cmeta">' + (mine ? 'You' : escapeHtml(chatNice(r.sender_name) + ' · ' + (r.sender_role||''))) + escapeHtml(to) + ' · ' + t + '</div>' + escapeHtml(r.body) + '</div>';
+    const isReq = /^🙋 REQUEST/.test(String(r.body||''));
+    // My request to a Supervisor with no answer for 3 minutes → offer Managers.
+    let esc = '';
+    if (mine && isReq && r.to_level === 'sup' && r.id && Date.now() - new Date(r.created_at).getTime() > 180000 && !th.rows.some(x => x.id > r.id && String(x.sender_id) !== me)) esc = '<br><button class="chat-esc" onclick="chatEscalate(' + r.id + ')">⬆ No answer yet — send to Managers</button>';
+    return '<div class="chat-msg ' + (mine ? 'mine' : 'theirs') + (isReq ? ' req' : '') + (r._pending ? ' pending' : '') + '"><div class="cmeta">' + (mine ? 'You' : escapeHtml(chatNice(r.sender_name) + ' · ' + (r.sender_role||''))) + escapeHtml(to) + ' · ' + t + '</div>' + escapeHtml(r.body) + esc + '</div>';
   }).join('') : '<div class="empty"><div class="empty-icon">💬</div><p>No messages yet. Pick who it\'s for, then type or tap a quick message.</p></div>';
   if (nearBottom || all.length <= 12) window.scrollTo(0, document.body.scrollHeight);
 }
@@ -19076,15 +19171,18 @@ async function chatSend(quick) {
   const input = document.getElementById('chat-input');
   const body = String(quick || input.value || '').trim().slice(0, 1000);
   if (!body) return;
-  if (!th.people) th.people = await chatPeopleFor(th.stand).catch(()=>null);
-  let to = th.to || chatDefaultTo(th), note = '';
+  // Who's on duty can change minutes before a message to Managers — always check fresh.
+  if (!chatIsGroup(th.stand) && (th.to === 'mgr' || !th.people || !(th.people.mgr && th.people.mgr.length))) { chatDirReset(); th.people = await chatPeopleFor(th.stand).catch(()=>th.people); chatRenderWho(); }
+  if (!th.people) th.people = chatIsGroup(th.stand) ? await chatGroupPeople() : await chatPeopleFor(th.stand).catch(()=>null);
+  let to = chatIsGroup(th.stand) ? null : (th.to || chatDefaultTo(th)), note = '';
   // Nobody on today at that level → the next level up gets it.
   const p = th.people;
-  if (p && to !== 'mgr' && !(p[to] && p[to].length)) {
+  if (p && to && to !== 'mgr' && !(p[to] && p[to].length)) {
     const up = CHAT_LEVELS.slice(CHAT_LEVELS.indexOf(to) + 1).find(l => l !== me.level && (l === 'mgr' || (p[l] && p[l].length)));
     if (up) { note = 'No ' + CHAT_LEVEL_LABEL[to] + ' on today — sent to ' + CHAT_LEVEL_LABEL[up]; to = up; }
   }
-  const row = {event_date:stadiumDay(), stand:th.stand, sender_id:me.id, sender_name:me.name, sender_role:me.role, side:chatSide(), sender_level:me.level, to_level:to, body, client_id:genUUID()};
+  if (p && to === 'mgr' && !(p.mgr && p.mgr.length)) note = 'No manager has signed in today — saved in chat for when they open the app';
+  const row = {event_date:stadiumDay(), stand:th.stand, sender_id:me.id, sender_name:me.name, sender_role:me.role, side:chatSide(), sender_level:me.level === 'whl' ? null : me.level, to_level:to, body, client_id:genUUID()};
   if (!quick) { input.value = ''; input.style.height = 'auto'; }
   th.pending.push({...row, _pending:true});
   chatRenderThread();
@@ -19104,13 +19202,15 @@ async function chatSend(quick) {
 // Only the addressed level is alerted. The stand name leads the title so a
 // lead over several portables knows at a glance which one is asking.
 async function chatNotify(stand, to, me, body) {
+  if (chatIsGroup(stand)) { const g = await chatGroupPeople(); g.group.filter(x => x.on && x.id !== me.id).forEach(x => sendPushTo(x.id, '🏭 Warehouse Leaders', chatNice(me.name) + ': ' + (body.length > 130 ? body.slice(0, 127) + '…' : body))); return; }
   const p = await chatPeopleFor(stand).catch(()=>null);
   const ids = new Set(((p && p[to]) || []).map(x => x.id));
   // Crew/leads who already wrote in this thread hear the reply too.
   const th = state._chatThread;
   if (th && th.stand === stand && (to === 'crew' || to === 'lead')) th.rows.filter(r => r.sender_level === to).forEach(r => ids.add(String(r.sender_id)));
   ids.delete(me.id); ids.delete('');
-  const title = '💬 ' + stand;
+  const isReq = /^🙋 REQUEST/.test(body);
+  const title = (isReq ? '🙋 ' + body.replace(/^🙋 REQUEST · /,'').split(' — ')[0].toUpperCase() + ' · ' : '💬 Message · ') + stand;
   const text = chatNice(me.name) + ' (' + me.role + '): ' + (body.length > 130 ? body.slice(0, 127) + '…' : body);
   ids.forEach(id => sendPushTo(id, title, text));
 }
@@ -19147,7 +19247,7 @@ function chatRouteRender(){
     const head=x.venue!==lastV?'<div class="section-title" style="margin-top:8px">'+escapeHtml(VENUE_SHORT[x.venue]||x.venue)+'</div>':'';lastV=x.venue;
     return head+'<div class="card" id="cr-card-'+escapeAttr(x.name.replace(/[^a-z0-9]/gi,'_'))+'" onclick="chatRouteEdit(this.dataset.s)" data-s="'+escapeAttr(x.name)+'" style="padding:9px 11px;margin-bottom:6px;cursor:pointer;font-size:12px">'+
       '<div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:13px">'+escapeHtml(x.name)+'</b><span style="color:var(--asu-maroon);font-weight:800">Edit ›</span></div>'+
-      '<div style="color:var(--text-2);margin-top:3px;line-height:1.5">⭐ '+pin('lead')+nm(p.lead)+' · 🧭 '+pin('sup')+nm(p.sup)+' · 👔 '+(p.pinned&&p.pinned.mgr?'📌'+nm(p.mgr):'all managers')+'</div></div>';
+      '<div style="color:var(--text-2);margin-top:3px;line-height:1.5">⭐ '+pin('lead')+nm(p.lead)+' · 🧭 '+pin('sup')+nm(p.sup)+' · 👔 '+(p.pinned&&p.pinned.mgr?'📌'+nm(p.mgr):'managers on duty')+'</div></div>';
   }).join(''):'<div style="font-size:11px;color:var(--text-3)">No stands match.</div>';
   if(_crEditing){const c=document.getElementById('cr-card-'+_crEditing.replace(/[^a-z0-9]/gi,'_'));if(c&&ed){c.after(ed);ed.style.display='';}}
 }
@@ -19161,7 +19261,7 @@ async function chatRouteEdit(stand){
   const autoTxt=(l,none)=>'Automatic'+(p.pinned&&p.pinned[l]?'':' — '+(p[l]&&p[l].length?p[l].map(x=>chatNice(x.name)).slice(0,2).join(', '):none));
   document.getElementById('cr-lead').innerHTML=opts('lead',autoTxt('lead','nobody scheduled'));
   document.getElementById('cr-sup').innerHTML=opts('sup',autoTxt('sup','nobody scheduled'));
-  document.getElementById('cr-mgr').innerHTML=opts('mgr','Automatic — all managers');
+  document.getElementById('cr-mgr').innerHTML=opts('mgr','Automatic — managers signed in that day');
   const areas=await chatAreas(),a=areas.find(z=>(z.stands||[]).some(s=>canonicalStandName2026(s)===canonicalStandName2026(stand)));
   const aw=document.getElementById('cr-area-wrap');document.getElementById('cr-area').checked=false;
   if(aw){aw.style.display=a?'flex':'none';aw.dataset.key=a?a.area_key:'';document.getElementById('cr-area-label').textContent=a?'Use for every stand in '+a.area_name+' ('+(a.stands||[]).length+' stands)':'';}
@@ -19647,7 +19747,6 @@ async function submitITIssue() {
       // ticket isn't assigned to one specific person the way a transfer
       // is (any active tech can pick it up), so this pushes to all of
       // them rather than a single userId.
-      await coverageNotifyRequest('it',targetStand,'🔧 IT ticket in your coverage',targetStand+' — '+state.itCategory,false);
       // Small IT team: every active Tech gets every ticket. No area assignment required.
       sb('staff_accounts?role=eq.tech&is_active=eq.true&select=employee_id').then(techs=>{if(!techs._err&&Array.isArray(techs))techs.forEach(t=>sendPushTo(t.employee_id,'🔧 New IT ticket',targetStand+' — '+state.itCategory));}).catch(()=>{});
       toast('🔧 IT alerted!');

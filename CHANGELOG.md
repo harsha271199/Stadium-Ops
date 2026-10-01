@@ -4,6 +4,27 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-01-alerts-2
+- **Managers are only alerted for things that need a manager, and only on days they've signed in.** A new `on_duty` table records who opened the app each game day (it cleans itself up after 30 days). "Managers" in alerts now means managers signed in today, so a test on a weekday no longer buzzes every manager's phone.
+  - **No longer alerts managers:**
+    - every new stock request ("Stock request in your coverage");
+    - every new IT ticket;
+    - every new stock request to warehouse leaders when the stand already has an assigned warehouse person;
+    - every late food order (that was all managers and admins);
+    - golf-cart flags (warehouse leaders still get them);
+    - every new food order to Food Managers when a runner already took it (they're alerted only when no runner covers the stand).
+  - **Still alerts managers (on-duty ones):** a chat message sent to Managers, an unanswered request escalated to Managers, a refund at a stand with no supervisor, an inventory reminder for a stand with no lead or supervisor, and late orders for a manager's own coverage area.
+  - **Refund alerts bug:** the alert looked up supervisors using a schedule column that doesn't exist, so it always alerted every manager. It now goes to the stand's Supervisor (same rules as chat, including Admin pins).
+  - **Late-order alerts sent once:** each open manager, supervisor or warehouse phone used to send the same late-order alert. Now only one phone sends it.
+  - **Clearer alert titles:** `⏰ LATE · Stock · 207…`, `⏰ LATE · Food · …`, `💵 REFUND · stand`, `🙋 REFUND · stand` (chat request), `💬 Message · stand`, `🏭 Warehouse Leaders`.
+- **Chat:**
+  - **Clearer "Send to":** the choices show the person ("🧭 Sue (Supervisor)", "👔 Mia (Manager)"), with a line under them saying exactly who will be alerted ("🔔 Only Sue Qasuper will get an alert", or "🔕 No manager has signed in today").
+  - **Quick requests** for things only a Supervisor or Manager can do: 💵 Refund, ❌ Void / wrong order, 💰 Cash drop / change, 🏷️ Comp / price, 😠 Guest complaint, 🔑 Manager override, 🧹 Spill / cleanup, 🆘 Supervisor now. One tap sends a highlighted "🙋 REQUEST" to the Supervisor (or the Managers if there's none). If nobody answers in 3 minutes, a **⬆ No answer yet — send to Managers** button appears.
+  - Supervisors and managers get a "✅ Done" quick reply; managers also get "Approved".
+  - The "Manager" line in each stand shows who is on duty. The 14-day footer is gone.
+- **🏭 Warehouse Leaders group chat** for Warehouse Managers and Warehouse Supervisors, opened from the floating 💬 button. It shows who is signed in (🟢), and a message alerts the other leaders who are signed in today. Stand managers don't see it.
+- **My Team check in / check out.** Each person shows "🟢 In 4:02 PM · still here" or "· ⏹ Out 10:15 PM". The bare icons are now labelled buttons: ✓ Check in, ⏹ Check out, ☕ Break, ✓ Back from break, ↩ Back on shift, ✕ Absent, ↩ Undo absent, ↔ Move, ⭐ Feedback. Check out is pre-filled with "End of shift", so it's one tap and OK.
+
 ## 2026-09-30-chat-3
 - **Admin → "💬 Chat — who answers each stand".** Every stand at every venue is listed with who answers it today: ⭐ Stand Lead, 🧭 Supervisor, 👔 Manager.
   - **Automatic by default**, worked out from the schedule: the stand's lead, or the lead scheduled at its area such as "West Portables"; the supervisor scheduled at the stand or its area; all managers. A Stand Lead given multi-stand coverage in "Temporary Stand Lead → Multi-Stand Coverage" also counts as lead for those stands.
