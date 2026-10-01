@@ -305,6 +305,7 @@
   /* WAREHOUSE MANAGER — status stat chips (Needs your attention row) */
   .wh-stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:7px}
   .food-stat-row{grid-template-columns:repeat(5,1fr);gap:5px}
+  .wh-now{grid-template-columns:repeat(4,1fr);gap:6px}
   .food-stat-row .wh-stat-chip{padding-left:2px;padding-right:2px;cursor:pointer}
   .food-stat-row .wh-stat-chip span{font-size:9px;letter-spacing:.2px}
   .wh-stat-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 6px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border);text-align:center;cursor:pointer}
@@ -454,6 +455,32 @@
   .chat-to .chip.selected{background:var(--asu-maroon);color:#fff;border-color:var(--asu-maroon)}
   .chat-inbox-row.unread{border-left:4px solid var(--aramark-red)}
   .chat-req{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+  .alert-pill{display:inline-flex;align-items:center;gap:8px;border:1px solid #FCD34D;background:#FFFBEB;color:#92400E;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+  .alert-pill b{color:#B45309}
+  .wh-hello{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:2px 2px 10px}
+  .wh-hello .hi{font-size:20px;font-weight:900;color:var(--text)}
+  .wh-hello .sub{font-size:12px;font-weight:700;color:var(--text-3)}
+  .wh-big{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  .wh-big-card{position:relative;border-radius:18px;padding:14px;background:var(--bg-card);border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer;min-height:118px;display:flex;flex-direction:column;justify-content:space-between}
+  .wh-big-card:active{transform:scale(.98)}
+  .wh-big-card .ic{font-size:26px}
+  .wh-big-card .lbl{font-size:16px;font-weight:900;color:var(--text);margin-top:6px}
+  .wh-big-card .tile-sub{font-size:12px;color:var(--text-2);font-weight:600;margin-top:2px}
+  .wh-big-card.hot{background:linear-gradient(135deg,#8C1D40,#B4234F);border-color:#8C1D40}
+  .wh-big-card.hot .lbl,.wh-big-card.hot .tile-sub{color:#fff}
+  .wh-tools-title{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-3);margin:6px 2px 8px}
+  .wh-tools{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .wh-tool{border:1px solid var(--border);background:var(--bg-card);border-radius:14px;padding:12px 4px 10px;text-align:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .wh-tool:active{transform:scale(.97)}
+  .wh-tool .ic{font-size:22px;line-height:1}
+  .wh-tool .lbl{font-size:12px;font-weight:800;color:var(--text);margin-top:6px;line-height:1.2}
+  .wh-tool .tile-sub{display:none}
+  .wh-tool.tile-red{border-color:#DC2626;background:#FEF2F2}
+  .wh-big-card.tile-red{background:linear-gradient(135deg,#8C1D40,#B4234F)}
+  .food-cov{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;color:var(--text-2);margin:0 2px 10px}
+  .food-cov button{border:1px solid var(--border);background:var(--bg-card);border-radius:999px;padding:5px 11px;font-size:11.5px;font-weight:800;color:var(--text);cursor:pointer;font-family:inherit}
+  .wh-emp-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 4px}
+  .wh-emp-actions button{display:flex;align-items:center;justify-content:center;gap:6px;height:48px;border-radius:14px;border:1px solid var(--border);background:var(--bg-card);font-size:13.5px;font-weight:800;color:var(--text);cursor:pointer;font-family:inherit;box-shadow:0 1px 3px rgba(0,0,0,.05)}
   .cm-day{align-self:center;font-size:11px;font-weight:800;color:var(--text-3);background:var(--bg-elevated);padding:3px 12px;border-radius:99px;margin:2px 0 4px}
   .cm-row{display:flex;gap:8px;align-items:flex-end}
   .cm-row.mine{justify-content:flex-end}
@@ -1903,10 +1930,6 @@
         <span class="icon">📦</span>
         <span class="text"><div>Inventory Tracker</div><div class="sub">Who finished Count In / Count Out · remind stands</div></span>
       </button>
-      <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goChat()">
-        <span class="icon">💬</span>
-        <span class="text"><div>Stand Chat <span class="chat-unread-pill" style="display:none"></span></div><div class="sub">Message Stand Leads &amp; NPO Leads</div></span>
-      </button>
       <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goStandTransferRecord()">
         <span class="icon">🔄</span>
         <span class="text"><div>Stand Transfer Record</div><div class="sub">Today's stand-to-stand transfers</div></span>
@@ -2843,10 +2866,6 @@
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goInvTracker()">
           <span class="icon">📦</span>
           <span class="text"><div>Inventory Tracker</div><div class="sub">Who finished Count In / Count Out · remind stands</div></span>
-        </button>
-        <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goChat()">
-          <span class="icon">💬</span>
-          <span class="text"><div>Stand Chat <span class="chat-unread-pill" style="display:none"></span></div><div class="sub">Message Stand Leads &amp; NPO Leads</div></span>
         </button>
         <button class="big-action" id="mgr-alerts-check-btn" style="border-left:4px solid var(--asu-maroon);display:none" onclick="goAlertsCheck()">
           <span class="icon">📲</span>
@@ -3972,13 +3991,14 @@
            tab-bar — the same message twice was a big chunk of what made
            this screen feel like it was half messages. Kept only the tip
            banner (dismissible, so it goes away for good once read). -->
-      <button class="btn btn-ghost" onclick="whScanToOpen()" style="width:100%;margin-bottom:12px">📷 Quick Drop — scan stand & add stock</button>
+
       <!-- Real fix, per direct request: Golf Cart re-enabled for the
            actual drivers. Employee's screen stays deliberately simple (one
            list + one main action), so this is a plain secondary button,
            not a tile — same weight as Quick Drop above it. -->
-      <button class="btn btn-ghost" onclick="goGolfCart()" style="width:100%;margin-bottom:12px"><svg width="15" height="14" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Golf Cart — take / return a key</button>
+
       <div id="wh-todeliver-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+      <div class="wh-emp-actions"><button onclick="whScanToOpen()">📷 Quick Drop</button><button id="wh-emp-cart-btn" onclick="goGolfCart()"><svg width="18" height="16"><use href="#gc-icon"/></svg> Golf Cart</button></div>
     </div>
 
     <!-- MODE 0: TRANSFERS (assigned deliveries) -->
@@ -4365,7 +4385,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-10-01-chat-4';
+const BUILD_TAG = '2026-10-01-ui-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -14809,12 +14829,12 @@ function renderFoodCoverageBar(){
   const coord=['food_manager','kitchen_coordinator'].includes(role);
   if(coord){el.style.display='none';el.innerHTML='';return;}
   if(!runner){el.style.display='none';return;}
-  el.style.display='block';
+  el.style.display='block';el.className='';el.style.marginBottom='0';
   const areas=state.foodCoverageAreas||[],stands=state.foodCoverageStands||[];
-  const scope=stands.length?(areas.join(' · ')||stands.length+' assigned stands'):'No game-day area assigned';
+  const scope=stands.length?(areas.join(' · ')||'My stands'):'No game-day area assigned';
   const mode=stands.length?(state.foodShowAll?'All stadium':'My coverage'):'All stadium';
-  el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div><b>'+escapeHtml(mode)+'</b><div style="font-size:10px;margin-top:2px">'+escapeHtml(scope)+(stands.length?' · '+stands.length+' stands':' · fallback view')+'</div></div>'+
-    (stands.length?'<button class="btn btn-ghost" onclick="foodToggleAll()" style="width:auto;margin:0;padding:7px 9px;font-size:10px">'+(state.foodShowAll?'My coverage':'Show all stadium')+'</button>':'')+'</div>';
+  el.innerHTML='<div class="food-cov"><span>📍 '+(stands.length?(state.foodShowAll?'Showing all stadium':escapeHtml(scope)+' · '+stands.length+' stands'):'All stadium')+'</span>'+
+    (stands.length?'<button onclick="foodToggleAll()">'+(state.foodShowAll?'My stands':'Show all')+'</button>':'')+'</div>';
 }
 function foodToggleAll(){state.foodShowAll=!state.foodShowAll;renderFoodCoverageBar();loadKitchenConsole();}
 
@@ -15098,7 +15118,6 @@ async function renderKitchenRuns(rows){
       <div class="stand">${escapeHtml(r.stand)}</div>
       <div class="items">${kitchenItemsText(r)}</div>
       <div class="meta">${kitchenEtaText(r)} · requested by ${escapeHtml(r.requested_by||'stand')}</div>
-      <div style="margin-top:7px;font-size:12px;font-weight:850">${step}</div>
       ${r.note?'<div class="req-wh-msg">💬 '+escapeHtml(r.note)+'</div>':''}
       ${btn}
     </div>`;
@@ -16063,7 +16082,7 @@ function renderOpsAlertStatus(kind){
   const el=document.getElementById(id);if(!el)return;
   const supported=('Notification' in window)&&('serviceWorker' in navigator)&&('PushManager' in window);
   if(!supported){
-    el.innerHTML='<div class="notice warning"><b>🔕 Phone alerts not set up.</b> <a href="#" onclick="showAlertsSetup(true);return false" style="font-weight:800">How to turn them on ›</a></div>';
+    el.innerHTML='<button class="alert-pill" onclick="showAlertsSetup(true)">🔕 Phone alerts off <b>Turn on ›</b></button>';
     return;
   }
   if(Notification.permission==='granted'){
@@ -16072,7 +16091,7 @@ function renderOpsAlertStatus(kind){
     // just eats screen space for something already confirmed once.
     el.innerHTML='';
   }else if(Notification.permission==='denied'){
-    el.innerHTML='<div class="notice warning"><b>🔕 Notifications blocked.</b> <a href="#" onclick="showAlertsSetup(true);return false" style="font-weight:800">How to unblock ›</a></div>';
+    el.innerHTML='<button class="alert-pill" onclick="showAlertsSetup(true)">🔕 Alerts blocked <b>Fix ›</b></button>';
   }else{
     el.innerHTML='<button class="btn btn-primary" onclick="requestPushPermission()" style="margin:0">🔔 Turn On Game-Day Alerts</button>';
   }
@@ -16108,13 +16127,13 @@ function renderFoodAlertStatus(){
   if(!['food_manager','kitchen_coordinator','food_runner','kitchen_runner'].includes(role)){el.innerHTML='';return;}
   const supported=('Notification' in window)&&('serviceWorker' in navigator)&&('PushManager' in window);
   if(!supported){
-    el.innerHTML='<div class="notice warning"><b>🔕 Phone alerts not set up.</b> <a href="#" onclick="showAlertsSetup(true);return false" style="font-weight:800">How to turn them on ›</a></div>';
+    el.innerHTML='<button class="alert-pill" onclick="showAlertsSetup(true)">🔕 Phone alerts off <b>Turn on ›</b></button>';
     return;
   }
   if(Notification.permission==='granted'){
-    el.innerHTML='<div class="notice success" style="padding:8px 10px"><b>🔔 Game-day alerts ON</b> · You can leave this screen and still receive assigned/ready/due alerts.</div>';
+    el.innerHTML='';
   }else if(Notification.permission==='denied'){
-    el.innerHTML='<div class="notice warning"><b>🔕 Notifications blocked.</b> <a href="#" onclick="showAlertsSetup(true);return false" style="font-weight:800">How to unblock ›</a></div>';
+    el.innerHTML='<button class="alert-pill" onclick="showAlertsSetup(true)">🔕 Alerts blocked <b>Fix ›</b></button>';
   }else{
     el.innerHTML='<button class="btn btn-primary" onclick="requestPushPermission()" style="margin:0">🔔 Turn On Game-Day Alerts</button>';
   }
@@ -20083,15 +20102,12 @@ function renderWarehouseForRole() {
   const actions = document.getElementById('wh-role-actions');
   const help = document.getElementById('wh-first-game-help');
   const helpText = document.getElementById('wh-first-game-help-text');
-  if (title) title.textContent = (state.staffAccount && state.staffAccount.name) || roleLabel;
-  if (meta) {
-    meta.textContent = isWhMgr
-      ? 'Warehouse oversight · deliveries · inventory · planning tools'
-      : isWhSup
-        ? 'Full warehouse access · deliveries · approvals · planning tools'
-        : 'Your jobs · deliver items · QR only when convenient';
-  }
+  const nm = String((state.staffAccount && state.staffAccount.name) || '');
+  const first = nm.includes(',') ? nm.split(',')[1].trim().split(' ')[0] : nm.split(' ')[0];
+  const strip = document.getElementById('wh-role-summary');
+  if (strip) { strip.className = 'wh-hello'; strip.innerHTML = '<div class="hi">Hi ' + escapeHtml(first || 'there') + ' 👋</div><div class="sub" id="wh-hello-sub">' + (isWhMgr ? 'Warehouse Manager' : isWhSup ? 'Warehouse Supervisor' : 'Warehouse') + '</div>'; }
   if (actions) { actions.innerHTML = ''; actions.style.display = 'none'; }
+  { const cb = document.getElementById('wh-emp-cart-btn'); if (cb) cb.style.display = isWhEmp ? '' : 'none'; } // leaders have Golf Cart in Tools
   if (helpText) {
     helpText.innerHTML = (isWhMgr || isWhSup)
       ? '<b>First game:</b> the Right Now numbers are live — tap one to open it. Approvals turns red when a delivery waits for a sign-off; one tap verifies and approves.'
@@ -20105,7 +20121,7 @@ function renderWarehouseForRole() {
     const empId = state.staffAccount && state.staffAccount.empId;
     let dismissed = false;
     try { dismissed = localStorage.getItem('wh_fg_dismissed_' + (empId || 'x')) === '1'; } catch (e) {}
-    help.style.display = dismissed ? 'none' : '';
+    help.style.display = 'none'; // no explainer boxes — the screen speaks for itself
   }
 
   // Manager-only tabs — hidden entirely for employee/supervisor, since
@@ -20173,37 +20189,24 @@ function renderWarehouseForRole() {
   // .action-tiles class's display:grid via inline-style specificity,
   // which is why the tiles rendered as a vertical stack instead of the
   // intended 2-column grid. Leaving display unset lets the class control it.
-  tilesSlot.className = 'action-tiles';
+  tilesSlot.className = '';
   tilesSlot.style.cssText = 'margin-bottom:4px';
+  // Two jobs that need a person right now, big; everything else is a tool.
+  const tool = (go, ic, label, id, subId) => '<div class="wh-tool"' + (id ? ' id="' + id + '"' : '') + ' onclick="' + go + '"><div class="ic">' + ic + '</div><div class="lbl tile-label">' + label + '</div>' + (subId ? '<div class="tile-sub" id="' + subId + '"></div>' : '') + '</div>';
   tilesSlot.innerHTML =
-    // Most-used first: Approvals (turns red when something waits), the one
-    // list of all delivery work, then planning tools, then reports.
-    '<div class="action-tile" id="wh-tile-approvals" onclick="showScreen(\'screen-wh-approvals\')">' +
-      '<span class="tile-icon">✅</span><div class="tile-label">Approvals</div><div class="tile-sub" id="wh-tile-approvals-sub">Loading…</div>' +
+    '<div class="wh-big">' +
+      '<div class="wh-big-card" id="wh-tile-approvals" onclick="showScreen(\'screen-wh-approvals\')"><div class="ic">✅</div><div><div class="lbl tile-label">Approvals</div><div class="tile-sub" id="wh-tile-approvals-sub">Loading…</div></div></div>' +
+      '<div class="wh-big-card" id="wh-tile-deliveries" onclick="whMgrOpenPane(\'todeliver\')"><div class="ic">📦</div><div><div class="lbl tile-label">Deliveries</div><div class="tile-sub" id="wh-sup-tile-deliveries-sub">Stands waiting</div></div></div>' +
     '</div>' +
-    '<div class="action-tile" onclick="whMgrOpenPane(\'todeliver\')">' +
-      '<span class="tile-icon">📦</span><div class="tile-label">Deliveries</div><div class="tile-sub" id="wh-sup-tile-deliveries-sub">Stands waiting for stock</div>' +
-    '</div>' +
-    '<div class="action-tile" onclick="whMgrOpenPane(\'transfers\')">' +
-      '<span class="tile-icon">✍️</span><div class="tile-label">All Transfers</div><div class="tile-sub" id="wh-sup-tile-transfers-sub">Sign-offs + every transfer</div>' +
-    '</div>' +
-    '<div class="action-tile" onclick="showScreen(\'screen-wh-create-transfer\')">' +
-      '<span class="tile-icon">🚚</span><div class="tile-label">Create Transfer</div><div class="tile-sub">Send stock — self or assign</div>' +
-    '</div>' +
-    '<div class="action-tile" onclick="showScreen(\'screen-wh-team\')">' +
-      '<span class="tile-icon">🗺️</span><div class="tile-label">Assign & Team</div><div class="tile-sub">Who covers which stands today</div>' +
-    '</div>' +
-    '<div class="action-tile" onclick="whMgrOpenPane(\'roster\')">' +
-      '<span class="tile-icon">👥</span><div class="tile-label">My Team</div><div class="tile-sub" id="wh-tile-roster-sub">Check in/out · today\'s crew</div>' +
-    '</div>' +
-    '<div class="action-tile" id="wh-tile-cart" onclick="whMgrOpenPane(\'cart\')">' +
-      '<span class="tile-icon"><svg width="32" height="30" style="vertical-align:-6px"><use href="#gc-icon"/></svg></span><div class="tile-label">Golf Cart</div><div class="tile-sub" id="wh-tile-cart-sub">Drivers + flagged issues</div>' +
-    '</div>' +
-    '<div class="action-tile" onclick="whMgrOpenPane(\'inventory\')">' +
-      '<span class="tile-icon">📄</span><div class="tile-label">Stand Transfer Report</div><div class="tile-sub">End-of-day, per stand</div>' +
-    '</div>' +
-    '<div class="action-tile" onclick="whMgrOpenPane(\'requests\')" style="grid-column:1/-1;padding:10px 12px;min-height:0;flex-direction:row;gap:8px;justify-content:flex-start">' +
-      '<span style="font-size:18px">📥</span><div class="tile-label" style="margin:0;font-size:13px">Request history · new request for a stand</div>' +
+    '<div class="wh-tools-title">TOOLS</div>' +
+    '<div class="wh-tools">' +
+      tool("showScreen('screen-wh-create-transfer')", '🚚', 'Create Transfer') +
+      tool("whMgrOpenPane('transfers')", '✍️', 'All Transfers', '', 'wh-sup-tile-transfers-sub') +
+      tool("showScreen('screen-wh-team')", '🗺️', 'Assign & Team') +
+      tool("whMgrOpenPane('roster')", '👥', 'My Team', '', 'wh-tile-roster-sub') +
+      tool("whMgrOpenPane('cart')", '<svg width="26" height="24"><use href="#gc-icon"/></svg>', 'Golf Cart', 'wh-tile-cart', 'wh-tile-cart-sub') +
+      tool("whMgrOpenPane('inventory')", '📄', 'Stand Report') +
+      tool("whMgrOpenPane('requests')", '📥', 'Requests') +
     '</div>';
   whUpdateApprovalsTile();
   whUpdateCartTile();
@@ -20226,7 +20229,7 @@ function whBuildInventoryPane() {
     invContainer.innerHTML =
       '<div style="max-width:480px">' +
         '<div style="font-weight:700;font-size:14px;margin-bottom:4px">📄 Stand Transfer Report</div>' +
-        '<div class="notice info" style="font-size:12px">One report, split by stand — everything delivered there plus any waste the stand logged that day. This is the warehouse→stand movement for Yellow Dog\'s Purchasing/Worksheet Transfers — not stand-to-stand, which stays in Stand Reconciliation.</div>' +
+        '<div style="font-size:11.5px;color:var(--text-3);margin:2px 0 6px">Everything delivered to each stand, plus logged waste.</div>' +
         '<label class="form-label" style="margin-top:8px">Date</label>' +
         '<div style="display:flex;gap:8px;align-items:center">' +
           '<input class="form-input" type="date" id="wh-mgr-inv-date" style="margin:0;flex:1">' +
@@ -20266,7 +20269,7 @@ function whBuildCartPane() {
           '<input class="form-input" type="text" id="wh-adm-drv-name" placeholder="Full name">' +
           '<button class="btn btn-primary" onclick="adminAddDriver()" style="margin-top:6px">Add driver →</button>' +
         '</div>' +
-        '<div class="notice info" style="font-size:12px"><svg width="13" height="12" style="vertical-align:-1px"><use href="#gc-icon"/></svg> Only people on this list can take cart keys.</div>' +
+        '<div style="font-size:11.5px;color:var(--text-3);margin:2px 0 8px">Only people on this list can take cart keys.</div>' +
         '<div id="wh-adm-drv-list" style="margin-top:10px"><div class="loading"><div class="spinner"></div>Loading...</div></div>' +
       '</div>';
     loadWhCartReturns();
@@ -21118,11 +21121,14 @@ async function whUpdateApprovalsTile() {
   if (!sub) return;
   const s = await whComputeStats();
   if (!s) { sub.textContent = 'Verified deliveries'; return; }
-  const needs = s.awaitingConfirm.length + s.partialRows.length;
-  if (!needs) { sub.textContent = 'All caught up ✅'; if (tile) tile.classList.remove('tile-red'); }
+  // Deliveries waiting for a signature count here too — one place for "needs me".
+  const c = state._whTfCache, toSign = (c && Array.isArray(c.rows) ? c.rows : []).filter(t => t.status === 'delivered').length;
+  if (tile) tile.onclick = () => toSign ? whMgrOpenPane('transfers') : showScreen('screen-wh-approvals');
+  const needs = s.awaitingConfirm.length + s.partialRows.length + toSign;
+  if (!needs) { sub.textContent = 'All caught up ✅'; if (tile) tile.classList.remove('tile-red','hot'); }
   else {
-    sub.textContent = needs + ' waiting' + (s.partialRows.length ? ' · ' + s.partialRows.length + ' partial' : '');
-    if (tile) tile.classList.add('tile-red');
+    sub.textContent = (toSign ? toSign + ' to sign' : '') + (toSign && needs - toSign ? ' · ' : '') + (needs - toSign ? (needs - toSign) + ' to approve' : '') + (s.partialRows.length ? ' · ' + s.partialRows.length + ' partial' : '');
+    if (tile) tile.classList.add('tile-red','hot');
   }
 }
 // Same "at a glance" pattern as Approvals — surfaces flagged carts
@@ -21359,6 +21365,7 @@ async function loadWhToDeliver() {
   const list = Object.values(byStand).sort((a,b) => (b.urgent-a.urgent) || ((b.mine||b.transferMine)-(a.mine||a.transferMine)) || standSort(a.stand,b.stand));
   const dsub = document.getElementById('wh-sup-tile-deliveries-sub');
   if (dsub) dsub.textContent = list.length ? list.length + ' stand' + (list.length===1?'':'s') + ' waiting' : 'All caught up ✅';
+  { const hs = document.getElementById('wh-hello-sub'); if (hs && role === 'warehouse_employee') hs.textContent = list.length ? list.length + ' stand' + (list.length===1?'':'s') + ' waiting' : 'All caught up ✅'; }
 
   const badge = document.getElementById('wh-todeliver-count');
   if (badge) badge.textContent = list.length;
@@ -21799,18 +21806,18 @@ function whRenderLiveStrip() {
   const dsub = document.getElementById('wh-sup-tile-deliveries-sub');
   const openTf = tfs.filter(t => t.status === 'pending' || t.status === 'delivering').length;
   if (dsub) dsub.textContent = (waiting + openTf) ? (waiting + ' requested · ' + openTf + ' transfer' + (openTf === 1 ? '' : 's')) : 'All caught up ✅';
+  { const dc = document.getElementById('wh-tile-deliveries'); if (dc) dc.classList.toggle('hot', waiting + openTf > 0); }
+  if (state._lastToVerify !== toVerify) { state._lastToVerify = toVerify; whUpdateApprovalsTile(); } // only re-query when it changes
   const isMgr = true; // Supervisor has the Manager's full access and home screen
   const workPane = isMgr ? "whMgrOpenPane('transfers')" : "whMgrOpenPane('todeliver')";
-  const signPane = isMgr ? "showScreen('screen-wh-approvals')" : "whMgrOpenPane('transfers')";
+  const signPane = toVerify ? "whMgrOpenPane('transfers')" : "showScreen('screen-wh-approvals')";
   const chip = (n, label, cls, go) => '<div class="wh-stat-chip' + (n ? ' ' + cls : '') + '" onclick="' + go + '"><b>' + n + '</b><span>' + label + '</span></div>';
   el.style.display = '';
-  el.innerHTML = '<div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-2);margin-bottom:6px">RIGHT NOW</div><div class="wh-stat-row">' +
+  el.innerHTML = '<div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-3);margin-bottom:6px">RIGHT NOW</div><div class="wh-stat-row wh-now">' +
     chip(waiting, 'Waiting', 'warn', workPane) +
     chip(onWay, 'On the way', 'info', workPane) +
     chip(overdue, 'Overdue', 'urgent', workPane) +
-    chip(toVerify, 'To verify', 'info', signPane) +
-    chip(toApprove, 'To approve', 'urgent', signPane) +
-    (isMgr ? chip(unassigned, 'Unassigned', 'warn', "whMgrOpenPane('transfers')") : '') +
+    chip(toVerify + toApprove, 'To verify', 'urgent', signPane) +
     '</div>';
 }
 

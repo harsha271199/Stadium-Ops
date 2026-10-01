@@ -4,6 +4,20 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-01-ui-1
+- **Warehouse Manager / Supervisor home redesigned.** It now has:
+  - **"Hi Will 👋"** greeting and role in place of the name card;
+  - a slim alerts chip;
+  - **Right Now** cut to 4 numbers: Waiting · On the way · Overdue · To verify;
+  - **two big cards for the jobs that need a person** — ✅ Approvals (now also counts deliveries waiting for a signature, and opens the right list) and 📦 Deliveries. Each turns maroon when something is waiting;
+  - every other tool in a compact 3-across **Tools** grid: Create Transfer, All Transfers, Assign & Team, My Team, Golf Cart, Stand Report, Requests.
+  The "First game" explainer box is gone.
+- **Warehouse employee home:** "Hi Eli 👋 · 1 stand waiting", deliveries first, then two small side-by-side buttons (📷 Quick Drop · 🛺 Golf Cart) instead of two full-width bars above the list. No explainer box. Leaders don't get the duplicate Golf Cart button (it's in Tools).
+- **Food Runner:** the "My coverage" box is now one line ("📍 My stands · 2 stands · Show all"), and the "1️⃣ Get the food…" hint line is removed. The button says what to do.
+- **Alerts banner everywhere** is a slim chip ("🔕 Alerts blocked · Fix ›"). The green "alerts ON" banner is gone.
+- **Golf Cart and Stand Transfer Report panes:** their explanation boxes are now one short muted line.
+- **Manager / Support Manager / Supervisor:** the duplicate **Stand Chat** button is removed. The floating 💬 Chat button does the same thing and shows the unread count. Nothing else on those screens changed.
+
 ## 2026-10-01-chat-4
 - **Chat request buttons cut to 4: 💵 Refund · 😠 Customer complaint · 🏷️ Comp / price · 🆘 SOS**, under "NEED A SUPERVISOR FOR…". Anything else, people just type. The stand side's quick-message row ("Need a Supervisor at the stand", etc.) is gone.
 - **Requests show as cards:** a colored header ("💵 REFUND REQUEST"), who asked and their role, 📍 the stand, the typed detail, and the status (⏳ Waiting for a reply → 🏃 Sue is on the way → ✅ Handled by Sue). Supervisors and Managers get **🏃 On my way** / **✅ Done** buttons right on the card, which reply to the person who asked. Replies show as "↩ Re: Refund request".
