@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#E4002B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -455,6 +455,7 @@
   .chat-to .chip.selected{background:var(--asu-maroon);color:#fff;border-color:var(--asu-maroon)}
   .chat-inbox-row.unread{border-left:4px solid var(--aramark-red)}
   .chat-req{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+  html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .alert-pill{display:inline-flex;align-items:center;gap:8px;border:1px solid #FCD34D;background:#FFFBEB;color:#92400E;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
   .alert-pill b{color:#B45309}
   .wh-hello{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:2px 2px 10px}
@@ -4385,7 +4386,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-10-01-ui-1';
+const BUILD_TAG = '2026-10-01-ui-2';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5015,20 +5016,28 @@ function urgNorm(u){ const x=(u||'').toLowerCase(); if(x.includes('urg'))return'
 // last name); tier 3 = first name only. Best tier wins; a tie between two
 // different people asks for the full last name.
 function loginFold(x){return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
-function loginEdit1(a,b){if(a===b)return true;if(Math.abs(a.length-b.length)>1)return false;let i=0,j=0,d=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue;}if(++d>1)return false;if(a.length>b.length)i++;else if(b.length>a.length)j++;else{i++;j++;}}return d+(a.length-i)+(b.length-j)<=1;}
+function loginDist(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array.from({length:n+1},(_,k)=>k);for(let x=1;x<=m;x++){const c=[x];for(let y=1;y<=n;y++){c[y]=Math.min(p[y]+1,c[y-1]+1,p[y-1]+(a[x-1]===b[y-1]?0:1));}p=c;}return p[n];}
+// "Mostly right" = a few letters off, scaled to the name's length.
+function loginClose(e,target){if(!e||!target)return false;const allow=target.length>=9?3:target.length>=6?2:target.length>=4?1:0;return loginDist(e,target)<=allow;}
 function loginNameTier(entered,fullName){
   const L=x=>loginFold(x).replace(/[^a-z]/g,'');
   const e=L(entered);if(e.length<2)return 0;
   const nm=String(fullName||'').trim();
   const lastRaw=nm.includes(',')?nm.split(',')[0]:nm.split(/\s+/).pop();
   const firstRaw=nm.includes(',')?nm.split(',').slice(1).join(' '):nm.split(/\s+/).slice(0,-1).join(' ');
-  const last=L(lastRaw),first=L(firstRaw);if(!last)return 0;
-  if(e===last||e===last+first||e===first+last)return 1;
+  const last=L(lastRaw),first=L(firstRaw),firstWord=L(String(firstRaw).trim().split(/\s+/)[0]||'');if(!last)return 0;
+  if(e===last||e===last+first||e===first+last||e===firstWord+last||e===last+firstWord)return 1;
+  // Close enough: start of the last name (3+ letters), any 4+ letters inside
+  // it, one word of a two-word last name, or a few typos (incl. full name
+  // typed). Fewer typos rank higher, so "qawhsupp" picks Qawhsup over Qawhemp.
   if(e.length>=3&&last.startsWith(e))return 2;
-  if(loginFold(lastRaw).split(/[^a-z]+/).filter(t=>t.length>=3).includes(e))return 2;
-  if(e.startsWith(last)&&last.length>=3)return 2;
-  if(last.length>=5&&loginEdit1(e,last))return 2;
-  if(first&&e.length>=3&&(e===first||first.split(/\s+/)[0]===e))return 3;
+  if(e.length>=4&&last.includes(e))return 2;
+  if(last.length>=3&&e.includes(last))return 2;
+  const cands=[last,firstWord+last,last+firstWord].concat(loginFold(lastRaw).split(/[^a-z]+/).filter(t=>t.length>=3));
+  let best=99;cands.forEach(t=>{if(loginClose(e,t))best=Math.min(best,loginDist(e,t));});
+  if(e.length>=4&&loginClose(e.slice(0,last.length),last))best=Math.min(best,loginDist(e.slice(0,last.length),last)+0.5);
+  if(best<99)return 2+best/10;
+  if(firstWord&&e.length>=3&&(e===firstWord||loginClose(e,firstWord)))return 3+(e===firstWord?0:loginDist(e,firstWord)/10);
   return 0;
 }
 function loginPickByName(rows,entered,nameOf,idOf){
@@ -7320,9 +7329,7 @@ function isWhLeaderSession() { return isWarehouseManagerSession() || isWarehouse
 // Tell every other warehouse leader (manager + supervisors) about a sign-off.
 function whNotifyOtherLeaders(title, body) {
   const me = String((state.staffAccount && state.staffAccount.empId) || '');
-  sb('staff_accounts?role=in.(warehouse_manager,warehouse_supervisor)&is_active=eq.true&select=employee_id').then(rows => {
-    if (!rows._err && Array.isArray(rows)) rows.filter(m => String(m.employee_id) !== me).forEach(m => sendPushTo(m.employee_id, title, body));
-  }).catch(() => {});
+  pushOnDuty(['warehouse_manager','warehouse_supervisor'], title, body, me);
 }
 function isWarehouseSupervisorSession() {
   return !!(state.staffAccount && state.staffAccount.role === 'warehouse_supervisor');
@@ -9008,7 +9015,7 @@ async function submitStock() {
         assignedIds.forEach(id => sendPushTo(id,'📥 New request for your stand',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):'')));
         // Covered stand: only the routed people are buzzed. Leaders watch the live strip; they hear about it if it runs late.
       }
-      else sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor,warehouse_manager)&is_active=eq.true&select=employee_id').then(whs=>{ if(!whs._err&&Array.isArray(whs)) whs.forEach(w=>sendPushTo(w.employee_id,'📥 New stock request',targetStand+etaLabel+(itemsText?' — '+itemsText.slice(0,55):''))); }).catch(()=>{});
+      else pushOnDuty(['warehouse_employee','warehouse_supervisor','warehouse_manager'],'📥 New stock request · '+targetStand,(etaLabel?etaLabel.replace(/^ · /,'')+' — ':'')+(itemsText?itemsText.slice(0,70):''));
       const supportRoute=[]; // managers are not buzzed for every new request (late ones escalate)
       const routeLabel = assignedNames.length ? (' → '+assignedNames.join(', ')) : '';
       const monitorLabel=supportRoute.length?(' · '+supportRoute.length+' coverage manager'+(supportRoute.length===1?'':'s')+' notified'):'';
@@ -14780,7 +14787,7 @@ async function submitKitchenRequest(){
   if(!_kitchenPreview){
     const foodMgrs=await sb('staff_accounts?role=in.(food_manager,kitchen_coordinator)&is_active=eq.true&select=employee_id').catch(()=>({_err:true}));
     if(!foodMgrs._err&&Array.isArray(foodMgrs)&&foodMgrs.length){
-      if(!autoAssignId)foodMgrs.forEach(x=>sendPushTo(x.employee_id,'🍽️ Food order needs a runner · '+stand,row.items.slice(0,90)+' · '+kitchenEtaText(row)+(autoAssignName?' · auto-assigned to '+autoAssignName:' · unclaimed')));
+      if(!autoAssignId)pushOnDuty(['food_manager','kitchen_coordinator'],'🍽️ Food order needs a runner · '+stand,row.items.slice(0,90)+' · '+kitchenEtaText(row)+(autoAssignName?' · auto-assigned to '+autoAssignName:' · unclaimed'));
     }
     if(autoAssignId){
       // Real assignment now, not just a heads-up — this is the request
@@ -14790,8 +14797,7 @@ async function submitKitchenRequest(){
     }else{
       // No runner covers this stand's area — falls into the normal
       // self-serve Available Jobs queue, same as before.
-      const foodTeam=await sb('staff_accounts?role=in.(food_runner,kitchen_runner)&is_active=eq.true&select=employee_id').catch(()=>({_err:true}));
-      if(!foodTeam._err&&Array.isArray(foodTeam))foodTeam.forEach(x=>sendPushTo(x.employee_id,'🍽️ New food delivery request',stand+' · '+row.items.slice(0,75)));
+      pushOnDuty(['food_runner','kitchen_runner'],'🍽️ New food order · '+stand,row.items.slice(0,75));
     }
   }
   toast(made._queued?'📤 Food request queued — will send when WiFi returns':('🍔 Food request sent'+(autoAssignName?' · assigned to '+autoAssignName:'')));
@@ -15791,12 +15797,15 @@ async function notifyStandPeople(stand,title,body){
   (await notifyStandLeadsAndSupervisors(stand,title,body).catch(()=>[])).forEach(id=>ids.delete(String(id)));
   ids.forEach(id=>sendPushTo(id,title,body));
 }
-async function notifyStandLeadsAndSupervisors(stand,title,body){
-  const day=stadiumDay();
+// Routine stand updates (warehouse on the way / delivered, IT on the way /
+// fixed) go to the stand's Stand Lead(s) only — supervisors aren't buzzed for
+// every delivery. skipIds = people already told (e.g. the requester).
+async function notifyStandLeadsAndSupervisors(stand,title,body,skipIds){
+  const day=stadiumDay(),skip=new Set((skipIds||[]).map(String));
   const rows=await sb('schedule?event_date=eq.'+encodeURIComponent(day)+'&location=eq.'+encodeURIComponent(stand)+'&select=employee_id,role').catch(()=>({_err:true}));
   if(rows._err||!Array.isArray(rows))return [];
-  const ids=[...new Set(rows.filter(r=>/supervisor|stand lead/i.test(String(r.role||''))).map(r=>String(r.employee_id||'')).filter(Boolean))];
-  ids.forEach(id=>sendPushTo(id,title,body));
+  const ids=[...new Set(rows.filter(r=>/stand lead/i.test(String(r.role||''))).map(r=>String(r.employee_id||'')).filter(Boolean))];
+  ids.forEach(id=>{if(!skip.has(id))sendPushTo(id,title,body);});
   return ids;
 }
 
@@ -15998,6 +16007,17 @@ async function markOnDuty() {
 }
 setInterval(markOnDuty, 120000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) markOnDuty(); });
+// Group alerts ("all warehouse", "all techs"…) only reach people of that role
+// who have signed in today — never every account that exists.
+async function onDutyIds(roles) {
+  const rows = await sb('on_duty?day=eq.' + stadiumDay() + '&role=in.(' + roles.join(',') + ')&select=employee_id').catch(()=>({_err:true}));
+  return Array.isArray(rows) ? [...new Set(rows.map(r => String(r.employee_id)))] : [];
+}
+async function pushOnDuty(roles, title, body, exceptId) {
+  const ids = await onDutyIds(roles);
+  ids.forEach(id => { if (id !== String(exceptId||'')) sendPushTo(id, title, body); });
+  return ids.length;
+}
 async function managersOnDuty() {
   const rows = await sb('on_duty?day=eq.' + stadiumDay() + '&role=in.(manager,admin,support_manager)&select=employee_id,name,role').catch(()=>({_err:true}));
   return Array.isArray(rows) ? rows : [];
@@ -16366,10 +16386,7 @@ async function checkOverdueStockRequests() {
       const recipients=new Set();
       const cov=await coverageResolveStand('stock',r.stand).catch(()=>({support:[]}));
       (cov.support||[]).forEach(x=>{if(x.employee_id)recipients.add(String(x.employee_id));});
-      if(!recipients.size){
-        const leaders=await sb('staff_accounts?is_active=eq.true&role=eq.warehouse_manager&select=employee_id').catch(()=>({_err:true}));
-        if(!leaders._err&&Array.isArray(leaders))leaders.forEach(x=>{if(x.employee_id)recipients.add(String(x.employee_id));});
-      }
+      if(!recipients.size)(await onDutyIds(['warehouse_manager','warehouse_supervisor'])).forEach(id=>recipients.add(id));
       recipients.forEach(id=>sendPushTo(id,title,body));
       (r.assignedToIds||[]).forEach(id=>sendPushTo(id,'⏱ Delivery overdue',r.stand+' · '+minsOver+'m past ETA'));
       await markRequestEtaEscalated(raw,new Date().toISOString());
@@ -16417,10 +16434,7 @@ async function checkOverdueFoodRequests() {
       const recipients=new Set();
 
       // Food Managers own late food; stadium managers only via their coverage area.
-      const leaders=await sb('staff_accounts?is_active=eq.true&role=in.(food_manager,kitchen_coordinator)&select=employee_id').catch(()=>({_err:true}));
-      if(!leaders._err&&Array.isArray(leaders)){
-        leaders.forEach(x=>{if(x.employee_id)recipients.add(String(x.employee_id));});
-      }
+      (await onDutyIds(['food_manager','kitchen_coordinator'])).forEach(id=>recipients.add(id));
 
       // The Support/Manager assigned to this game's coverage area also gets it.
       const cov=await coverageResolveStand('food',r.stand).catch(()=>({support:[],operational:[]}));
@@ -16985,9 +16999,7 @@ async function gcSubmitInspection() {
       // Push both warehouse managers and stand/game managers — a flagged
       // cart is exactly the kind of thing that shouldn't wait for someone
       // to happen to open the app and notice.
-      sb('staff_accounts?role=eq.warehouse_manager&is_active=eq.true&select=employee_id').then(mgrs => {
-        if (!mgrs._err && Array.isArray(mgrs)) mgrs.forEach(m => sendPushTo(m.employee_id, '🚫 Cart ' + _gcSelectedKey + ' flagged', (comments || 'Issue found on pre-use inspection') + ' — reported by ' + _gcUser.name));
-      }).catch(() => {});
+      pushOnDuty(['warehouse_manager','warehouse_supervisor'], '🚫 Cart ' + _gcSelectedKey + ' flagged', (comments || 'Issue found on pre-use inspection') + ' — reported by ' + _gcUser.name);
     }
   });
   if (flagged) {
@@ -17074,9 +17086,7 @@ function notifyCartManagers(title, body) {
   // notifications as Manager now — previously only warehouse_manager and
   // (stand) manager heard about a flagged cart, meaning a supervisor
   // covering the warehouse solo had no idea a cart went out of service.
-  sb('staff_accounts?role=in.(warehouse_manager,warehouse_supervisor)&is_active=eq.true&select=employee_id').then(mgrs => {
-    if (!mgrs._err && Array.isArray(mgrs)) mgrs.forEach(m => sendPushTo(m.employee_id, title, body));
-  }).catch(() => {});
+  pushOnDuty(['warehouse_manager','warehouse_supervisor'], title, body);
 }
 
 async function gcReturnSubmit() {
@@ -19905,7 +19915,7 @@ async function submitITIssue() {
       // is (any active tech can pick it up), so this pushes to all of
       // them rather than a single userId.
       // Small IT team: every active Tech gets every ticket. No area assignment required.
-      sb('staff_accounts?role=eq.tech&is_active=eq.true&select=employee_id').then(techs=>{if(!techs._err&&Array.isArray(techs))techs.forEach(t=>sendPushTo(t.employee_id,'🔧 New IT ticket',targetStand+' — '+state.itCategory));}).catch(()=>{});
+      pushOnDuty(['tech'],'🔧 New IT ticket · '+targetStand,state.itCategory);
       toast('🔧 IT alerted!');
       document.querySelectorAll('#it-cat-row .chip, #it-sub-row .chip').forEach(c => c.classList.remove('selected'));
       document.getElementById('it-sub-section').style.display = 'none';
@@ -21473,7 +21483,7 @@ async function whStartDeliveryForStand(stand, transferId) {
       if(res.ok){
         claimedAny=true;
         if(res.requesterId)sendPushTo(res.requesterId,'🚚 Stock is on the way',who+' is bringing your request to '+stand);
-        notifyStandLeadsAndSupervisors(stand,'🚚 Warehouse on the way',who+' claimed a stock request for '+stand);
+        notifyStandLeadsAndSupervisors(stand,'🚚 Stock on the way · '+stand,who+' is bringing it',[res.requesterId]);
       }
     }
     const requestTransferId=await whGetOrCreateRequestTransfer(stand);
@@ -22741,7 +22751,7 @@ async function tsCompleteDelivery(opts) {
     for (const reqId of linkedRequestIds) {
       const res = await api('updateStockStatus', { requestId: reqId, status: 'Fulfilled', warehouseMessage: '' }).catch(()=>({ok:false}));
       if (res.ok && res.requesterId) sendPushTo(res.requesterId, '✅ Stock delivered', (res.stand||_tsTransfer.stand) + ' — your request was fulfilled');
-      if(res.ok)notifyStandLeadsAndSupervisors(res.stand||_tsTransfer.stand,'✅ Stock delivered',(res.stand||_tsTransfer.stand)+' — warehouse completed the request');
+      if(res.ok)notifyStandLeadsAndSupervisors(res.stand||_tsTransfer.stand,'✅ Stock delivered · '+(res.stand||_tsTransfer.stand),'Warehouse completed the request',[res.requesterId]);
     }
 
     // Manager sign-off/approval chain (delivered → verified → confirmed)
@@ -22813,20 +22823,11 @@ async function tsCompleteDelivery(opts) {
       _tsTransfer.wh_confirmed_at = patchBody.wh_confirmed_at;
     }
     if(finalStatus==='delivered'){
-      sb('staff_accounts?role=eq.warehouse_supervisor&is_active=eq.true&select=employee_id').then(rows=>{
-        // A supervisor who made this delivery himself can't sign it off, so
-        // he isn't the one to alert — if nobody else is on, it goes to the
-        // manager instead (same fallback as "no supervisor on shift").
-        const meId=String((state.staffAccount&&state.staffAccount.empId)||'');
-        const others=(!rows._err&&Array.isArray(rows))?rows.filter(x=>String(x.employee_id)!==meId):[];
-        if(others.length){
-          others.forEach(x=>sendPushTo(x.employee_id,'📦 Delivery ready to verify',_tsTransfer.stand+' · delivered by '+deliveredByName));
-        }else{
-          // No active supervisor covering this game — the manager is the
-          // only one left who'd otherwise never hear this needs verifying.
-          sb('staff_accounts?role=eq.warehouse_manager&is_active=eq.true&select=employee_id').then(mgrs=>{if(!mgrs._err&&Array.isArray(mgrs))mgrs.forEach(x=>sendPushTo(x.employee_id,'📦 Delivery ready to verify',_tsTransfer.stand+' · delivered by '+deliveredByName+' · no supervisor on shift'));}).catch(()=>{});
-        }
-      }).catch(()=>{});
+      // On-duty warehouse supervisors (not the one who delivered it); nobody on → on-duty warehouse managers.
+      (async()=>{const meId=String((state.staffAccount&&state.staffAccount.empId)||'');
+        const sups=(await onDutyIds(['warehouse_supervisor'])).filter(id=>id!==meId);
+        const to=sups.length?sups:(await onDutyIds(['warehouse_manager'])).filter(id=>id!==meId);
+        to.forEach(id=>sendPushTo(id,'📦 Ready to verify · '+_tsTransfer.stand,'Delivered by '+deliveredByName));})();
     }
     if (selfHandled) {
       toast(finalStatus === 'confirmed' ? '✅ Delivered, verified & confirmed — done' : '✅ Delivered & verified — waiting on the stand manager\'s final receipt');
@@ -23226,7 +23227,7 @@ async function claimReq(id) {
   if (res.ok || res.simulated) {
     toast('🚚 On the way — stand notified');
     if (res.requesterId) sendPushTo(res.requesterId, '🚚 Stock is on the way', who + ' claimed your request' + (res.stand ? ' for ' + res.stand : ''));
-    if(res.stand)notifyStandLeadsAndSupervisors(res.stand,'🚚 Warehouse on the way',who+' claimed a stock request for '+res.stand);
+    if(res.stand)notifyStandLeadsAndSupervisors(res.stand,'🚚 Stock on the way · '+res.stand,who+' is bringing it',[res.requesterId]);
     loadWarehouse();
   } else {
     toast(res.error || 'Someone else may have claimed this — refreshing', 'error');

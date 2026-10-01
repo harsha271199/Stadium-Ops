@@ -4,6 +4,26 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-01-ui-2
+- **Sign-in accepts a name that's mostly right.** The ID digits are still required. The name can now be:
+  - a few letters off, scaled to its length: 1 for 4–5 letters, 2 for 6–8, 3 for 9+ ("bntley", "flenrd", "herandez", "vangamplr");
+  - any 4+ letters from inside it ("entley");
+  - the first name alone if it's unique.
+  
+  The closest match wins, so "qawhsupp" signs in Qawhsup, not Qawhemp. Two people with the same last name still get asked for the full name, and one or two letters alone are still rejected.
+- **No more zooming while entering stock.** The page header now stops the phone from zooming into input boxes, and a style stops the double-tap zoom when tapping + / − quickly. This applies to every screen.
+- **Group alerts only reach people signed in today.** These used to go to every active account in the group:
+  - new stock request at a stand with no warehouse person assigned (all ~40 warehouse accounts);
+  - new IT ticket (every tech);
+  - food order with no runner (every runner and Food Manager);
+  - warehouse sign-offs, "ready to verify", golf-cart flags (every warehouse leader);
+  - late stock with nobody covering the stand (every warehouse manager);
+  - late food (every Food Manager).
+- **One alert per event.**
+  - When the warehouse claims or delivers a stock request, the requester gets one alert. The stand's other Stand Lead(s) get one only if they didn't ask (before, the requester got both "Stock is on the way" and "Warehouse on the way").
+  - Stand supervisors are no longer buzzed for every routine delivery or IT update; Stand Leads still are.
+  - Titles: "🚚 Stock on the way · stand", "✅ Stock delivered · stand", "🔧 New IT ticket · stand", "📦 Ready to verify · stand".
+
 ## 2026-10-01-ui-1
 - **Warehouse Manager / Supervisor home redesigned.** It now has:
   - **"Hi Will 👋"** greeting and role in place of the name card;
