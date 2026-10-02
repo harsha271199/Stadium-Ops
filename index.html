@@ -4400,7 +4400,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-10-02-grp-1';
+const BUILD_TAG = '2026-10-02-grp-2';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5031,24 +5031,31 @@ function urgNorm(u){ const x=(u||'').toLowerCase(); if(x.includes('urg'))return'
 // different people asks for the full last name.
 // Warehouse screens show people as "First Last" (the database keeps "Last, First"
 // so sign-in and everything else keep working). Display only.
-// One open request per stand per type (Stock / Food / IT). Checked live
-// against the database at the moment of sending, so two phones can't both
-// slip a request through. Only requests from the last 18h count, so a stale
-// row from an earlier game can never lock a stand out.
+// Open-request limits per stand: IT 1, Food 3, Stock 3 for portables / small
+// kiosks (P, M, T, B stands) and 5 for the big stands. Checked live against the
+// database when sending, so two phones can't both slip past. A request that is
+// delivered / resolved frees its slot straight away. Only the last 18h count.
+function openRequestLimit(kind, stand){
+  if(kind==='it')return 1;
+  if(kind==='food')return 3;
+  const small=/^\s*\d{3}\s*[PMTB]\b/i.test(String(stand||''))||/portable/i.test(String(stand||''));
+  return small?3:5;
+}
 async function openRequestGuard(kind, stand){
   if(!stand)return null;
   const since=encodeURIComponent(new Date(Date.now()-18*3600*1000).toISOString());
   const st=encodeURIComponent(stand);
-  let url,label,who;
-  if(kind==='stock'){url='stock_requests?stand=eq.'+st+'&status=in.(open,claimed)&created_at=gte.'+since+'&order=created_at.desc&limit=1&select=requested_by,created_at,status';label='Stock';}
-  else if(kind==='food'){url='kitchen_requests?stand=eq.'+st+'&status=not.in.(delivered,cancelled)&created_at=gte.'+since+'&order=created_at.desc&limit=1&select=requested_by,created_at,status';label='Food';}
-  else {url='it_issues?stand=eq.'+st+'&status=neq.resolved&created_at=gte.'+since+'&order=created_at.desc&limit=1&select=reported_by,created_at,status';label='IT';}
+  const limit=openRequestLimit(kind,stand);
+  let url,label;
+  if(kind==='stock'){url='stock_requests?stand=eq.'+st+'&status=in.(open,claimed)&created_at=gte.'+since+'&order=created_at.desc&select=requested_by,created_at,status';label='Stock';}
+  else if(kind==='food'){url='kitchen_requests?stand=eq.'+st+'&status=not.in.(delivered,cancelled)&created_at=gte.'+since+'&order=created_at.desc&select=requested_by,created_at,status';label='Food';}
+  else {url='it_issues?stand=eq.'+st+'&status=neq.resolved&created_at=gte.'+since+'&order=created_at.desc&select=reported_by,created_at,status';label='IT';}
   const rows=await sb(url).catch(()=>({_err:true}));
-  if(rows._err||!Array.isArray(rows)||!rows.length)return null;
+  if(rows._err||!Array.isArray(rows)||rows.length<limit)return null;
   const r=rows[0];
   const mins=Math.max(0,Math.round((Date.now()-new Date(r.created_at))/60000));
   const ago=mins<1?'just now':mins===1?'1 min ago':mins+' min ago';
-  return '🔒 '+stand+' already has an open '+label+' request ('+(r.requested_by||r.reported_by||'someone')+', '+ago+'). Only one at a time — wait until it is completed, or ask your Supervisor.';
+  return '🔒 '+stand+' already has '+rows.length+' open '+label+' request'+(rows.length===1?'':'s')+' (limit '+limit+'; latest by '+(r.requested_by||r.reported_by||'someone')+', '+ago+'). As soon as one is completed you can send the next.';
 }
 function whDisp(n){n=String(n==null?'':n).trim();if(!n||!n.includes(','))return n;const i=n.indexOf(',');const last=n.slice(0,i).trim(),first=n.slice(i+1).trim();return (first?first+' ':'')+last;}
 function loginFold(x){return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
@@ -5749,7 +5756,7 @@ async function api(action, data) {
       return { ok:true, transfers: filtered };
     }
     case 'getMyRequests': {
-      const rows = await sb('stock_requests?stand=eq.'+encodeURIComponent(data.stand)+'&order=created_at.desc&select=*');
+      const rows = await sb('stock_requests?stand=eq.'+encodeURIComponent(data.stand)+'&created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*');
       if (rows._err) return {ok:false,error:'Network'};
       return { ok:true, requests: rows.map(mapStock) };
     }
@@ -5810,12 +5817,12 @@ async function api(action, data) {
       return r._err ? {ok:false,error:'Could not submit'} : {ok:true, id:'IT'};
     }
     case 'getITIssues': {
-      const rows = await sb('it_issues?order=created_at.desc&select=*');
+      const rows = await sb('it_issues?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*');
       if (rows._err) return {ok:false,error:'Network'};
       return { ok:true, issues: rows.map(mapIT) };
     }
     case 'getMyITIssues': {
-      const rows = await sb('it_issues?stand=eq.'+encodeURIComponent(data.stand)+'&order=created_at.desc&select=*');
+      const rows = await sb('it_issues?stand=eq.'+encodeURIComponent(data.stand)+'&created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*');
       if (rows._err) return {ok:false,error:'Network'};
       return { ok:true, issues: rows.map(mapIT) };
     }
@@ -14692,7 +14699,7 @@ function kitchenEtaText(r){if(!r||!r.eta_deadline)return ''; const ms=new Date(r
 function kitchenItemsText(r){const a=r&&r.items_json&&Array.isArray(r.items_json.items)?r.items_json.items:[];return a.map(x=>escapeHtml(x.itemName)+' ×'+Number(x.qty||0)).join(' · ')||escapeHtml(r.items||'Food');}
 
 async function kitchenFetchRequests(){
-  const rows=await sb('kitchen_requests?order=created_at.desc&limit=200&select=*').catch(()=>({_err:true,status:0}));
+  const rows=await sb('kitchen_requests?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&limit=200&select=*').catch(()=>({_err:true,status:0}));
   if(kitchenIsMissing(rows)){
     _kitchenPreview=true;
     const local=kitchenLocalRequests();state._kitchenRowsCache=local;return local;
@@ -14845,7 +14852,7 @@ async function loadExistingKitchenRequestsForStand(stand){
   // arrive.
   const mostRecent=open[0];
   const recentMins=mostRecent?Math.max(0,Math.round((Date.now()-new Date(mostRecent.created_at||Date.now()))/60000)):999;
-  state._kitchenHoldActive=recentMins<10;
+  state._kitchenHoldActive=false; // replaced by the 3-open-requests limit
   const holdWrap=document.getElementById('kitchen-hold-override-wrap');
   if(holdWrap){
     if(state._kitchenHoldActive){
@@ -16555,7 +16562,7 @@ async function checkOverdueStockRequests() {
   const actorRole = state.staffAccount ? state.staffAccount.role : (state.user && state.user.role);
   if (!['manager','admin','support_manager','warehouse_manager','warehouse_supervisor','supervisor'].includes(actorRole)) return;
   try {
-    const rawRows = await sb('stock_requests?status=in.(open,claimed)&order=created_at.asc&select=*');
+    const rawRows = await sb('stock_requests?status=in.(open,claimed)&created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.asc&select=*');
     if (rawRows._err || !Array.isArray(rawRows)) return;
     const now=Date.now();
     for (const raw of rawRows) {
@@ -18300,7 +18307,7 @@ async function loadLedgerTransferTotals() {
 
 async function loadTsStockRequests(stand) {
   const area = document.getElementById('ts-stock-requests-area');
-  let rows = await sb('stock_requests?stand=eq.'+encodeURIComponent(stand)+'&status=in.(open,claimed)&order=created_at.desc&select=*').catch(()=>({_err:true}));
+  let rows = await sb('stock_requests?stand=eq.'+encodeURIComponent(stand)+'&status=in.(open,claimed)&created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*').catch(()=>({_err:true}));
   if (rows._err || !Array.isArray(rows)) { area.style.display = 'none'; return; }
   if(state.staffAccount&&state.staffAccount.role==='warehouse_employee')rows=rows.filter(whRawRequestRoutedToMe);
 

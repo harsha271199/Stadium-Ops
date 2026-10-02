@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-02-grp-2
+- **Open-request limits per stand** (replaces the one-at-a-time rule from grp-1): **IT 1**, **Food 3**, **Stock 3** for portables and small kiosks (P / M / T / B stands) and **5** for the big stands. The moment a request is delivered or resolved its slot frees up and the stand can send the next. The old 10-minute Food hold is gone (the limit replaces it).
+- **Fresh game: no old requests anywhere.** Stock, Food and IT lists (stand screens, manager/support views, warehouse queue, "My IT tickets") only show requests from the current game day (the day rolls over at 6 AM). Chat already only showed the current day.
+- Live database: 9/30 practice data removed (test accounts, schedule, kitchen runner assignment, practice chat, on-duty log, and practice stock requests / transfers after the Sep 5–6 game). Warehouse logins created for Cassidy Cole and Shawn Harris (60000 + last name).
+
 ## 2026-10-02-grp-1
 - **One open request per stand — Stock, Food and IT.** If a stand already has an open request of that type (not yet delivered / resolved), a second one is refused with who sent it and when. Checked live against the database at the moment of sending, so two phones can't both slip one through; only the last 18 hours count so an old row can't lock a stand. Other stands, and other request types, are unaffected. Once the request is delivered or resolved, the stand can send a new one.
 - **Temp warehouse workers (walk-ins).** Warehouse Manager / Supervisor → Roster → **➕ Add temp warehouse worker**: search the name (or employee ID) in the ASU employee list, tap the person, confirm. They get a warehouse login with their real employee ID, sign in with **60000 + last name**, and are added to today's roster so they show in check-in and in Assign & Team.
