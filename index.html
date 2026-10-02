@@ -4282,16 +4282,19 @@
   <div class="content">
     <div id="wh-coverage-card">
       <div id="whcov-summary" style="margin-bottom:10px"></div>
-      <input class="form-input" type="text" id="whcov-people-search" placeholder="🔍 Find a person" oninput="whCovRenderPeople()" style="margin-bottom:8px">
+      <div id="whcov-groups-legend" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:8px"><input class="form-input" type="text" id="whcov-people-search" placeholder="🔍 Find a person" oninput="whCovRenderPeople()" style="margin:0;flex:1"><button class="btn btn-ghost" id="whcov-bulk-btn" onclick="whCovToggleBulk()" style="width:auto;margin:0;padding:0 12px;white-space:nowrap;font-size:12px">☑ Select several</button></div>
+      <div id="whcov-bulk-bar" style="display:none;position:sticky;top:0;z-index:5;background:var(--surface,#fff);border:2px solid var(--asu-maroon);border-radius:10px;padding:10px;margin-bottom:8px"></div>
       <div id="whcov-people"><div class="loading"><div class="spinner"></div>Loading…</div></div>
       <div class="card" id="whcov-editor" style="display:none;padding:12px;margin:-4px 0 12px;border:2px solid var(--asu-maroon)">
         <select id="whcov-person" style="display:none" onchange="warehouseCoveragePersonChanged()"></select>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:850;font-size:14px" id="whcov-editor-name">—</div><button class="btn btn-ghost" onclick="whCovClose()" style="width:auto;margin:0;padding:5px 10px;font-size:12px">Close</button></div>
-        <label class="form-label">Areas <span style="font-weight:600;color:var(--text-3)">(number = people already there)</span></label>
-        <div class="coverage-area-chips" id="whcov-areas"></div>
-        <label class="form-label">Extra stands</label>
-        <input class="form-input" type="text" id="whcov-stand-search" placeholder="🔍 Stand name or number" oninput="whCovRenderStands()" style="margin-bottom:6px">
-        <div id="whcov-stands-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 8px"></div>
+        <label class="form-label">Group <span style="font-weight:600;color:var(--text-3)">(tap one or more · number = people already there)</span></label>
+        <div class="coverage-area-chips" id="whcov-groups"></div>
+        <div id="whcov-areas" style="display:none"></div>
+        <details style="margin-top:8px"><summary style="font-size:12px;font-weight:700;color:var(--text-2);cursor:pointer">Need one single stand instead? (optional)</summary>
+        <input class="form-input" type="text" id="whcov-stand-search" placeholder="🔍 Stand name or number" oninput="whCovRenderStands()" style="margin:6px 0">
+        <div id="whcov-stands-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 8px"></div></details>
         <button class="btn btn-primary" onclick="warehouseCoverageSave()" style="margin-top:10px">✅ Save</button>
         <button class="btn btn-ghost" onclick="warehouseCoverageClear()" style="margin-top:6px;border-color:#DC2626;color:#DC2626">Take off all stands</button>
       </div>
@@ -4397,7 +4400,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-10-02-wh-1';
+const BUILD_TAG = '2026-10-02-grp-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5028,6 +5031,25 @@ function urgNorm(u){ const x=(u||'').toLowerCase(); if(x.includes('urg'))return'
 // different people asks for the full last name.
 // Warehouse screens show people as "First Last" (the database keeps "Last, First"
 // so sign-in and everything else keep working). Display only.
+// One open request per stand per type (Stock / Food / IT). Checked live
+// against the database at the moment of sending, so two phones can't both
+// slip a request through. Only requests from the last 18h count, so a stale
+// row from an earlier game can never lock a stand out.
+async function openRequestGuard(kind, stand){
+  if(!stand)return null;
+  const since=encodeURIComponent(new Date(Date.now()-18*3600*1000).toISOString());
+  const st=encodeURIComponent(stand);
+  let url,label,who;
+  if(kind==='stock'){url='stock_requests?stand=eq.'+st+'&status=in.(open,claimed)&created_at=gte.'+since+'&order=created_at.desc&limit=1&select=requested_by,created_at,status';label='Stock';}
+  else if(kind==='food'){url='kitchen_requests?stand=eq.'+st+'&status=not.in.(delivered,cancelled)&created_at=gte.'+since+'&order=created_at.desc&limit=1&select=requested_by,created_at,status';label='Food';}
+  else {url='it_issues?stand=eq.'+st+'&status=neq.resolved&created_at=gte.'+since+'&order=created_at.desc&limit=1&select=reported_by,created_at,status';label='IT';}
+  const rows=await sb(url).catch(()=>({_err:true}));
+  if(rows._err||!Array.isArray(rows)||!rows.length)return null;
+  const r=rows[0];
+  const mins=Math.max(0,Math.round((Date.now()-new Date(r.created_at))/60000));
+  const ago=mins<1?'just now':mins===1?'1 min ago':mins+' min ago';
+  return '🔒 '+stand+' already has an open '+label+' request ('+(r.requested_by||r.reported_by||'someone')+', '+ago+'). Only one at a time — wait until it is completed, or ask your Supervisor.';
+}
 function whDisp(n){n=String(n==null?'':n).trim();if(!n||!n.includes(','))return n;const i=n.indexOf(',');const last=n.slice(0,i).trim(),first=n.slice(i+1).trim();return (first?first+' ':'')+last;}
 function loginFold(x){return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
 function loginDist(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array.from({length:n+1},(_,k)=>k);for(let x=1;x<=m;x++){const c=[x];for(let y=1;y<=n;y++){c[y]=Math.min(p[y]+1,c[y-1]+1,p[y-1]+(a[x-1]===b[y-1]?0:1));}p=c;}return p[n];}
@@ -5102,12 +5124,13 @@ async function api(action, data) {
       // The second field is the person's last name (full name can be used for duplicates).
       if(idInput==='60000'){
         if(!secret)return {ok:false,error:'Enter your assigned warehouse sign-in credential'};
-        const rows=await sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor,warehouse_manager)&is_active=eq.true&select=employee_id,name,role').catch(()=>({_err:true}));
+        const rows=await sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor,warehouse_manager)&is_active=eq.true&select=employee_id,name,role,pin').catch(()=>({_err:true}));
         if(rows._err)return {ok:false,error:'Warehouse login unavailable — try again'};
         if(!Array.isArray(rows)||!rows.length)return {ok:false,error:'Warehouse accounts are not available — contact Admin'};
         const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
         const entered=norm(secret);
-        const aliases=(Array.isArray(rows)?rows:[]).filter(r=>String(r.employee_id||'').endsWith('60000'));
+        // Temp walk-in workers keep their real employee ID but carry pin 60000, so they sign in the same way.
+        const aliases=(Array.isArray(rows)?rows:[]).filter(r=>String(r.employee_id||'').endsWith('60000')||(String(r.pin||'')==='60000'&&r.role==='warehouse_employee'));
         if(!aliases.length)return {ok:false,error:'Warehouse login is unavailable — contact Admin'};
         const pick=loginPickByName(aliases,secret,r=>r.name,r=>r.employee_id);
         const matches=pick.people>1?pick.rows:pick.rows.slice(0,1);
@@ -5402,6 +5425,7 @@ async function api(action, data) {
     // ---------- STOCK ----------
     case 'submitStock':
     case 'submitStockRequest': {
+      { const blocked = await openRequestGuard('stock', data.stand); if (blocked) return { ok:false, blocked:true, error:blocked }; }
       const qtyTxt = data.quantity || data.qty || '';
       const itemsTxt = data.itemsText || ((data.items||'') + (qtyTxt ? (' \u2014 ' + qtyTxt) : ''));
       const etaMins = Number(data.eta_minutes || 0);
@@ -5780,6 +5804,7 @@ async function api(action, data) {
 
     // ---------- IT ISSUES ----------
     case 'submitITIssue': {
+      { const blocked = await openRequestGuard('it', data.stand); if (blocked) return { ok:false, blocked:true, error:blocked }; }
       const body = { stand:data.stand, reported_by:data.requestedBy||data.reportedBy, category:data.category, urgency:urgNorm(data.urgency), status:'open', description:(data.subCategory?data.subCategory+' \u2014 ':'')+(data.details||'') };
       const r = await sb('it_issues', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
       return r._err ? {ok:false,error:'Could not submit'} : {ok:true, id:'IT'};
@@ -9003,6 +9028,7 @@ async function submitStock() {
   });
   const other = document.getElementById('stock-other').value.trim();
   if (jsonItems.length === 0 && !other) return toast('Enter a quantity for at least one item (or use Other)', 'error');
+  { const gStand=state.stockTargetStand||getRequesterIdentity().homeStand; const gMsg=await openRequestGuard('stock',gStand); if(gMsg) return toast(gMsg,'error',8000); }
   const duplicateHits=stockDuplicateOverlap(jsonItems);
   if(duplicateHits.length){
     const lines=duplicateHits.slice(0,4).map(h=>{
@@ -14848,6 +14874,7 @@ function kitchenRequestBack(){if(state.standTaskReturnScreen==='screen-submenu-r
 
 async function submitKitchenRequest(){
   const who=getRequesterIdentity();const stand=state.kitchenTargetStand||getOperationalStand(who);const items=_kitchenDraft.filter(x=>x.itemName&&Number(x.qty)>0);if(!stand)return toast('Choose a stand','error');if(!items.length)return toast('Add at least one food item','error');
+  { const gMsg=await openRequestGuard('food',stand); if(gMsg) return toast(gMsg,'error',8000); }
   // Real 10-minute hold, enforced here (not just shown as a notice) —
   // requires an override reason if fewer than 10 minutes have passed
   // since this stand's last food order.
@@ -14869,6 +14896,7 @@ async function submitKitchenRequest(){
   // stable per-form uuid means even if two attempts somehow both reach
   // the server, the database's own duplicate protection actually works.
   await withLock(evtBtn(), 'Sending…', async () => {
+  const blockedMsg=await openRequestGuard('food',stand);if(blockedMsg)return toast(blockedMsg,'error',8000);
   const enriched=items.map(x=>{const m=_kitchenStandItems.find(y=>String(y.itemName).toLowerCase()===String(x.itemName).toLowerCase());return {...x,unit:m&&m.unit||'units',pack:m&&m.pack||'',track_inventory:!!m};});
   const deadline=new Date(Date.now()+(Number(state.kitchenETA)||30)*60000).toISOString();const suggested=await kitchenSuggestedRunner(stand);
   const requestClientUuid=state._kitchenRequestUuid||(state._kitchenRequestUuid=genUUID());
@@ -15327,7 +15355,7 @@ async function foodManagerCoveragePersonChanged(){
 async function foodManagerCoverageSave(){
   const emp=document.getElementById('fm-cov-person').value;
   if(!emp)return toast('Select a Food Runner','error');
-  if(!_foodMgrCovStands.size)return toast('Choose at least one area or stand','error');
+  if(!_foodMgrCovStands.size)return toast('Tap a group first','error');
   const person=_foodMgrCovPeople.find(x=>String(x.employee_id)===String(emp));
   const row={employee_id:emp,name:person?person.name:'',role:'food_runner',stands:[..._foodMgrCovStands],is_active:true,updated_at:new Date().toISOString()};
   const ok=await kitchenSaveAssignment(row);
@@ -15957,8 +15985,66 @@ async function warehouseCoverageInit(){const card=document.getElementById('wh-co
   const sel=document.getElementById('whcov-person');if(sel)sel.innerHTML='<option value=""></option>'+_whCovPeople.map(p=>'<option value="'+escapeAttr(p.employee_id)+'">'+escapeHtml(p.name)+'</option>').join('');
   whCovClose();
   await whCovLoadStandsList();await warehouseCoverageCurrent();}
+// Warehouse GROUPS — the simple way to split a big crew. Six fixed groups of
+// stands by stand number (no setup). A person's coverage is still stored as
+// plain stands, so request routing/"My Stands" work exactly as before.
+const WH_GROUPS=[
+  {key:'g1',name:'Group 1 · Gates & Inferno',test:n=>/^(SE Gate|SW Gate)/i.test(n)||[140,142].includes(parseInt(n,10))},
+  {key:'g2',name:'Group 2 · West 203–210',test:n=>{const k=parseInt(n,10);return k>=203&&k<=210;}},
+  {key:'g3',name:'Group 3 · West 211–221',test:n=>{const k=parseInt(n,10);return k>=211&&k<=221;}},
+  {key:'g4',name:'Group 4 · East 222–234',test:n=>{const k=parseInt(n,10);return k>=222&&k<=234;}},
+  {key:'g5',name:'Group 5 · 300s',test:n=>{const k=parseInt(n,10);return k>=300&&k<400;}},
+  {key:'g6',name:'Group 6 · 400s',test:n=>{const k=parseInt(n,10);return k>=400&&k<500;}}
+];
+function whGroupStands(g){return (_whCovStandsList||[]).filter(n=>(_whCovStandVenue[n]||'Mountain America Stadium')==='Mountain America Stadium'&&g.test(n));}
+function whGroupCovered(g,stands){const gs=whGroupStands(g);if(!gs.length)return false;const set=new Set(stands||[]);return gs.every(x=>set.has(x));}
+function whGroupPeopleCount(g,exceptEmp){return _whCovRows.filter(r=>String(r.employee_id)!==String(exceptEmp||'')&&whGroupCovered(g,r.direct_stands)).length;}
+function whCovRenderGroups(){
+  const el=document.getElementById('whcov-groups');if(!el)return;
+  const me=(document.getElementById('whcov-person')||{}).value||'';
+  el.innerHTML=WH_GROUPS.map(g=>{const n=whGroupPeopleCount(g,me),on=whGroupCovered(g,_whCovSelectedStands);return '<button class="coverage-area-chip '+(on?'selected':'')+'" onclick="whCovToggleGroup(\''+g.key+'\')">'+escapeHtml(g.name)+(n?' <b style="opacity:.7">· '+n+'</b>':'')+'</button>';}).join('');
+}
+function whCovToggleGroup(k){
+  const g=WH_GROUPS.find(x=>x.key===k);if(!g)return;const gs=whGroupStands(g);
+  if(whGroupCovered(g,_whCovSelectedStands))_whCovSelectedStands=_whCovSelectedStands.filter(x=>!gs.includes(x));
+  else gs.forEach(x=>{if(!_whCovSelectedStands.includes(x))_whCovSelectedStands.push(x);});
+  whCovRenderGroups();whCovRenderStands();
+}
+let _whCovBulk=false,_whCovBulkSel=new Set();
+function whCovToggleBulk(){_whCovBulk=!_whCovBulk;_whCovBulkSel=new Set();whCovClose();whCovRenderPeople();whCovRenderBulkBar();}
+function whCovBulkPick(emp){if(_whCovBulkSel.has(String(emp)))_whCovBulkSel.delete(String(emp));else _whCovBulkSel.add(String(emp));whCovRenderPeople();whCovRenderBulkBar();}
+function whCovRenderBulkBar(){
+  const bar=document.getElementById('whcov-bulk-bar'),btn=document.getElementById('whcov-bulk-btn');if(!bar)return;
+  if(btn)btn.textContent=_whCovBulk?'✕ Done':'☑ Select several';
+  if(!_whCovBulk){bar.style.display='none';bar.innerHTML='';return;}
+  const n=_whCovBulkSel.size;
+  bar.style.display='block';
+  bar.innerHTML='<div style="font-weight:800;font-size:13px;margin-bottom:6px">'+(n?n+' selected — tap a group to put them all in it':'Tap the people below, then pick their group')+'</div>'+
+    '<div class="coverage-area-chips">'+WH_GROUPS.map(g=>'<button class="coverage-area-chip" '+(n?'':'disabled style="opacity:.45"')+' onclick="whCovBulkApply(\''+g.key+'\')">'+escapeHtml(g.name)+'</button>').join('')+'</div>'+
+    (n?'<button class="btn btn-ghost" onclick="whCovBulkApply(\'\')" style="margin-top:6px;font-size:12px;border-color:#DC2626;color:#DC2626">Take selected off all groups</button>':'');
+}
+async function whCovBulkApply(gk){
+  const ids=[..._whCovBulkSel];if(!ids.length)return;
+  const g=WH_GROUPS.find(x=>x.key===gk);
+  if(g&&!whGroupStands(g).length)return toast('That group has no stands today','error');
+  if(!(await confirmAction((g?'Put '+ids.length+' people in '+g.name+'?':'Take '+ids.length+' people off all groups?')+(g?'\n\nThis replaces whatever stands they had.':''),{title:g?'Set group':'Remove groups',confirmLabel:'Yes'})))return;
+  await withLock(evtBtn(),'Saving…',async()=>{
+    let ok=0;
+    for(const id of ids){
+      const p=_whCovPeople.find(x=>String(x.employee_id)===id);
+      if(!g){if(await coverageDeleteAssignment(stadiumDay(),'Mountain America Stadium',id,'warehouse'))ok++;continue;}
+      if(await coverageSaveAssignment({event_date:stadiumDay(),venue:'Mountain America Stadium',employee_id:id,name:p?p.name:'',role:p?p.role:'warehouse_employee',team:'warehouse',area_keys:[],direct_stands:whGroupStands(g),notify_requests:true,updated_at:new Date().toISOString()}))ok++;
+    }
+    toast(ok===ids.length?'✅ '+ok+' people updated':ok+' of '+ids.length+' saved — try the rest again',ok===ids.length?'success':'error');
+    _whCovBulkSel=new Set();await warehouseCoverageCurrent();whCovRenderBulkBar();
+  });
+}
+function whCovRenderLegend(){
+  const el=document.getElementById('whcov-groups-legend');if(!el)return;
+  el.innerHTML='<div class="coverage-area-chips">'+WH_GROUPS.map(g=>{const n=whGroupPeopleCount(g,'');return '<span class="coverage-area-chip" style="cursor:default;'+(n?'':'opacity:.6')+'">'+escapeHtml(g.name.replace(' · ',': '))+' <b>· '+n+'</b></span>';}).join('')+'</div>';
+}
 let _whCovRoster=new Set(),_whCovRows=[],_whCovAreas=[],_whCovShowOthers=false;
-function whCovSummaryText(r){const names=(r.area_keys||[]).map(k=>{const a=_whCovAreas.find(x=>x.area_key===k);return a?a.area_name:k;});const parts=[...names,...(r.direct_stands||[])];return parts.join(' · ');}
+function whCovSummaryText(r){const gn=WH_GROUPS.filter(g=>whGroupCovered(g,r.direct_stands));const rest=(r.direct_stands||[]).filter(x=>!gn.some(g=>whGroupStands(g).includes(x)));if(gn.length&&!(r.area_keys||[]).length)return [...gn.map(g=>g.name),...rest].join(' · ');const names=(r.area_keys||[]).map(k=>{const a=_whCovAreas.find(x=>x.area_key===k);return a?a.area_name:k;});const parts=[...names,...(r.direct_stands||[])];return parts.join(' · ');}
 // Assign & Team, built for a big crew: everyone is a card, grouped by what
 // still needs doing (working today with no stands first), with search.
 // Tap a card to edit that person right under it.
@@ -15973,11 +16059,12 @@ function whCovRenderPeople(){
   const working=p=>!hasRoster||_whCovRoster.has(key(p.name));
   const todo=people.filter(p=>working(p)&&!rowOf(p)),done=people.filter(p=>working(p)&&rowOf(p)),others=people.filter(p=>!working(p));
   const card=p=>{const r=rowOf(p),txt=r?whCovSummaryText(r):'';const sup=p.role==='warehouse_supervisor';
-    return '<div class="food-runner-card" id="whcov-card-'+escapeAttr(p.employee_id)+'" onclick="whCovOpen(\''+escapeAttr(p.employee_id)+'\')" style="cursor:pointer;padding:10px 12px;margin-bottom:7px;'+(r?'':'border-left-color:#F59E0B')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0"><div style="font-weight:800;font-size:14px">'+escapeHtml(whDisp(p.name))+(sup?' <span style="font-size:10px;font-weight:800;color:var(--asu-maroon)">SUPERVISOR</span>':'')+'</div><div style="font-size:12px;margin-top:2px;color:'+(r?'var(--text-2)':'#B45309')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(txt||'No stands yet — tap to assign')+'</div></div><span style="font-size:12px;font-weight:800;color:var(--asu-maroon);flex-shrink:0">Edit ›</span></div></div>';};
+    return '<div class="food-runner-card" id="whcov-card-'+escapeAttr(p.employee_id)+'" onclick="'+(_whCovBulk?'whCovBulkPick':'whCovOpen')+'(\''+escapeAttr(p.employee_id)+'\')" style="cursor:pointer;padding:10px 12px;margin-bottom:7px;'+(r?'':'border-left-color:#F59E0B')+(_whCovBulk&&_whCovBulkSel.has(String(p.employee_id))?';outline:3px solid var(--asu-maroon);background:rgba(140,29,64,0.08)':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0"><div style="font-weight:800;font-size:14px">'+escapeHtml(whDisp(p.name))+(sup?' <span style="font-size:10px;font-weight:800;color:var(--asu-maroon)">SUPERVISOR</span>':'')+'</div><div style="font-size:12px;margin-top:2px;color:'+(r?'var(--text-2)':'#B45309')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(txt||'No stands yet — tap to assign')+'</div></div><span style="font-size:12px;font-weight:800;color:var(--asu-maroon);flex-shrink:0">'+(_whCovBulk?(_whCovBulkSel.has(String(p.employee_id))?'✅':'⬜'):'Edit ›')+'</span></div></div>';};
   const sec=(t,list)=>list.length?'<div class="section-title" style="margin-top:10px">'+t+' · '+list.length+'</div>'+list.map(card).join(''):'';
   let html=sec(hasRoster?'⚠️ Working today — no stands yet':'⚠️ No stands yet',todo)+sec(hasRoster?'✅ Working today — assigned':'✅ Assigned',done);
   if(others.length)html+=q||_whCovShowOthers?sec('Not on today\'s roster',others):'<button class="btn btn-ghost" onclick="_whCovShowOthers=true;whCovRenderPeople()" style="margin-top:8px">Show '+others.length+' people not on today\'s roster</button>';
   el.innerHTML=html||'<div class="empty"><p>No one matches.</p></div>';
+  whCovRenderLegend();
   const sum=document.getElementById('whcov-summary');
   if(sum){const all=_whCovPeople.filter(working),n=all.filter(p=>rowOf(p)).length;
     sum.innerHTML='<div class="wh-stat-row"><div class="wh-stat-chip'+(all.length-n?' warn':'')+'"><b>'+(all.length-n)+'</b><span>No stands</span></div><div class="wh-stat-chip"><b>'+n+'</b><span>Assigned</span></div><div class="wh-stat-chip"><b>'+all.length+'</b><span>'+(hasRoster?'Working today':'Warehouse team')+'</span></div></div>'+
@@ -16005,16 +16092,16 @@ async function whCovCopyLast(){
   if(!(await confirmAction('Give '+rows.length+' people the same areas and stands they had on '+d+'. You can change anyone after.',{title:'Copy last game\'s plan?',confirmLabel:'Copy plan'})))return;
   await withLock(evtBtn(),'Copying…',async()=>{let ok=0;for(const r of rows){if(await coverageSaveAssignment({event_date:stadiumDay(),venue:'Mountain America Stadium',employee_id:r.employee_id,name:r.name,role:r.role,team:'warehouse',area_keys:r.area_keys||[],direct_stands:r.direct_stands||[],notify_requests:true,updated_at:new Date().toISOString()}))ok++;}toast('✅ Copied '+ok+' people from '+d);await warehouseCoverageCurrent();});
 }
-async function warehouseCoverageRenderAreas(){const areas=await coverageGetAreas('Mountain America Stadium'),el=document.getElementById('whcov-areas');_whCovAreas=areas;const me=(document.getElementById('whcov-person')||{}).value||'';if(el)el.innerHTML=areas.map(a=>{const n=_whCovRows.filter(r=>String(r.employee_id)!==String(me)&&(r.area_keys||[]).includes(a.area_key)).length;return '<button class="coverage-area-chip '+(_whCovSelected.includes(a.area_key)?'selected':'')+'" onclick="warehouseCoverageToggle(\''+escapeAttr(a.area_key)+'\')">'+escapeHtml(a.area_name)+(n?' <b style="opacity:.7">· '+n+'</b>':'')+'</button>';}).join('');}
+async function warehouseCoverageRenderAreas(){whCovRenderGroups();const areas=await coverageGetAreas('Mountain America Stadium'),el=document.getElementById('whcov-areas');_whCovAreas=areas;const me=(document.getElementById('whcov-person')||{}).value||'';if(el)el.innerHTML=areas.map(a=>{const n=_whCovRows.filter(r=>String(r.employee_id)!==String(me)&&(r.area_keys||[]).includes(a.area_key)).length;return '<button class="coverage-area-chip '+(_whCovSelected.includes(a.area_key)?'selected':'')+'" onclick="warehouseCoverageToggle(\''+escapeAttr(a.area_key)+'\')">'+escapeHtml(a.area_name)+(n?' <b style="opacity:.7">· '+n+'</b>':'')+'</button>';}).join('');}
 function warehouseCoverageToggle(k){if(_whCovSelected.includes(k))_whCovSelected=_whCovSelected.filter(x=>x!==k);else _whCovSelected.push(k);warehouseCoverageRenderAreas();}
 // Today's actual stand list — same source the stock-count dropdown and
 // the old dead Zone Assignments tool both used, just kept local here.
 async function whCovLoadStandsList(){const all=await allVenueStands();_whCovStandVenue={};all.forEach(x=>{_whCovStandVenue[x.name]=x.venue;});_whCovStandsList=all.map(x=>x.name);}
 let _whCovStandVenue={};
 function whCovRenderStands(){const c=document.getElementById('whcov-stands-list');if(!c)return;const q=(document.getElementById('whcov-stand-search')||{value:''}).value.toLowerCase().trim();const list=_whCovStandsList.filter(s=>!q||s.toLowerCase().indexOf(q)>=0);if(!list.length){c.innerHTML='<div style="font-size:11px;color:var(--text-3);padding:6px 0">No stands match.</div>';return;}let lastV='';c.innerHTML=list.map(s=>{const v=_whCovStandVenue[s]||'';const head=v!==lastV?'<div style="font-size:10px;font-weight:800;letter-spacing:1px;color:var(--text-2);padding:8px 2px 2px">'+escapeHtml((VENUE_SHORT[v]||v).toUpperCase())+'</div>':'';lastV=v;const checked=_whCovSelectedStands.includes(s)?'checked':'';return head+'<label style="display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px"><input type="checkbox" '+checked+' onchange="whCovToggleStand(this,\''+s.replace(/'/g,"\\'")+'\')"> '+escapeHtml(s)+'</label>';}).join('');}
-function whCovToggleStand(cb,stand){if(cb.checked){if(!_whCovSelectedStands.includes(stand))_whCovSelectedStands.push(stand);}else{_whCovSelectedStands=_whCovSelectedStands.filter(s=>s!==stand);}}
-async function warehouseCoveragePersonChanged(){_whCovSelected=[];_whCovSelectedStands=[];const emp=document.getElementById('whcov-person').value;if(!emp){warehouseCoverageRenderAreas();whCovRenderStands();return;}const rows=await coverageGetAssignments(stadiumDay(),'Mountain America Stadium'),r=rows.find(x=>String(x.employee_id)===String(emp)&&x.team==='warehouse');if(r){_whCovSelected=(r.area_keys||[]).slice();_whCovSelectedStands=(r.direct_stands||[]).slice();}warehouseCoverageRenderAreas();whCovRenderStands();}
-async function warehouseCoverageSave(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person','error');if(!_whCovSelected.length&&!_whCovSelectedStands.length)return toast('Choose at least one area or stand','error');const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));if(await coverageSaveAssignment({event_date:stadiumDay(),venue:'Mountain America Stadium',employee_id:emp,name:p?p.name:'',role:p?p.role:'warehouse_employee',team:'warehouse',area_keys:_whCovSelected,direct_stands:_whCovSelectedStands,notify_requests:true,updated_at:new Date().toISOString()})){toast('✅ Saved — '+(p?p.name:'')+' covers '+(_whCovSelected.length+_whCovSelectedStands.length)+' area/stand choice(s)');whCovClose();warehouseCoverageCurrent();}else toast('Could not save coverage','error');}
+function whCovToggleStand(cb,stand){if(cb.checked){if(!_whCovSelectedStands.includes(stand))_whCovSelectedStands.push(stand);}else{_whCovSelectedStands=_whCovSelectedStands.filter(s=>s!==stand);}whCovRenderGroups();}
+async function warehouseCoveragePersonChanged(){_whCovSelected=[];_whCovSelectedStands=[];const emp=document.getElementById('whcov-person').value;if(!emp){warehouseCoverageRenderAreas();whCovRenderStands();return;}const rows=await coverageGetAssignments(stadiumDay(),'Mountain America Stadium'),r=rows.find(x=>String(x.employee_id)===String(emp)&&x.team==='warehouse');if(r){const ar=await coverageGetAreas('Mountain America Stadium');_whCovAreas=ar;const fromAreas=(r.area_keys||[]).flatMap(k=>{const a=ar.find(x=>x.area_key===k);return a&&Array.isArray(a.stands)?a.stands:[];});_whCovSelected=[];_whCovSelectedStands=[...new Set([...(r.direct_stands||[]),...fromAreas])];}warehouseCoverageRenderAreas();whCovRenderStands();}
+async function warehouseCoverageSave(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person','error');if(!_whCovSelected.length&&!_whCovSelectedStands.length)return toast('Tap a group first','error');const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));if(await coverageSaveAssignment({event_date:stadiumDay(),venue:'Mountain America Stadium',employee_id:emp,name:p?p.name:'',role:p?p.role:'warehouse_employee',team:'warehouse',area_keys:_whCovSelected,direct_stands:_whCovSelectedStands,notify_requests:true,updated_at:new Date().toISOString()})){toast('✅ Saved — '+(p?p.name:'')+' covers '+(_whCovSelected.length+_whCovSelectedStands.length)+' area/stand choice(s)');whCovClose();warehouseCoverageCurrent();}else toast('Could not save coverage','error');}
 async function warehouseCoverageClear(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person first','error');if(!(await confirmAction('They\'ll go back to seeing every stand/request until reassigned.',{title:'Remove this person\'s coverage?',confirmLabel:'Remove'})))return;if(await coverageDeleteAssignment(stadiumDay(),'Mountain America Stadium',emp,'warehouse')){_whCovSelected=[];_whCovSelectedStands=[];whCovClose();toast('Coverage removed');warehouseCoverageCurrent();}else toast('Could not remove coverage','error');}
 async function warehouseCoverageCurrent(){_whCovRows=(await coverageGetAssignments(stadiumDay(),'Mountain America Stadium')).filter(x=>x.team==='warehouse');_whCovAreas=await coverageGetAreas('Mountain America Stadium');whCovRenderPeople();}
 // "My Stands" filter and new-request push routing both resolve through
@@ -19997,6 +20084,7 @@ async function submitITIssue() {
   if ((state.itCategory === 'POS Handheld' || state.itCategory === 'POS Tablet') && !posNum) {
     return toast('Enter the POS # before submitting', 'error');
   }
+  { const gStand=state.itTargetStand||getRequesterIdentity().homeStand; const gMsg=await openRequestGuard('it',gStand); if(gMsg) return toast(gMsg,'error',8000); }
   // Real hold — a second ticket in the same category for the same
   // stand while one is already open requires typing why (a genuinely
   // different unit/problem), rather than silently piling onto a queue
@@ -20434,6 +20522,15 @@ function whBuildRosterPane() {
           '</div>'
         : '<input type="hidden" id="wh-roster-date" value="' + localISODate() + '">'
       ) +
+      (isRealMgr ?
+        '<div class="card" style="padding:14px;margin-bottom:14px">' +
+          '<div style="font-weight:700;font-size:14px;margin-bottom:4px">➕ Add temp warehouse worker</div>' +
+          '<div style="font-size:11px;color:var(--text-2);margin-bottom:8px">For walk-ins who work warehouse / runner today. Search the name, tap the person, and they can sign in with ID <b>60000</b> + their last name.</div>' +
+          '<input class="form-input" type="text" id="wh-temp-search" placeholder="Search name or employee ID…" oninput="whTempSearch(this.value)" style="margin:0 0 6px">' +
+          '<div id="wh-temp-results"></div>' +
+        '</div>'
+        : ''
+      ) +
       '<input class="form-input" type="text" id="wh-roster-search" placeholder="Search by name…" oninput="renderWhRosterList()" style="margin:0 0 10px">' +
       '<div id="wh-roster-progress" style="font-size:12px;color:var(--text-2);margin-bottom:8px"></div>' +
       '<div id="wh-roster-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>' +
@@ -20443,6 +20540,60 @@ function whBuildRosterPane() {
   loadWhRoster();
 }
 
+// Temp warehouse walk-in: pick a real person from the employee directory,
+// make them a warehouse worker for the day. They sign in with 60000 + last
+// name (staff_accounts row keeps their real employee ID, pin 60000) and are
+// added to today's warehouse roster so they show up in check-in and in the
+// Assign & Team lists.
+let _whTempTimer = null, _whTempHits = [];
+function whTempSearch(term) {
+  clearTimeout(_whTempTimer);
+  const q = (term || '').trim(), box = document.getElementById('wh-temp-results');
+  if (!box) return;
+  if (q.length < 2) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div style="font-size:11px;color:var(--text-2);padding:6px 0">Searching…</div>';
+  _whTempTimer = setTimeout(async () => {
+    const safe = encodeURIComponent('*' + q.replace(/[*,()]/g, '') + '*');
+    const filter = /^\d+$/.test(q) ? 'employee_id=ilike.' + safe : 'full_name=ilike.' + safe;
+    const rows = await sb('employee_directory?' + filter + '&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(() => ({ _err: true }));
+    if (rows._err || !Array.isArray(rows)) { box.innerHTML = '<div class="notice" style="font-size:11px">Search failed — try again.</div>'; return; }
+    _whTempHits = rows;
+    if (!rows.length) { box.innerHTML = '<div class="notice info" style="font-size:11px;padding:8px 10px">No match in the employee list.</div>'; return; }
+    box.innerHTML = rows.map((r, i) =>
+      '<div class="prem-walkin-result" onclick="whTempAdd(' + i + ')"><div class="name">' + escapeHtml(whDisp(r.full_name)) + '</div><div class="meta">ID ' + escapeHtml(r.employee_id) + (r.role ? ' · ' + escapeHtml(r.role) : '') + ' · tap to add</div></div>'
+    ).join('');
+  }, 300);
+}
+async function whTempAdd(i) {
+  const role = state.staffAccount && state.staffAccount.role;
+  if (!['warehouse_manager', 'warehouse_supervisor'].includes(role)) return toast('Not authorized', 'error');
+  const p = _whTempHits[i];
+  if (!p) return;
+  const empId = String(p.employee_id), name = p.full_name;
+  const ok = await confirmAction('Add ' + whDisp(name) + ' (ID ' + empId + ') as a warehouse worker for today?\n\nThey sign in with 60000 + last name.', { title: 'Add temp worker', confirmLabel: 'Add' });
+  if (!ok) return;
+  const box = document.getElementById('wh-temp-results');
+  const existing = await sb('staff_accounts?employee_id=eq.' + encodeURIComponent(empId) + '&select=employee_id,role,is_active').catch(() => ({ _err: true }));
+  if (existing._err) return toast('Could not check accounts — try again', 'error');
+  if (Array.isArray(existing) && existing.length) {
+    const ex = existing[0];
+    if (!String(ex.role).startsWith('warehouse')) return toast(whDisp(name) + ' already has a ' + ex.role + ' account — ask Admin', 'error', 7000);
+    if (!ex.is_active) await sb('staff_accounts?employee_id=eq.' + encodeURIComponent(empId), { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ is_active: true }) });
+  } else {
+    const r = await sb('staff_accounts', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ employee_id: empId, name: name, role: 'warehouse_employee', pin: '60000', is_active: true }) });
+    if (r && r._err) return toast('Could not create the login' + (r.status ? ' · HTTP ' + r.status : ''), 'error');
+  }
+  const day = stadiumDay();
+  const onRoster = await sb('warehouse_roster?event_date=eq.' + day + '&employee_id=eq.' + encodeURIComponent(empId) + '&select=id').catch(() => ({ _err: true }));
+  if (!Array.isArray(onRoster) || !onRoster.length) {
+    const r2 = await sb('warehouse_roster', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ event_date: day, role: 'Warehouse Worker (temp)', name: name, employee_id: empId, work_schedule_type: 'Walk-in' }) });
+    if (r2 && r2._err) return toast('Login created but could not add to today\'s roster', 'error');
+  }
+  toast('✅ ' + whDisp(name) + ' added · signs in with 60000 + ' + String(name).split(',')[0].trim(), 'success', 7000);
+  if (box) box.innerHTML = '';
+  const se = document.getElementById('wh-temp-search'); if (se) se.value = '';
+  loadWhRoster();
+}
 async function adminUploadWarehouseRoster(prefix) {
   // Real change, per direct request: upload is Manager/Admin only —
   // Supervisor's own button was removed, and the function itself is the
@@ -22845,10 +22996,15 @@ async function tsQuickMarkDelivered() {
   await tsCompleteDelivery({ scanSkipped: true });
 }
 
+const WH_SKIP_VERIFY_DATES = ['2026-10-02', '2026-10-03'];
+function whSkipVerifyToday() { return WH_SKIP_VERIFY_DATES.includes(stadiumDay()); }
 async function tsCompleteDelivery(opts) {
   opts = opts || {};
   await withLock(document.getElementById('ts-deliver-btn'), 'Saving…', async () => {
-    const isManagerPlanned = !!(_tsTransfer.initiated_by && _tsTransfer.initiated_by.trim());
+    // Oct 2–3 (test day + ASU vs Baylor): no supervisor verification or
+    // e-signature — a delivery is final when the worker taps Delivered,
+    // exactly like a routine stand request. Inventory is still logged.
+    const isManagerPlanned = !whSkipVerifyToday() && !!(_tsTransfer.initiated_by && _tsTransfer.initiated_by.trim());
 
     // Mark all items delivered. Routine/ad-hoc deliveries are final here,
     // so they write the physical ledger now. Manager-planned transfers do

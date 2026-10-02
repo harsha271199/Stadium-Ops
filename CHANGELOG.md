@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-02-grp-1
+- **One open request per stand — Stock, Food and IT.** If a stand already has an open request of that type (not yet delivered / resolved), a second one is refused with who sent it and when. Checked live against the database at the moment of sending, so two phones can't both slip one through; only the last 18 hours count so an old row can't lock a stand. Other stands, and other request types, are unaffected. Once the request is delivered or resolved, the stand can send a new one.
+- **Temp warehouse workers (walk-ins).** Warehouse Manager / Supervisor → Roster → **➕ Add temp warehouse worker**: search the name (or employee ID) in the ASU employee list, tap the person, confirm. They get a warehouse login with their real employee ID, sign in with **60000 + last name**, and are added to today's roster so they show in check-in and in Assign & Team.
+- **Assign & Team is now by Group.** Six groups by stand number — 1 Gates & Inferno, 2 West 203–210, 3 West 211–221, 4 East 222–234, 5 300s, 6 400s. Tap a person → tap their group(s). **☑ Select several** lets you tick many people and put them all in a group with one tap. Top of the screen shows how many people are in each group. Individual stands are still available under "Need one single stand instead?". Coverage is still stored as plain stands, so request routing and "My Stands" work as before.
+- **No verification or e-signature on Oct 2 and Oct 3.** A warehouse delivery is final when the worker taps Delivered — even for manager-planned transfers — and inventory is still logged. Other dates are unchanged (`WH_SKIP_VERIFY_DATES`).
+
 ## 2026-10-02-wh-1
 - **Warehouse screens show "First Last".** Warehouse staff sign in with 60000 + last name as before, and the database keeps "Last, First", so nothing about sign-in or matching changed. What changed is how names are displayed on warehouse screens:
   - the check-in / My Team roster (search finds "eli qaw" as well as "qawhemp"), Assign & Team, and the "assign to" list in Create Transfer;
