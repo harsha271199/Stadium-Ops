@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-02-inv-1
+- **Stand Leads and Supervisors can sign in on a day they aren't scheduled.** They land on their most recent stand (or their next one if they've never worked). The home screen says "📅 Not scheduled today · last shift Sep 27". Regular workers still need today's schedule.
+- **Premium gets the game-day card** concessions already had: event, date, gates, kickoff, meals and reminders (from Admin → Game Day Information). Tapping it opens the full details screen.
+- **Admin → Upload inventory now matches the file to the app's stands before saving.**
+  - **Matching:** exact name, a known rename, or the nearest stand (same number and same kind, e.g. "207 Sun Devil Burger & Tenders" → "207 Sun Devil Burgers & Tenders", "204P Fan Fuel Bev Market" → "204P Fan Fuel Beverage MKT").
+  - **Family fill:** a stand the file doesn't cover gets the list of the same kind of stand — Beer Portables, Fan Fuel Beverage markets (incl. Mashgin/S4), Chick-fil-A, Stinger, Bahama Bucks, Bar S Sausage, Someburros, Game Day, Draft House, Sun Devil Burgers & Tenders, Pitchfork, Nacho, Venezia, Huss Hideout, Cold Beer Cheeseburgers, Gate Dogs. A P stand prefers a P stand, an M stand an M stand.
+  - **Review first:** a match report (✅ exact · 🔎 nearest · 🧬 filled from same kind · ⚠️ no list · 📄 in file but not an app stand) shows before anything is replaced, and again after the upload.
+  - **Order kept:** each stand keeps the file's item order (`sort_order`), plus Category / Vendor / SKU when the file has them. Count In / Count Out and the end-of-day report follow that order.
+- **Fixed: inventory upload failed when On Hand, Restock or Exp Start was blank or missing.** The database rejects empty text in number columns ("Failed after 0 rows"). Blanks are now saved as empty.
+
 ## 2026-10-01-ui-2
 - **Sign-in accepts a name that's mostly right.** The ID digits are still required. The name can now be:
   - a few letters off, scaled to its length: 1 for 4–5 letters, 2 for 6–8, 3 for 9+ ("bntley", "flenrd", "herandez", "vangamplr");

@@ -4089,6 +4089,17 @@
       <div class="role-profile-title" id="prem-role-summary-title">Premium</div>
       <div class="role-profile-meta" id="prem-role-summary-meta">Loading access…</div>
     </div>
+    <!-- Same game-day info concessions get: kickoff, gates, meals, reminders. -->
+    <div class="gameday-banner" id="prem-gameday" onclick="openGamedayInfo()" role="button" tabindex="0" aria-label="View game day details" style="display:none;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div style="min-width:0">
+          <div style="font-size:10px;font-weight:800;letter-spacing:1px;opacity:0.85">GAME DAY</div>
+          <div style="font-size:15px;font-weight:800;margin-top:2px" id="prem-gameday-title">Game Day</div>
+          <div style="font-size:12px;opacity:0.92;margin-top:3px;line-height:1.45" id="prem-gameday-lines"></div>
+        </div>
+        <div style="font-size:20px;opacity:0.8">›</div>
+      </div>
+    </div>
 
     <!-- Premium Manager only: today's roster/check-ins — present/absent,
          move, add walk-in. This is the actual daily tool, so it's the
@@ -4386,7 +4397,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-10-01-ui-2';
+const BUILD_TAG = '2026-10-02-inv-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5215,6 +5226,17 @@ async function api(action, data) {
       if (!match && todaysRows.length) {
         match = todaysRows.length === 1 ? todaysRows[0] : pickCurrentShift(todaysRows);
       }
+      // Stand Leads and Supervisors can always sign in: on a day they aren't
+      // scheduled they land on their most recent stand (or their next one if
+      // they've never worked a shift). Workers still need today's schedule.
+      let offSchedule = false;
+      if (!match) {
+        const leaders = candidates.filter(r => ['lead','supervisor'].includes(mapRole(r.role)));
+        const past = leaders.filter(r => (r.event_date || '') <= gameDay).sort((a,b) => String(b.event_date||'').localeCompare(String(a.event_date||'')));
+        const next = leaders.filter(r => (r.event_date || '') > gameDay).sort((a,b) => String(a.event_date||'').localeCompare(String(b.event_date||'')));
+        match = past[0] || next[0] || null;
+        if (match) offSchedule = true;
+      }
       if (!match) return { ok:false, error:"You're not on today's schedule — ask your Stand Lead or Supervisor to add you as a walk-in" };
 
       // Portable/outside stands (bartender carts, off-site booths) often
@@ -5280,7 +5302,8 @@ async function api(action, data) {
         leadAccessGranted: leadAccessGranted,
         tempLeadAccess: tempLeadAccess,
         limitedSupervisorAccess: supervisorStands.length > 0,
-        supervisorStands: supervisorStands
+        supervisorStands: supervisorStands,
+        offSchedule: offSchedule
       }};
     }
 
@@ -7584,6 +7607,7 @@ function renderHome() {
   document.getElementById('home-game-date').textContent =
     homeDate.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+
     ' · '+(u.site||u.stand||'Game venue');
+  if (u.offSchedule) document.getElementById('home-game-date').textContent = '📅 Not scheduled today · last shift ' + homeDate.toLocaleDateString('en-US',{month:'short',day:'numeric'});
   const gb=document.getElementById('gameday-banner');if(gb)gb.style.display='none';
   loadGameDayContent(u.shiftDate||localISODate(),u.site||'all').then(renderGameDayInfo).catch(()=>{
     state.gameDayContent=defaultGameContent(u.shiftDate||localISODate(),u.site||'all');
@@ -13327,6 +13351,67 @@ async function adminRollCountOut(){
     toast('✅ Counts rolled forward');
   });
 }
+// ============ INVENTORY FILE → STANDS MATCHING ============
+// Every stand in the uploaded file is matched to a stand in the app:
+//   exact   – same name (or a known rename)
+//   nearest – same stand number and same kind of stand ("207 Sun Devil Burger
+//             & Tenders" → "207 Sun Devil Burgers & Tenders")
+// A stand the file doesn't cover gets the list of the same kind of stand
+// ("family"): all Beer Portables share one list, all Fan Fuel Beverage
+// markets, Chick-fil-A, Stinger, Bahama Bucks, Bar S Sausage, Someburros,
+// Game Day, Draft House… Item order is kept exactly as in the file.
+function invStandNum(n) { const m = String(n||'').match(/(\d{3})/); return m ? m[1] : ''; }
+function invFamily(n) {
+  let x = String(n||'').toLowerCase().replace(/&/g,' and ');
+  x = x.replace(/^\s*(sw|se|nw|ne)?\s*gate\s*-?\s*\d+\s*/,'gate ').replace(/^\s*\d{3}(?:[a-z]\b|\s+[a-z]\b)?\s*-?\s*/,'');
+  x = x.replace(/\(.*?\)/g,' ').replace(/[^a-z0-9 ]+/g,' ');
+  const rules = [[/chi\w*\s*-?\s*fil+\s*-?\s*a/, 'chickfila'], [/sti\w*ger/, 'stinger'], [/bahama\w*\s*buck/, 'bahamabucks'],
+    [/bar\s*-?\s*s\s*(sausage)?/, 'bars'], [/fan\s*fuel\s*bev/, 'fanfuelbev'], [/beer\s*portable/, 'beerportable'], [/draft\s*house/, 'drafthouse'],
+    [/some\s*burros/, 'someburros'], [/game\s*day/, 'gameday'], [/pitchfork/, 'pitchfork'], [/sun\s*devil\s*burger/, 'sundevilburgers'],
+    [/fan\s*fuel\s*nacho/, 'fanfuelnacho'], [/kathy/, 'kathys'], [/venezia/, 'venezia'], [/cold\s*beer\s*(and\s*)?cheese\s*burger/, 'cbcb'],
+    [/huss\s*hideout\s*burger/, 'husshideoutburgers'], [/huss\s*hideout\s*fav/, 'husshideoutfav'], [/gate.*dogs/, 'gatedogs']];
+  for (const [re, k] of rules) if (re.test(x)) return k;
+  return x.replace(/\b(sc|the|and)\b/g,' ').replace(/\s+/g,'');
+}
+function invKind(n) { const m = String(n||'').match(/^\s*\d{3}\s*([a-z])\b/i); return m ? m[1].toUpperCase() : ''; } // P / M / B / T…
+function invMatchPlan(fileStands, appStands) {
+  const key = n => String(canonicalStandName2026(n)||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const appByKey = new Map(appStands.map(a => [key(a), a]));
+  const plan = {exact:[], nearest:[], family:[], empty:[], fileOnly:[]};
+  const used = new Map(); // app stand -> file stand
+  // 1. exact / known renames
+  fileStands.forEach(f => { const a = appByKey.get(key(f)); if (a && !used.has(a)) { used.set(a, f); plan.exact.push({file:f, app:a}); } });
+  // 2. nearest: same number + same family (and same P/M/B kind when both have one)
+  fileStands.filter(f => ![...used.values()].includes(f)).forEach(f => {
+    const num = invStandNum(f), fam = invFamily(f), kind = invKind(f);
+    const cands = appStands.filter(a => !used.has(a) && num && invStandNum(a) === num && invFamily(a) === fam && (!kind || !invKind(a) || invKind(a) === kind));
+    if (cands.length === 1) { used.set(cands[0], f); plan.nearest.push({file:f, app:cands[0]}); }
+    else plan.fileOnly.push(f);
+  });
+  // 3. family fill for app stands the file doesn't cover
+  const covered = [...used.entries()];
+  appStands.filter(a => !used.has(a)).forEach(a => {
+    const fam = invFamily(a), kind = invKind(a);
+    const same = covered.filter(([ca]) => invFamily(ca) === fam);
+    const pick = same.find(([ca]) => invKind(ca) === kind) || same[0];
+    if (pick) plan.family.push({app:a, from:pick[1], via:pick[0]});
+    else plan.empty.push(a);
+  });
+  plan.used = used;
+  return plan;
+}
+function invPlanHtml(plan) {
+  const row = (l, r, c) => '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span>' + escapeHtml(l) + '</span><span style="color:' + (c||'var(--text-2)') + ';text-align:right">' + escapeHtml(r) + '</span></div>';
+  const sec = (t, n, body) => '<details' + (n && t.startsWith('⚠️') ? ' open' : '') + ' style="margin-top:8px"><summary style="cursor:pointer;font-weight:800;font-size:13px">' + t + ' · ' + n + '</summary>' + body + '</details>';
+  return '<div class="card" style="padding:10px 12px;margin-top:8px">' +
+    '<div style="font-weight:900;font-size:14px">Match check</div>' +
+    sec('✅ Exact match', plan.exact.length, plan.exact.map(x => row(x.app, 'same name')).join('')) +
+    sec('🔎 Nearest match', plan.nearest.length, plan.nearest.map(x => row(x.app, '← ' + x.file, '#2563EB')).join('')) +
+    sec('🧬 Filled from same kind', plan.family.length, plan.family.map(x => row(x.app, '← ' + x.via, '#7C3AED')).join('')) +
+    sec('⚠️ No list (nothing similar in file)', plan.empty.length, plan.empty.map(x => row(x, 'empty', '#DC2626')).join('') || '<div style="font-size:12px">None 🎉</div>') +
+    sec('📄 In file but not an app stand', plan.fileOnly.length, plan.fileOnly.map(x => row(x, 'kept as is')).join('') || '<div style="font-size:12px">None</div>') +
+    '</div>';
+}
 async function adminUploadInventory() {
   // Real guard — this can delete and bulk-replace the entire stand_sheets
   // table (every stand's item catalog). Previously only gated by the
@@ -13348,7 +13433,10 @@ async function adminUploadInventory() {
       on_hand: pickCol(H, ['on_hand','onhand','qty_on_hand']),
       restock: pickCol(H, ['restock','par']),
       exp_start: pickCol(H, ['exp_start','expected_start','expstart','start_count']),
-      chargeable: pickCol(H, ['chargeable'])
+      chargeable: pickCol(H, ['chargeable']),
+      category: pickCol(H, ['category','item_category','group']),
+      vendor: pickCol(H, ['vendor']),
+      sku: pickCol(H, ['sku','item_number','item_no','item_code'])
     };
     if (col.stand < 0 || col.item_name < 0) { st.style.color = '#DC2626'; st.textContent = '⚠️ Could not find "Stand" and "Item Name" columns. Found: ' + rows[0].join(', '); return; }
     const get = (r, i) => i >= 0 ? String(r[i] || '').trim() : '';
@@ -13357,10 +13445,26 @@ async function adminUploadInventory() {
       const r = rows[i];
       const stand = get(r, col.stand), item = get(r, col.item_name);
       if (!stand || !item) continue;
+      // Number columns: blank or "—" must be null (Postgres rejects '' for numeric).
+      const numOrNull = v => { const t = String(v||'').replace(/[, ]/g,''); if (!t) return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
       out.push({ stand: stand, item_name: item, unit: get(r, col.unit), pack: get(r, col.pack),
-        on_hand: get(r, col.on_hand), restock: get(r, col.restock), exp_start: get(r, col.exp_start), chargeable: get(r, col.chargeable) });
+        on_hand: numOrNull(get(r, col.on_hand)), restock: numOrNull(get(r, col.restock)), exp_start: numOrNull(get(r, col.exp_start)), chargeable: get(r, col.chargeable) || 'Y',
+        category: get(r, col.category), vendor: get(r, col.vendor), sku: get(r, col.sku) });
     }
     if (!out.length) { st.style.color = '#DC2626'; st.textContent = '⚠️ No valid rows found.'; return; }
+    // Match file stands to app stands, fill missing stands from the same
+    // kind of stand, and keep the file's item order (sort_order).
+    const byFile = new Map(); out.forEach(o => { if (!byFile.has(o.stand)) byFile.set(o.stand, []); byFile.get(o.stand).push(o); });
+    const appStands = (await allVenueStands()).map(x => x.name);
+    const plan = invMatchPlan([...byFile.keys()], appStands);
+    const final = [];
+    const addRows = (standName, rows) => rows.forEach((o, i) => final.push({...o, stand: standName, sort_order: i + 1, category: o.category || null, vendor: o.vendor || null, sku: o.sku || null}));
+    plan.used.forEach((fileStand, appStand) => addRows(appStand, byFile.get(fileStand)));
+    plan.family.forEach(x => addRows(x.app, byFile.get(x.from)));
+    plan.fileOnly.forEach(f => addRows(f, byFile.get(f)));
+    st.style.color = ''; st.innerHTML = invPlanHtml(plan);
+    if (!(await confirmAction(plan.exact.length + ' exact · ' + plan.nearest.length + ' nearest · ' + plan.family.length + ' filled from the same kind · ' + plan.empty.length + ' with no list. Upload ' + final.length + ' item lines for ' + new Set(final.map(o => o.stand)).size + ' stands?', {title:'Upload inventory?', confirmLabel:'Upload'}))) return;
+    out.length = 0; final.forEach(o => out.push(o));
     if (document.getElementById('up-inv-replace').checked) {
       if (!(await confirmAction('This deletes every stand’s current item list and replaces it with the ' + out.length + ' items in this file. Stands not in this file will end up with an empty sheet.', {title:'Replace the entire inventory sheet?', confirmLabel:'Replace all items', danger:true}))) { st.textContent = ''; return; }
       st.textContent = 'Clearing old inventory sheet…';
@@ -13369,7 +13473,7 @@ async function adminUploadInventory() {
     }
     const res = await sbBulkInsert('stand_sheets', out, st);
     if (res._err) { st.style.color = '#DC2626'; st.textContent = '⚠️ Failed after ' + res.at + ' rows — check the file and retry.'; return; }
-    st.style.color = 'var(--success)'; st.textContent = '✅ ' + out.length + ' items uploaded (' + [...new Set(out.map(o => o.stand))].length + ' stands).';
+    st.style.color = ''; st.innerHTML = '<div style="color:var(--success);font-weight:800">✅ ' + out.length + ' items uploaded (' + [...new Set(out.map(o => o.stand))].length + ' stands).</div>' + invPlanHtml(plan);
     toast('✅ Inventory uploaded');
   });
 }
@@ -20665,6 +20769,23 @@ function premiumRoleLabel(role) {
   return role === 'premium_manager' ? 'Premium Manager' : 'Premium Employee';
 }
 
+async function premiumRenderGameDay() {
+  const card = document.getElementById('prem-gameday'); if (!card) return;
+  const date = stadiumDay();
+  state.managerGameDayDate = date;
+  let g; try { g = await loadGameDayContent(date, 'all'); } catch (e) { g = defaultGameContent(date, 'all'); }
+  state.gameDayContent = g;
+  renderGameDayInfo(); // fills the full details screen the card opens
+  const anyVisible = !!(g && (g.show_details || g.show_meals || g.show_policy));
+  card.style.display = anyVisible ? '' : 'none';
+  if (!anyVisible) return;
+  document.getElementById('prem-gameday-title').textContent = (g.event_name || 'Game Day') + (g.date_label ? ' · ' + g.date_label : '');
+  const lines = [];
+  if (g.show_details && (g.gates_open || g.start_time)) lines.push('🕓 ' + [g.gates_open && ('Gates ' + g.gates_open), g.start_time && ('Kickoff ' + g.start_time)].filter(Boolean).join(' · '));
+  if (g.show_meals && g.meals_text) lines.push('🍽️ ' + String(g.meals_text).split('\n')[0]);
+  if (g.show_policy && g.policy_text) lines.push('😊 ' + String(g.policy_text).split('\n')[0]);
+  document.getElementById('prem-gameday-lines').innerHTML = lines.map(escapeHtml).join('<br>');
+}
 async function renderPremiumForRole() {
   const role = state.staffAccount ? state.staffAccount.role : 'premium_employee';
   const isMgr = role === 'premium_manager';
@@ -20682,6 +20803,7 @@ async function renderPremiumForRole() {
 
   const tools = document.getElementById('prem-manager-tools');
   if (tools) tools.style.display = isMgr ? 'block' : 'none';
+  premiumRenderGameDay();
 
   const checkinCard = document.getElementById('prem-checkin-card');
   if (checkinCard) checkinCard.style.display = isMgr ? 'block' : 'none';
