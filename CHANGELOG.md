@@ -4,6 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-02-wh-1
+- **Warehouse screens show "First Last".** Warehouse staff sign in with 60000 + last name as before, and the database keeps "Last, First", so nothing about sign-in or matching changed. What changed is how names are displayed on warehouse screens:
+  - the check-in / My Team roster (search finds "eli qaw" as well as "qawhemp"), Assign & Team, and the "assign to" list in Create Transfer;
+  - the deliveries list, All Transfers, Approvals, and the delivery / verify screen ("Delivered by Eli Qawhemp", "Verified by …", "Assigned to: … by …");
+  - golf cart drivers, duty and flagged-cart lists;
+  - warehouse alerts ("approved by Wanda Qawhmgr", "Delivered by …").
+  Warehouse chat already did this. Stand, manager and supervisor screens are unchanged.
+
 ## 2026-10-02-inv-1
 - **Stand Leads and Supervisors can sign in on a day they aren't scheduled.** They land on their most recent stand (or their next one if they've never worked). The home screen says "📅 Not scheduled today · last shift Sep 27". Regular workers still need today's schedule.
 - **Premium gets the game-day card** concessions already had: event, date, gates, kickoff, meals and reminders (from Admin → Game Day Information). Tapping it opens the full details screen.

@@ -4397,7 +4397,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-10-02-inv-1';
+const BUILD_TAG = '2026-10-02-wh-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5026,6 +5026,9 @@ function urgNorm(u){ const x=(u||'').toLowerCase(); if(x.includes('urg'))return'
 // name, one word of a two-word last name, one typo, extra letters after the
 // last name); tier 3 = first name only. Best tier wins; a tie between two
 // different people asks for the full last name.
+// Warehouse screens show people as "First Last" (the database keeps "Last, First"
+// so sign-in and everything else keep working). Display only.
+function whDisp(n){n=String(n==null?'':n).trim();if(!n||!n.includes(','))return n;const i=n.indexOf(',');const last=n.slice(0,i).trim(),first=n.slice(i+1).trim();return (first?first+' ':'')+last;}
 function loginFold(x){return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
 function loginDist(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array.from({length:n+1},(_,k)=>k);for(let x=1;x<=m;x++){const c=[x];for(let y=1;y<=n;y++){c[y]=Math.min(p[y]+1,c[y-1]+1,p[y-1]+(a[x-1]===b[y-1]?0:1));}p=c;}return p[n];}
 // "Mostly right" = a few letters off, scaled to the name's length.
@@ -11846,12 +11849,12 @@ async function mtLoadAssignees() {
   // his own "assign to" list (only warehouse_employee_directory rows
   // show up there). Listed first so it's the fast, obvious choice.
   const me = state.staffAccount;
-  const meOption = me ? '<option value="'+escapeAttr(me.empId)+'|'+escapeAttr(me.name)+'">🙋 Myself ('+escapeHtml(me.name)+') — deliver it yourself</option>' : '';
+  const meOption = me ? '<option value="'+escapeAttr(me.empId)+'|'+escapeAttr(me.name)+'">🙋 Myself ('+escapeHtml(whDisp(me.name))+') — deliver it yourself</option>' : '';
   const opt = r => {
       const n = counts[r.employee_id] || 0;
       const load = n === 0 ? 'no open tasks' : n + ' open task' + (n === 1 ? '' : 's');
       const tag = r.role === 'warehouse_supervisor' ? ' (Supervisor)' : '';
-      return '<option value="'+escapeAttr(r.employee_id)+'|'+escapeAttr(r.name)+'">'+escapeHtml(r.name)+tag+' — '+load+'</option>';
+      return '<option value="'+escapeAttr(r.employee_id)+'|'+escapeAttr(r.name)+'">'+escapeHtml(whDisp(r.name))+tag+' — '+load+'</option>';
     };
   // With a big crew, people on today's roster come first.
   const roster = await sb('warehouse_roster?event_date=eq.'+stadiumDay()+'&select=name').catch(()=>({_err:true}));
@@ -12182,7 +12185,7 @@ async function loadMgrTransfers() {
     return `<div class="fs-unit-card">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div><div style="font-weight:700">${escapeHtml(t.stand)}</div>
-        <div style="font-size:12px;color:var(--text-2)"><span style="color:${st.color};font-weight:700">${st.label}</span>${t.delivered_by?' · '+escapeHtml(t.delivered_by):''}${t.verified_by?' · ✍️'+escapeHtml(t.verified_by):''}</div></div>
+        <div style="font-size:12px;color:var(--text-2)"><span style="color:${st.color};font-weight:700">${st.label}</span>${t.delivered_by?' · '+escapeHtml(whDisp(t.delivered_by)):''}${t.verified_by?' · ✍️'+escapeHtml(whDisp(t.verified_by)):''}</div></div>
         <button class="btn btn-ghost" style="width:auto;padding:6px 10px;font-size:12px" onclick="mtViewTransfer('${t.id}','${t.stand.replace(/'/g,"\\'")}')">View</button>
       </div>
       ${canConfirm ? '<button class="btn btn-primary" onclick="mtConfirmTransfer('+t.id+')" style="margin-top:10px">✅ Confirm receipt (final)</button>' : ''}
@@ -13640,7 +13643,7 @@ async function adminLoadDrivers() {
   if (!rows.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:6px 0">No approved drivers yet.</div>'; return; }
   el.innerHTML = rows.map(dr =>
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)' + (dr.is_active ? '' : ';opacity:0.5') + '">' +
-      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">' + dr.name + (dr.is_active ? '' : ' (revoked)') + '</div>' +
+      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">' + escapeHtml(whDisp(dr.name)) + (dr.is_active ? '' : ' (revoked)') + '</div>' +
       '<div style="font-size:11px;color:var(--text-2)">ID ' + dr.employee_id + '</div></div>' +
       '<button class="btn btn-ghost" onclick="adminToggleDriver(' + dr.id + ',' + (!dr.is_active) + ')" style="width:auto;padding:6px 10px;font-size:11px;flex-shrink:0' + (dr.is_active ? ';border-color:#DC2626;color:#DC2626' : '') + '">' + (dr.is_active ? 'Revoke' : 'Re-approve') + '</button>' +
     '</div>').join('');
@@ -15966,11 +15969,11 @@ function whCovRenderPeople(){
   const key=n=>loginFold(n).replace(/[^a-z]/g,'');
   const hasRoster=_whCovRoster.size>0;
   const rowOf=p=>_whCovRows.find(x=>String(x.employee_id)===String(p.employee_id));
-  let people=_whCovPeople.filter(p=>!q||loginFold(p.name).includes(q));
+  let people=_whCovPeople.filter(p=>!q||loginFold(p.name+' '+whDisp(p.name)).includes(q));
   const working=p=>!hasRoster||_whCovRoster.has(key(p.name));
   const todo=people.filter(p=>working(p)&&!rowOf(p)),done=people.filter(p=>working(p)&&rowOf(p)),others=people.filter(p=>!working(p));
   const card=p=>{const r=rowOf(p),txt=r?whCovSummaryText(r):'';const sup=p.role==='warehouse_supervisor';
-    return '<div class="food-runner-card" id="whcov-card-'+escapeAttr(p.employee_id)+'" onclick="whCovOpen(\''+escapeAttr(p.employee_id)+'\')" style="cursor:pointer;padding:10px 12px;margin-bottom:7px;'+(r?'':'border-left-color:#F59E0B')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0"><div style="font-weight:800;font-size:14px">'+escapeHtml(p.name)+(sup?' <span style="font-size:10px;font-weight:800;color:var(--asu-maroon)">SUPERVISOR</span>':'')+'</div><div style="font-size:12px;margin-top:2px;color:'+(r?'var(--text-2)':'#B45309')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(txt||'No stands yet — tap to assign')+'</div></div><span style="font-size:12px;font-weight:800;color:var(--asu-maroon);flex-shrink:0">Edit ›</span></div></div>';};
+    return '<div class="food-runner-card" id="whcov-card-'+escapeAttr(p.employee_id)+'" onclick="whCovOpen(\''+escapeAttr(p.employee_id)+'\')" style="cursor:pointer;padding:10px 12px;margin-bottom:7px;'+(r?'':'border-left-color:#F59E0B')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0"><div style="font-weight:800;font-size:14px">'+escapeHtml(whDisp(p.name))+(sup?' <span style="font-size:10px;font-weight:800;color:var(--asu-maroon)">SUPERVISOR</span>':'')+'</div><div style="font-size:12px;margin-top:2px;color:'+(r?'var(--text-2)':'#B45309')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(txt||'No stands yet — tap to assign')+'</div></div><span style="font-size:12px;font-weight:800;color:var(--asu-maroon);flex-shrink:0">Edit ›</span></div></div>';};
   const sec=(t,list)=>list.length?'<div class="section-title" style="margin-top:10px">'+t+' · '+list.length+'</div>'+list.map(card).join(''):'';
   let html=sec(hasRoster?'⚠️ Working today — no stands yet':'⚠️ No stands yet',todo)+sec(hasRoster?'✅ Working today — assigned':'✅ Assigned',done);
   if(others.length)html+=q||_whCovShowOthers?sec('Not on today\'s roster',others):'<button class="btn btn-ghost" onclick="_whCovShowOthers=true;whCovRenderPeople()" style="margin-top:8px">Show '+others.length+' people not on today\'s roster</button>';
@@ -15986,7 +15989,7 @@ async function whCovOpen(emp){
   const sel=document.getElementById('whcov-person'),ed=document.getElementById('whcov-editor');if(!sel||!ed)return;
   if(sel.value===String(emp)&&ed.style.display!=='none'){whCovClose();return;}
   sel.value=emp;const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));
-  document.getElementById('whcov-editor-name').textContent=p?p.name:emp;
+  document.getElementById('whcov-editor-name').textContent=p?whDisp(p.name):emp;
   const c=document.getElementById('whcov-card-'+emp);if(c)c.after(ed);ed.style.display='';
   const ss=document.getElementById('whcov-stand-search');if(ss)ss.value='';
   await warehouseCoveragePersonChanged();
@@ -20573,7 +20576,7 @@ function renderWhRosterList() {
   if (!list) return;
   const all = state._whRosterFlat || [];
   const q = (document.getElementById('wh-roster-search') || { value: '' }).value.toLowerCase().trim();
-  const rows = q ? all.filter(w => w.name.toLowerCase().indexOf(q) >= 0) : all;
+  const rows = q ? all.filter(w => (w.name + ' ' + whDisp(w.name)).toLowerCase().indexOf(q) >= 0) : all;
   if (progress) {
     const inNow = all.filter(w => w.status === 'working' || w.status === 'break').length;
     const outDone = all.filter(w => w.status === 'ended').length;
@@ -20590,7 +20593,7 @@ function renderWhRosterList() {
     const btn = 'flex:1;height:40px;border-radius:10px;font-size:13px;font-weight:700;border:1.5px solid var(--border);background:var(--bg-elevated);color:var(--text-1);cursor:pointer';
     return '<div class="prem-row" style="flex-wrap:wrap">' +
       '<div class="prem-row-info" style="flex:1 1 100%">' +
-        '<div class="prem-row-name">' + escapeHtml(w.name) + (w.role ? ' <span style="font-weight:400;color:var(--text-2);font-size:11px">· ' + escapeHtml(w.role) + '</span>' : '') + '</div>' +
+        '<div class="prem-row-name">' + escapeHtml(whDisp(w.name)) + (w.role ? ' <span style="font-weight:400;color:var(--text-2);font-size:11px">· ' + escapeHtml(w.role) + '</span>' : '') + '</div>' +
         // Status and scheduled time are separate meta lines: .prem-row-meta is
         // nowrap+ellipsis app-wide, so one combined line got cut off.
         '<div class="prem-row-meta" style="font-weight:' + (isIn ? '700' : '400') + ';color:' + (isIn ? '#00A651' : 'var(--text-2)') + '">' + statusText + '</div>' +
@@ -20686,7 +20689,7 @@ async function loadWhCartDuty() {
     const isIn = latest && latest.action === 'duty_checkin';
     return '<div class="prem-row' + (isIn ? ' present' : '') + '">' +
       '<div class="prem-row-info">' +
-        '<div class="prem-row-name">' + escapeHtml(dr.name) + '</div>' +
+        '<div class="prem-row-name">' + escapeHtml(whDisp(dr.name)) + '</div>' +
         '<div class="prem-row-meta">' + (latest ? (isIn ? 'Checked in · ' : 'Checked out · ') + new Date(latest.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'Not marked yet today') + '</div>' +
       '</div>' +
       '<div class="prem-row-actions">' +
@@ -20728,7 +20731,7 @@ async function loadWhCartReturns() {
   if (!returns.length) { el.innerHTML = ''; return; }
   el.innerHTML = '<div style="font-size:12px;font-weight:700;color:#DC2626;margin-bottom:8px">⚠️ CARTS OUT OF SERVICE — NEEDS REVIEW</div>' +
     returns.map(r => '<div class="card" style="margin-bottom:8px;border-left:4px solid #DC2626">' +
-      '<div style="font-weight:600">' + escapeHtml(r.employee_name) + ' flagged Key ' + r.key_number + '</div>' +
+      '<div style="font-weight:600">' + escapeHtml(whDisp(r.employee_name)) + ' flagged Key ' + r.key_number + '</div>' +
       '<div style="font-size:12px;color:var(--text-2);margin:4px 0">' + (r.notes ? escapeHtml(r.notes) + ' · ' : '') + new Date(r.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + '</div>' +
       '<button class="btn btn-primary" onclick="whConfirmCartReturn(' + r.key_number + ',\'' + escapeHtml(r.employee_name).replace(/'/g,"\\'") + '\')" style="margin-top:8px;padding:8px 16px;font-size:13px">✅ Mark repaired &amp; back in service</button>' +
     '</div>').join('');
@@ -21329,7 +21332,7 @@ async function loadWhApprovals() {
       '<span class="smb-icon" onclick="openTransferStand(\'' + t.stand.replace(/'/g,"\\'") + '\',\'list\',' + t.id + ')">📦</span>' +
       '<div style="flex:1" onclick="openTransferStand(\'' + t.stand.replace(/'/g,"\\'") + '\',\'list\',' + t.id + ')">' +
         '<div class="smb-label">' + escapeHtml(t.stand) + '</div>' +
-        '<div class="smb-sub">' + (t.assigned_to_name ? 'Assigned to ' + escapeHtml(t.assigned_to_name) : 'Unassigned') + ' · <span style="color:' + st.color + ';font-weight:700">' + st.label + '</span>' + badge + '</div>' +
+        '<div class="smb-sub">' + (t.assigned_to_name ? 'Assigned to ' + escapeHtml(whDisp(t.assigned_to_name)) : 'Unassigned') + ' · <span style="color:' + st.color + ';font-weight:700">' + st.label + '</span>' + badge + '</div>' +
       '</div>' + right +
     '</div>';
   }).join('');
@@ -21808,7 +21811,7 @@ async function loadWhTransfers() {
           <span class="smb-icon" onclick="openTransferStand('${standJs}','list',null)">📥</span>
           <div style="flex:1" onclick="openTransferStand('${standJs}','list',null)">
             <div class="smb-label">${escapeHtml(r.stand)}</div>
-            <div class="smb-sub">📥 Stand requested · ${escapeHtml(r.requested_by || '')} · <span style="color:#F59E0B;font-weight:700">${r.status === 'open' ? 'Not started' : 'Claimed — ' + escapeHtml(r.claimed_by || '')}</span></div>
+            <div class="smb-sub">📥 Stand requested · ${escapeHtml(whDisp(r.requested_by || ''))} · <span style="color:#F59E0B;font-weight:700">${r.status === 'open' ? 'Not started' : 'Claimed — ' + escapeHtml(whDisp(r.claimed_by || ''))}</span></div>
           </div>
           ${action}
         </div>`;
@@ -21861,17 +21864,17 @@ async function loadWhTransfers() {
         ? (stillWorking
             ? '<button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();openTransferStand(\'' + t.stand.replace(/'/g,"\\'") + '\',\'list\',' + t.id + ')">▶ Continue delivery</button>'
             : '<span style="font-size:11px;color:#00A651;font-weight:700">✓ Assigned to you</span>')
-        : '<span style="font-size:11px;color:var(--text-2)">' + escapeHtml(t.assigned_to_name || '') + '</span>';
+        : '<span style="font-size:11px;color:var(--text-2)">' + escapeHtml(whDisp(t.assigned_to_name || '')) + '</span>';
     } else {
       // Unassigned (legacy / force-stock via QR) — keep self-serve claim as a fallback
       const claimed = t.delivered_by && t.status !== 'pending';
       rightSide = !claimed
         ? '<button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();whClaimTransfer(\'' + t.id + '\',\'' + t.stand.replace(/'/g,"\\'") + '\')">✋ Claim</button>'
-        : '<span style="font-size:11px;color:var(--text-2)">' + escapeHtml(t.delivered_by) + '</span>';
+        : '<span style="font-size:11px;color:var(--text-2)">' + escapeHtml(whDisp(t.delivered_by)) + '</span>';
     }
     const assignedLine = t.assigned_to_name
-      ? 'Assigned to: ' + escapeHtml(t.assigned_to_name) + (t.assigned_by ? ' by ' + escapeHtml(t.assigned_by) : '')
-      : (t.initiated_by ? 'From: ' + escapeHtml(t.initiated_by) : 'Force-stock');
+      ? 'Assigned to: ' + escapeHtml(whDisp(t.assigned_to_name)) + (t.assigned_by ? ' by ' + escapeHtml(whDisp(t.assigned_by)) : '')
+      : (t.initiated_by ? 'From: ' + escapeHtml(whDisp(t.initiated_by)) : 'Force-stock');
     // Same printable document the whole way through a transfer's life —
     // before pickup it's a pull sheet (empty checkbox to tick while
     // pulling); once delivered/verified/confirmed it becomes a delivery
@@ -21984,7 +21987,7 @@ async function whConfirmTask(id, stand) {
   if (WAREHOUSE_TRANSFER_HUBS.includes(stand)) { body.status = 'confirmed'; body.confirmed_by = who; body.confirmed_at = body.wh_confirmed_at; }
   const res = await sb('transfers?id=eq.'+id+'&status=eq.verified', { method:'PATCH', headers:{Prefer:'return=representation'}, body: JSON.stringify(body) });
   if (res._err || !Array.isArray(res) || !res.length) { toast('Could not approve — try refreshing', 'error'); loadWhTransfers(); return; }
-  whNotifyOtherLeaders('✅ Delivery signed off', stand + ' — approved by ' + who);
+  whNotifyOtherLeaders('✅ Delivery signed off', stand + ' — approved by ' + whDisp(who));
   toast('✅ Approved');
   loadWhTransfers();
 }
@@ -22065,7 +22068,7 @@ async function openTransferStand(stand, source, transferId) {
   _tsSource = source;
   document.getElementById('ts-title').textContent =
     ((source==='qr'||source==='qrforce'||source==='fieldqr'||source==='camera_restock')?'⚡ Force Restock · ':'📦 ') + stand;
-  document.getElementById('ts-sub').textContent = (state.whName || getFieldOpsActor().name || 'Game Day');
+  document.getElementById('ts-sub').textContent = whDisp(state.whName || getFieldOpsActor().name || 'Game Day');
   document.getElementById('ts-scan-badge').style.display = (source === 'qr'||source==='fieldqr'||source==='qrforce'||source==='camera_restock') ? 'block' : 'none';
   const forceMode=isFieldForceStockSource(source);
   const forceBanner=document.getElementById('ts-force-banner');
@@ -22388,13 +22391,13 @@ function renderTsStatus() {
     // 'confirmed' never went through that step, so falsely saying
     // "confirmed by manager" here would be misleading.
     b.textContent = _tsTransfer.confirmed_by
-      ? ('✅ Confirmed by ' + _tsTransfer.confirmed_by)
-      : ('✅ Delivered by ' + (_tsTransfer.delivered_by||'warehouse') + ' — stand request, no sign-off needed');
+      ? ('✅ Confirmed by ' + whDisp(_tsTransfer.confirmed_by))
+      : ('✅ Delivered by ' + whDisp(_tsTransfer.delivered_by||'warehouse') + ' — stand request, no sign-off needed');
   }
   if (_tsTransfer.status === 'verified') {
     const b = document.getElementById('ts-confirmed-badge');
     b.style.display = 'block';
-    b.innerHTML = '✍️ Verified by ' + escapeHtml(_tsTransfer.verified_by||'supervisor') + '<br><span style="font-size:12px;font-weight:400">Waiting for warehouse manager confirmation</span>';
+    b.innerHTML = '✍️ Verified by ' + escapeHtml(whDisp(_tsTransfer.verified_by||'supervisor')) + '<br><span style="font-size:12px;font-weight:400">Waiting for warehouse manager confirmation</span>';
   }
 }
 
@@ -22423,7 +22426,7 @@ function renderTsItems() {
   const locked = _tsTransfer.status === 'delivered' || _tsTransfer.status === 'verified' || _tsTransfer.status === 'confirmed';
   if (locked) {
     const deliveredByLine = _tsTransfer.delivered_by
-      ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px">Delivered by ${escapeHtml(_tsTransfer.delivered_by)}${_tsTransfer.updated_at ? ' · ' + new Date(_tsTransfer.updated_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : ''}</div>`
+      ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px">Delivered by ${escapeHtml(whDisp(_tsTransfer.delivered_by))}${_tsTransfer.updated_at ? ' · ' + new Date(_tsTransfer.updated_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : ''}</div>`
       : '';
     el.innerHTML = `
       <div style="text-align:center;background:#DCFCE7;border:1px solid #00A651;border-radius:12px;padding:16px;margin-bottom:12px">
@@ -22949,7 +22952,7 @@ async function tsCompleteDelivery(opts) {
       (async()=>{const meId=String((state.staffAccount&&state.staffAccount.empId)||'');
         const sups=(await onDutyIds(['warehouse_supervisor'])).filter(id=>id!==meId);
         const to=sups.length?sups:(await onDutyIds(['warehouse_manager'])).filter(id=>id!==meId);
-        to.forEach(id=>sendPushTo(id,'📦 Ready to verify · '+_tsTransfer.stand,'Delivered by '+deliveredByName));})();
+        to.forEach(id=>sendPushTo(id,'📦 Ready to verify · '+_tsTransfer.stand,'Delivered by '+whDisp(deliveredByName)));})();
     }
     if (selfHandled) {
       toast(finalStatus === 'confirmed' ? '✅ Delivered, verified & confirmed — done' : '✅ Delivered & verified — waiting on the stand manager\'s final receipt');
@@ -23122,7 +23125,7 @@ async function whFinalApprove(fromVerify) {
   // Manager wasn't the one who did this — make sure he still finds out,
   // same as any other action someone did on his behalf while he wasn't
   // the one handling it.
-  whNotifyOtherLeaders('✅ Delivery signed off', _tsTransfer.stand + ' — ' + who + (ownDelivery ? ' signed off their own delivery' : ' verified & approved'));
+  whNotifyOtherLeaders('✅ Delivery signed off', _tsTransfer.stand + ' — ' + whDisp(who) + (ownDelivery ? ' signed off their own delivery' : ' verified & approved'));
   toast((fromVerify ? '✍️ Verified & approved' : '✅ Approved') + (isHub ? ' — warehouse transfer complete' : ' — visible to the stand manager for final confirm'));
   renderTsItems();
   renderTsStatus();
