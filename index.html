@@ -4364,7 +4364,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-9';
+const BUILD_TAG = '2026-10-03-fix-10';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15304,7 +15304,13 @@ async function renderKitchenQueue(rows){
     </div>`;
   };
   const doneRow=r=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);font-size:12px"><div><b>${escapeHtml(r.stand)}</b><div style="color:var(--text-2)">${kitchenItemsText(r)}</div></div><div style="text-align:right;white-space:nowrap;color:var(--text-2)">✅ ${escapeHtml(r.assigned_runner_name||'')}<br>${new Date(r.delivered_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</div></div>`;
-  if(f==='done'){el.innerHTML=doneToday.length?'<div class="card" style="padding:6px 12px">'+doneToday.map(doneRow).join('')+'</div>':'<div class="empty"><div class="empty-icon">🍔</div><p>Nothing delivered yet today.</p></div>';return;}
+  if(f==='done'){
+    // History only: delivered orders, then orders the Food Manager declined (with the reply).
+    const declinedToday=(rows||[]).filter(r=>r.status==='cancelled'&&r.declined_reason&&now-new Date(r.updated_at||r.created_at||0).getTime()<14*3600000);
+    const decRow=r=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);font-size:12px"><div><b>${escapeHtml(r.stand)}</b><div style="color:var(--text-2)">${kitchenItemsText(r)}</div><div style="color:#B91C1C;font-weight:700">“${escapeHtml(r.declined_reason)}”</div></div><div style="text-align:right;white-space:nowrap;color:#B91C1C">❌ Declined<br><span style="color:var(--text-3)">${escapeHtml(r.declined_by||'')}</span></div></div>`;
+    let h=doneToday.length?'<div class="section-title" style="margin-top:4px">✅ Delivered · '+doneToday.length+'</div><div class="card" style="padding:6px 12px">'+doneToday.map(doneRow).join('')+'</div>':'';
+    if(declinedToday.length)h+='<div class="section-title" style="margin-top:12px">❌ Declined · '+declinedToday.length+'</div><div class="card" style="padding:6px 12px">'+declinedToday.map(decRow).join('')+'</div>';
+    el.innerHTML=h||'<div class="empty"><div class="empty-icon">🍔</div><p>Nothing delivered or declined yet today.</p></div>';return;}
   if(!active.length){el.innerHTML='<div class="empty"><div class="empty-icon">✅</div><p>No open food orders.</p><p style="font-size:12px;color:var(--text-3)">Orders go straight to the runner who covers the stand.</p></div>';return;}
   const filters={need:r=>!r.assigned_runner_id,wait:isWaiting,way:r=>r.status==='on_the_way',late};
   if(f!=='all'){
@@ -15318,6 +15324,7 @@ async function renderKitchenQueue(rows){
 // ---- Food Manager: decline an order with a short reply to the stand ----
 const FOOD_DECLINE_REASONS=['Not available right now','Kitchen can\'t make it right now','Sold out','Duplicate order'];
 function kitchenDeclineOpen(id){
+  if(!foodIsManagerSession())return toast('Only the Food Manager can decline an order','error');
   const rows=state._kitchenRowsCache||[];const r=rows.find(x=>String(x.id)===String(id));
   const old=document.getElementById('food-decline-overlay');if(old)old.remove();
   const ov=document.createElement('div');ov.id='food-decline-overlay';ov.className='contact-popup-overlay';
@@ -15335,7 +15342,9 @@ function kitchenDeclinePick(btn){
   document.querySelectorAll('#food-decline-chips .chip').forEach(c=>c.classList.toggle('selected',c===btn));
   const t=document.getElementById('food-decline-text');if(t)t.value=btn.textContent;
 }
+function foodIsManagerSession(){const r=state.staffAccount&&state.staffAccount.role||'';return ['food_manager','kitchen_coordinator'].includes(r);}
 async function kitchenDeclineSave(id,btn){
+  if(!foodIsManagerSession())return toast('Only the Food Manager can decline an order','error');
   const reason=String((document.getElementById('food-decline-text')||{}).value||'').trim();
   if(!reason)return toast('Pick a reply or type one','error');
   const who=state.staffAccount||{};
