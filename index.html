@@ -1749,11 +1749,12 @@
       <label class="form-label">Group PIN</label>
       <input class="form-input" type="tel" inputmode="numeric" pattern="[0-9]*" id="npo-pin" placeholder="4-digit group PIN" maxlength="4" autocomplete="off">
       <label class="form-label">Your Name</label>
-      <input class="form-input" type="text" id="npo-member-name" placeholder="First Last" autocomplete="off">
+      <input class="form-input" type="text" id="npo-member-name" placeholder="Your name (first or last is fine)" autocomplete="off">
+      <div id="npo-name-choices" style="display:none"></div>
       <button class="btn btn-primary" onclick="doNpoLogin()">Sign in →</button>
     </div>
     <p style="font-size:11px;color:var(--text-3);text-align:center;line-height:1.5">
-      Use the group's shared 4-digit PIN + your exact approved roster name.<br>
+      Pick your group, enter the group's 4-digit PIN and your name — first name or last name is enough.<br>
       At a <b>main stand</b>, the approved NPO Lead signs in and manages the group's attendance. At a <b>portable/non-main stand</b>, regular approved members may self-login only when Admin has turned that stand ON.
     </p>
   </div>
@@ -2063,7 +2064,7 @@
     <div><div class="page-title">📦 Requests</div><div class="page-sub" id="request-hub-context">Fast game-day help</div></div>
   </div>
   <div class="content">
-    <button class="sub-menu-btn" id="req-hub-existing-btn" style="display:none;border-left:4px solid #7C3AED" onclick="openLeadershipRequestMonitor()">
+    <button class="sub-menu-btn" id="req-hub-existing-btn" style="display:none;border-left:4px solid #7C3AED" onclick="openLeadershipRequests()">
       <span class="smb-icon">📣</span>
       <div><div class="smb-label">All Requests · today <span id="stand-requests-badge" style="display:none;background:var(--aramark-red);color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;margin-left:6px"></span></div><div class="smb-sub">Stock · Food · IT across all stands</div></div>
     </button>
@@ -2710,8 +2711,7 @@
       </div>
       <div id="stand-requests-open-count" style="font-size:11px;font-weight:850;color:var(--warning);margin-bottom:8px">Loading…</div>
       <div id="stand-requests-cat-filter" style="display:none;gap:6px;margin-bottom:8px;overflow-x:auto;padding-bottom:2px">
-        <button class="tab-item active" data-cat="all" onclick="standRequestsCatChanged('all',this)" style="white-space:nowrap">All</button>
-        <button class="tab-item" data-cat="stock" onclick="standRequestsCatChanged('stock',this)" style="white-space:nowrap">📦 Stock/Warehouse</button>
+        <button class="tab-item active" data-cat="stock" onclick="standRequestsCatChanged('stock',this)" style="white-space:nowrap">📦 Stock/Warehouse</button>
         <button class="tab-item" data-cat="kitchen" onclick="standRequestsCatChanged('kitchen',this)" style="white-space:nowrap">🍔 Food</button>
         <button class="tab-item" data-cat="it" onclick="standRequestsCatChanged('it',this)" style="white-space:nowrap">🔧 IT/Tech</button>
       </div>
@@ -4368,7 +4368,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-3';
+const BUILD_TAG = '2026-10-03-fix-4';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7036,6 +7036,7 @@ async function goNpoLogin() {
   document.getElementById('npo-group-name').value = '';
   document.getElementById('npo-pin').value = '';
   document.getElementById('npo-member-name').value = '';
+  { const ch=document.getElementById('npo-name-choices'); if(ch){ch.innerHTML='';ch.style.display='none';} }
   const sel = document.getElementById('npo-group-select');
   const txt = document.getElementById('npo-group-name');
   sel.style.display = 'none';
@@ -7066,6 +7067,62 @@ async function goNpoLogin() {
 function npoNameKey(v){
   return String(v||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
     .toLowerCase().replace(/[^a-z0-9]+/g,'').trim();
+}
+// ---- Forgiving NPO name matching (same spirit as employee sign-in) ----
+// Members rarely type their roster name exactly. Accept: any order
+// ("Leoni Sean"), first or last name only, short starts ("Sean L"), and
+// small typos. If more than one member fits, they tap their name.
+function npoNameTokens(v){
+  return String(v||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+    .replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean);
+}
+function npoEditDistance(a,b){
+  if(a===b)return 0; if(!a.length)return b.length; if(!b.length)return a.length;
+  let prev=Array.from({length:b.length+1},(_,j)=>j);
+  for(let i=1;i<=a.length;i++){const cur=[i];for(let j=1;j<=b.length;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur;}
+  return prev[b.length];
+}
+// Every typed word must pair with a different roster word; test(t,r) decides a pair.
+function npoTokensFit(T,R,test){
+  const used=new Set();
+  return T.every(t=>{const i=R.findIndex((r,k)=>!used.has(k)&&test(t,r));if(i<0)return false;used.add(i);return true;});
+}
+function npoMatchMember(typed,roster){
+  const T=npoNameTokens(typed); if(!T.length)return {none:true};
+  const rows=(roster||[]).map(m=>({m,R:npoNameTokens(m.member_name)})).filter(x=>x.R.length);
+  const pick=list=>list.length===1?{member:list[0].m}:list.length>1?{choices:list.map(x=>x.m)}:null;
+  // 1. exact (any word order)
+  const k=T.slice().sort().join(' ');
+  let r=pick(rows.filter(x=>x.R.slice().sort().join(' ')===k)); if(r)return r;
+  // 2. every typed word is a whole roster word (e.g. just "Sean", or "Sean Leoni" for "Sean M Leoni")
+  r=pick(rows.filter(x=>npoTokensFit(T,x.R,(t,w)=>t===w))); if(r)return r;
+  // 3. every typed word starts a roster word ("Sean L", "Leo")
+  r=pick(rows.filter(x=>npoTokensFit(T,x.R,(t,w)=>t.length>=1&&w.startsWith(t)&&(t.length>=2||T.length>1)))); if(r)return r;
+  // 4. small typos ("Shawn Leony")
+  const near=(t,w)=>t.length>=3&&npoEditDistance(t,w)<=(t.length>=6?2:1);
+  r=pick(rows.filter(x=>npoTokensFit(T,x.R,(t,w)=>(t.length>=2&&w.startsWith(t))||near(t,w)))); if(r)return r;
+  if(T.join('').length<2)return {none:true};
+  // 5. nothing fits: offer the closest names, if any are reasonably close
+  const score=x=>T.reduce((s,t)=>s+Math.min(...x.R.map(w=>npoEditDistance(t,w.slice(0,Math.max(t.length,1))))),0);
+  const close=rows.map(x=>({x,s:score(x)})).filter(o=>o.s<=Math.max(2,Math.floor(T.join('').length/3))).sort((a,b)=>a.s-b.s).slice(0,4).map(o=>o.x.m);
+  return close.length?{choices:close,notExact:true}:{none:true};
+}
+// Group typed instead of picked (only when the drop-down could not load).
+function npoFuzzyFind(typed,groups){
+  const key=npoNameKey(typed); if(!key)return null;
+  const exact=(groups||[]).filter(g=>npoNameKey(g.group_name)===key); if(exact.length===1)return exact[0];
+  const part=(groups||[]).filter(g=>npoNameKey(g.group_name).includes(key)); return part.length===1?part[0]:null;
+}
+function npoShowNameChoices(list,notExact){
+  const el=document.getElementById('npo-name-choices'); if(!el)return;
+  el.innerHTML='<div style="font-size:12px;font-weight:800;margin:8px 0 6px">'+(notExact?'Did you mean:':'Tap your name:')+'</div>'+
+    list.map(m=>'<button class="btn btn-ghost" style="margin:0 0 6px;text-align:left" onclick="npoChooseName(this.dataset.n)" data-n="'+escapeAttr(m.member_name)+'">'+escapeHtml(m.member_name)+(m.is_lead?' <small style="color:var(--asu-maroon)">· NPO Lead</small>':'')+'</button>').join('');
+  el.style.display='';
+}
+function npoChooseName(n){
+  const inp=document.getElementById('npo-member-name'); if(inp)inp.value=n;
+  const el=document.getElementById('npo-name-choices'); if(el){el.innerHTML='';el.style.display='none';}
+  doNpoLogin();
 }
 
 async function doNpoLogin() {
@@ -7101,14 +7158,12 @@ async function doNpoLogin() {
       '&is_active=eq.true&select=id,member_name,is_lead,notes&order=member_name.asc');
     if (roster._err) return toast('Could not check the NPO roster — try again', 'error');
 
-    const key = npoNameKey(memberName);
-    const matches = roster.filter(m => npoNameKey(m.member_name) === key);
-    if (matches.length !== 1) {
-      return toast(matches.length
-        ? 'More than one roster name matches — enter your full first and last name'
-        : 'Your name is not on the approved ' + g.group_name + ' roster', 'error');
-    }
-    const member = matches[0];
+    const found = npoMatchMember(memberName, roster);
+    if (found.choices) { npoShowNameChoices(found.choices, found.notExact); return toast(found.notExact ? 'Check your name — tap it below' : 'More than one person fits — tap your name below', 'error'); }
+    if (!found.member) return toast('Your name is not on the ' + g.group_name + ' list — check spelling or ask your NPO Lead', 'error', 7000);
+    const member = found.member;
+    const matches = [member];
+    { const el=document.getElementById('npo-name-choices'); if(el){el.innerHTML='';el.style.display='none';} }
 
     const assigned = String(g.stand || '').split(',')
       .map(s => canonicalStandName2026(s.trim())).filter(Boolean);
@@ -9464,7 +9519,9 @@ async function loadStandRequests(){
   // so everyone gets the same Stock/Food/IT filtering managers already had.
   const catFilter=document.getElementById('stand-requests-cat-filter');
   if(catFilter)catFilter.style.display='flex';
-  const cat=state.standRequestsCat||'all';
+  // No "All" tab: one category at a time (Stock / Food / IT), Stock first.
+  if(!['stock','kitchen','it'].includes(state.standRequestsCat))state.standRequestsCat='stock';
+  const cat=state.standRequestsCat;
   if(catFilter)catFilter.querySelectorAll('.tab-item').forEach(t=>t.classList.toggle('active',t.dataset.cat===cat));
 
   const sub=document.getElementById('stand-requests-sub'),title=document.getElementById('stand-requests-title');
@@ -10427,6 +10484,15 @@ function requestHubOpenExisting(){
   const s=getOperationalStand(who)||state.activeStand||who.homeStand||'';
   if(s)state.standRequestsStand=s;
   state.standRequestsView='';
+  showScreen('screen-stand-requests');
+}
+// Managers / Support Managers / Admin: the Stand Requests screen (Working stand
+// or All stands; Stock / Food / IT tabs). Back returns to the Requests menu.
+function openLeadershipRequests(){
+  if(!(state.staffAccount&&state.staffAccount.group==='manager'&&['support_manager','manager','admin'].includes(state.staffAccount.role)))return;
+  state.standTaskReturnScreen='screen-submenu-requests';
+  state.standRequestsStand=state.activeStand||state.standRequestsStand||'';
+  state.standRequestsView='__all__';
   showScreen('screen-stand-requests');
 }
 function openLeadershipRequestMonitor(){

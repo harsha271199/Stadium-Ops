@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-4
+- **Manager / Support Manager requests:** back to the original **Stand Requests** screen (Back at the top, "Working stand / All stands", the 📦 Stock / 🍔 Food / 🔧 IT boxes). Only the "All" box is removed, so one type shows at a time (Stock first). No "New request" button on it. Opened from Requests → All Requests · today.
+- **NPO sign-in is forgiving:** after picking the group and PIN, the name can be first name only, last name only, either order, a short start ("Sean L") or have small typos. If more than one member fits (e.g. two "Lopez"), they tap their name from a short list. Unknown names are still refused.
+- Fixed a missing helper (`npoFuzzyFind`) used when the NPO group list can't load.
+
 ## 2026-10-03-fix-3
 - **Why yesterday's chat / requests / "23 stands" still showed:** before 6 AM Arizona the app counted the night as the previous game day, so at 2–5 AM on Oct 3 it was still showing Oct 2 test data. Oct 3 is now the first game day: nothing before it is ever "today", and Oct 3 lists start at midnight.
 - **Manager requests list:** back to the plain list (OPEN NOW, then RECENTLY FINISHED). The open / in-progress / overdue tiles and the search are gone; only the "All" filter was removed (Stock · Food · IT stay). It now has a Back button.
