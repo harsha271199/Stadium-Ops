@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-20';
+const BUILD_TAG = '2026-10-03-fix-21';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9481,7 +9481,7 @@ async function goStandRequests(targetStand){
   const stand=targetStand || getOperationalStand(who) || who.homeStand || '';
   if(!stand) return toast('Choose a stand first','error');
   state.standRequestsStand=stand;
-  state.standRequestsView='';
+  state.standRequestsView=(isLimitedAreaLead()&&!targetStand)?'__all__':'';
   if(isSupervisorSession()) setSupervisorActiveStand(stand,{silent:true});
   if(isManagerOpsSession()) mgrV10SetActiveStand(stand,true);
   showScreen('screen-stand-requests');
@@ -9515,6 +9515,11 @@ function standRequestsViewChanged(){
     if(isSupervisorSession())setSupervisorActiveStand(state.standRequestsView,{silent:true});
   }
   loadStandRequests();
+}
+function standRequestsPick(v){
+  const sel=document.getElementById('stand-requests-view-select');
+  if(sel){if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}sel.value=v;}
+  standRequestsViewChanged();
 }
 function standRequestsToggleRecent(){
   state.standRequestsShowRecent=!state.standRequestsShowRecent;
@@ -9571,6 +9576,13 @@ async function loadStandRequests(){
     viewSel.value=want;
   }
   const allMode=canAll&&(viewSel?viewSel.value==='__all__':state.standRequestsView==='__all__');
+  if(viewWrap&&isLimitedAreaLead()){
+    let qb=document.getElementById('stand-requests-area-btns');
+    if(!qb){qb=document.createElement('div');qb.id='stand-requests-area-btns';qb.style.cssText='display:flex;gap:6px;margin-bottom:8px';viewWrap.parentNode.insertBefore(qb,viewWrap);}
+    const cur=state.standRequestsStand||defaultStand;
+    qb.innerHTML='<button class="btn '+(allMode?'btn-primary':'btn-ghost')+'" style="margin:0;flex:1;padding:10px" onclick="standRequestsPick(\'__all__\')">📋 All my stands</button>'+
+      '<button class="btn '+(!allMode?'btn-primary':'btn-ghost')+'" style="margin:0;flex:1;padding:10px" onclick="standRequestsPick(\''+escapeAttr(cur)+'\')">📍 '+escapeHtml(String(cur).split(' ')[0]||'My stand')+'</button>';
+  }
   const stand=allMode?'':(canAll&&viewSel&&viewSel.value?viewSel.value:defaultStand);
   if(!allMode&&!stand)return;
 
@@ -10549,7 +10561,7 @@ function requestHubOpenExisting(){
   const who=getRequesterIdentity();
   const s=getOperationalStand(who)||state.activeStand||who.homeStand||'';
   if(s)state.standRequestsStand=s;
-  state.standRequestsView='';
+  state.standRequestsView=isLimitedAreaLead()?'__all__':''; // multi-stand leads start on All my stands
   showScreen('screen-stand-requests');
 }
 // Managers / Support Managers / Admin: the Stand Requests screen (Working stand
