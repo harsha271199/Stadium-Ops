@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-14
+- Warehouse leaders' RIGHT NOW: Waiting / Overdue open **Requests → Open**, On the way opens **Requests → In Progress** (was opening All Transfers). Leaders' Requests list shows every stand by default.
+- Game day 10/3 is requests + Force Stock only: Create Transfer, All Transfers, Approvals and the "To verify" chip are hidden; Manager tools leads with **Stand Requests** and has a **Force Stock** button.
+
 ## 2026-10-03-fix-13
 - Admin "Multi-Stand Coverage" now lists Supervisors as well as Stand Leads (Supervisors first, labelled). Saving limits that person to only the checked stands, with Stand Lead tools and a stand picker. "Remove temporary access" gives a Supervisor back their full view.
 - One-tap area buttons (Inferno, West Concourse, North/Draft Houses 215–221, East Concourse, Upper West, Upper East) add a whole area's stands.

@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-13';
+const BUILD_TAG = '2026-10-03-fix-14';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -20781,20 +20781,24 @@ function renderWarehouseForRole() {
   tilesSlot.style.cssText = 'margin-bottom:4px';
   // Two jobs that need a person right now, big; everything else is a tool.
   const tool = (go, ic, label, id, subId) => '<div class="wh-tool"' + (id ? ' id="' + id + '"' : '') + ' onclick="' + go + '"><div class="ic">' + ic + '</div><div class="lbl tile-label">' + label + '</div>' + (subId ? '<div class="tile-sub" id="' + subId + '"></div>' : '') + '</div>';
+  const reqOnly = whRequestsOnlyToday();
   tilesSlot.innerHTML =
     '<div class="wh-big">' +
-      '<div class="wh-big-card" id="wh-tile-approvals" onclick="showScreen(\'screen-wh-approvals\')"><div class="ic">✅</div><div><div class="lbl tile-label">Approvals</div><div class="tile-sub" id="wh-tile-approvals-sub">Loading…</div></div></div>' +
+      (reqOnly
+        ? '<div class="wh-big-card" id="wh-tile-requests-big" onclick="whOpenRequests(\'open\')"><div class="ic">📥</div><div><div class="lbl tile-label">Stand Requests</div><div class="tile-sub">Every stand · open & in progress</div></div></div>'
+        : '<div class="wh-big-card" id="wh-tile-approvals" onclick="showScreen(\'screen-wh-approvals\')"><div class="ic">✅</div><div><div class="lbl tile-label">Approvals</div><div class="tile-sub" id="wh-tile-approvals-sub">Loading…</div></div></div>') +
       '<div class="wh-big-card" id="wh-tile-deliveries" onclick="whMgrOpenPane(\'todeliver\')"><div class="ic">📦</div><div><div class="lbl tile-label">← My Jobs</div><div class="tile-sub" id="wh-sup-tile-deliveries-sub">Stands waiting</div></div></div>' +
     '</div>' +
     '<div class="wh-tools-title">🛠️ MANAGER TOOLS</div>' +
     '<div class="wh-tools">' +
-      tool("showScreen('screen-wh-create-transfer')", '🚚', 'Create Transfer') +
-      tool("whMgrOpenPane('transfers')", '✍️', 'All Transfers', '', 'wh-sup-tile-transfers-sub') +
+      (reqOnly ? '' : tool("showScreen('screen-wh-create-transfer')", '🚚', 'Create Transfer') +
+        tool("whMgrOpenPane('transfers')", '✍️', 'All Transfers', '', 'wh-sup-tile-transfers-sub')) +
+      tool("whScanToOpen()", '📷', 'Force Stock') +
       tool("showScreen('screen-wh-team')", '🗺️', 'Assign & Team') +
       tool("whMgrOpenPane('roster')", '👥', 'My Team', '', 'wh-tile-roster-sub') +
       tool("whMgrOpenPane('cart')", '<svg width="26" height="24"><use href="#gc-icon"/></svg>', 'Golf Cart', 'wh-tile-cart', 'wh-tile-cart-sub') +
       tool("whMgrOpenPane('inventory')", '📄', 'Stand Report') +
-      tool("whMgrOpenPane('requests')", '📥', 'Requests') +
+      tool("whOpenRequests('open')", '📥', 'Requests') +
     '</div>';
   whUpdateApprovalsTile();
   whUpdateCartTile();
@@ -21974,7 +21978,11 @@ async function whInitZoneToggle() {
   }
   if (state._myWhZoneStands && state._myWhZoneStands.length) {
     row.style.display = 'flex';
-    if (!state.whZoneMode) state.whZoneMode = 'mine'; // default narrow
+    const leader = ['warehouse_manager', 'warehouse_supervisor'].includes(state.staffAccount.role);
+    if (!state.whZoneMode) {
+      state.whZoneMode = leader ? 'all' : 'mine'; // leaders oversee every stand; workers see their own
+      row.querySelectorAll('.chip').forEach((c, i) => c.classList.toggle('selected', i === (leader ? 1 : 0)));
+    }
   } else {
     row.style.display = 'none';
   }
@@ -22517,16 +22525,16 @@ function whRenderLiveStrip() {
   if (dsub) dsub.textContent = (waiting + openTf) ? (waiting + ' requested · ' + openTf + ' transfer' + (openTf === 1 ? '' : 's')) : 'All caught up ✅';
   { const dc = document.getElementById('wh-tile-deliveries'); if (dc) dc.classList.toggle('hot', waiting + openTf > 0); }
   if (state._lastToVerify !== toVerify) { state._lastToVerify = toVerify; whUpdateApprovalsTile(); } // only re-query when it changes
-  const isMgr = true; // Supervisor has the Manager's full access and home screen
-  const workPane = isMgr ? "whMgrOpenPane('transfers')" : "whMgrOpenPane('todeliver')";
+  // Waiting / On the way / Overdue are stand REQUESTS — open the Requests list on the matching tab.
+  const workPane = "whOpenRequests('open')", wayPane = "whOpenRequests('claimed')";
   const signPane = toVerify ? "whMgrOpenPane('transfers')" : "showScreen('screen-wh-approvals')";
   const chip = (n, label, cls, go) => '<div class="wh-stat-chip' + (n ? ' ' + cls : '') + '" onclick="' + go + '"><b>' + n + '</b><span>' + label + '</span></div>';
   el.style.display = '';
   el.innerHTML = '<div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-3);margin-bottom:6px">RIGHT NOW</div><div class="wh-stat-row wh-now">' +
     chip(waiting, 'Waiting', 'warn', workPane) +
-    chip(onWay, 'On the way', 'info', workPane) +
+    chip(onWay, 'On the way', 'info', wayPane) +
     chip(overdue, 'Overdue', 'urgent', workPane) +
-    chip(toVerify + toApprove, 'To verify', 'urgent', signPane) +
+    (whRequestsOnlyToday() ? '' : chip(toVerify + toApprove, 'To verify', 'urgent', signPane)) +
     '</div>';
 }
 
@@ -23716,6 +23724,18 @@ async function whFinalApprove(fromVerify) {
 
 
 
+// Game day: the warehouse runs on stand requests + Force Stock only — no transfers.
+const WH_REQUESTS_ONLY_DATES = ['2026-10-03'];
+function whRequestsOnlyToday() { return WH_REQUESTS_ONLY_DATES.includes(stadiumDay()); }
+// Opens the Requests list on Open ('open') or In Progress ('claimed'), always showing every stand.
+function whOpenRequests(tab) {
+  whMgrOpenPane('requests');
+  state.whZoneMode = 'all';
+  document.querySelectorAll('#wh-zone-toggle .chip').forEach((c, i) => c.classList.toggle('selected', i === 1));
+  const tabs = document.querySelectorAll('#wh-mode-requests .tab-bar .tab-item');
+  const el = tabs[tab === 'claimed' ? 1 : tab === 'done' ? 2 : 0];
+  if (el) wTab(el, tab || 'open'); else renderWarehouse();
+}
 function wTab(el, tab) {
   // Only affect the sub-tab bar inside requests mode
   el.parentElement.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
