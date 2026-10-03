@@ -3278,19 +3278,20 @@
       </div>
 
       <div class="v11-admin-section">
-        <div class="v11-admin-title">🧭 Temporary Stand Lead → Multi-Stand Coverage</div>
-        <div class="v11-admin-sub">Give an actual Stand Lead temporary coverage for selected stands on this game date. The assignment saves to Supabase and is limited to only the stands checked here.</div>
+        <div class="v11-admin-title">🧭 Stand Lead / Supervisor → Multi-Stand Coverage</div>
+        <div class="v11-admin-sub">Give a Stand Lead or a Supervisor coverage of selected stands on this game date. They get Stand Lead tools with a picker of only the stands checked here — nothing else.</div>
         <label class="form-label" style="margin-top:0">Game date</label>
         <input class="form-input" type="date" id="sla-date" onchange="adminLoadAreaLeadPeople()" style="margin-top:0">
-        <label class="form-label">Stand Lead</label>
-        <select class="form-input" id="sla-person" onchange="adminLoadAreaLeadAssignment()"><option value="">— Select Stand Lead —</option></select><div id="sla-people-status" style="font-size:10px;color:var(--text-3);margin-top:4px"></div>
-        <label class="form-label">Stands this lead can cover</label>
+        <label class="form-label">Stand Lead or Supervisor</label>
+        <select class="form-input" id="sla-person" onchange="adminLoadAreaLeadAssignment()"><option value="">— Select person —</option></select><div id="sla-people-status" style="font-size:10px;color:var(--text-3);margin-top:4px"></div>
+        <label class="form-label">Stands this person can cover</label>
+        <div id="sla-groups" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px"></div>
         <input class="form-input" id="sla-search" placeholder="🔍 Search stands…" oninput="adminRenderAreaLeadStands()">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 5px">
           <div id="sla-selected-count" style="font-size:11px;font-weight:800;color:var(--text-2)">0 stands selected</div>
           <div style="display:flex;gap:5px"><button class="btn btn-ghost" onclick="adminAreaLeadSelectHome()" style="padding:6px 8px;font-size:10px;margin:0">Home stand</button><button class="btn btn-ghost" onclick="adminAreaLeadClearAll()" style="padding:6px 8px;font-size:10px;margin:0">Clear</button></div>
         </div>
-        <div class="v11-stand-checks" id="sla-stands"><div style="font-size:10px;color:var(--text-3)">Select a Stand Lead first.</div></div>
+        <div class="v11-stand-checks" id="sla-stands"><div style="font-size:10px;color:var(--text-3)">Select a person first.</div></div>
         <button class="btn btn-primary" onclick="adminSaveAreaLeadAssignment()" style="margin-top:9px">Save Selected Stands</button>
         <button class="btn btn-ghost" onclick="adminClearAreaLeadAssignment()" style="margin-top:6px">Remove temporary access</button>
         <div id="sla-status" style="font-size:10px;color:var(--text-2);margin-top:6px"></div>
@@ -4372,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-12';
+const BUILD_TAG = '2026-10-03-fix-13';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15760,20 +15761,21 @@ async function getConfiguredStandNames(){
 async function adminLoadAreaLeadPeople(){
   const date=(document.getElementById('sla-date')&&document.getElementById('sla-date').value)||localISODate();
   const status=document.getElementById('sla-people-status');
-  if(status)status.textContent='Loading Stand Leads…';
+  if(status)status.textContent='Loading Stand Leads and Supervisors…';
   const rows=await sb('schedule?event_date=eq.'+encodeURIComponent(date)+'&select=employee_id,worker_name,role,location,event_name').catch(()=>({_err:true}));
   const leads=[];
   if(!rows._err&&Array.isArray(rows)){
     const seen=new Set();
-    rows.filter(r=>mapRole(r.role)==='lead').forEach(r=>{
+    rows.filter(r=>['lead','supervisor'].includes(mapRole(r.role))).forEach(r=>{
       if(seen.has(String(r.employee_id)))return;seen.add(String(r.employee_id));
-      leads.push({employee_id:String(r.employee_id),name:r.worker_name||r.employee_id,homeStand:r.location||r.event_name||''});
+      leads.push({employee_id:String(r.employee_id),name:r.worker_name||r.employee_id,homeStand:r.location||r.event_name||'',kind:mapRole(r.role)==='supervisor'?'Supervisor':'Stand Lead'});
     });
+    leads.sort((a,b)=>(a.kind===b.kind?0:a.kind==='Supervisor'?-1:1)||String(a.name).localeCompare(String(b.name)));
   }
   _v11AreaLeads=leads;
   const sel=document.getElementById('sla-person');
-  if(sel)sel.innerHTML='<option value="">— Select Stand Lead —</option>'+leads.map(x=>`<option value="${escapeAttr(x.employee_id)}">${escapeHtml(x.name)}${x.homeStand?' · '+escapeHtml(x.homeStand):''}</option>`).join('');
-  if(status)status.textContent=rows._err?'Could not load today’s Stand Leads':(leads.length?leads.length+' Stand Lead'+(leads.length===1?'':'s')+' available for '+date:'No Stand Leads scheduled for '+date);
+  if(sel)sel.innerHTML='<option value="">— Select person —</option>'+leads.map(x=>`<option value="${escapeAttr(x.employee_id)}">${x.kind==='Supervisor'?'🧭 ':''}${escapeHtml(x.name)} · ${x.kind}${x.homeStand?' · '+escapeHtml(x.homeStand):''}</option>`).join('');
+  if(status){const ns=leads.filter(x=>x.kind==='Supervisor').length;status.textContent=rows._err?'Could not load today’s schedule':(leads.length?ns+' Supervisor'+(ns===1?'':'s')+' · '+(leads.length-ns)+' Stand Lead'+(leads.length-ns===1?'':'s')+' on '+date:'No Stand Leads or Supervisors scheduled for '+date);}
   _v11AreaStands=await getConfiguredStandNames();
   _v11AreaSelected=[];
   const ss=document.getElementById('sla-status');
@@ -15799,7 +15801,9 @@ function adminRenderAreaLeadStands(){
   const q=((document.getElementById('sla-search')&&document.getElementById('sla-search').value)||'').toLowerCase();
   const emp=document.getElementById('sla-person')&&document.getElementById('sla-person').value;
   const count=document.getElementById('sla-selected-count');if(count)count.textContent=_v11AreaSelected.length+' stand'+(_v11AreaSelected.length===1?'':'s')+' selected';
-  if(!emp){el.innerHTML='<div style="font-size:10px;color:var(--text-3)">Select a Stand Lead first.</div>';return;}
+  const gEl=document.getElementById('sla-groups');
+  if(gEl)gEl.innerHTML=emp?WH_GROUPS.map(g=>`<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 9px;font-size:10px" onclick="adminAreaLeadAddGroup('${g.key}')">+ ${escapeHtml(g.short==='Draft Houses'?'North (Draft Houses 215–221)':g.short)}</button>`).join(''):'';
+  if(!emp){el.innerHTML='<div style="font-size:10px;color:var(--text-3)">Select a person first.</div>';return;}
   const rows=_v11AreaStands.filter(s=>!q||s.toLowerCase().includes(q));
   if(!rows.length){
     el.innerHTML='<div style="font-size:11px;color:var(--text-3);padding:10px">'+(_v11AreaStands.length?'No matching stands.':'Stand list did not load. Tap the game date again to retry.')+'</div>';
@@ -15816,9 +15820,17 @@ function adminAreaLeadToggle(stand,on){
 function adminAreaLeadSelectHome(){
   const emp=document.getElementById('sla-person')&&document.getElementById('sla-person').value;
   const p=_v11AreaLeads.find(x=>String(x.employee_id)===String(emp));
-  if(!p||!p.homeStand)return toast('This Stand Lead has no home stand on the selected date','error');
+  if(!p||!p.homeStand)return toast('This person has no home stand on the selected date','error');
   if(_v11AreaStands.includes(p.homeStand)&&!_v11AreaSelected.includes(p.homeStand))_v11AreaSelected.push(p.homeStand);
   adminRenderAreaLeadStands();
+}
+// One tap adds a whole area (same 6 groups as the warehouse).
+function adminAreaLeadAddGroup(key){
+  const g=WH_GROUPS.find(x=>x.key===key);if(!g)return;
+  const add=_v11AreaStands.filter(n=>g.test(n));
+  add.forEach(n=>{if(!_v11AreaSelected.includes(n))_v11AreaSelected.push(n);});
+  adminRenderAreaLeadStands();
+  toast('+ '+add.length+' stand'+(add.length===1?'':'s')+' · '+g.short);
 }
 function adminAreaLeadClearAll(){_v11AreaSelected=[];adminRenderAreaLeadStands();}
 async function adminSaveAreaLeadAssignment(){
@@ -15826,7 +15838,7 @@ async function adminSaveAreaLeadAssignment(){
   const date=document.getElementById('sla-date')&&document.getElementById('sla-date').value;
   const status=document.getElementById('sla-status');
   if(!date)return toast('Choose the game date','error');
-  if(!emp)return toast('Select a Stand Lead','error');
+  if(!emp)return toast('Select a Stand Lead or Supervisor','error');
   if(!_v11AreaSelected.length)return toast('Check at least one stand','error');
   const person=_v11AreaLeads.find(x=>String(x.employee_id)===String(emp));
   const actor=(state.staffAccount&&state.staffAccount.name)||(state.user&&state.user.name)||'Admin';
@@ -15856,7 +15868,7 @@ async function adminSaveAreaLeadAssignment(){
     _v11AreaSelected=verify[0].stands.slice();
     adminRenderAreaLeadStands();
   }
-  if(status)status.textContent='✅ '+row.stands.length+' stand'+(row.stands.length===1?'':'s')+' assigned to '+(person?person.name:'Stand Lead');
+  if(status)status.textContent='✅ '+row.stands.length+' stand'+(row.stands.length===1?'':'s')+' assigned to '+(person?person.name:'this person')+' · they sign out and back in to see it';
   toast('✅ Temporary multi-stand coverage saved');
 }
 async function adminClearAreaLeadAssignment(){
