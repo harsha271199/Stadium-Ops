@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-3
+- **Why yesterday's chat / requests / "23 stands" still showed:** before 6 AM Arizona the app counted the night as the previous game day, so at 2–5 AM on Oct 3 it was still showing Oct 2 test data. Oct 3 is now the first game day: nothing before it is ever "today", and Oct 3 lists start at midnight.
+- **Manager requests list:** back to the plain list (OPEN NOW, then RECENTLY FINISHED). The open / in-progress / overdue tiles and the search are gone; only the "All" filter was removed (Stock · Food · IT stay). It now has a Back button.
+- **iPhone Back button:** page headers now leave room for the iPhone's top status area, so Back is no longer hidden under it.
+- **Stand Status and Inventory Tracker** list every scheduled stand plus every NPO stand.
+- **Requests hub:** Refund Assistance sits right after Report IT Issue.
+- **Manager home:** Stand Transfer Record removed.
+- **Add walk-in** (manager, support, supervisor, stand lead): descriptions removed.
+- **Notifications switch (Admin):** a card on the Admin home turns staff notifications ON (live) or OFF (testing). When OFF nobody gets a push except the admin who switched it off. Stored in the `app_settings` table.
+
 ## 2026-10-03-fix-2
 - **Manager "All Requests" was blank:** a style rule hid the whole panel when opened from the manager home. Fixed. The monitor now has an **All stands / one stand** picker and **Stock · Food · IT** filters only (no "All"), today's requests only.
 - **Old requests / chat everywhere:** refund, maintenance and pending stand-transfer lists are now today-only too (requests, IT, food and chat already were).

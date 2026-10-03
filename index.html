@@ -69,7 +69,7 @@
   .theme-toggle{width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--bg-elevated);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px}
   
   /* PAGE HEADER */
-  .page-header{padding:14px 20px 10px;display:flex;align-items:center;gap:12px;background:var(--bg-card);border-bottom:1px solid var(--border)}
+  .page-header{padding:calc(env(safe-area-inset-top) + 14px) 20px 10px;display:flex;align-items:center;gap:12px;background:var(--bg-card);border-bottom:1px solid var(--border)}
   .back-btn{background:var(--bg-elevated);border:1px solid var(--border);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:16px;color:var(--text)}
   /* V11.11.19 — make navigation unmistakable on task screens. */
   .page-header .back-btn{width:auto;min-width:72px;border-radius:10px;padding:0 12px;gap:5px;font-size:17px;font-weight:800}
@@ -1061,7 +1061,7 @@
   #screen-bedcheck.manager-session #mgr-simple-shell,
   #screen-bedcheck.admin-session #mgr-simple-shell{display:block}
   #screen-bedcheck.support-helper #support-ops-shell,
-  #screen-bedcheck.support-helper #mgr-v10-shell,
+  #screen-bedcheck.support-helper:not(.simple-tool-open) #mgr-v10-shell,
   #screen-bedcheck.manager-session #support-ops-shell,
   #screen-bedcheck.manager-session:not(.simple-tool-open) #mgr-v10-shell,
   #screen-bedcheck.admin-session #support-ops-shell,
@@ -1081,7 +1081,7 @@
      V11.4 — SUPPORT MANAGER GAME-DAY HELPER
      One scope selector follows Team / Stock / Food / IT.
      ============================================================ */
-  #screen-bedcheck.support-helper #mgr-v10-shell{display:none !important}
+  #screen-bedcheck.support-helper:not(.simple-tool-open) #mgr-v10-shell{display:none !important}
   #screen-bedcheck.support-helper .content{
     max-width:820px !important;
     padding:10px 10px calc(76px + env(safe-area-inset-bottom)) !important;
@@ -2068,7 +2068,7 @@
       <div><div class="smb-label">All Requests · today <span id="stand-requests-badge" style="display:none;background:var(--aramark-red);color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;margin-left:6px"></span></div><div class="smb-sub">Stock · Food · IT across all stands</div></div>
     </button>
 
-    <div class="request-primary-note">Most game-day problems should use one of these three:</div>
+    <div class="request-primary-note">Most game-day problems should use one of these:</div>
 
     <button class="sub-menu-btn smb-red" onclick="requestHubGoStock()">
       <span class="smb-icon">📦</span>
@@ -2082,9 +2082,13 @@
       <span class="smb-icon">🔧</span>
       <div><div class="smb-label">Report IT Issue</div><div class="smb-sub">POS · tablet · TV · network</div></div>
     </button>
+    <button class="sub-menu-btn smb-green" onclick="goRefund()">
+      <span class="smb-icon">💵</span>
+      <div><div class="smb-label">Refund Assistance</div><div class="smb-sub">Notify a Supervisor to come help</div></div>
+    </button>
 
     <details class="request-more" id="stand-request-more">
-      <summary><span>••• More request tools</span><span style="color:var(--text-3)">Transfers · Refund · Maintenance</span></summary>
+      <summary><span>••• More request tools</span><span style="color:var(--text-3)">Transfers · Maintenance</span></summary>
       <div class="request-more-body">
         <button class="sub-menu-btn" id="addstock-btn" style="border-left:4px solid #F59E0B" onclick="goAddStockMyself()">
           <span class="smb-icon">➕</span>
@@ -2097,10 +2101,6 @@
         <button class="sub-menu-btn" id="incoming-transfers-btn" style="border-left:4px solid #00A651" onclick="goIncomingTransfers()">
           <span class="smb-icon">📥</span>
           <div><div class="smb-label">Incoming Transfers <span id="incoming-badge" style="display:none;background:var(--aramark-red);color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;margin-left:6px"></span></div><div class="smb-sub">Confirm stock another stand sent you</div></div>
-        </button>
-        <button class="sub-menu-btn smb-green" onclick="goRefund()">
-          <span class="smb-icon">💵</span>
-          <div><div class="smb-label">Refund Assistance</div><div class="smb-sub">Notify a Supervisor to come help</div></div>
         </button>
         <button class="sub-menu-btn smb-green" id="supervisor-refunds-btn" style="display:none;border-left-color:#7C3AED" onclick="goSupervisorRefunds()">
           <span class="smb-icon">🧾</span>
@@ -2660,7 +2660,6 @@
     <div><div class="page-title">Add walk-in worker</div><div class="page-sub" id="walkin-sub">—</div></div>
   </div>
   <div class="content">
-    <div class="notice info" id="walkin-help">Use this if someone shows up but isn't on today's schedule. Once added, they can sign in with their last 5 ID digits + last name. If you have their real 8-digit employee ID, enter that instead — it matters for tip distribution, which matches by full employee ID.</div>
     <div id="walkin-stand-wrap" style="display:none">
       <label class="form-label" style="margin-top:0">Add to stand</label>
       <select class="form-input" id="walkin-stand-select"></select>
@@ -2670,9 +2669,8 @@
     <div id="walkin-search-results" style="margin-bottom:10px"></div>
     <label class="form-label">Name (Last, First)</label>
     <input class="form-input" type="text" id="walkin-name" placeholder="e.g. Smith, John">
-    <label class="form-label">Employee ID — use the full 8 digits</label>
+    <label class="form-label">Employee ID</label>
     <input class="form-input" type="tel" inputmode="numeric" id="walkin-empid" maxlength="8" placeholder="e.g. 32445678">
-    <div style="font-size:11px;color:var(--text-2);margin:-4px 0 10px">Enter all 8 digits if you can — a 5-digit ID still works for login, but has to be corrected by hand later for tip distribution.</div>
     <button class="btn btn-primary" onclick="submitWalkin()">Add walk-in & enable login →</button>
   </div>
 </div>
@@ -2751,7 +2749,7 @@
     <div id="team-walkin-form" class="prem-walkin-panel">
       <div class="prem-walkin-head">
         <span class="prem-walkin-head-icon">➕</span>
-        <div><div class="prem-walkin-head-title">Add walk-in worker</div><div class="prem-walkin-head-sub" id="team-walkin-head-sub">They'll show up on this stand's roster instantly.</div></div>
+        <div><div class="prem-walkin-head-title">Add walk-in worker</div><div class="prem-walkin-head-sub" id="team-walkin-head-sub"></div></div>
       </div>
       <div class="prem-walkin-body">
         <label class="form-label" style="margin-top:0">Search for the person</label>
@@ -2759,9 +2757,8 @@
         <div id="team-walkin-search-results"></div>
         <label class="form-label">Name (Last, First)</label>
         <input class="form-input" type="text" id="team-walkin-name" placeholder="e.g. Smith, John">
-        <label class="form-label">Employee ID — full 8 digits if you have it</label>
+        <label class="form-label">Employee ID</label>
         <input class="form-input" type="tel" inputmode="numeric" maxlength="8" id="team-walkin-empid" placeholder="e.g. 32445678">
-        <div class="prem-walkin-hint">A 5-digit ID still works, but the full 8 digits matter later for payroll matching.</div>
         <div class="prem-walkin-actions">
           <button class="btn btn-primary" onclick="teamSaveWalkin()">✓ Add walk-in</button>
           <button class="btn btn-ghost" onclick="teamCloseWalkin()">Cancel</button>
@@ -2802,6 +2799,7 @@
           <div style="font-size:20px;opacity:0.8">›</div>
         </div>
       </div>
+      <div id="mgr-push-switch" style="display:none;margin-bottom:10px"></div>
       <div class="stand-card">
         <div class="full-name" id="mgr-simple-name">—</div>
         <div class="role-badge supervisor" id="mgr-simple-role">MANAGER</div>
@@ -2859,10 +2857,6 @@
         <button class="big-action" id="mgr-alerts-check-btn" style="border-left:4px solid var(--asu-maroon);display:none" onclick="goAlertsCheck()">
           <span class="icon">📲</span>
           <span class="text"><div>Who has alerts on</div><div class="sub">Today's leads, supervisors, warehouse, food, IT</div></span>
-        </button>
-        <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goStandTransferRecord()">
-          <span class="icon">🔄</span>
-          <span class="text"><div>Stand Transfer Record</div><div class="sub">Today's stand-to-stand transfers</div></span>
         </button>
       </div>
 
@@ -4374,7 +4368,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-2';
+const BUILD_TAG = '2026-10-03-fix-3';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4666,9 +4660,20 @@ function localISODate(){
 // the submission really landed under the next day's date instead.
 // Anything submitted between midnight and 6 AM Arizona time still counts
 // as the PREVIOUS calendar day's event.
+// FIRST_GAME_DAY: the real season data starts here. The Oct 2 night was only a
+// test, so nothing from before this date is ever treated as "today" — even in
+// the small hours before the usual 6 AM roll-over.
+const FIRST_GAME_DAY = '2026-10-03';
 function stadiumDay() {
   const d = localISODate();
-  return arizonaNowMinutes() < 360 ? prevISODate(d) : d;
+  const sd = arizonaNowMinutes() < 360 ? prevISODate(d) : d;
+  return (sd < FIRST_GAME_DAY && d >= FIRST_GAME_DAY) ? FIRST_GAME_DAY : sd;
+}
+// Start of the current game day for "today only" lists (6 AM roll-over; on the
+// very first game day it starts at midnight so early-morning requests show).
+function stadiumDayStartISO() {
+  const d = stadiumDay();
+  return d + (d === FIRST_GAME_DAY ? 'T00:00:00-07:00' : 'T06:00:00-07:00');
 }
 // Current time-of-day in Arizona, as minutes since midnight — same reliable
 // pattern as localISODate (explicit timeZone, not the device's own clock),
@@ -5017,7 +5022,7 @@ function openRequestLimit(kind, stand){
 }
 async function openRequestGuard(kind, stand){
   if(!stand)return null;
-  const since=encodeURIComponent(new Date(Date.now()-18*3600*1000).toISOString());
+  const since=encodeURIComponent(stadiumDayStartISO());
   const st=encodeURIComponent(stand);
   const limit=openRequestLimit(kind,stand);
   let url,label;
@@ -5440,7 +5445,7 @@ async function api(action, data) {
       // now). Scoped to the current stadium day, which correctly treats
       // midnight–6am as still belonging to the previous night's event so a
       // late finish doesn't lose its own requests at midnight.
-      const dayStart = stadiumDay() + 'T06:00:00-07:00';
+      const dayStart = stadiumDayStartISO();
       const rows = await sb('stock_requests?created_at=gte.'+encodeURIComponent(dayStart)+'&order=created_at.desc&select=*');
       if (rows._err) return {ok:false,error:'Network'};
       return { ok:true, requests: rows.map(mapStock) };
@@ -5672,6 +5677,11 @@ async function api(action, data) {
       ]);
       if (sched._err) return {ok:false,error:'Network'};
       let stands = [...new Set(sched.map(s => s.location || s.event_name))];
+      // Stands run by an active NPO group are staffed too (no daily schedule), so they belong in the overview.
+      if (!data.stand) {
+        const npoG = await sb('npo_groups?is_active=eq.true&select=stand').catch(()=>({_err:true}));
+        if (Array.isArray(npoG)) npoG.forEach(g => String(g.stand||'').split(',').map(x => x.trim()).filter(Boolean).forEach(x => { if (!stands.includes(x)) stands.push(x); }));
+      }
       // A directly selected stand must get its own status object even when
       // there is no schedule row today. Otherwise "nothing completed" can
       // look like the previous stand because the client receives no row.
@@ -5730,7 +5740,7 @@ async function api(action, data) {
       return { ok:true, transfers: filtered };
     }
     case 'getMyRequests': {
-      const rows = await sb('stock_requests?stand=eq.'+encodeURIComponent(data.stand)+'&created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*');
+      const rows = await sb('stock_requests?stand=eq.'+encodeURIComponent(data.stand)+'&created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.desc&select=*');
       if (rows._err) return {ok:false,error:'Network'};
       return { ok:true, requests: rows.map(mapStock) };
     }
@@ -5771,7 +5781,7 @@ async function api(action, data) {
       const row=Array.isArray(r)&&r[0]?r[0]:null;return { ok:true,id:row&&row.id };
     }
     case 'getRefunds': {
-      const rows = await sb('refund_requests?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&limit=200&select=*');
+      const rows = await sb('refund_requests?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.desc&limit=200&select=*');
       if (rows._err) return { ok:false, error: rows.status === 404 ? 'Refunds table missing — run stadium_update.sql' : 'Network' };
       return { ok:true, refunds: rows };
     }
@@ -5791,12 +5801,12 @@ async function api(action, data) {
       return r._err ? {ok:false,error:'Could not submit'} : {ok:true, id:'IT'};
     }
     case 'getITIssues': {
-      const rows = await sb('it_issues?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*');
+      const rows = await sb('it_issues?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.desc&select=*');
       if (rows._err) return {ok:false,error:'Network'};
       return { ok:true, issues: rows.map(mapIT) };
     }
     case 'getMyITIssues': {
-      const rows = await sb('it_issues?stand=eq.'+encodeURIComponent(data.stand)+'&created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*');
+      const rows = await sb('it_issues?stand=eq.'+encodeURIComponent(data.stand)+'&created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.desc&select=*');
       if (rows._err) return {ok:false,error:'Network'};
       return { ok:true, issues: rows.map(mapIT) };
     }
@@ -6697,8 +6707,8 @@ async function api(action, data) {
 
     case 'getMaintenanceReports': {
       const q = data.status && data.status !== 'all'
-        ? 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&status=eq.'+data.status+'&order=created_at.desc&select=*'
-        : 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*';
+        ? 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&status=eq.'+data.status+'&order=created_at.desc&select=*'
+        : 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.desc&select=*';
       const rows = await sb(q);
       return rows._err ? {ok:false,error:'Network'} : {ok:true, reports:rows};
     }
@@ -8389,7 +8399,7 @@ async function goIncomingTransfers() {
   const stand = getOperationalStand(getRequesterIdentity());
   if (!stand) return toast('Choose a working stand first', 'error');
   showScreen('screen-incoming-transfers');
-  const rows = await sb('stand_transfers?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&to_stand=eq.'+encodeURIComponent(stand)+'&status=eq.pending&order=created_at.desc&select=*').catch(()=>({_err:true}));
+  const rows = await sb('stand_transfers?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&to_stand=eq.'+encodeURIComponent(stand)+'&status=eq.pending&order=created_at.desc&select=*').catch(()=>({_err:true}));
   const el = document.getElementById('incoming-list');
   if (rows._err) { el.innerHTML = '<div class="notice" style="background:rgba(220,38,38,0.08);color:#DC2626">Could not load — try again</div>'; return; }
   const badge = document.getElementById('incoming-badge');
@@ -9231,7 +9241,7 @@ async function leadershipOpenWalkin(){
   const nameF=document.getElementById('walkin-name'); if(nameF)nameF.value='';
   const idF=document.getElementById('walkin-empid'); if(idF)idF.value='';
   const wrap=document.getElementById('walkin-stand-wrap'); if(wrap)wrap.style.display='block';
-  const sub=document.getElementById('walkin-sub'); if(sub)sub.textContent='Today only · creates login access';
+  const sub=document.getElementById('walkin-sub'); if(sub)sub.textContent='Today';
   await populateStandPicker('walkin-stand-select',state.myTeamStand||state.activeStand||'');
   const sel=document.getElementById('walkin-stand-select');
   if(sel&&(state.myTeamStand||state.activeStand))sel.value=state.myTeamStand||state.activeStand;
@@ -9874,7 +9884,7 @@ function leadershipAddWorkerToCurrentStand(){
 function teamOpenWalkin(){
   const stand=state.myTeamStand;
   const sub=document.getElementById('team-walkin-head-sub');
-  if(sub)sub.textContent="They'll show up on "+stand+"'s roster instantly.";
+  if(sub)sub.textContent=stand||'';
   document.getElementById('team-walkin-name').value='';
   document.getElementById('team-walkin-empid').value='';
   document.getElementById('team-walkin-search').value='';
@@ -10359,6 +10369,7 @@ async function setupMgrSimpleHome(){
     if(cur)cur.textContent=state.activeStand||'Choose a stand';
   }
   await mgrSimpleRefreshRequestBadge();
+  renderPushSwitch();
   await loadManagerGameDayInfo();
 }
 
@@ -10423,14 +10434,13 @@ function openLeadershipRequestMonitor(){
   state.standTaskReturnScreen='screen-submenu-requests';
   showScreen('screen-bedcheck');
   const screen=document.getElementById('screen-bedcheck');if(screen)screen.classList.add('simple-tool-open');
-  if(state.staffAccount.role==='support_manager'){
-    supportOpsTab('stock');
-  }else{
+  {
     state.mgrV10View='requests';
     mgrV10HidePanels();
     const home=document.getElementById('mgr-v10-home');if(home)home.style.display='none';
     const req=document.getElementById('mgr-v10-requests');if(req)req.style.display='';
     const manage=document.getElementById('mgr-v10-manage');if(manage)manage.style.display='none';
+    const tb=document.getElementById('mgr-v10-tool-back');if(tb)tb.style.display='flex';
     mgrV10SetNav('requests');
     mgrV10RequestFilter((state.mgrV10RequestFilter&&state.mgrV10RequestFilter!=='all')?state.mgrV10RequestFilter:'stock',true);
   }
@@ -11417,13 +11427,12 @@ async function mgrV10LoadRequests(filter){
       ...visibleIT.map(r=>({kind:'it',r}))
     ];
     mgrSmartNewRequestAlert(allForAlert);
-    mgrV10RenderSmartRequests();
     mgrV10UpdateNeedsActionUi();
     if(state.mgrV10View==='home')mgrV10RefreshHome();
-    return;
+    const st=document.getElementById('mgr-smart-request-tools');if(st)st.style.display='none';
   }
 
-  // Preserve the existing Support Manager request behavior.
+  // Same plain list for every manager tier: OPEN NOW, then RECENTLY FINISHED.
   if(state.mgrV10NeedsActionOnly)rows=rows.filter(x=>mgrV10ReqIsOverdue(x.kind,x.r));
   rows.sort((a,b)=>{
     const ao=mgrV10ReqIsOpen(a.kind,a.r)?0:1,bo=mgrV10ReqIsOpen(b.kind,b.r)?0:1;
@@ -14695,7 +14704,7 @@ function kitchenEtaText(r){if(!r||!r.eta_deadline)return ''; const ms=new Date(r
 function kitchenItemsText(r){const a=r&&r.items_json&&Array.isArray(r.items_json.items)?r.items_json.items:[];return a.map(x=>x.free_text?escapeHtml(x.itemName):(escapeHtml(x.itemName)+' ×'+Number(x.qty||0))).join(' · ')||escapeHtml(r.items||'Food');}
 
 async function kitchenFetchRequests(){
-  const rows=await sb('kitchen_requests?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&limit=200&select=*').catch(()=>({_err:true,status:0}));
+  const rows=await sb('kitchen_requests?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.desc&limit=200&select=*').catch(()=>({_err:true,status:0}));
   if(kitchenIsMissing(rows)){
     _kitchenPreview=true;
     const local=kitchenLocalRequests();state._kitchenRowsCache=local;return local;
@@ -16229,14 +16238,51 @@ async function claimEtaEscalation(table, id) {
   const r = await sb(table + '?id=eq.' + encodeURIComponent(id) + '&eta_escalated_at=is.null', {method:'PATCH', headers:{Prefer:'return=representation'}, body:JSON.stringify({eta_escalated_at:new Date().toISOString()})}).catch(()=>({_err:true}));
   return Array.isArray(r) && r.length > 0;
 }
+// ---- Notification switch (Admin) ----
+// app_settings.push_live = 'on' | 'off'. When OFF nobody gets a push except the
+// admin who switched it off (so they can still test). Checked on every send,
+// cached for 15 seconds.
+let _pushLive = { v:true, tester:'', at:0 };
+async function pushSettings(force) {
+  if (!force && Date.now() - _pushLive.at < 15000) return _pushLive;
+  const rows = await sb('app_settings?key=eq.push_live&select=value,updated_by').catch(()=>({_err:true}));
+  if (Array.isArray(rows)) { const r = rows[0]; _pushLive = { v: !r || String(r.value) !== 'off', tester: r ? String(r.updated_by || '') : '', at: Date.now() }; }
+  else _pushLive.at = Date.now() - 10000; // lookup failed: keep the last known value, retry in 5 s
+  return _pushLive;
+}
 function sendPushTo(userId, title, body) {
   if (!userId) return;
   if (BUILD_TAG.includes('preview')) { state._previewPushLog=state._previewPushLog||[]; state._previewPushLog.push({userId,title,body,at:new Date().toISOString()}); console.info('[preview push]',userId,title,body); return; }
-  fetch(PUSH_FUNCTION_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
-    body: JSON.stringify({ user_id: userId, title, body })
-  }).catch(() => {}); // deploy hasn't happened yet, or a network blip — either way, non-fatal
+  pushSettings().catch(()=>_pushLive).then(st => {
+    if (st && st.v === false && String(userId) !== String(st.tester)) { console.info('[push off — test mode]', userId, title); return; }
+    fetch(PUSH_FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+      body: JSON.stringify({ user_id: userId, title, body })
+    }).catch(() => {}); // deploy hasn't happened yet, or a network blip — either way, non-fatal
+  });
+}
+async function renderPushSwitch() {
+  const el = document.getElementById('mgr-push-switch'); if (!el) return;
+  const admin = !!(state.staffAccount && state.staffAccount.role === 'admin');
+  el.style.display = admin ? '' : 'none'; if (!admin) return;
+  const st = await pushSettings(true);
+  el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;border:2px solid ' + (st.v ? '#00A651' : '#DC2626') + ';background:var(--bg-card)">' +
+    '<div><div style="font-weight:800;font-size:14px">🔔 Staff notifications: ' + (st.v ? '<span style="color:#00A651">ON (live)</span>' : '<span style="color:#DC2626">OFF (testing)</span>') + '</div>' +
+    '<div style="font-size:11px;color:var(--text-2);margin-top:2px">' + (st.v ? 'Everyone gets alerts.' : 'Nobody gets alerts except you.') + '</div></div>' +
+    '<button class="btn ' + (st.v ? 'btn-ghost' : 'btn-primary') + '" style="width:auto;margin:0;padding:10px 14px" onclick="togglePushLive()">' + (st.v ? 'Turn OFF' : 'Turn ON') + '</button></div>';
+}
+async function togglePushLive() {
+  if (!(state.staffAccount && state.staffAccount.role === 'admin')) return toast('Admin only', 'error');
+  const st = await pushSettings(true), turnOff = st.v !== false;
+  const ok = await confirmAction(turnOff ? 'Turn notifications OFF? Staff will not get any alerts until you turn them back ON. Use this for testing only.' : 'Turn notifications back ON for everyone?', { confirmLabel: turnOff ? 'Turn OFF' : 'Turn ON', danger: turnOff });
+  if (!ok) return;
+  const me = String((state.staffAccount && state.staffAccount.empId) || '');
+  const r = await sb('app_settings?on_conflict=key', { method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify({ key:'push_live', value: turnOff ? 'off' : 'on', updated_by: me, updated_at: new Date().toISOString() }) }).catch(()=>({_err:true}));
+  if (r && r._err) return toast('Could not change it — try again', 'error');
+  _pushLive = { v: !turnOff, tester: turnOff ? me : '', at: Date.now() };
+  toast(turnOff ? '🔕 Notifications OFF — testing mode' : '🔔 Notifications ON — live', turnOff ? 'error' : 'success');
+  renderPushSwitch();
 }
 
 let _pushSubscription = null;
@@ -16558,7 +16604,7 @@ async function checkOverdueStockRequests() {
   const actorRole = state.staffAccount ? state.staffAccount.role : (state.user && state.user.role);
   if (!['manager','admin','support_manager','warehouse_manager','warehouse_supervisor','supervisor'].includes(actorRole)) return;
   try {
-    const rawRows = await sb('stock_requests?status=in.(open,claimed)&created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.asc&select=*');
+    const rawRows = await sb('stock_requests?status=in.(open,claimed)&created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.asc&select=*');
     if (rawRows._err || !Array.isArray(rawRows)) return;
     const now=Date.now();
     for (const raw of rawRows) {
@@ -17474,8 +17520,8 @@ async function loadMgrMaint(filter) {
   const el = document.getElementById('mgr-maint-list');
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   const query = filter === 'all'
-    ? 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*'
-    : 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&status=eq.'+filter+'&order=created_at.desc&select=*';
+    ? 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.desc&select=*'
+    : 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&status=eq.'+filter+'&order=created_at.desc&select=*';
   const rows = await sb(query);
   if (rows._err) { el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load</p></div>'; return; }
   if (!rows.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🔨</div><p>No ' + (filter==='all'?'':filter+' ') + 'maintenance reports</p></div>'; return; }
@@ -18308,7 +18354,7 @@ async function loadLedgerTransferTotals() {
 
 async function loadTsStockRequests(stand) {
   const area = document.getElementById('ts-stock-requests-area');
-  let rows = await sb('stock_requests?stand=eq.'+encodeURIComponent(stand)+'&status=in.(open,claimed)&created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*').catch(()=>({_err:true}));
+  let rows = await sb('stock_requests?stand=eq.'+encodeURIComponent(stand)+'&status=in.(open,claimed)&created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.desc&select=*').catch(()=>({_err:true}));
   if (rows._err || !Array.isArray(rows)) { area.style.display = 'none'; return; }
   if(state.staffAccount&&state.staffAccount.role==='warehouse_employee')rows=rows.filter(whRawRequestRoutedToMe);
 
