@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-5
+- **All Requests (managers / Support Managers / supervisors):** the "View requests" picker is now a stand drop-down — **All stands** first, then NPO stands, then every other stand. Pick one to see only that stand's Stock / Food / IT requests.
+
 ## 2026-10-03-fix-4
 - **Manager / Support Manager requests:** back to the original **Stand Requests** screen (Back at the top, "Working stand / All stands", the 📦 Stock / 🍔 Food / 🔧 IT boxes). Only the "All" box is removed, so one type shows at a time (Stock first). No "New request" button on it. Opened from Requests → All Requests · today.
 - **NPO sign-in is forgiving:** after picking the group and PIN, the name can be first name only, last name only, either order, a short start ("Sean L") or have small typos. If more than one member fits (e.g. two "Lopez"), they tap their name from a short list. Unknown names are still refused.

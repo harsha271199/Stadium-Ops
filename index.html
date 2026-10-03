@@ -2704,10 +2704,8 @@
       <div id="stand-requests-view-wrap" style="display:none;margin-bottom:8px">
         <label class="form-label" style="margin-top:0">VIEW REQUESTS</label>
         <select class="form-input" id="stand-requests-view-select" onchange="standRequestsViewChanged()" style="margin:0">
-          <option value="">Working stand</option>
           <option value="__all__">All stands</option>
         </select>
-        <div style="font-size:8px;color:var(--text-3);margin-top:4px">Use All stands to monitor requests across the stadium. Choose a specific stand before creating a new request.</div>
       </div>
       <div id="stand-requests-open-count" style="font-size:11px;font-weight:850;color:var(--warning);margin-bottom:8px">Loading…</div>
       <div id="stand-requests-cat-filter" style="display:none;gap:6px;margin-bottom:8px;overflow-x:auto;padding-bottom:2px">
@@ -4368,7 +4366,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-4';
+const BUILD_TAG = '2026-10-03-fix-5';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9504,12 +9502,20 @@ async function loadStandRequests(){
   const viewWrap=document.getElementById('stand-requests-view-wrap');
   if(viewWrap)viewWrap.style.display=canAll?'block':'none';
   const viewSel=document.getElementById('stand-requests-view-select');
-  if(viewSel){
-    if(state.standRequestsView==='__all__'&&canAll)viewSel.value='__all__';
-    else viewSel.value='';
+  // Leadership picks any stand from a drop-down ("All stands" first, then NPO
+  // stands, then every other stand). state.standRequestsView = '__all__' or a stand.
+  if(viewSel&&canAll){
+    if(!viewSel.dataset.filled){
+      viewSel.dataset.filled='1';
+      await populateStandPicker('stand-requests-view-select','');
+      const first=viewSel.options[0]; if(first){first.value='__all__';first.textContent='All stands';}
+    }
+    const want=state.standRequestsView==='__all__'?'__all__':(state.standRequestsView||defaultStand||'__all__');
+    if(![...viewSel.options].some(o=>o.value===want)){const o=document.createElement('option');o.value=want;o.textContent=want;viewSel.appendChild(o);}
+    viewSel.value=want;
   }
-  const allMode=canAll&&state.standRequestsView==='__all__';
-  const stand=allMode?'':defaultStand;
+  const allMode=canAll&&(viewSel?viewSel.value==='__all__':state.standRequestsView==='__all__');
+  const stand=allMode?'':(canAll&&viewSel&&viewSel.value?viewSel.value:defaultStand);
   if(!allMode&&!stand)return;
 
   // Real fix: this filter used to only show in the combined "All stands"
