@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-19';
+const BUILD_TAG = '2026-10-03-fix-20';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7507,6 +7507,7 @@ function setSupervisorActiveStand(stand, opts) {
   state.checksTargetStand = stand;
   state.inventoryTargetStand = stand;
   state.stockTargetStand = stand;
+  state.standRequestsStand = stand; // new requests go to the stand they are working now
   state.myTeamStand = stand;
   state.itTargetStand = stand;
   const sel = document.getElementById('supervisor-working-stand-select');
@@ -9509,6 +9510,10 @@ function standRequestsCatChanged(cat, el){
 function standRequestsViewChanged(){
   const sel=document.getElementById('stand-requests-view-select');
   state.standRequestsView=sel?sel.value:'';
+  if(state.standRequestsView&&state.standRequestsView!=='__all__'){
+    state.standRequestsStand=state.standRequestsView;
+    if(isSupervisorSession())setSupervisorActiveStand(state.standRequestsView,{silent:true});
+  }
   loadStandRequests();
 }
 function standRequestsToggleRecent(){
@@ -9559,7 +9564,7 @@ async function loadStandRequests(){
     if(!viewSel.dataset.filled){
       viewSel.dataset.filled='1';
       await populateStandPicker('stand-requests-view-select','');
-      const first=viewSel.options[0]; if(first){first.value='__all__';first.textContent='All stands';}
+      const first=viewSel.options[0]; if(first){first.value='__all__';first.textContent=isLimitedAreaLead()?'All my stands':'All stands';}
     }
     const want=state.standRequestsView==='__all__'?'__all__':(state.standRequestsView||defaultStand||'__all__');
     if(![...viewSel.options].some(o=>o.value===want)){const o=document.createElement('option');o.value=want;o.textContent=want;viewSel.appendChild(o);}
@@ -9582,8 +9587,8 @@ async function loadStandRequests(){
   if(catFilter)catFilter.querySelectorAll('.tab-item').forEach(t=>t.classList.toggle('active',t.dataset.cat===cat));
 
   const sub=document.getElementById('stand-requests-sub'),title=document.getElementById('stand-requests-title');
-  if(sub)sub.textContent=allMode?'All stands':stand;
-  if(title)title.textContent=allMode?'All Stadium Requests':stand;
+  if(sub)sub.textContent=allMode?(isLimitedAreaLead()?'All my stands':'All stands'):stand;
+  if(title)title.textContent=allMode?(isLimitedAreaLead()?'All My Stands':'All Stadium Requests'):'📍 New requests go to '+stand;
   const helper=document.getElementById('stand-requests-helper');
   if(helper)helper.textContent=allMode?'Monitor Stock, Food and IT across all stands.':'Live status — Waiting → On the Way → Delivered/Resolved.';
 
@@ -9593,9 +9598,12 @@ async function loadStandRequests(){
     allMode?api('getITIssues',{}).catch(()=>({ok:false,issues:[]})):api('getMyITIssues',{stand}).catch(()=>({ok:false,issues:[]}))
   ]);
 
-  const stocks=(stockRes.requests||[]).filter(()=>cat==='all'||cat==='stock');
-  const kitchens=(kitchenRows||[]).filter(r=>allMode||r.stand===stand).filter(()=>cat==='all'||cat==='kitchen');
-  const issues=(itRes.issues||[]).filter(()=>cat==='all'||cat==='it');
+  // Multi-stand lead: "All my stands" covers only the stands they were given.
+  const myArea=isLimitedAreaLead()?new Set([state.user.stand,...(state.user.supervisorStands||[])].map(canonicalStandName2026)):null;
+  const inArea=r=>!allMode||!myArea||myArea.has(canonicalStandName2026(r.stand));
+  const stocks=(stockRes.requests||[]).filter(inArea).filter(()=>cat==='all'||cat==='stock');
+  const kitchens=(kitchenRows||[]).filter(r=>allMode||r.stand===stand).filter(inArea).filter(()=>cat==='all'||cat==='kitchen');
+  const issues=(itRes.issues||[]).filter(inArea).filter(()=>cat==='all'||cat==='it');
 
   const openStock=stocks.filter(r=>r.status==='Pending'||r.status==='On the way');
   const openKitchen=kitchens.filter(r=>!['delivered','cancelled'].includes(r.status));

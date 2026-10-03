@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-20
+- Multi-stand leads/supervisors: Stand Requests now sends new Stock/Food/IT requests to the stand picked in "View requests" or the stand they switched to on Home (it was stuck on the first stand they opened, e.g. 203). Header says "📍 New requests go to …". Area leads' "All my stands" shows only their assigned stands, not the whole stadium. The Stock/Food/IT forms keep their own stand picker.
+
 ## 2026-10-03-fix-19
 - Warehouse leaders' My Jobs shows the ← back arrow (to Manager tools) as well as the Manager tools button.
 
