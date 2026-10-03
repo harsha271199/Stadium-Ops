@@ -69,7 +69,7 @@
   .theme-toggle{width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--bg-elevated);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px}
   
   /* PAGE HEADER */
-  .page-header{padding:calc(env(safe-area-inset-top) + 14px) 20px 10px;display:flex;align-items:center;gap:12px;background:var(--bg-card);border-bottom:1px solid var(--border)}
+  .page-header{position:sticky;top:0;z-index:40;padding:calc(env(safe-area-inset-top) + 14px) 20px 10px;display:flex;align-items:center;gap:12px;background:var(--bg-card);border-bottom:1px solid var(--border)}
   .back-btn{background:var(--bg-elevated);border:1px solid var(--border);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:16px;color:var(--text)}
   /* V11.11.19 — make navigation unmistakable on task screens. */
   .page-header .back-btn{width:auto;min-width:72px;border-radius:10px;padding:0 12px;gap:5px;font-size:17px;font-weight:800}
@@ -1927,10 +1927,6 @@
         <span class="icon">📋</span>
         <span class="text"><div>Stand Status</div><div class="sub">Checks · Inventory · Food Safety · tap missing work</div></span>
       </button>
-      <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goInvTracker()">
-        <span class="icon">📦</span>
-        <span class="text"><div>Inventory Tracker</div><div class="sub">Who finished Count In / Count Out · remind stands</div></span>
-      </button>
       <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goStandTransferRecord()">
         <span class="icon">🔄</span>
         <span class="text"><div>Stand Transfer Record</div><div class="sub">Today's stand-to-stand transfers</div></span>
@@ -2840,9 +2836,9 @@
 
       <div id="mgr-simple-supervisor-actions">
         <div class="section-title" id="mgr-simple-allstands-title">Supervisor — All Stands</div>
-        <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goInvTracker()">
+        <button class="big-action" id="mgr-invtracker-btn" style="border-left:4px solid var(--asu-maroon)" onclick="goInvTracker()">
           <span class="icon">📦</span>
-          <span class="text"><div>Inventory Tracker</div><div class="sub">Who finished Count In / Count Out · remind stands</div></span>
+          <span class="text"><div>Checkout &amp; Inventory Tracker</div><div class="sub">Count In / Count Out · boxes received at the exit</div></span>
         </button>
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAllStandsLive()">
           <span class="icon">📊</span>
@@ -3622,11 +3618,11 @@
     </div>
     <label class="form-label">NEEDED</label>
     <div class="chip-row" id="kitchen-urgency-row">
-      <div class="chip selected" onclick="selectKitchenUrgency(this,'Normal',30)">🟢 Normal</div>
-      <div class="chip" onclick="selectKitchenUrgency(this,'Soon',20)">🟡 Soon</div>
-      <div class="chip" onclick="selectKitchenUrgency(this,'URGENT',10)">🔴 URGENT</div>
+      <div class="chip selected" onclick="selectKitchenUrgency(this,'Normal',15)">🟢 Normal · 15m</div>
+      <div class="chip" onclick="selectKitchenUrgency(this,'Soon',12)">🟡 Soon · 12m</div>
+      <div class="chip" onclick="selectKitchenUrgency(this,'URGENT',10)">🔴 URGENT · 10m</div>
     </div>
-    <div style="font-size:11px;color:var(--text-2);margin:8px 0 12px">Target: <b id="kitchen-eta-label">30 minutes</b></div>
+    <div style="font-size:11px;color:var(--text-2);margin:8px 0 12px">Target: <b id="kitchen-eta-label">15 minutes</b></div>
     <label class="form-label">FOOD ORDER</label>
     <div class="food-delivery-note">Type the <b>food</b> and <b>how many</b> in this one box. Write everything you need.</div>
     <textarea class="form-input" id="kitchen-order-text" rows="4" placeholder="Food name and quantity" oninput="if(_kitchenDraft[0])_kitchenDraft[0].itemName=this.value"></textarea>
@@ -3766,7 +3762,7 @@
         <div class="chat-quick" id="chat-quick"></div>
         <div id="chat-stand-wrap" style="display:none"><input class="form-input" id="chat-stand" list="chat-stand-list" placeholder="📍 Which stand? (required)" autocomplete="off"><datalist id="chat-stand-list"></datalist></div>
         <div class="chat-compose-row">
-          <textarea class="form-input" id="chat-input" rows="1" maxlength="1000" placeholder="Type a message…" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+          <textarea class="form-input" id="chat-input" rows="1" maxlength="1000" placeholder="Type a message… (e.g. Refund $12 hot dog)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
           <button class="btn btn-primary" id="chat-send-btn" onclick="chatSend()">Send</button>
         </div>
       </div>
@@ -3778,15 +3774,18 @@
 <div class="screen" id="screen-inv-tracker">
   <div class="page-header">
     <div class="back-btn" role="button" tabindex="0" aria-label="Back" onclick="goRoleHome()">←</div>
-    <div><div class="page-title">Inventory Tracker</div><div class="page-sub">Today · Count In &amp; Count Out by stand</div></div>
+    <div><div class="page-title">Checkout &amp; Inventory Tracker</div><div class="page-sub">Today · Count In / Count Out · boxes received at the exit table</div></div>
   </div>
   <div class="content">
     <div id="invt-summary" class="status-summary-grid"></div>
     <div class="chip-row" id="invt-filter" style="margin-bottom:10px">
-      <button class="chip selected" data-f="out" onclick="invtSetFilter('out',this)">Missing Count Out</button>
+      <button class="chip selected" data-f="nobox" onclick="invtSetFilter('nobox',this)">📦 Box not received</button>
+      <button class="chip" data-f="out" onclick="invtSetFilter('out',this)">Missing Count Out</button>
       <button class="chip" data-f="in" onclick="invtSetFilter('in',this)">Missing Count In</button>
+      <button class="chip" data-f="got" onclick="invtSetFilter('got',this)">✅ Received</button>
       <button class="chip" data-f="all" onclick="invtSetFilter('all',this)">All stands</button>
     </div>
+    <input class="form-input" id="invt-search" placeholder="🔍 Find a stand (number or name)" oninput="renderInvTracker()" style="margin-bottom:10px">
     <button class="btn btn-primary" id="invt-remind-all" onclick="invtRemindAll()" style="margin-bottom:12px">🔔 Remind every stand shown</button>
     <div id="invt-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>
   </div>
@@ -3934,7 +3933,7 @@
     <!-- Shown only when a manager has tapped into one of the shared panes
          below via a tile — gives them the back button they were missing,
          without duplicating the pane markup/logic per role. -->
-    <div class="page-header" id="wh-mgr-backbar" style="display:none;margin:0 0 14px;padding:0 0 10px;background:transparent">
+    <div class="page-header" id="wh-mgr-backbar" style="display:none;position:static;margin:0 0 14px;padding:0 0 10px;background:transparent">
       <div class="back-btn" role="button" tabindex="0" aria-label="Back to menu" onclick="whMgrBackToMenu()">←</div>
       <div><div class="page-title" id="wh-mgr-backbar-title">Menu</div></div>
     </div>
@@ -4366,7 +4365,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-6';
+const BUILD_TAG = '2026-10-03-fix-7';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5187,7 +5186,7 @@ async function api(action, data) {
           const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
           const entered=norm(secret);
           // Warehouse runners / temp walk-ins (pin 60000) may also use their own last 5 + last name.
-          const lastNameRows=staffRows.filter(r=>['manager','support_manager','food_manager','food_runner'].includes(r.role)||(r.role==='warehouse_employee'&&String(r.pin||'')==='60000'));
+          const lastNameRows=staffRows.filter(r=>['manager','support_manager','food_manager','food_runner','tech'].includes(r.role)||(r.role==='warehouse_employee'&&String(r.pin||'')==='60000'));
           const pick=loginPickByName(lastNameRows,secret,r=>r.name,r=>r.employee_id);
           if(pick.people===1)acct=pick.rows[0];
           else if(pick.people>1){
@@ -5815,6 +5814,12 @@ async function api(action, data) {
       // only while it isn't already 'resolved' — previously an unconditional PATCH
       // meant two tech staff claiming the same issue within the same second would
       // both silently "succeed."
+      if (data.status === 'Pending') {
+        // Release: only the Tech who claimed it can put it back to Available.
+        const rr = await sb('it_issues?id=eq.'+data.issueId+'&status=eq.claimed&claimed_by=eq.'+encodeURIComponent(data.claimedBy||''), { method:'PATCH', headers:{Prefer:'return=representation'}, body: JSON.stringify({ status:'open', claimed_by:null, resolution_note:'' }) });
+        if (rr._err) return {ok:false};
+        return Array.isArray(rr) && rr.length ? {ok:true} : {ok:false, error:'This ticket is no longer yours to release'};
+      }
       const isClaim = data.status === 'On the way';
       const patch = isClaim
         ? { status:'claimed', claimed_by:data.claimedBy, resolution_note:data.techMessage||'' }
@@ -10419,6 +10424,7 @@ async function setupMgrSimpleHome(){
   const role=acct.role||'manager';
   const label=role==='admin'?'ADMIN':role==='support_manager'?'SUPPORT MANAGER':'MANAGER';
   { const ac=document.getElementById('mgr-alerts-check-btn'); if(ac) ac.style.display=role==='admin'?'':'none'; } // alerts check: Admin only
+  { const it=document.getElementById('mgr-invtracker-btn'); if(it) it.style.display=['manager','admin'].includes(role)?'':'none'; } // tracker: Managers/Admin only
   const first=String(acct.name||label).includes(',')
     ? String(acct.name).split(',')[1].trim().split(' ')[0]
     : String(acct.name||label).split(' ')[0];
@@ -14918,12 +14924,12 @@ async function goKitchenRequest(targetStand){
   const who=getRequesterIdentity();
   const canFoodRequest=['lead','supervisor','support_manager','manager','admin'].includes(who.tier)||isLimitedAreaLead();
   if(!canFoodRequest)return toast('Ask your Stand Lead or Supervisor to send a food request','error');
-  state.kitchenUrgency='Normal';state.kitchenETA=30;_kitchenDraft=[{itemName:'',qty:1,free_text:true}];{const ot=document.getElementById('kitchen-order-text');if(ot)ot.value='';}
+  state.kitchenUrgency='Normal';state.kitchenETA=15;_kitchenDraft=[{itemName:'',qty:1,free_text:true}];{const ot=document.getElementById('kitchen-order-text');if(ot)ot.value='';}
   // Same stable-uuid fix as Stock — generated once when the form opens,
   // reused on every submit attempt for this one request.
   state._kitchenRequestUuid=genUUID();
   const stand=targetStand||getOperationalStand(who)||who.homeStand||'';state.kitchenTargetStand=stand;
-  document.getElementById('kitchen-request-note').value='';document.getElementById('kitchen-eta-label').textContent='30 minutes';
+  document.getElementById('kitchen-request-note').value='';document.getElementById('kitchen-eta-label').textContent='15 minutes';
   document.querySelectorAll('#kitchen-urgency-row .chip').forEach((x,i)=>x.classList.toggle('selected',i===0));
   const picker=document.getElementById('kitchen-req-stand-picker');
   if(!stand||!who.homeStand||isLimitedAreaLead()){picker.style.display='';await populateStandPicker('kitchen-req-stand',stand);const ks=document.getElementById('kitchen-req-stand');if(ks&&stand)ks.value=stand;}else picker.style.display='none';
@@ -15015,7 +15021,7 @@ async function submitKitchenRequest(){
   await withLock(evtBtn(), 'Sending…', async () => {
   const blockedMsg=await openRequestGuard('food',stand);if(blockedMsg)return toast(blockedMsg,'error',8000);
   const enriched=items.map(x=>{const m=_kitchenStandItems.find(y=>String(y.itemName).toLowerCase()===String(x.itemName).toLowerCase());return {...x,unit:m&&m.unit||'units',pack:m&&m.pack||'',track_inventory:!!m};});
-  const deadline=new Date(Date.now()+(Number(state.kitchenETA)||30)*60000).toISOString();const suggested=await kitchenSuggestedRunner(stand);
+  const deadline=new Date(Date.now()+(Number(state.kitchenETA)||15)*60000).toISOString();const suggested=await kitchenSuggestedRunner(stand);
   const requestClientUuid=state._kitchenRequestUuid||(state._kitchenRequestUuid=genUUID());
   // Real fix for the actual reason Food Manager stopped using the app
   // mid-game: this used to leave EVERY order unassigned no matter what,
@@ -15028,7 +15034,7 @@ async function submitKitchenRequest(){
   // assignment at all.
   const autoAssignId=(suggested&&suggested.employee_id&&!String(suggested.employee_id).startsWith('preview-'))?suggested.employee_id:null;
   const autoAssignName=autoAssignId?suggested.name:null;
-  const row={client_uuid:requestClientUuid,stand,requested_by:who.name,requested_by_id:who.empId||'',items:enriched.map(x=>x.free_text?x.itemName:(x.qty+' × '+x.itemName)).join(', '),items_json:{items:enriched},note:holdNote+document.getElementById('kitchen-request-note').value,urgency:state.kitchenUrgency||'Normal',eta_minutes:Number(state.kitchenETA)||30,eta_deadline:deadline,status:'open',assigned_runner_id:autoAssignId,assigned_runner_name:autoAssignName};
+  const row={client_uuid:requestClientUuid,stand,requested_by:who.name,requested_by_id:who.empId||'',items:enriched.map(x=>x.free_text?x.itemName:(x.qty+' × '+x.itemName)).join(', '),items_json:{items:enriched},note:holdNote+document.getElementById('kitchen-request-note').value,urgency:state.kitchenUrgency||'Normal',eta_minutes:Number(state.kitchenETA)||15,eta_deadline:deadline,status:'open',assigned_runner_id:autoAssignId,assigned_runner_name:autoAssignName};
   state._lastKitchenCreateError=null;const made=await kitchenCreate(row);if(!made){const e=state._lastKitchenCreateError||{};return toast('Could not send Food request'+(e.status?' · HTTP '+e.status:'')+(e.msg?' · '+String(e.msg).slice(0,90):''),'error',10000);}
   state._kitchenRequestUuid=null; // real request went through — next one gets its own fresh id
   state._kitchenHoldActive=false;
@@ -19120,8 +19126,9 @@ async function standLeaderIds(stand) {
   if (Array.isArray(rows)) rows.forEach(r => { if (r.employee_id) ids.add(String(r.employee_id)); });
   return [...ids];
 }
+function invTrackerAllowed() { return !!(state.staffAccount && state.staffAccount.group === 'manager' && ['manager','admin'].includes(state.staffAccount.role)); }
 function goInvTracker() {
-  if (!(isManagerOpsSession() || isSupervisorSession())) return toast('Managers and Supervisors only', 'error');
+  if (!invTrackerAllowed()) return toast('Managers only', 'error');
   showScreen('screen-inv-tracker');
 }
 function invtSetFilter(f, btn) {
@@ -19136,62 +19143,129 @@ async function invSheetStands() {
   state._invSheetStands = new Set(rows.map(r => r.stand));
   return state._invSheetStands;
 }
+// Portables (203P, 216M, 219T, "219 P …") also hand back their POS.
+function invtIsPortable(stand) { return /^\d+\s?[PMT]\b/i.test(String(stand || '')); }
+// What should be in a stand's checkout box: its kit list + inventory sheets (+ POS for portables).
+function invtBoxItems(r) {
+  const kit = String(r.kit || '').split(',').map(x => x.trim()).filter(Boolean);
+  return [...kit, 'Inventory sheets'].concat(invtIsPortable(r.stand) ? ['POS'] : []);
+}
 async function loadInvTracker() {
   const day = stadiumDay();
-  const [sched, inv, sheets, leads, ovr, npoAtt, npoGroups] = await Promise.all([
+  const [sched, inv, sheets, leads, ovr, npoAtt, npoGroups, kits, receipts] = await Promise.all([
     sb('schedule?is_test=neq.true&event_date=eq.' + day + '&select=location').catch(()=>({_err:true})),
-    sb('inventory_entries?entry_date=eq.' + day + '&phase=in.(%22Count%20In%22,%22Count%20Out%22)&select=stand,phase,submitted_by,created_at&order=created_at.desc').catch(()=>({_err:true})),
+    sb('inventory_entries?entry_date=eq.' + day + '&phase=in.(%22Count%20In%22,%22Count%20Out%22)&select=stand,phase,submitted_by,created_at,counts&order=created_at.desc').catch(()=>({_err:true})),
     invSheetStands(),
     standLeadsIndex(),
     sb('attendance?entry_date=eq.' + day + '&notes=ilike.*INVENTORY%20OVERRIDE*&select=worker_name,stand,notes,updated_at').catch(()=>({_err:true})),
     sb('attendance?entry_date=eq.' + day + '&employee_id=like.NPO-*&select=stand').catch(()=>({_err:true})),
-    sb('npo_groups?is_active=eq.true&select=stand').catch(()=>({_err:true}))
+    sb('npo_groups?is_active=eq.true&select=stand').catch(()=>({_err:true})),
+    sb('checkout_kits?select=stand,items').catch(()=>({_err:true})),
+    sb('checkout_receipts?event_date=eq.' + day + '&select=*').catch(()=>({_err:true}))
   ]);
   const el = document.getElementById('invt-list'); if (!el) return;
   if (!Array.isArray(sched) || !Array.isArray(inv)) { el.innerHTML = '<div class="notice">Could not load — try again</div>'; return; }
-  // Today's stands = scheduled locations + NPO stands where someone checked in.
-  const set = new Set(sched.map(r => r.location).filter(Boolean));
+  // Today's stands = scheduled locations + every stand an active NPO group runs (runner groups are people, not stands).
+  const set = new Set(sched.map(r => r.location).filter(Boolean).filter(x => !/\brunner\b/i.test(x)));
   if (Array.isArray(npoAtt)) npoAtt.forEach(r => { if (r.stand) set.add(r.stand); });
-  // Every stand an active NPO group is assigned to counts, even before anyone checks in.
   if (Array.isArray(npoGroups)) npoGroups.forEach(g => String(g.stand || '').split(',').map(x => x.trim()).filter(Boolean).forEach(x => set.add(x)));
   const stands = [...set].filter(st => !sheets || sheets.has(st));
+  const kitOf = {}; if (Array.isArray(kits)) kits.forEach(k => { kitOf[canonicalStandName2026(k.stand)] = k.items; });
+  const recOf = {}; if (Array.isArray(receipts)) receipts.forEach(r => { if (r.status === 'received') recOf[r.stand] = r; });
+  state._invtReceiptsOk = Array.isArray(receipts);
   const latest = (st, ph) => inv.find(r => r.stand === st && r.phase === ph) || null;
-  state._invtRows = stands.map(st => ({stand:st, countIn:latest(st,'Count In'), countOut:latest(st,'Count Out'), leads:leads[st] || []}));
+  state._invtRows = stands.map(st => ({stand:st, countIn:latest(st,'Count In'), countOut:latest(st,'Count Out'), leads:leads[st] || [], kit:kitOf[canonicalStandName2026(st)] || '', receipt:recOf[st] || null}));
   state._invtOverrides = Array.isArray(ovr) ? ovr : [];
   renderInvTracker();
 }
 function renderInvTracker() {
-  const rows = state._invtRows || [], f = state._invtFilter || 'out';
-  const tot = rows.length, inDone = rows.filter(r => r.countIn).length, outDone = rows.filter(r => r.countOut).length;
+  const rows = state._invtRows || [], f = state._invtFilter || 'nobox';
+  const tot = rows.length, inDone = rows.filter(r => r.countIn).length, outDone = rows.filter(r => r.countOut).length, got = rows.filter(r => r.receipt).length;
+  const missingRows = rows.filter(r => r.receipt && (r.receipt.missing_items || []).length);
   const sum = document.getElementById('invt-summary');
   if (sum) sum.innerHTML =
-    '<div class="status-summary-card"><div class="n" style="color:' + (inDone === tot ? '#00A651' : '#D97706') + '">' + inDone + '/' + tot + '</div><div class="t">Count In done</div></div>' +
+    '<div class="status-summary-card"><div class="n" style="color:' + (got === tot ? '#00A651' : '#DC2626') + '">' + got + '/' + tot + '</div><div class="t">Boxes received</div></div>' +
     '<div class="status-summary-card"><div class="n" style="color:' + (outDone === tot ? '#00A651' : '#DC2626') + '">' + outDone + '/' + tot + '</div><div class="t">Count Out done</div></div>' +
-    '<div class="status-summary-card"><div class="n" style="color:' + ((state._invtOverrides||[]).length ? '#DC2626' : 'var(--text)') + '">' + (state._invtOverrides||[]).length + '</div><div class="t">Lead overrides</div></div>';
-  const list = rows.filter(r => f === 'all' ? true : f === 'in' ? !r.countIn : !r.countOut).sort((a,b) => a.stand.localeCompare(b.stand, undefined, {numeric:true}));
+    '<div class="status-summary-card"><div class="n" style="color:' + (inDone === tot ? '#00A651' : '#D97706') + '">' + inDone + '/' + tot + '</div><div class="t">Count In done</div></div>' +
+    '<div class="status-summary-card"><div class="n" style="color:' + (missingRows.length ? '#DC2626' : 'var(--text)') + '">' + missingRows.length + '</div><div class="t">Boxes with missing items</div></div>';
+  const q = String((document.getElementById('invt-search') || {}).value || '').trim().toLowerCase();
+  const pass = r => f === 'all' ? true : f === 'in' ? !r.countIn : f === 'out' ? !r.countOut : f === 'got' ? !!r.receipt : !r.receipt;
+  const list = rows.filter(r => pass(r) && (!q || r.stand.toLowerCase().includes(q))).sort((a,b) => a.stand.localeCompare(b.stand, undefined, {numeric:true}));
   state._invtShown = list;
   const btn = document.getElementById('invt-remind-all');
-  if (btn) btn.style.display = (f !== 'all' && list.length) ? '' : 'none';
+  if (btn) btn.style.display = ((f === 'in' || f === 'out') && list.length) ? '' : 'none';
   const el = document.getElementById('invt-list'); if (!el) return;
   const t = e => e ? new Date(e.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
-  const chip = (label, e) => '<span style="display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;margin-right:6px;background:' + (e ? '#DCFCE7;color:#166534' : '#FEE2E2;color:#991B1B') + '">' + label + ' ' + (e ? '✓ ' + escapeHtml(e.submitted_by||'') + ' ' + t(e) : '✗') + '</span>';
+  const chip = (label, e) => '<span style="display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;margin:0 6px 4px 0;background:' + (e ? '#DCFCE7;color:#166534' : '#FEE2E2;color:#991B1B') + '">' + label + ' ' + (e ? '✓ ' + escapeHtml(e.submitted_by||'') + ' ' + t(e) : '✗') + '</span>';
   const reminded = state._invtReminded || {};
   let html = list.length ? list.map(r => {
     const i = rows.indexOf(r);
     const leadTxt = r.leads.length ? r.leads.map(x => escapeHtml(x.name)).join(', ') : '<span style="color:#D97706">No Stand Lead — Supervisor responsible</span>';
+    const rec = r.receipt, miss = rec ? (rec.missing_items || []) : [];
     const done = r.countIn && r.countOut;
+    const color = rec ? (miss.length ? '#D97706' : '#00A651') : done ? '#2563EB' : '#DC2626';
     const ago = reminded[r.stand] ? ' · reminded ' + Math.max(0, Math.round((Date.now() - reminded[r.stand]) / 60000)) + 'm ago' : '';
-    return '<div class="card" style="padding:12px;margin-bottom:8px;border-left:4px solid ' + (done ? '#00A651' : '#DC2626') + '">' +
+    const boxChip = rec
+      ? '<span style="display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800;margin:0 6px 4px 0;background:' + (miss.length ? '#FEF3C7;color:#92400E' : '#DCFCE7;color:#166534') + '">📦 Box received ✓ ' + escapeHtml(rec.received_by || '') + ' ' + new Date(rec.received_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) + '</span>'
+      : '<span style="display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800;margin:0 6px 4px 0;background:#FEE2E2;color:#991B1B">📦 Box not received</span>';
+    return '<div class="card" style="padding:12px;margin-bottom:8px;border-left:4px solid ' + color + '">' +
       '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div style="font-weight:700;font-size:14px">' + escapeHtml(r.stand) + '</div>' +
-      (done ? '' : '<button class="btn btn-ghost" style="width:auto;padding:6px 10px;margin:0;font-size:12px" onclick="invtRemind(' + i + ')">🔔 Remind</button>') + '</div>' +
+      (rec ? '<button class="btn btn-ghost" style="width:auto;padding:6px 10px;margin:0;font-size:12px" onclick="invtReceiveOpen(' + i + ')">Edit</button>'
+           : '<button class="btn btn-primary" style="width:auto;padding:8px 12px;margin:0;font-size:13px" onclick="invtReceiveOpen(' + i + ')">📦 Receive box</button>') + '</div>' +
       '<div style="font-size:12px;color:var(--text-2);margin:4px 0 6px">Runs it: ' + leadTxt + '<span style="font-size:11px">' + ago + '</span></div>' +
-      chip('Count In', r.countIn) + chip('Count Out', r.countOut) +
-      (done ? '' : '<div style="margin-top:6px"><button class="btn btn-ghost" style="width:auto;padding:4px 10px;margin:0;font-size:11px" onclick="invtOpen(' + i + ')">Open ' + (r.countIn ? 'Count Out' : 'Count In') + ' for this stand ›</button></div>') +
+      chip('Count In', r.countIn) + chip('Count Out', r.countOut) + boxChip +
+      (miss.length ? '<div style="font-size:12px;font-weight:700;color:#B45309;margin-top:4px">Missing: ' + miss.map(escapeHtml).join(', ') + '</div>' : '') +
+      (!rec ? '<div style="font-size:11px;color:var(--text-3);margin-top:4px">Box: ' + invtBoxItems(r).map(escapeHtml).join(', ') + '</div>' : '') +
+      (done ? '' : '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-ghost" style="width:auto;padding:4px 10px;margin:0;font-size:11px" onclick="invtOpen(' + i + ')">Open ' + (r.countIn ? 'Count Out' : 'Count In') + ' ›</button><button class="btn btn-ghost" style="width:auto;padding:4px 10px;margin:0;font-size:11px" onclick="invtRemind(' + i + ')">🔔 Remind</button></div>') +
       '</div>';
-  }).join('') : '<div class="empty"><div class="empty-icon">✅</div><p>' + (f === 'all' ? 'No stands with inventory today.' : 'Every stand has finished ' + (f === 'in' ? 'Count In' : 'Count Out') + '.') + '</p></div>';
-  const ov = state._invtOverrides || [];
-  if (ov.length) html += '<div class="section-title" style="margin-top:14px">Leads clocked out without inventory (override)</div>' + ov.map(o => '<div class="card" style="padding:10px 12px;margin-bottom:6px;font-size:12px"><b>' + escapeHtml(o.worker_name||'') + '</b> · ' + escapeHtml(o.stand||'') + '<div style="color:var(--text-2);margin-top:2px">' + escapeHtml(o.notes||'') + '</div></div>').join('');
+  }).join('') : '<div class="empty"><div class="empty-icon">✅</div><p>' + (f === 'nobox' ? 'Every box is in.' : f === 'got' ? 'No boxes received yet.' : f === 'all' ? 'No stands with inventory today.' : 'Every stand has finished ' + (f === 'in' ? 'Count In' : 'Count Out') + '.') + '</p></div>';
+  if (missingRows.length && (f === 'got' || f === 'all' || f === 'nobox')) {
+    html += '<div class="section-title" style="margin-top:14px">Who is missing what</div>' + missingRows.sort((a,b)=>a.stand.localeCompare(b.stand,undefined,{numeric:true})).map(r =>
+      '<div class="card" style="padding:10px 12px;margin-bottom:6px;font-size:12px;border-left:4px solid #D97706"><b>' + escapeHtml(r.stand) + '</b><div style="color:#B45309;margin-top:2px">' + r.receipt.missing_items.map(escapeHtml).join(', ') + '</div></div>').join('');
+  }
+  if (state._invtReceiptsOk === false) html = '<div class="notice warning" style="font-size:12px">Box check-in is not available right now — try again in a moment.</div>' + html;
   el.innerHTML = html;
+}
+// ---- Receive a stand's checkout box (managers at the exit table) ----
+function invtReceiveOpen(i) {
+  const r = (state._invtRows || [])[i]; if (!r) return;
+  const items = invtBoxItems(r), had = new Set(r.receipt ? (r.receipt.missing_items || []) : []);
+  const old = document.getElementById('invt-receive-overlay'); if (old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'invt-receive-overlay'; ov.className = 'contact-popup-overlay';
+  ov.innerHTML = '<div class="contact-popup" style="max-width:460px;max-height:86vh;overflow:auto">' +
+    '<div style="font-size:18px;font-weight:800;margin-bottom:2px">📦 ' + escapeHtml(r.stand) + '</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin-bottom:8px">Untick anything that is <b>not</b> in the box.</div>' +
+    (r.countOut ? '' : '<div class="notice warning" style="font-size:12px;margin-bottom:8px">⚠️ Count Out is not done for this stand yet.</div>') +
+    items.map((it, k) => '<label style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);font-size:15px"><input type="checkbox" data-item="' + escapeAttr(it) + '" ' + (had.has(it) ? '' : 'checked') + ' style="width:22px;height:22px">' + escapeHtml(it) + '</label>').join('') +
+    '<button class="btn btn-primary" style="margin-top:12px;min-height:52px;font-size:16px" onclick="invtReceiveSave(' + i + ',this)">✅ Confirm box received</button>' +
+    (r.receipt ? '<button class="btn btn-ghost" style="margin-top:6px;color:#DC2626;border-color:#DC2626" onclick="invtReceiveUndo(' + i + ',this)">Undo — not received</button>' : '') +
+    '<button class="btn btn-ghost" style="margin-top:6px" onclick="document.getElementById(\'invt-receive-overlay\').remove()">Cancel</button></div>';
+  document.body.appendChild(ov);
+}
+async function invtReceiveSave(i, btn) {
+  const r = (state._invtRows || [])[i]; if (!r) return;
+  const missing = [...document.querySelectorAll('#invt-receive-overlay input[type=checkbox]')].filter(c => !c.checked).map(c => c.dataset.item);
+  const who = getRequesterIdentity();
+  await withLock(btn, 'Saving…', async () => {
+    const res = await sb('checkout_receipts?on_conflict=event_date,stand', {method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=representation'}, body: JSON.stringify({event_date: stadiumDay(), stand: r.stand, status:'received', received_by: who.name || 'Manager', received_by_id: String(who.empId || ''), received_at: new Date().toISOString(), missing_items: missing})}).catch(()=>({_err:true}));
+    if (!Array.isArray(res) || !res.length) return toast('Could not save — try again', 'error');
+    r.receipt = res[0];
+    const ov = document.getElementById('invt-receive-overlay'); if (ov) ov.remove();
+    toast(missing.length ? '📦 ' + r.stand + ' received — missing ' + missing.length : '✅ ' + r.stand + ' box received');
+    renderInvTracker();
+  });
+}
+async function invtReceiveUndo(i, btn) {
+  const r = (state._invtRows || [])[i]; if (!r || !r.receipt) return;
+  await withLock(btn, 'Saving…', async () => {
+    const res = await sb('checkout_receipts?on_conflict=event_date,stand', {method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'}, body: JSON.stringify({event_date: stadiumDay(), stand: r.stand, status:'undone', missing_items: []})}).catch(()=>({_err:true}));
+    if (res && res._err) return toast('Could not save — try again', 'error');
+    r.receipt = null;
+    const ov = document.getElementById('invt-receive-overlay'); if (ov) ov.remove();
+    toast('↩ ' + r.stand + ' set back to not received');
+    renderInvTracker();
+  });
 }
 function invtOpen(i) {
   const r = (state._invtRows||[])[i]; if (!r) return;
@@ -19527,10 +19601,8 @@ async function chatRequest(kind) {
   const th = state._chatThread; if (!th) return;
   if (!th.people) th.people = await chatPeopleFor(th.stand).catch(()=>null);
   const input = document.getElementById('chat-input'), extra = String(input.value || '').trim();
-  // A request with no details is useless to the person who has to answer it:
-  // Refund / Complaint / Comp must say WHICH item and how much.
-  const NEEDS = {'Refund':'Item and amount? e.g. Hot dog $6','Customer complaint':'What happened? e.g. Cold food, wrong order','Comp / price':'Which item and what price? e.g. Pretzel — is it $7?'};
-  if (NEEDS[kind] && extra.length < 3) { input.placeholder = NEEDS[kind]; input.focus(); return toast('Type the item / price first, then tap ' + kind, 'error', 6000); }
+  // Flexible: whatever is typed in the box rides along ("$12 hot dog");
+  // nothing typed still sends the plain request.
   input.value = '';
   th.to = th.people && th.people.sup && th.people.sup.length ? 'sup' : 'mgr'; th._toTouched = true; chatRenderTo();
   chatSend('🙋 REQUEST · ' + kind + (extra ? ' — ' + extra : ''));
@@ -20430,7 +20502,7 @@ function renderTech() {
     const subPart = r.subCategory ? ' — ' + r.subCategory : '';
     let actions = '';
     if (r.status === 'Pending') actions = '<div class="req-actions"><button class="btn-claim" onclick="claimIT(\'' + r.id + '\')">🔧 Claim · On my way</button></div>';
-    else if (r.status === 'On the way' && techMine(r)) actions = '<div class="req-actions"><button class="btn-fulfill" onclick="resolveIT(\'' + r.id + '\')">✓ Resolve my job</button></div>';
+    else if (r.status === 'On the way' && techMine(r)) actions = '<div class="req-actions"><button class="btn-fulfill" onclick="resolveIT(\'' + r.id + '\')">✓ Resolve my job</button><button class="btn-claim" style="background:transparent;color:var(--text-2);border:1px solid var(--border)" onclick="releaseIT(\'' + r.id + '\')">↩ Release</button></div>';
     return '<div class="req-card ' + cardClass + '">' +
       '<div class="req-header"><div><div class="req-stand">' + escapeHtml(r.stand||'Unknown stand') + '</div><div class="req-time">' + timeAgo(r.timestamp) + ' · ' + escapeHtml(r.requestedBy||'') + '</div></div><span class="status-pill ' + pillClass + '">' + escapeHtml(pillText||'') + '</span></div>' +
       '<div class="req-items">' + escapeHtml(r.category||'IT issue') + escapeHtml(subPart) + '</div>' +
@@ -20445,7 +20517,7 @@ function renderTech() {
 async function claimIT(id) {
   const acct=state.staffAccount;
   if(!acct||acct.group!=='tech')return toast('IT login required','error');
-  const msg = prompt('Message for the stand (optional)\n\nExample: "Bringing replacement POS in 5 min"');
+  const msg = await promptAction('Message for the stand (optional)', {title:'Claim · On my way', placeholder:'e.g. Bringing a new POS in 5 min', confirmLabel:'🔧 On my way'});
   if(msg===null)return;
   const res = await api('updateITIssue', { issueId: id, status: 'On the way', claimedBy: acct.name, techMessage: msg || '' });
   if (res.ok || res.simulated) {
@@ -20456,10 +20528,18 @@ async function claimIT(id) {
   else { toast(res.error || 'Could not claim — another Tech may have taken it', 'error'); loadTech(); }
 }
 
+async function releaseIT(id) {
+  const acct=state.staffAccount; if(!acct||acct.group!=='tech')return;
+  if(!(await confirmAction('Put this ticket back in Available for another Tech?',{title:'Release job',confirmLabel:'Release'})))return;
+  const res = await api('updateITIssue', { issueId: id, status: 'Pending', claimedBy: acct.name });
+  if (res.ok) { toast('↩ Released — back in Available'); state.tTab='available'; }
+  else toast(res.error || 'Could not release — try again', 'error');
+  loadTech();
+}
 async function resolveIT(id) {
   const row=(state.tIssues||[]).find(x=>String(x.id)===String(id));
   if(!row||row.status!=='On the way'||!techMine(row))return toast('Only the Tech who claimed this job can resolve it','error');
-  const note = prompt('Resolution note (what fixed it?):\n\nExample: "Rebooted POS, working fine now"');
+  const note = await promptAction('What fixed it? (optional)', {title:'Resolve job', placeholder:'e.g. Rebooted POS, working now', confirmLabel:'✓ Resolved'});
   if (note === null) return;
   const res = await api('updateITIssue', { issueId: id, status: 'Resolved', resolutionNote: note || '' });
   if (res.ok || res.simulated) {
@@ -24199,6 +24279,10 @@ function handleAppBack() {
     if (state.staffAccount.group === 'manager') { showScreen('screen-bedcheck'); restoreMgrSidebarState(); return; }
   }
 
+  // Swipe-back = tap the screen's own ← Back button, so both always go to the same place.
+  { const sc = cur && document.getElementById(cur);
+    const bb = sc && sc.querySelector(':scope > .page-header .back-btn');
+    if (bb && bb.offsetParent !== null && (bb.onclick || bb.getAttribute('onclick'))) { bb.click(); return; } }
   const isRegistered = BACK_MAP.hasOwnProperty(cur);
   const dest = isRegistered ? BACK_MAP[cur] : 'screen-home';
   if (dest === null) {

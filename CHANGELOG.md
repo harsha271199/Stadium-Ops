@@ -4,6 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-7
+- **Checkout & Inventory Tracker (Managers / Admin only):** the Inventory Tracker now also tracks the end-of-game boxes at the exit table. Each stand shows Count In / Count Out and its box (kit list + inventory sheets + POS for portables). "📦 Receive box" opens a checklist — untick anything missing and confirm. Filters: Box not received · Missing Count Out · Missing Count In · Received · All, plus search. "Who is missing what" lists every box that came back short. Undo is available. Kit lists live in `checkout_kits` (61 stands); receipts in `checkout_receipts`.
+- Supervisors and Support Managers no longer see the tracker.
+- **IT Tech:** sign in with last 5 + last name (PIN still works); claim / resolve messages use the app's own dialog; a claimed ticket can be released back to Available.
+- **Food requests:** default target 15 minutes (Soon 12, URGENT 10).
+- **Chat requests:** Refund / Customer complaint / Comp / SOS send even with nothing typed; anything typed rides along ("Refund — $12 hot dog"). The chat box hint shows an example.
+- **Back button:** page headers stay pinned at the top while scrolling (My Team, long lists), and the phone's swipe-back now does exactly what the screen's ← Back does.
+
 ## 2026-10-03-fix-6
 - **Runners split:** the old "Kitchen Runner" list is now **Concession Runner** (the 5 Food Runners) and **Warehouse Runner** (9 people, added to the Oct 3 warehouse roster). Warehouse Runners can sign in with 60000 + last name or their own last 5 + last name, and land in Warehouse. Runner groups no longer show up as "stands" in Stand Status, and Warehouse Runners are not in the concession Team list.
 - **Warehouse groups (Assign & Team):** 1 Inferno (140, 142) · 2 West Concourse (203–214) · 3 Draft Houses (215–221) · 4 East Concourse (222–234) · 5 Upper West (310, 316, 401–414) · 6 Upper East (334, 348, 438, 442). Stock requests alert only the people assigned to that stand's group; an unassigned manager transfer now alerts that group too. Warehouse leaders' chat name shows their group (e.g. "Warehouse Supervisor · West Concourse").
