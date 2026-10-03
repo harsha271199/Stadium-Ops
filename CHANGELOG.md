@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-2
+- **Manager "All Requests" was blank:** a style rule hid the whole panel when opened from the manager home. Fixed. The monitor now has an **All stands / one stand** picker and **Stock · Food · IT** filters only (no "All"), today's requests only.
+- **Old requests / chat everywhere:** refund, maintenance and pending stand-transfer lists are now today-only too (requests, IT, food and chat already were).
+- **Manager home:** no "Hi …", no repeated Working stand text, no "All-stand operations…" line — compact card like the Supervisor's.
+- **IT form:** the IT-only reminder now sits next to the Details box, not as a banner on top.
+- **Stock request:** only Supervisors and Managers/Admin can type a custom ("Other") request or notes; everyone else picks from the list and asks their Supervisor. Same for the Force Restock manual-add box.
+- **Chat:** managers are no longer alerted for a stand chat until an Admin assigns them in Chat routing.
+- **Inventory Tracker:** counts every stand an active NPO group is assigned to (scheduled stands + NPO stands), even before anyone checks in.
+
 ## 2026-10-03-fix-1
 - **Manager portal:** the game-day banner (ASU vs Baylor) is now the first card on the home screen, same look as the Supervisor's. Under "All Stands" the **Inventory Tracker** is first and the duplicate "All Requests" button is gone.
 - **Team (manager / admin):** three clickable options only — **All stands · Workers · NPO**. The "Working stand", "Live now", the Fully staffed / Partial / None / Checked-in chips and the filter buttons are removed. Every worker row (in All stands, Workers and NPO) has ✓ check-in, **Check out** (once checked in), ✕ absent, ↔ move and ⭐ feedback.

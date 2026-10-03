@@ -1071,7 +1071,6 @@
   #screen-bedcheck.simple-tool-open #mgr-v10-bottom-nav,
   #screen-bedcheck.simple-tool-open #mgr-coverage-profile,
   #screen-bedcheck.simple-tool-open #mgr-v10-home,
-  #screen-bedcheck.simple-tool-open #mgr-v10-requests,
   #screen-bedcheck.simple-tool-open #mgr-v10-manage{display:none !important}
   #mgr-simple-shell .action-tiles{margin-bottom:8px}
   #mgr-simple-shell .big-action{margin-bottom:8px}
@@ -2585,10 +2584,13 @@
     <label class="form-label" style="margin-top:0">Items — enter cases needed *</label>
     <input class="form-input" type="text" id="stock-search" placeholder="🔍 Search items…" oninput="renderStockItems()" style="margin-bottom:8px">
     <div id="stock-items-list"><div class="loading"><div class="spinner"></div>Loading your stand's items…</div></div>
+    <div id="stock-free-text-wrap">
     <label class="form-label">Other / not on the list</label>
     <textarea class="form-input" id="stock-other" placeholder="e.g. 1 bag ice, 2 rolls receipt paper"></textarea>
     <label class="form-label">Notes</label>
     <textarea class="form-input" id="stock-notes" placeholder="Anything else..."></textarea>
+    </div>
+    <div class="notice info" id="stock-free-text-note" style="display:none;font-size:12px">Item not on the list? Ask your Supervisor — only Supervisors and Managers can type a custom stock request.</div>
     <!-- Spacer so the last field stays above the fixed Urgency + ETA + Send bar. -->
     <div style="height:128px"></div>
   </div>
@@ -2801,17 +2803,11 @@
         </div>
       </div>
       <div class="stand-card">
-        <div class="greeting-line">Hi <span id="mgr-simple-firstname">—</span>! 👋</div>
         <div class="full-name" id="mgr-simple-name">—</div>
-        <div class="label">Working stand</div>
-        <div class="stand-name" id="mgr-simple-current-stand">Choose a stand</div>
-        <div class="shift-time">Game-day operations</div>
         <div class="role-badge supervisor" id="mgr-simple-role">MANAGER</div>
-        <div class="role-scope" id="mgr-simple-access-note"></div>
         <div class="working-stand-control" style="display:block">
           <div class="ws-label">Working stand</div>
           <select class="form-input" id="mgr-simple-stand-select" onchange="mgrSimpleStandChanged()"></select>
-          <div class="working-stand-help">Choose once. Checks, Requests, Food Safety, Team and Force Restock follow this stand.</div>
         </div>
       </div>
 
@@ -3005,8 +3001,7 @@
           <button class="btn btn-ghost" onclick="mgrV10NewIT()">🔧 IT</button>
         </div>
         <div class="mgr-v10-filter-row">
-          <button class="mgr-v10-filter active" data-v10-filter="all" onclick="mgrV10RequestFilter('all')">All <span class="mgr-v10-mini-count" id="mgr-v10-all-count">0</span></button>
-          <button class="mgr-v10-filter" data-v10-filter="stock" onclick="mgrV10RequestFilter('stock')">Stock <span class="mgr-v10-mini-count" id="mgr-stock-count">0</span></button>
+          <button class="mgr-v10-filter active" data-v10-filter="stock" onclick="mgrV10RequestFilter('stock')">Stock <span class="mgr-v10-mini-count" id="mgr-stock-count">0</span></button>
           <button class="mgr-v10-filter" data-v10-filter="kitchen" onclick="mgrV10RequestFilter('kitchen')">Food <span class="mgr-v10-mini-count" id="mgr-kitchen-count">0</span></button>
           <button class="mgr-v10-filter" data-v10-filter="it" onclick="mgrV10RequestFilter('it')">IT <span class="mgr-v10-mini-count" id="mgr-it-count">0</span></button>
         </div>
@@ -3579,7 +3574,6 @@
       <label class="form-label" style="margin-top:0">Which stand?</label>
       <select class="form-input" id="it-stand-select" onchange="itStandChanged()"></select>
     </div>
-    <div class="notice" style="font-weight:700;border-left:4px solid #DC2626">🔧 IT ONLY — POS, handheld, tablet, TV / menu board, internet. <b>Do NOT use this for food, stock, ice, cups, refunds or anything else</b> — use the Food or Stock request buttons. Those requests will be ignored here.</div>
     <label class="form-label" style="margin-top:0">What's the issue? *</label>
     <div class="chip-row" id="it-cat-row">
       <button class="chip" onclick="selectITCat(this,'POS Handheld')">📱 POS Handheld</button>
@@ -3603,7 +3597,7 @@
       <button class="chip soon" onclick="selectITUrg(this,'Soon')">🟡 Soon</button>
       <button class="chip urgent" onclick="selectITUrg(this,'URGENT')">🔴 URGENT (stopped)</button>
     </div>
-    <label class="form-label">Details *</label>
+    <label class="form-label">Details * <span style="font-weight:600;color:#DC2626;text-transform:none;letter-spacing:0">— IT problems only (POS, handheld, tablet, TV, internet)</span></label>
     <textarea class="form-input" id="it-details" placeholder="Tech problem only — e.g. POS 3 frozen since 4:30, won't restart"></textarea>
     <button class="btn btn-primary" onclick="submitITIssue()">Send to IT →</button>
   </div>
@@ -4380,7 +4374,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-1';
+const BUILD_TAG = '2026-10-03-fix-2';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5777,7 +5771,7 @@ async function api(action, data) {
       const row=Array.isArray(r)&&r[0]?r[0]:null;return { ok:true,id:row&&row.id };
     }
     case 'getRefunds': {
-      const rows = await sb('refund_requests?order=created_at.desc&limit=200&select=*');
+      const rows = await sb('refund_requests?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&limit=200&select=*');
       if (rows._err) return { ok:false, error: rows.status === 404 ? 'Refunds table missing — run stadium_update.sql' : 'Network' };
       return { ok:true, refunds: rows };
     }
@@ -6703,8 +6697,8 @@ async function api(action, data) {
 
     case 'getMaintenanceReports': {
       const q = data.status && data.status !== 'all'
-        ? 'maintenance_reports?status=eq.'+data.status+'&order=created_at.desc&select=*'
-        : 'maintenance_reports?order=created_at.desc&select=*';
+        ? 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&status=eq.'+data.status+'&order=created_at.desc&select=*'
+        : 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*';
       const rows = await sb(q);
       return rows._err ? {ok:false,error:'Network'} : {ok:true, reports:rows};
     }
@@ -8395,7 +8389,7 @@ async function goIncomingTransfers() {
   const stand = getOperationalStand(getRequesterIdentity());
   if (!stand) return toast('Choose a working stand first', 'error');
   showScreen('screen-incoming-transfers');
-  const rows = await sb('stand_transfers?to_stand=eq.'+encodeURIComponent(stand)+'&status=eq.pending&order=created_at.desc&select=*').catch(()=>({_err:true}));
+  const rows = await sb('stand_transfers?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&to_stand=eq.'+encodeURIComponent(stand)+'&status=eq.pending&order=created_at.desc&select=*').catch(()=>({_err:true}));
   const el = document.getElementById('incoming-list');
   if (rows._err) { el.innerHTML = '<div class="notice" style="background:rgba(220,38,38,0.08);color:#DC2626">Could not load — try again</div>'; return; }
   const badge = document.getElementById('incoming-badge');
@@ -8835,6 +8829,10 @@ function getRequesterIdentity() {
 // controls what shows up on screen (request tags, feedback records).
 // Deliberately shown as plain "Manager" — nobody needs to see the tier
 // distinction, just who actually made the request.
+// Only Supervisors and Managers/Admin may type a free-text stock request; everyone else picks from the list.
+function canTypeFreeRequests(){
+  return isSupervisorSession() || !!(state.staffAccount && state.staffAccount.group==='manager' && ['support_manager','manager','admin'].includes(state.staffAccount.role));
+}
 const TIER_LABELS = { supervisor:'Supervisor', support_manager:'Manager', manager:'Manager', admin:'Admin' };
 
 async function goStock() {
@@ -8847,6 +8845,7 @@ async function goStock() {
   document.getElementById('stock-other').value = '';
   document.getElementById('stock-notes').value = '';
   setStockEta(30);
+  { const ok=canTypeFreeRequests(), w=document.getElementById('stock-free-text-wrap'), n=document.getElementById('stock-free-text-note'); if(w)w.style.display=ok?'':'none'; if(n)n.style.display=ok?'none':''; }
   showScreen('screen-stock');
   const picker = document.getElementById('stock-stand-picker');
   // Anyone without a fixed home stand (support manager, manager, admin)
@@ -9034,7 +9033,7 @@ async function submitStock() {
     jsonItems.push({ itemName: item.itemName, unit: item.unit || '', pack: item.pack || '', qty: v, cases: v });
     lines.push(v + ' case' + (v !== 1 ? 's' : '') + ' × ' + item.itemName + (item.pack ? ' (' + item.pack + ')' : ''));
   });
-  const other = document.getElementById('stock-other').value.trim();
+  const other = canTypeFreeRequests() ? document.getElementById('stock-other').value.trim() : '';
   if (jsonItems.length === 0 && !other) return toast('Enter a quantity for at least one item (or use Other)', 'error');
   { const gStand=state.stockTargetStand||getRequesterIdentity().homeStand; const gMsg=await openRequestGuard('stock',gStand); if(gMsg) return toast(gMsg,'error',8000); }
   const duplicateHits=stockDuplicateOverlap(jsonItems);
@@ -10433,7 +10432,7 @@ function openLeadershipRequestMonitor(){
     const req=document.getElementById('mgr-v10-requests');if(req)req.style.display='';
     const manage=document.getElementById('mgr-v10-manage');if(manage)manage.style.display='none';
     mgrV10SetNav('requests');
-    mgrV10RequestFilter(state.mgrV10RequestFilter||'all',true);
+    mgrV10RequestFilter((state.mgrV10RequestFilter&&state.mgrV10RequestFilter!=='all')?state.mgrV10RequestFilter:'stock',true);
   }
 }
 function requestHubGoStock(){ requestHubMarkReturn(); goStock(); }
@@ -10489,7 +10488,7 @@ function applyManagerTierAccess() {
   setupMgrSimpleHome();
   mgrRefreshCoverageProfile();
 }
-const MGR_V10_PANELS=['mgr-roster','mgr-stock','mgr-kitchen','mgr-it','mgr-live','mgr-inv','mgr-transfers','mgr-reports','mgr-carts','mgr-maint','mgr-refunds','mgr-times','mgr-admin','mgr-checkins'];
+const MGR_V10_PANELS=['mgr-v10-requests','mgr-roster','mgr-stock','mgr-kitchen','mgr-it','mgr-live','mgr-inv','mgr-transfers','mgr-reports','mgr-carts','mgr-maint','mgr-refunds','mgr-times','mgr-admin','mgr-checkins'];
 
 function mgrV10HidePanels(){
   MGR_V10_PANELS.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
@@ -10559,7 +10558,7 @@ function supportRequestStandChanged(){
   state.kitchenTargetStand=stand;
   state.itTargetStand=stand;
   supportRequestStandSummary();
-  mgrV10LoadRequests(state.mgrV10RequestFilter||'all');
+  mgrV10LoadRequests(state.mgrV10RequestFilter||'stock');
 }
 function supportRequestStandSummary(){
   const el=document.getElementById('support-request-selected-summary');
@@ -11071,7 +11070,7 @@ function mgrV10View(view,preserve){
       mgrV10LoadRequests('all');
       mgrV10UpdateNeedsActionUi();
     }else{
-      mgrV10RequestFilter(state.mgrV10RequestFilter||'all',true);
+      mgrV10RequestFilter((state.mgrV10RequestFilter&&state.mgrV10RequestFilter!=='all')?state.mgrV10RequestFilter:'stock',true);
     }
   }else if(view==='team'){
     const roster=document.getElementById('mgr-roster');if(roster)roster.style.display='';
@@ -11330,7 +11329,7 @@ function mgrV10RenderSmartRequests(){
 
 function mgrV10RequestFilter(filter,silent){
   state.mgrV10NeedsActionOnly=false;
-  state.mgrV10RequestFilter=filter||'all';
+  state.mgrV10RequestFilter=filter||'stock';
   document.querySelectorAll('.mgr-v10-filter').forEach(b=>b.classList.toggle('active',b.dataset.v10Filter===state.mgrV10RequestFilter));
   mgrV10LoadRequests(state.mgrV10RequestFilter);
   if(!silent)window.scrollTo(0,0);
@@ -17475,8 +17474,8 @@ async function loadMgrMaint(filter) {
   const el = document.getElementById('mgr-maint-list');
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   const query = filter === 'all'
-    ? 'maintenance_reports?order=created_at.desc&select=*'
-    : 'maintenance_reports?status=eq.'+filter+'&order=created_at.desc&select=*';
+    ? 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&select=*'
+    : 'maintenance_reports?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&status=eq.'+filter+'&order=created_at.desc&select=*';
   const rows = await sb(query);
   if (rows._err) { el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load</p></div>'; return; }
   if (!rows.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🔨</div><p>No ' + (filter==='all'?'':filter+' ') + 'maintenance reports</p></div>'; return; }
@@ -18982,19 +18981,22 @@ async function invSheetStands() {
 }
 async function loadInvTracker() {
   const day = stadiumDay();
-  const [sched, inv, sheets, leads, ovr, npoAtt] = await Promise.all([
+  const [sched, inv, sheets, leads, ovr, npoAtt, npoGroups] = await Promise.all([
     sb('schedule?is_test=neq.true&event_date=eq.' + day + '&select=location').catch(()=>({_err:true})),
     sb('inventory_entries?entry_date=eq.' + day + '&phase=in.(%22Count%20In%22,%22Count%20Out%22)&select=stand,phase,submitted_by,created_at&order=created_at.desc').catch(()=>({_err:true})),
     invSheetStands(),
     standLeadsIndex(),
     sb('attendance?entry_date=eq.' + day + '&notes=ilike.*INVENTORY%20OVERRIDE*&select=worker_name,stand,notes,updated_at').catch(()=>({_err:true})),
-    sb('attendance?entry_date=eq.' + day + '&employee_id=like.NPO-*&select=stand').catch(()=>({_err:true}))
+    sb('attendance?entry_date=eq.' + day + '&employee_id=like.NPO-*&select=stand').catch(()=>({_err:true})),
+    sb('npo_groups?is_active=eq.true&select=stand').catch(()=>({_err:true}))
   ]);
   const el = document.getElementById('invt-list'); if (!el) return;
   if (!Array.isArray(sched) || !Array.isArray(inv)) { el.innerHTML = '<div class="notice">Could not load — try again</div>'; return; }
   // Today's stands = scheduled locations + NPO stands where someone checked in.
   const set = new Set(sched.map(r => r.location).filter(Boolean));
   if (Array.isArray(npoAtt)) npoAtt.forEach(r => { if (r.stand) set.add(r.stand); });
+  // Every stand an active NPO group is assigned to counts, even before anyone checks in.
+  if (Array.isArray(npoGroups)) npoGroups.forEach(g => String(g.stand || '').split(',').map(x => x.trim()).filter(Boolean).forEach(x => set.add(x)));
   const stands = [...set].filter(st => !sheets || sheets.has(st));
   const latest = (st, ph) => inv.find(r => r.stand === st && r.phase === ph) || null;
   state._invtRows = stands.map(st => ({stand:st, countIn:latest(st,'Count In'), countOut:latest(st,'Count Out'), leads:leads[st] || []}));
@@ -19165,7 +19167,7 @@ async function chatPeopleFor(stand, dayArg) {
   const autoSup = uniq(dir.sups.filter(r => canonicalStandName2026(r.location) === canon || inAreas.includes(r.location)).map(r => ({id:String(r.employee_id||''), name:r.worker_name||'Supervisor'})));
   const autoMgr = uniq(dir.mgrs.map(m => ({id:String(m.employee_id), name:m.name||'Manager'})));
   const eL = uniq(explicit('lead')), eS = uniq(explicit('sup')), eM = uniq(explicit('mgr'));
-  return {crew, lead:eL.length ? eL : autoLead, sup:eS.length ? eS : autoSup, mgr:eM.length ? eM : autoMgr, areas:inAreas, pinned:{lead:!!eL.length, sup:!!eS.length, mgr:!!eM.length}};
+  return {crew, lead:eL.length ? eL : autoLead, sup:eS.length ? eS : autoSup, mgr:eM, areas:inAreas, pinned:{lead:!!eL.length, sup:!!eS.length, mgr:!!eM.length}};
 }
 // A worker the Admin pinned as a stand's Stand Lead answers that stand's chat.
 async function chatRefreshAssigned() {
@@ -19411,7 +19413,7 @@ function chatRenderTo() {
   el.innerHTML = '<span style="font-size:11px;font-weight:800;color:var(--text-2);margin-right:2px">SEND TO</span>' + opts.map(l =>
     '<button class="chip' + (th.to === l ? ' selected' : '') + '" onclick="chatSetTo(\'' + l + '\')">' + label(l) + '</button>').join('');
   const note = document.getElementById('chat-to-note');
-  if (note) { const who = th.people[th.to] || []; note.textContent = who.length ? '🔔 Only ' + (who.length <= 2 ? who.map(x => chatNice(x.name)).join(' & ') : who.length + ' ' + (th.to === 'mgr' ? 'managers on duty' : CHAT_LEVEL_LABEL[th.to] + 's')) + ' will get an alert' : (th.to === 'mgr' ? '🔕 No manager has signed in today — they\'ll see it when they open the app' : '🔕 Nobody at this level today — it goes up one level'); }
+  if (note) { const who = th.people[th.to] || []; note.textContent = who.length ? '🔔 Only ' + (who.length <= 2 ? who.map(x => chatNice(x.name)).join(' & ') : who.length + ' ' + (th.to === 'mgr' ? 'managers on duty' : CHAT_LEVEL_LABEL[th.to] + 's')) + ' will get an alert' : (th.to === 'mgr' ? '🔕 No manager is assigned to this stand\'s chat — they\'ll see it when they open the app' : '🔕 Nobody at this level today — it goes up one level'); }
 }
 function chatSetTo(l) { const th = state._chatThread; if (!th) return; th.to = l; th._toTouched = true; chatRenderTo(); }
 async function chatOpenThread(stand) {
@@ -19456,7 +19458,7 @@ function chatRenderWho() {
   if (th.people.group) { el.innerHTML = '<div style="font-weight:800;margin-bottom:2px">🏭 Group — Warehouse Managers & Supervisors</div>' + th.people.group.map(x => '<span style="display:inline-block;margin:2px 8px 0 0">' + (x.on ? '🟢' : '⚪') + ' ' + escapeHtml(chatNice(x.name)) + ' <small style="color:var(--text-3)">' + (x.role === 'warehouse_manager' ? 'Mgr' : 'Sup') + '</small></span>').join('') + '<div style="font-size:10px;color:var(--text-3);margin-top:3px">🟢 signed in today — gets the alert</div>'; return; }
   const p = th.people, names = l => p[l].length ? p[l].map(x => escapeHtml(chatNice(x.name))).slice(0, 3).join(', ') + (p[l].length > 3 ? ' +' + (p[l].length - 3) : '') : '<span style="color:var(--text-3)">none on today</span>';
   const pin = l => p.pinned && p.pinned[l] ? ' <span style="font-size:10px;color:var(--asu-maroon);font-weight:800">📌 set by Admin</span>' : '';
-  el.innerHTML = (p.crew.length ? '<div>👥 Crew: ' + names('crew') + '</div>' : '') + '<div>⭐ Stand Lead: ' + names('lead') + pin('lead') + (!p.pinned.lead && p.areas.length && p.lead.length ? ' <span style="color:var(--text-3)">(' + escapeHtml(p.areas.join(', ')) + ')</span>' : '') + '</div><div>🧭 Supervisor: ' + names('sup') + pin('sup') + '</div><div>👔 Manager: ' + (p.mgr.length ? names('mgr') + pin('mgr') : '<span style="color:var(--text-3)">none signed in today</span>') + '</div>';
+  el.innerHTML = (p.crew.length ? '<div>👥 Crew: ' + names('crew') + '</div>' : '') + '<div>⭐ Stand Lead: ' + names('lead') + pin('lead') + (!p.pinned.lead && p.areas.length && p.lead.length ? ' <span style="color:var(--text-3)">(' + escapeHtml(p.areas.join(', ')) + ')</span>' : '') + '</div><div>🧭 Supervisor: ' + names('sup') + pin('sup') + '</div><div>👔 Manager: ' + (p.mgr.length ? names('mgr') + pin('mgr') : '<span style="color:var(--text-3)">none assigned</span>') + '</div>';
 }
 async function chatLoadThread(first) {
   const th = state._chatThread; if (!th || th.stand !== state._chatStand) return;
@@ -22374,7 +22376,7 @@ async function openTransferStand(stand, source, transferId) {
   // primary way to add something (it does the same job, just plainer) —
   // stays open when there's no picker, since it's the only way then.
   const manualDetails = document.getElementById('ts-manual-add-details');
-  if (manualDetails) manualDetails.open = !quickMode;
+  if (manualDetails) { manualDetails.open = !quickMode; if (quickMode && !canTypeFreeRequests()) { manualDetails.open = false; manualDetails.style.display = 'none'; } else manualDetails.style.display = ''; }
 
   // Load this session. Force Restock never reads/claims/fulfills stand requests.
   await loadTsItems();
