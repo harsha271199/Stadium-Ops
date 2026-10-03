@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-18
+- Warehouse My Jobs: tapping a waiting stand now shows the full order (every request, items, who asked, ETA) with a big **🚚 On my way** button and ← Back — nothing is claimed until they tap On my way. Requests list button renamed "On my way".
+- Data: closed old request #992 (229, Manas, 2 cases water) as "Closed by admin — old request".
+
 ## 2026-10-03-fix-17
 - Warehouse Manager/Supervisor can **❌ Deny** (pick/type a reason; stand + stand leads/supervisors get a push; shows "Denied — reason" on the stand) or **✏️ Edit** (change quantities, 0 removes an item, edit the note; requester gets a push) any open or on-the-way stand request. Denied requests sit in the Done tab and never count as waiting/overdue.
 - Back buttons: Manager tools menu has ← back to My Jobs; Deny/Edit/Reassign sheets have ← Back and close with the phone back gesture.

@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-17';
+const BUILD_TAG = '2026-10-03-fix-18';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -22114,9 +22114,9 @@ async function loadWhToDeliver() {
     const sub = mine
       ? '🚚 You’re on the way' + (s.requests.length > 1 ? ' · '+s.requests.length+' requests' : '')
       : s.urgent
-        ? 'Tap to claim + start delivery'
+        ? 'Tap to see the order'
         : pending
-          ? '📥 Stock requested · Tap to claim + start delivery'
+          ? '📥 Stock requested · Tap to see the order'
           : '🚚 Planned transfer · Tap to open';
     const etaRow=s.eta?stockEtaHtml({etaDeadline:new Date(s.eta).toISOString(),status:'Pending'}):'';
     const bring=s.requests.map(r=>r.items).filter(Boolean).join('; ');
@@ -22189,7 +22189,22 @@ async function whGetOrCreateRequestTransfer(stand){
   return created[0].id;
 }
 
+// Tapping a waiting stand first shows the whole order; "On my way" is its own tap.
 async function whStartDeliveryForStand(stand, transferId) {
+  const who = state.whName || (state.staffAccount && state.staffAccount.name) || 'Warehouse';
+  const eligiblePending=(state.wRequests||[]).filter(r=>r.stand===stand&&r.status==='Pending'&&whMappedRequestRoutedToMe(r));
+  const alreadyMine=(state.wRequests||[]).some(r=>r.stand===stand&&r.status==='On the way'&&r.claimedBy===who);
+  if(eligiblePending.length&&!alreadyMine){
+    const urgent=eligiblePending.some(r=>r.urgency==='URGENT');
+    whSheet('<div style="font-weight:850;font-size:18px">📦 '+escapeHtml(stand)+'</div>'+
+      '<div style="font-size:12px;color:var(--text-2);margin:3px 0 10px">'+(urgent?'<b style="color:#DC2626">🔴 URGENT</b> · ':'')+eligiblePending.length+' request'+(eligiblePending.length===1?'':'s')+' · check the full order, then tap On my way</div>'+
+      eligiblePending.map(r=>'<div class="card" style="padding:10px 12px;margin-bottom:8px"><div style="font-size:11px;color:var(--text-2);margin-bottom:4px">'+escapeHtml(r.requestedBy||'')+' · '+timeAgo(r.timestamp)+(r.urgency?' · '+escapeHtml(r.urgency):'')+'</div><div style="font-size:14px">'+stockItemsHtml(r)+'</div>'+stockEtaHtml(r)+'</div>').join('')+
+      '<button class="btn btn-primary" style="font-size:16px;padding:16px" onclick="whSheetClose();whClaimAndDeliver(\''+escapeAttr(stand)+'\')">🚚 On my way</button>');
+    return;
+  }
+  return whClaimAndDeliver(stand, transferId);
+}
+async function whClaimAndDeliver(stand, transferId) {
   const who = state.whName || (state.staffAccount && state.staffAccount.name) || 'Warehouse';
   const eligiblePending=(state.wRequests||[]).filter(r=>r.stand===stand&&r.status==='Pending'&&whMappedRequestRoutedToMe(r));
   const alreadyMine=(state.wRequests||[]).some(r=>r.stand===stand&&r.status==='On the way'&&r.claimedBy===who);
@@ -23960,7 +23975,7 @@ function renderWarehouse() {
       ? `<button class="btn ${overdueReq ? 'btn-primary' : 'btn-ghost'}" style="margin:8px 0 0;padding:10px" onclick="whReassignOpen('${r.id}')">👤 ${overdueReq ? 'Overdue — give to someone else' : 'Reassign'}</button>` +
         `<div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-ghost" style="margin:0;padding:10px;flex:1" onclick="whEditOpen('${r.id}')">✏️ Edit</button><button class="btn btn-ghost" style="margin:0;padding:10px;flex:1;color:#DC2626;border-color:#DC2626" onclick="whDenyOpen('${r.id}')">❌ Deny</button></div>`
       : (r.status === 'Denied' ? `<div class="req-qty" style="color:#DC2626;font-weight:700">❌ Denied${r.deniedBy ? ' by ' + escapeHtml(r.deniedBy) : ''}${r.deniedReason ? ' — ' + escapeHtml(r.deniedReason) : ''}</div>` : '');
-    if (r.status === 'Pending') actions = `<div class="req-actions"><button class="btn-claim" onclick="claimReq('${r.id}')">🚚 Start delivery</button><button class="btn-fulfill" onclick="openTransferStand('${standJs}','list',null)">📦 View items</button></div>`;
+    if (r.status === 'Pending') actions = `<div class="req-actions"><button class="btn-claim" onclick="claimReq('${r.id}')">🚚 On my way</button><button class="btn-fulfill" onclick="openTransferStand('${standJs}','list',null)">📦 View items</button></div>`;
     else if (r.status === 'On the way') actions = `<div class="req-actions"><button class="btn-fulfill" onclick="openTransferStand('${standJs}','list',null)">📦 Deliver items</button></div>`;
     return `<div class="req-card ${cardClass}">
       <div class="req-header"><div><div class="req-stand">${escapeHtml(r.stand)}</div><div class="req-time">${timeAgo(r.timestamp)} · ${escapeHtml(r.requestedBy)}</div></div><span class="status-pill ${pillClass}">${pillText}</span></div>
