@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-17
+- Warehouse Manager/Supervisor can **❌ Deny** (pick/type a reason; stand + stand leads/supervisors get a push; shows "Denied — reason" on the stand) or **✏️ Edit** (change quantities, 0 removes an item, edit the note; requester gets a push) any open or on-the-way stand request. Denied requests sit in the Done tab and never count as waiting/overdue.
+- Back buttons: Manager tools menu has ← back to My Jobs; Deny/Edit/Reassign sheets have ← Back and close with the phone back gesture.
+
 ## 2026-10-03-fix-16
 - Warehouse Manager/Supervisor can hand any open or on-the-way stand request to anyone: **👤 Reassign** on each request (red **Overdue — give to someone else** when past ETA). Picker shows the whole warehouse crew, people in the app today first. The request goes back to waiting, routed only to that person (in their My Jobs with Start delivery), and they get a push.
 

@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-16';
+const BUILD_TAG = '2026-10-03-fix-17';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6765,7 +6765,8 @@ function mapStock(r){
     etaDeadline:r.eta_deadline || meta.eta_deadline || null,
     etaEscalatedAt:r.eta_escalated_at || meta.eta_escalated_at || null,
     assignedToIds:Array.isArray(meta.assigned_to_ids) ? meta.assigned_to_ids.map(String) : [],
-    assignedToNames:Array.isArray(meta.assigned_to_names) ? meta.assigned_to_names : []
+    assignedToNames:Array.isArray(meta.assigned_to_names) ? meta.assigned_to_names : [],
+    deniedReason:meta.denied_reason||'', deniedBy:meta.denied_by||'', editedBy:meta.edited_by||''
   };
 }
 // "45m", "2h 10m" — a 5,000-minute number is unreadable at a glance.
@@ -6804,7 +6805,7 @@ function stockItemsHtml(r){
   }
   return escapeHtml(r.items || '');
 }
-function stockStatusLabel(s){ if(s==='claimed')return'On the way'; if(s==='delivered')return'Fulfilled'; return'Pending'; }
+function stockStatusLabel(s){ if(s==='claimed')return'On the way'; if(s==='delivered')return'Fulfilled'; if(s==='denied')return'Denied'; return'Pending'; }
 function mapIT(r){ return { id:r.id, timestamp:r.created_at, stand:r.stand, requestedBy:r.reported_by, category:r.category, subCategory:'', urgency:urgNorm(r.urgency), details:r.description, status:itStatusLabel(r.status), claimedBy:r.claimed_by||'', techMessage:r.resolution_note||'', resolutionNote:r.resolution_note||'' }; }
 function itStatusLabel(s){ if(s==='claimed')return'On the way'; if(s==='resolved')return'Resolved'; return'Pending'; }
 
@@ -9445,6 +9446,8 @@ async function loadMyRequests() {
     if (r.status === 'Pending') statusLine = '<div style="font-size:13px;color:var(--warning);font-weight:600;margin-top:8px">⏳ Waiting for warehouse...</div>';
     else if (r.status === 'On the way') statusLine = `<div style="font-size:13px;color:var(--info);font-weight:600;margin-top:8px">🚚 ${escapeHtml(r.claimedBy) || 'Warehouse'} is on the way!</div>`;
     else if (r.status === 'Fulfilled') statusLine = `<div style="font-size:13px;color:var(--success);font-weight:600;margin-top:8px">✅ Delivered${r.claimedBy ? ' by '+escapeHtml(r.claimedBy) : ''}</div>`;
+    else if (r.status === 'Denied') statusLine = `<div style="font-size:13px;color:#DC2626;font-weight:700;margin-top:8px">❌ Denied by warehouse${r.deniedBy ? ' ('+escapeHtml(r.deniedBy)+')' : ''}${r.deniedReason ? ' — '+escapeHtml(r.deniedReason) : ''}</div>`;
+    if (r.editedBy && r.status !== 'Denied') statusLine += `<div style="font-size:11px;color:var(--text-2);margin-top:3px">✏️ Changed by warehouse (${escapeHtml(r.editedBy)})</div>`;
 
     return `<div class="req-card ${cardClass}">
       <div class="req-header">
@@ -9487,6 +9490,7 @@ function standRequestFriendlyStatus(kind,r){
     if(r.status==='Pending')return '⏳ Waiting for Warehouse';
     if(r.status==='On the way')return '🚚 Warehouse On the Way';
     if(r.status==='Fulfilled')return '✅ Delivered';
+    if(r.status==='Denied')return '❌ Denied'+(r.deniedReason?' — '+r.deniedReason:'');
   }
   if(kind==='kitchen'){
     return ({open:'⏳ Sent to Food Manager',preparing:'👨‍🍳 Preparing',ready:'✅ Ready for Runner',on_the_way:'🏃 Runner On the Way',delivered:'✅ Delivered',cancelled:'Cancelled'})[r.status]||kitchenStatusLabel(r.status);
@@ -20784,6 +20788,7 @@ function renderWarehouseForRole() {
   const tool = (go, ic, label, id, subId) => '<div class="wh-tool"' + (id ? ' id="' + id + '"' : '') + ' onclick="' + go + '"><div class="ic">' + ic + '</div><div class="lbl tile-label">' + label + '</div>' + (subId ? '<div class="tile-sub" id="' + subId + '"></div>' : '') + '</div>';
   const reqOnly = whRequestsOnlyToday();
   tilesSlot.innerHTML =
+    '<div class="page-header" style="position:static;margin:0 0 12px;padding:0 0 8px;background:transparent"><div class="back-btn" role="button" tabindex="0" aria-label="Back to My Jobs" onclick="whMgrOpenPane(\'todeliver\')">←</div><div><div class="page-title">🛠️ Manager tools</div></div></div>' +
     '<div class="wh-big">' +
       (reqOnly
         ? '<div class="wh-big-card" id="wh-tile-requests-big" onclick="whOpenRequests(\'open\')"><div class="ic">📥</div><div><div class="lbl tile-label">Stand Requests</div><div class="tile-sub">Every stand · open & in progress</div></div></div>'
@@ -23932,7 +23937,7 @@ function renderWarehouse() {
   }
   const open = reqs.filter(r => r.status === 'Pending');
   const claimed = reqs.filter(r => r.status === 'On the way');
-  const done = reqs.filter(r => r.status === 'Fulfilled');
+  const done = reqs.filter(r => r.status === 'Fulfilled' || r.status === 'Denied');
   document.getElementById('wh-open-count').textContent = open.length;
   whSupSyncTileBadges();
   const oc2 = document.getElementById('wh-open-count2');
@@ -23950,8 +23955,11 @@ function renderWarehouse() {
     const standJs = escapeAttr(r.stand);
     const leaderView = whIsLeader();
     const overdueReq = (r.status === 'Pending' || r.status === 'On the way') && r.etaDeadline && new Date(r.etaDeadline).getTime() < Date.now();
-    const reassignBtn = leaderView && (r.status === 'Pending' || r.status === 'On the way')
-      ? `<button class="btn ${overdueReq ? 'btn-primary' : 'btn-ghost'}" style="margin:8px 0 0;padding:10px" onclick="whReassignOpen('${r.id}')">👤 ${overdueReq ? 'Overdue — give to someone else' : 'Reassign'}</button>` : '';
+    const live = r.status === 'Pending' || r.status === 'On the way';
+    const reassignBtn = leaderView && live
+      ? `<button class="btn ${overdueReq ? 'btn-primary' : 'btn-ghost'}" style="margin:8px 0 0;padding:10px" onclick="whReassignOpen('${r.id}')">👤 ${overdueReq ? 'Overdue — give to someone else' : 'Reassign'}</button>` +
+        `<div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-ghost" style="margin:0;padding:10px;flex:1" onclick="whEditOpen('${r.id}')">✏️ Edit</button><button class="btn btn-ghost" style="margin:0;padding:10px;flex:1;color:#DC2626;border-color:#DC2626" onclick="whDenyOpen('${r.id}')">❌ Deny</button></div>`
+      : (r.status === 'Denied' ? `<div class="req-qty" style="color:#DC2626;font-weight:700">❌ Denied${r.deniedBy ? ' by ' + escapeHtml(r.deniedBy) : ''}${r.deniedReason ? ' — ' + escapeHtml(r.deniedReason) : ''}</div>` : '');
     if (r.status === 'Pending') actions = `<div class="req-actions"><button class="btn-claim" onclick="claimReq('${r.id}')">🚚 Start delivery</button><button class="btn-fulfill" onclick="openTransferStand('${standJs}','list',null)">📦 View items</button></div>`;
     else if (r.status === 'On the way') actions = `<div class="req-actions"><button class="btn-fulfill" onclick="openTransferStand('${standJs}','list',null)">📦 Deliver items</button></div>`;
     return `<div class="req-card ${cardClass}">
@@ -23969,6 +23977,88 @@ function renderWarehouse() {
   }).join('');
 }
 function whIsLeader() { return !!(state.staffAccount && ['warehouse_manager', 'warehouse_supervisor'].includes(state.staffAccount.role)); }
+
+// Bottom sheet used by Deny / Edit (tap outside or Cancel to close).
+function whSheet(html) {
+  const old = document.getElementById('wh-sheet-overlay'); if (old) old.remove();
+  const ov = document.createElement('div'); ov.id = 'wh-sheet-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center';
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  ov.innerHTML = '<div style="width:min(560px,100%);max-height:85vh;overflow:auto;background:var(--bg-card);border-radius:20px 20px 0 0;padding:16px 16px calc(14px + env(safe-area-inset-bottom))">' + html +
+    '<button class="btn btn-ghost" style="margin-top:8px" onclick="whSheetClose()">← Back</button></div>';
+  document.body.appendChild(ov);
+}
+function whSheetClose() { const o = document.getElementById('wh-sheet-overlay'); if (o) o.remove(); }
+async function whLoadRawRequest(id) {
+  const rows = await sb('stock_requests?id=eq.' + encodeURIComponent(id) + '&select=*').catch(() => ({ _err: true }));
+  if (rows._err || !Array.isArray(rows) || !rows[0]) { toast('Could not load the request — try again', 'error'); return null; }
+  const row = rows[0]; let j = row.items_json;
+  if (typeof j === 'string') { try { j = JSON.parse(j); } catch (e) { j = null; } }
+  row._j = (j && typeof j === 'object') ? j : null;
+  return row;
+}
+const WH_DENY_REASONS = ['Out of stock', 'Already delivered / duplicate', 'Not a warehouse item', 'Wrong stand', 'Too much — call warehouse'];
+function whDenyOpen(id) {
+  if (!whIsLeader()) return toast('Only the Warehouse Manager or Supervisor can deny', 'error');
+  const r = (state.wRequests || []).find(x => String(x.id) === String(id)); if (!r) return;
+  whSheet('<div style="font-weight:850;font-size:17px">❌ Deny request</div><div style="font-size:12px;color:var(--text-2);margin:3px 0 10px">' + escapeHtml(r.stand) + ' · the stand sees the reason</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">' + WH_DENY_REASONS.map(x => '<button class="chip" onclick="document.getElementById(\'wh-deny-reason\').value=this.textContent">' + escapeHtml(x) + '</button>').join('') + '</div>' +
+    '<input class="form-input" id="wh-deny-reason" placeholder="Reason (tap one above or type)" style="margin:0 0 8px">' +
+    '<button class="btn btn-primary" style="background:#DC2626;border-color:#DC2626" onclick="whDenySave(\'' + escapeAttr(String(id)) + '\')">Deny request</button>');
+}
+async function whDenySave(id) {
+  if (!whIsLeader()) return toast('Not authorized', 'error');
+  const reason = String((document.getElementById('wh-deny-reason') || { value: '' }).value || '').trim();
+  if (!reason) return toast('Pick or type a reason', 'error');
+  const row = await whLoadRawRequest(id); if (!row) return;
+  if (!['open', 'claimed'].includes(row.status)) { whSheetClose(); loadWarehouse(); return toast('This request is already closed', 'error'); }
+  const me = (state.staffAccount && state.staffAccount.name) || 'Warehouse';
+  const j = row._j || { items: [], other: '' };
+  const patch = { status: 'denied', note: 'Denied: ' + reason, items_json: Object.assign({}, j, { meta: Object.assign({}, j.meta || {}, { denied_reason: reason, denied_by: me, denied_at: new Date().toISOString() }) }) };
+  const r = await sb('stock_requests?id=eq.' + encodeURIComponent(id) + '&status=in.(open,claimed)', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) }).catch(() => ({ _err: true }));
+  if (r._err || !Array.isArray(r) || !r.length) return toast('Could not deny — it may have just been delivered', 'error');
+  whSheetClose();
+  if (row.requested_by_id) sendPushTo(row.requested_by_id, '❌ Stock request denied', row.stand + ' — ' + reason);
+  notifyStandLeadsAndSupervisors(row.stand, '❌ Stock request denied · ' + row.stand, reason + ' (' + me + ')', [row.requested_by_id]);
+  toast('Request denied — the stand was told why', 'success');
+  loadWarehouse();
+}
+let _whEditItems = [];
+async function whEditOpen(id) {
+  if (!whIsLeader()) return toast('Only the Warehouse Manager or Supervisor can edit', 'error');
+  const row = await whLoadRawRequest(id); if (!row) return;
+  if (!['open', 'claimed'].includes(row.status)) { loadWarehouse(); return toast('This request is already closed', 'error'); }
+  const j = row._j || {};
+  _whEditItems = (Array.isArray(j.items) ? j.items : []).map(it => Object.assign({}, it));
+  whSheet('<div style="font-weight:850;font-size:17px">✏️ Edit request</div><div style="font-size:12px;color:var(--text-2);margin:3px 0 10px">' + escapeHtml(row.stand) + ' · set a quantity to 0 to remove an item</div>' +
+    (_whEditItems.length ? _whEditItems.map((it, i) => '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><div style="flex:1;font-size:13px">' + escapeHtml(it.itemName) + (it.pack ? ' <span style="opacity:.6;font-size:11px">' + escapeHtml(it.pack) + '</span>' : '') + '</div>' +
+      '<input class="form-input" type="number" min="0" step="1" inputmode="numeric" id="wh-edit-q-' + i + '" value="' + escapeAttr(String(it.qty || 0)) + '" style="width:80px;margin:0;text-align:center"></div>').join('') : '<div style="font-size:12px;color:var(--text-3)">No listed items.</div>') +
+    '<label class="form-label">Other / note to the stand</label><input class="form-input" id="wh-edit-other" value="' + escapeAttr(j.other || '') + '" style="margin:0 0 8px">' +
+    '<button class="btn btn-primary" onclick="whEditSave(\'' + escapeAttr(String(id)) + '\')">Save changes</button>');
+}
+async function whEditSave(id) {
+  if (!whIsLeader()) return toast('Not authorized', 'error');
+  const row = await whLoadRawRequest(id); if (!row) return;
+  if (!['open', 'claimed'].includes(row.status)) { whSheetClose(); loadWarehouse(); return toast('This request is already closed', 'error'); }
+  const items = [];
+  for (let i = 0; i < _whEditItems.length; i++) {
+    const v = parseFloat((document.getElementById('wh-edit-q-' + i) || { value: '0' }).value);
+    if (v > 0) items.push(Object.assign({}, _whEditItems[i], { qty: v, cases: v }));
+  }
+  const other = String((document.getElementById('wh-edit-other') || { value: '' }).value || '').trim();
+  if (!items.length && !other) return toast('Nothing left on the request — use Deny instead', 'error');
+  const lines = items.map(it => it.qty + ' case' + (it.qty !== 1 ? 's' : '') + ' × ' + it.itemName + (it.pack ? ' (' + it.pack + ')' : ''));
+  let itemsText = lines.join('; '); if (other) itemsText += (itemsText ? '; ' : '') + 'Other: ' + other;
+  const me = (state.staffAccount && state.staffAccount.name) || 'Warehouse';
+  const j = row._j || {};
+  const patch = { items: itemsText, items_json: Object.assign({}, j, { items, other, meta: Object.assign({}, j.meta || {}, { edited_by: me, edited_at: new Date().toISOString() }) }) };
+  const r = await sb('stock_requests?id=eq.' + encodeURIComponent(id) + '&status=in.(open,claimed)', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) }).catch(() => ({ _err: true }));
+  if (r._err || !Array.isArray(r) || !r.length) return toast('Could not save — it may have just been delivered', 'error');
+  whSheetClose();
+  if (row.requested_by_id) sendPushTo(row.requested_by_id, '✏️ Your stock request was changed', row.stand + ' — ' + itemsText.slice(0, 80));
+  toast('✅ Request updated', 'success');
+  loadWarehouse();
+}
 
 // ── Reassign a stand request (Warehouse Manager / Supervisor) ──
 // Hands the request to one person: it goes back to "waiting" routed only to
@@ -24456,6 +24546,7 @@ function handleAppBack() {
   // Close any open popup first
   const popup = document.getElementById('contact-popup-overlay');
   if (popup) { popup.remove(); return; }
+  for (const oid of ['wh-sheet-overlay', 'wh-reassign-overlay']) { const o = document.getElementById(oid); if (o) { o.remove(); return; } }
   // Same for the shared confirm/alert dialog — a phone back-gesture while
   // it's open should dismiss the dialog (as Cancel), not navigate the
   // screen underneath while it's still showing.
