@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-14';
+const BUILD_TAG = '2026-10-03-fix-15';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7368,6 +7368,7 @@ async function staffLogout() {
   state.whName = null;
   state.managerName = null;
   state._myWhZoneStands = undefined;
+  state._myWhZoneAt = 0;
   state.whZoneMode = null;
   state._todeliverDefaulted = false;
   state._whLeadDefaulted = false;
@@ -16587,7 +16588,7 @@ function opsNewJobAlert(kind, rows){
   if(kind==='tech'){
     candidates=(rows||[]).filter(r=>r.status==='Pending');
   }else{
-    candidates=(rows||[]).filter(r=>['Pending','open','Open'].includes(r.status));
+    candidates=(rows||[]).filter(r=>['Pending','open','Open'].includes(r.status)&&(kind!=='warehouse'||whRequestIsMine(r)));
   }
   candidates.sort((a,b)=>new Date(b.timestamp||b.createdAt||b.created_at||0)-new Date(a.timestamp||a.createdAt||a.created_at||0));
   for(const r of candidates){
@@ -21934,8 +21935,8 @@ async function loadWarehouse() {
   const [res] = await Promise.all([api('getStockRequests', {}), whOpenTransfers()]);
   state.wRequests = res.requests || [];
   renderOpsAlertStatus('warehouse');
-  opsNewJobAlert('warehouse',state.wRequests);
   await whInitZoneToggle();
+  opsNewJobAlert('warehouse',state.wRequests); // after the area loads, so it only pops for my stands
   renderWarehouse();
   if (!state._whStandsLoaded) whLoadStandsDropdown();
   loadWhTransfers();
@@ -21973,8 +21974,9 @@ async function whInitZoneToggle() {
   const row = document.getElementById('wh-zone-toggle');
   if (!row) return;
   if (!state.staffAccount || !state.staffAccount.empId) { row.style.display = 'none'; return; }
-  if (state._myWhZoneStands === undefined) {
+  if (state._myWhZoneStands === undefined || Date.now() - (state._myWhZoneAt || 0) > 60000) {
     state._myWhZoneStands = await getMyWarehouseCoverageStands(state.staffAccount.empId);
+    state._myWhZoneAt = Date.now();
   }
   if (state._myWhZoneStands && state._myWhZoneStands.length) {
     row.style.display = 'flex';
@@ -22029,6 +22031,19 @@ function whMode(el, mode) {
 // same real delivery checklist (openTransferStand) — stock requests
 // merge into that checklist automatically (see loadTsStockRequests), so
 // there's no separate claim/fulfill action needed here anymore.
+// One rule for "should this warehouse person see/hear about this request":
+// routed to them, or not routed to anyone and inside their area (or they have no area).
+// Warehouse Manager/Supervisor oversee everything.
+function whRequestIsMine(r) {
+  const acct = state.staffAccount; if (!acct) return true;
+  if (['warehouse_manager', 'warehouse_supervisor'].includes(acct.role)) return true;
+  const myId = String(acct.empId || ''), myName = state.whName || acct.name || '';
+  if (r.status === 'On the way') return !r.claimedBy || r.claimedBy === myName;
+  const routed = (r.assignedToIds || []).map(String);
+  if (routed.length) return routed.includes(myId);
+  const zone = state._myWhZoneStands;
+  return zone && zone.length ? zone.includes(r.stand) : true;
+}
 async function loadWhToDeliver() {
   const el = document.getElementById('wh-todeliver-list');
   if (!el) return;
@@ -23913,7 +23928,7 @@ function renderWarehouse() {
   // has "My Stands" selected. Otherwise identical to the original behavior
   // (every stand's requests, unfiltered).
   if (state._myWhZoneStands && state._myWhZoneStands.length && state.whZoneMode === 'mine') {
-    reqs = reqs.filter(r => state._myWhZoneStands.includes(r.stand));
+    reqs = reqs.filter(r => state._myWhZoneStands.includes(r.stand) && whRequestIsMine(r));
   }
   const open = reqs.filter(r => r.status === 'Pending');
   const claimed = reqs.filter(r => r.status === 'On the way');

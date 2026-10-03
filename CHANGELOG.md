@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-15
+- Warehouse workers only see/hear about requests for their own area: the in-app "New warehouse request" banner used to pop for every request on every warehouse phone (e.g. Selle saw 229, routed only to Martin/Robles). Banner, My Jobs and Requests → My Stands now share one rule (routed to me, or unrouted and inside my area).
+- A worker's area refreshes every minute, so an assignment made mid-shift applies without signing out.
+
 ## 2026-10-03-fix-14
 - Warehouse leaders' RIGHT NOW: Waiting / Overdue open **Requests → Open**, On the way opens **Requests → In Progress** (was opening All Transfers). Leaders' Requests list shows every stand by default.
 - Game day 10/3 is requests + Force Stock only: Create Transfer, All Transfers, Approvals and the "To verify" chip are hidden; Manager tools leads with **Stand Requests** and has a **Force Stock** button.
