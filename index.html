@@ -3618,11 +3618,10 @@
     </div>
     <label class="form-label">NEEDED</label>
     <div class="chip-row" id="kitchen-urgency-row">
-      <div class="chip selected" onclick="selectKitchenUrgency(this,'Normal',15)">🟢 Normal · 15m</div>
-      <div class="chip" onclick="selectKitchenUrgency(this,'Soon',12)">🟡 Soon · 12m</div>
-      <div class="chip" onclick="selectKitchenUrgency(this,'URGENT',10)">🔴 URGENT · 10m</div>
+      <div class="chip selected" onclick="selectKitchenUrgency(this,'Normal',30)">🟢 Normal · 30m</div>
+      <div class="chip" onclick="selectKitchenUrgency(this,'URGENT',15)">🔴 Urgent · 15m</div>
     </div>
-    <div style="font-size:11px;color:var(--text-2);margin:8px 0 12px">Target: <b id="kitchen-eta-label">15 minutes</b></div>
+    <div style="font-size:11px;color:var(--text-2);margin:8px 0 12px">Target: <b id="kitchen-eta-label">30 minutes</b></div>
     <label class="form-label">FOOD ORDER</label>
     <div class="food-delivery-note">Type the <b>food</b> and <b>how many</b> in this one box. Write everything you need.</div>
     <textarea class="form-input" id="kitchen-order-text" rows="4" placeholder="Food name and quantity" oninput="if(_kitchenDraft[0])_kitchenDraft[0].itemName=this.value"></textarea>
@@ -4365,7 +4364,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-7';
+const BUILD_TAG = '2026-10-03-fix-8';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -11044,6 +11043,7 @@ function supportReqSearchText(kind,r){
 }
 function supportReqIsOverdue(kind,r){
   const deadline=kind==='food'?r.eta_deadline:r.etaDeadline;
+  if(kind==='food')return supportOpsIsOpen(kind,r)&&!!deadline&&foodIsLate(r);
   return supportOpsIsOpen(kind,r)&&deadline&&new Date(deadline).getTime()<Date.now();
 }
 function supportReqInProgress(kind,r){
@@ -11139,7 +11139,7 @@ async function mgrRefreshCoverageProfile(){
   let stock=stockRes.requests||[],food=Array.isArray(foodRows)?foodRows:[],it=itRes.issues||[];if(allowed){stock=stock.filter(r=>allowed.has(r.stand));food=food.filter(r=>allowed.has(r.stand));it=it.filter(r=>allowed.has(r.stand));}
   const os=stock.filter(r=>mgrV10ReqIsOpen('stock',r)),of=food.filter(r=>mgrV10ReqIsOpen('kitchen',r)),oi=it.filter(r=>mgrV10ReqIsOpen('it',r));
   const overdueStock=os.filter(r=>{const e=stockEtaInfo(r);return e&&e.late;}).length;
-  const overdueFood=of.filter(r=>r.eta_deadline&&new Date(r.eta_deadline).getTime()<Date.now()).length;
+  const overdueFood=of.filter(r=>r.eta_deadline&&foodIsLate(r)).length;
   const od=overdueStock+overdueFood;
   [['mgr-cov-stock',os.length],['mgr-cov-food',of.length],['mgr-cov-it',oi.length],['mgr-cov-overdue',od]].forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.textContent=v;});
   mgrV10UpdateNeedsActionUi(od);
@@ -11297,7 +11297,7 @@ function mgrV10ReqIsOverdue(kind,r){
     const e=stockEtaInfo(r);return !!(e&&e.late);
   }
   if(kind==='kitchen'){
-    return !!(r.eta_deadline&&new Date(r.eta_deadline).getTime()<Date.now());
+    return !!(r.eta_deadline&&foodIsLate(r));
   }
   return false;
 }
@@ -14811,7 +14811,11 @@ function kitchenLocalAssignments(){try{return JSON.parse(localStorage.getItem(KI
 function kitchenSaveLocalAssignments(rows){localStorage.setItem(KITCHEN_PREVIEW_ASSIGN_KEY,JSON.stringify(rows));}
 function kitchenIsMissing(r){return !!(r&&r._err&&(r.status===404||String(r.error||'').toLowerCase().includes('kitchen_')));}
 function kitchenStatusLabel(s){return ({open:'📥 Requested',preparing:'👨‍🍳 Preparing',ready:'✅ Ready',on_the_way:'🏃 On the way',delivered:'✅ Delivered',cancelled:'Cancelled'})[s]||s||'Requested';}
-function kitchenEtaText(r){if(!r||!r.eta_deadline)return ''; const ms=new Date(r.eta_deadline).getTime()-Date.now(); if(ms<=0)return '🔴 '+fmtMins(Math.max(1,Math.round(-ms/60000)))+' overdue'; return '⏱ '+Math.max(1,Math.ceil(ms/60000))+'m left';}
+// Food is only LATE 10 minutes after its target (cooking takes time) — until then it is "due now".
+const FOOD_LATE_GRACE_MIN = 10;
+function foodLateAt(r){const d=r&&r.eta_deadline?new Date(r.eta_deadline).getTime():NaN;return Number.isFinite(d)?d+FOOD_LATE_GRACE_MIN*60000:Infinity;}
+function foodIsLate(r,now){return foodLateAt(r)<(now||Date.now());}
+function kitchenEtaText(r){if(!r||!r.eta_deadline)return ''; const ms=new Date(r.eta_deadline).getTime()-Date.now(); if(ms<=0&&!foodIsLate(r))return '⏳ due now'; if(ms<=0)return '🔴 '+fmtMins(Math.max(1,Math.round(-ms/60000)))+' overdue'; return '⏱ '+Math.max(1,Math.ceil(ms/60000))+'m left';}
 function kitchenItemsText(r){const a=r&&r.items_json&&Array.isArray(r.items_json.items)?r.items_json.items:[];return a.map(x=>x.free_text?escapeHtml(x.itemName):(escapeHtml(x.itemName)+' ×'+Number(x.qty||0))).join(' · ')||escapeHtml(r.items||'Food');}
 
 async function kitchenFetchRequests(){
@@ -14924,12 +14928,12 @@ async function goKitchenRequest(targetStand){
   const who=getRequesterIdentity();
   const canFoodRequest=['lead','supervisor','support_manager','manager','admin'].includes(who.tier)||isLimitedAreaLead();
   if(!canFoodRequest)return toast('Ask your Stand Lead or Supervisor to send a food request','error');
-  state.kitchenUrgency='Normal';state.kitchenETA=15;_kitchenDraft=[{itemName:'',qty:1,free_text:true}];{const ot=document.getElementById('kitchen-order-text');if(ot)ot.value='';}
+  state.kitchenUrgency='Normal';state.kitchenETA=30;_kitchenDraft=[{itemName:'',qty:1,free_text:true}];{const ot=document.getElementById('kitchen-order-text');if(ot)ot.value='';}
   // Same stable-uuid fix as Stock — generated once when the form opens,
   // reused on every submit attempt for this one request.
   state._kitchenRequestUuid=genUUID();
   const stand=targetStand||getOperationalStand(who)||who.homeStand||'';state.kitchenTargetStand=stand;
-  document.getElementById('kitchen-request-note').value='';document.getElementById('kitchen-eta-label').textContent='15 minutes';
+  document.getElementById('kitchen-request-note').value='';document.getElementById('kitchen-eta-label').textContent='30 minutes';
   document.querySelectorAll('#kitchen-urgency-row .chip').forEach((x,i)=>x.classList.toggle('selected',i===0));
   const picker=document.getElementById('kitchen-req-stand-picker');
   if(!stand||!who.homeStand||isLimitedAreaLead()){picker.style.display='';await populateStandPicker('kitchen-req-stand',stand);const ks=document.getElementById('kitchen-req-stand');if(ks&&stand)ks.value=stand;}else picker.style.display='none';
@@ -15021,7 +15025,7 @@ async function submitKitchenRequest(){
   await withLock(evtBtn(), 'Sending…', async () => {
   const blockedMsg=await openRequestGuard('food',stand);if(blockedMsg)return toast(blockedMsg,'error',8000);
   const enriched=items.map(x=>{const m=_kitchenStandItems.find(y=>String(y.itemName).toLowerCase()===String(x.itemName).toLowerCase());return {...x,unit:m&&m.unit||'units',pack:m&&m.pack||'',track_inventory:!!m};});
-  const deadline=new Date(Date.now()+(Number(state.kitchenETA)||15)*60000).toISOString();const suggested=await kitchenSuggestedRunner(stand);
+  const deadline=new Date(Date.now()+(Number(state.kitchenETA)||30)*60000).toISOString();const suggested=await kitchenSuggestedRunner(stand);
   const requestClientUuid=state._kitchenRequestUuid||(state._kitchenRequestUuid=genUUID());
   // Real fix for the actual reason Food Manager stopped using the app
   // mid-game: this used to leave EVERY order unassigned no matter what,
@@ -15034,7 +15038,7 @@ async function submitKitchenRequest(){
   // assignment at all.
   const autoAssignId=(suggested&&suggested.employee_id&&!String(suggested.employee_id).startsWith('preview-'))?suggested.employee_id:null;
   const autoAssignName=autoAssignId?suggested.name:null;
-  const row={client_uuid:requestClientUuid,stand,requested_by:who.name,requested_by_id:who.empId||'',items:enriched.map(x=>x.free_text?x.itemName:(x.qty+' × '+x.itemName)).join(', '),items_json:{items:enriched},note:holdNote+document.getElementById('kitchen-request-note').value,urgency:state.kitchenUrgency||'Normal',eta_minutes:Number(state.kitchenETA)||15,eta_deadline:deadline,status:'open',assigned_runner_id:autoAssignId,assigned_runner_name:autoAssignName};
+  const row={client_uuid:requestClientUuid,stand,requested_by:who.name,requested_by_id:who.empId||'',items:enriched.map(x=>x.free_text?x.itemName:(x.qty+' × '+x.itemName)).join(', '),items_json:{items:enriched},note:holdNote+document.getElementById('kitchen-request-note').value,urgency:state.kitchenUrgency||'Normal',eta_minutes:Number(state.kitchenETA)||30,eta_deadline:deadline,status:'open',assigned_runner_id:autoAssignId,assigned_runner_name:autoAssignName};
   state._lastKitchenCreateError=null;const made=await kitchenCreate(row);if(!made){const e=state._lastKitchenCreateError||{};return toast('Could not send Food request'+(e.status?' · HTTP '+e.status:'')+(e.msg?' · '+String(e.msg).slice(0,90):''),'error',10000);}
   state._kitchenRequestUuid=null; // real request went through — next one gets its own fresh id
   state._kitchenHoldActive=false;
@@ -15227,8 +15231,8 @@ async function renderKitchenQueue(rows){
   const my=state.staffAccount&&state.staffAccount.empId||'';
   let active=rows.filter(r=>!['delivered','cancelled'].includes(r.status));
   active.sort((a,b)=>{
-    const aOver=a.eta_deadline&&new Date(a.eta_deadline).getTime()<Date.now()?1:0;
-    const bOver=b.eta_deadline&&new Date(b.eta_deadline).getTime()<Date.now()?1:0;
+    const aOver=a.eta_deadline&&foodIsLate(a)?1:0;
+    const bOver=b.eta_deadline&&foodIsLate(b)?1:0;
     if(aOver!==bOver)return bOver-aOver;
     const urg={URGENT:3,Soon:2,Normal:1};
     const au=urg[a.urgency]||0,bu=urg[b.urgency]||0;
@@ -15267,7 +15271,7 @@ async function renderKitchenQueue(rows){
   // "On my way" and "Delivered". The manager only steps in when an order has
   // no runner or a runner is slow — "Change runner" hands it to someone else.
   const now=Date.now();
-  const late=r=>!!(r.eta_deadline&&new Date(r.eta_deadline).getTime()<now);
+  const late=r=>!!(r.eta_deadline&&foodIsLate(r,now));
   const waitMins=r=>Math.max(0,Math.round((now-new Date(r.updated_at||r.created_at||now).getTime())/60000));
   const isWaiting=r=>r.assigned_runner_id&&r.status!=='on_the_way';
   const stuck=r=>isWaiting(r)&&waitMins(r)>=10;
@@ -16100,10 +16104,16 @@ let _whCovPeople=[],_whCovSelected=[],_whCovSelectedStands=[],_whCovStandsList=[
 async function warehouseCoverageInit(){const card=document.getElementById('wh-coverage-card');if(!card)return;
   const [rows,roster]=await Promise.all([
     sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor)&is_active=eq.true&select=employee_id,name,role&order=name.asc').catch(()=>({_err:true})),
-    sb('warehouse_roster?event_date=eq.'+stadiumDay()+'&select=name').catch(()=>({_err:true}))
+    sb('warehouse_roster?event_date=eq.'+stadiumDay()+'&select=name,employee_id').catch(()=>({_err:true}))
   ]);
-  _whCovPeople=!rows._err&&Array.isArray(rows)?rows:[];
   const key=n=>loginFold(n).replace(/[^a-z]/g,'');
+  // One card per person: the same name can have two accounts (a temp walk-in
+  // "…60000" ID plus their real ID). Keep the one on today's roster, else the real ID.
+  {const rosterIds=new Set(Array.isArray(roster)?roster.map(r=>String(r.employee_id||'')):[]);
+   const score=p=>(rosterIds.has(String(p.employee_id))?2:0)+(/60000$/.test(String(p.employee_id))?0:1);
+   const best=new Map();
+   (!rows._err&&Array.isArray(rows)?rows:[]).forEach(p=>{const k=key(p.name);const cur=best.get(k);if(!cur||score(p)>score(cur))best.set(k,p);});
+   _whCovPeople=[...best.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name)));}
   _whCovRoster=new Set(Array.isArray(roster)?roster.map(r=>key(r.name)):[]);
   const sel=document.getElementById('whcov-person');if(sel)sel.innerHTML='<option value=""></option>'+_whCovPeople.map(p=>'<option value="'+escapeAttr(p.employee_id)+'">'+escapeHtml(p.name)+'</option>').join('');
   whCovClose();
@@ -16780,7 +16790,7 @@ async function checkOverdueFoodRequests() {
       if(['delivered','cancelled'].includes(r.status))continue;
       if(!r.eta_deadline||r.eta_escalated_at)continue;
       const deadline=new Date(r.eta_deadline).getTime();
-      if(!Number.isFinite(deadline)||now<=deadline)continue;
+      if(!Number.isFinite(deadline)||now<=foodLateAt(r))continue; // 10-minute grace after the target
 
       if (!(await claimEtaEscalation('kitchen_requests', r.id))) continue;
       const minsOver=Math.max(1,Math.round((now-deadline)/60000));
@@ -20970,7 +20980,7 @@ async function loadWhRoster() {
   const list = document.getElementById('wh-roster-list');
   if (!list) return;
   list.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
-  const [rosterRows, attRows] = await Promise.all([
+  let [rosterRows, attRows] = await Promise.all([
     sb('warehouse_roster?event_date=eq.' + date + '&order=name.asc&select=*').catch(() => ({ _err: true })),
     sb('attendance?entry_date=eq.' + date + '&stand=eq.Warehouse&order=updated_at.asc&select=*').catch(() => ({ _err: true }))
   ]);
@@ -20987,6 +20997,9 @@ async function loadWhRoster() {
     if (a.status === 'ended') e.outAt = t;
     e.status = a.status;
   });
+  // One row per person, even if the roster was uploaded twice or they were also added as a walk-in.
+  { const seen = new Set(), k = n => loginFold(n).replace(/[^a-z]/g, '');
+    rosterRows = rosterRows.filter(r => { const key = k(r.name) || String(r.employee_id); if (seen.has(key)) return false; seen.add(key); return true; }); }
   state._whRosterFlat = rosterRows.map(r => {
     const e = attByEmp[r.employee_id] || {};
     return {

@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-8
+- **Warehouse duplicates:** a person who had a temp walk-in account (…60000) and a real-ID account showed twice. Lists now show each person once (the roster / real-ID account wins); the three unused walk-in duplicates (Birhade, Vijayakumar, Chaudhari) were set inactive. The warehouse roster list also shows each person once.
+- **Food targets:** Normal 30 min, Urgent 15 min. A food order only counts as LATE 10 minutes after its target — until then it shows "due now". The Food Manager's late alert, red overdue labels and the managers' overdue counts all use the same 10-minute grace.
+
 ## 2026-10-03-fix-7
 - **Checkout & Inventory Tracker (Managers / Admin only):** the Inventory Tracker now also tracks the end-of-game boxes at the exit table. Each stand shows Count In / Count Out and its box (kit list + inventory sheets + POS for portables). "📦 Receive box" opens a checklist — untick anything missing and confirm. Filters: Box not received · Missing Count Out · Missing Count In · Received · All, plus search. "Who is missing what" lists every box that came back short. Undo is available. Kit lists live in `checkout_kits` (61 stands); receipts in `checkout_receipts`.
 - Supervisors and Support Managers no longer see the tracker.
