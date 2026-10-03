@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-15';
+const BUILD_TAG = '2026-10-03-fix-16';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -23948,6 +23948,10 @@ function renderWarehouse() {
     const pillText = r.status === 'Pending' ? r.urgency : r.status;
     let actions = '';
     const standJs = escapeAttr(r.stand);
+    const leaderView = whIsLeader();
+    const overdueReq = (r.status === 'Pending' || r.status === 'On the way') && r.etaDeadline && new Date(r.etaDeadline).getTime() < Date.now();
+    const reassignBtn = leaderView && (r.status === 'Pending' || r.status === 'On the way')
+      ? `<button class="btn ${overdueReq ? 'btn-primary' : 'btn-ghost'}" style="margin:8px 0 0;padding:10px" onclick="whReassignOpen('${r.id}')">👤 ${overdueReq ? 'Overdue — give to someone else' : 'Reassign'}</button>` : '';
     if (r.status === 'Pending') actions = `<div class="req-actions"><button class="btn-claim" onclick="claimReq('${r.id}')">🚚 Start delivery</button><button class="btn-fulfill" onclick="openTransferStand('${standJs}','list',null)">📦 View items</button></div>`;
     else if (r.status === 'On the way') actions = `<div class="req-actions"><button class="btn-fulfill" onclick="openTransferStand('${standJs}','list',null)">📦 Deliver items</button></div>`;
     return `<div class="req-card ${cardClass}">
@@ -23960,8 +23964,75 @@ function renderWarehouse() {
       ${r.assignedToNames&&r.assignedToNames.length?`<div class="req-qty">👥 Teamed route: ${escapeHtml(r.assignedToNames.join(', '))}</div>`:''}
       ${r.warehouseMessage ? `<div class="req-wh-msg">💬 ${escapeHtml(r.warehouseMessage)}</div>` : ''}
       ${actions}
+      ${reassignBtn}
     </div>`;
   }).join('');
+}
+function whIsLeader() { return !!(state.staffAccount && ['warehouse_manager', 'warehouse_supervisor'].includes(state.staffAccount.role)); }
+
+// ── Reassign a stand request (Warehouse Manager / Supervisor) ──
+// Hands the request to one person: it goes back to "waiting" routed only to
+// them (so it shows in their My Jobs with Start delivery) and they get a push.
+let _whReassignPeople = [];
+async function whReassignOpen(id) {
+  if (!whIsLeader()) return toast('Only the Warehouse Manager or Supervisor can reassign', 'error');
+  const r = (state.wRequests || []).find(x => String(x.id) === String(id)); if (!r) return toast('Request not found — refresh', 'error');
+  const [accts, duty] = await Promise.all([
+    sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor,warehouse_manager)&is_active=eq.true&select=employee_id,name,role').catch(() => ({ _err: true })),
+    sb('on_duty?day=eq.' + stadiumDay() + '&select=employee_id').catch(() => ({ _err: true }))
+  ]);
+  if (accts._err || !Array.isArray(accts)) return toast('Could not load the warehouse crew — try again', 'error');
+  const onNow = new Set(Array.isArray(duty) ? duty.map(d => String(d.employee_id)) : []);
+  const seen = new Map();
+  accts.forEach(a => { // one row per person: prefer the account they actually signed in with today
+    const k = loginFold(a.name).replace(/[^a-z]/g, '') || String(a.employee_id);
+    const cur = seen.get(k), on = onNow.has(String(a.employee_id));
+    if (!cur || (on && !cur.on)) seen.set(k, { id: String(a.employee_id), name: a.name, role: a.role, on });
+  });
+  _whReassignPeople = [...seen.values()].sort((a, b) => (b.on - a.on) || String(a.name).localeCompare(String(b.name)));
+  const old = document.getElementById('wh-reassign-overlay'); if (old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'wh-reassign-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center';
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  const now = r.claimedBy ? 'On the way with ' + r.claimedBy : (r.assignedToNames && r.assignedToNames.length ? 'Sent to ' + r.assignedToNames.join(', ') : 'Not sent to anyone');
+  ov.innerHTML = '<div style="width:min(560px,100%);max-height:82vh;display:flex;flex-direction:column;background:var(--bg-card);border-radius:20px 20px 0 0;padding:16px 16px calc(14px + env(safe-area-inset-bottom))">' +
+    '<div style="font-weight:850;font-size:17px">👤 Give this request to…</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin:3px 0 10px">' + escapeHtml(r.stand) + ' · ' + escapeHtml(now) + '</div>' +
+    '<input class="form-input" id="wh-reassign-q" placeholder="🔍 Search name…" oninput="whReassignRender(\'' + escapeAttr(String(id)) + '\')" style="margin:0 0 8px">' +
+    '<div id="wh-reassign-list" style="overflow:auto;flex:1"></div>' +
+    '<button class="btn btn-ghost" style="margin-top:8px" onclick="document.getElementById(\'wh-reassign-overlay\').remove()">Cancel</button></div>';
+  document.body.appendChild(ov);
+  whReassignRender(id);
+}
+function whReassignRender(id) {
+  const el = document.getElementById('wh-reassign-list'); if (!el) return;
+  const q = String((document.getElementById('wh-reassign-q') || { value: '' }).value || '').toLowerCase().trim();
+  const rows = _whReassignPeople.map((p, i) => ({ p, i })).filter(x => !q || (x.p.name + ' ' + whDisp(x.p.name)).toLowerCase().includes(q));
+  if (!rows.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:10px">No match.</div>'; return; }
+  el.innerHTML = rows.map(({ p, i }) => '<div class="prem-walkin-result" onclick="whReassignSave(\'' + escapeAttr(String(id)) + '\',' + i + ')">' +
+    '<div class="name">' + (p.on ? '🟢 ' : '⚪ ') + escapeHtml(whDisp(p.name)) + '</div>' +
+    '<div class="meta">' + (p.on ? 'In the app today' : 'Not signed in today') + ' · ' + escapeHtml(p.role === 'warehouse_employee' ? 'Warehouse' : p.role === 'warehouse_supervisor' ? 'Supervisor' : 'Manager') + ' · tap to give</div></div>').join('');
+}
+async function whReassignSave(id, idx) {
+  if (!whIsLeader()) return toast('Not authorized', 'error');
+  const p = _whReassignPeople[idx]; if (!p) return;
+  const rows = await sb('stock_requests?id=eq.' + encodeURIComponent(id) + '&select=id,stand,status,items_json,claimed_by').catch(() => ({ _err: true }));
+  if (rows._err || !Array.isArray(rows) || !rows[0]) return toast('Could not load the request — try again', 'error');
+  const row = rows[0];
+  if (row.status === 'delivered') { const o = document.getElementById('wh-reassign-overlay'); if (o) o.remove(); loadWarehouse(); return toast('Already delivered', 'error'); }
+  let j = row.items_json;
+  if (typeof j === 'string') { try { j = JSON.parse(j); } catch (e) { j = null; } }
+  if (!j || typeof j !== 'object') return toast('Could not read this request — try again', 'error'); // never overwrite the item list
+  const me = (state.staffAccount && state.staffAccount.name) || 'Warehouse';
+  const meta = Object.assign({}, j.meta || {}, { assigned_to_ids: [p.id], assigned_to_names: [p.name], reassigned_by: me, reassigned_at: new Date().toISOString(), reassigned_from: row.claimed_by || ((j.meta && j.meta.assigned_to_names) || []).join(', ') });
+  const patch = { status: 'open', claimed_by: null, claimed_at: null, items_json: Object.assign({}, j, { meta }) };
+  const r = await sb('stock_requests?id=eq.' + encodeURIComponent(id) + '&status=neq.delivered', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) }).catch(() => ({ _err: true }));
+  if (r._err || !Array.isArray(r) || !r.length) return toast('Could not reassign — it may have just been delivered', 'error');
+  const o = document.getElementById('wh-reassign-overlay'); if (o) o.remove();
+  sendPushTo(p.id, '📥 Request given to you', row.stand + ' — from ' + me);
+  toast('✅ ' + row.stand + ' given to ' + whDisp(p.name), 'success', 5000);
+  loadWarehouse();
 }
 
 async function claimReq(id) {

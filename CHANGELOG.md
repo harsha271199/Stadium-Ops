@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-16
+- Warehouse Manager/Supervisor can hand any open or on-the-way stand request to anyone: **👤 Reassign** on each request (red **Overdue — give to someone else** when past ETA). Picker shows the whole warehouse crew, people in the app today first. The request goes back to waiting, routed only to that person (in their My Jobs with Start delivery), and they get a push.
+
 ## 2026-10-03-fix-15
 - Warehouse workers only see/hear about requests for their own area: the in-app "New warehouse request" banner used to pop for every request on every warehouse phone (e.g. Selle saw 229, routed only to Martin/Robles). Banner, My Jobs and Requests → My Stands now share one rule (routed to me, or unrouted and inside my area).
 - A worker's area refreshes every minute, so an assignment made mid-shift applies without signing out.
