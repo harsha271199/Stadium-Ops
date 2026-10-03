@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-19
+- Warehouse leaders' My Jobs shows the ← back arrow (to Manager tools) as well as the Manager tools button.
+
 ## 2026-10-03-fix-18
 - Warehouse My Jobs: tapping a waiting stand now shows the full order (every request, items, who asked, ETA) with a big **🚚 On my way** button and ← Back — nothing is claimed until they tap On my way. Requests list button renamed "On my way".
 - Data: closed old request #992 (229, Manas, 2 cases water) as "Closed by admin — old request".

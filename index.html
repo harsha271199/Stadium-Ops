@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-18';
+const BUILD_TAG = '2026-10-03-fix-19';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -11932,7 +11932,7 @@ function whMgrOpenPane(mode) {
   // My Jobs is the leader's home (same list every warehouse person sees);
   // everything else lives behind one "Manager tools" button.
   const onHome = mode === 'todeliver';
-  const arrow = backbar && backbar.querySelector('.back-btn'); if (arrow) arrow.style.display = onHome ? 'none' : '';
+  const arrow = backbar && backbar.querySelector('.back-btn'); if (arrow) arrow.style.display = ''; // ← on every pane (My Jobs ← goes to Manager tools)
   const toolsBtn = document.getElementById('wh-mgr-tools-btn'); if (toolsBtn) toolsBtn.style.display = onHome ? '' : 'none';
   state._whLeaderPane = mode;
   // Always switch the pane, even if no hidden tab element exists for this
