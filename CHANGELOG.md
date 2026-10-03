@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-11
+- Premium Managers can sign in with the last 5 of their ID + last name (same as Managers). Nestor Hernandez added as Premium Manager under his real ID 20532480.
+
 ## 2026-10-03-fix-10
 - Only the Food Manager can decline a food order (runners never see Decline, and the save itself refuses anyone else).
 - Food Manager's "Delivered" tab now shows today's history in two parts: ✅ Delivered and ❌ Declined (with the reply). Neither appears in the normal order list.

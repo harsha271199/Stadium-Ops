@@ -4364,7 +4364,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-10';
+const BUILD_TAG = '2026-10-03-fix-11';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5185,7 +5185,7 @@ async function api(action, data) {
           const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
           const entered=norm(secret);
           // Warehouse runners / temp walk-ins (pin 60000) may also use their own last 5 + last name.
-          const lastNameRows=staffRows.filter(r=>['manager','support_manager','food_manager','food_runner','tech'].includes(r.role)||(r.role==='warehouse_employee'&&String(r.pin||'')==='60000'));
+          const lastNameRows=staffRows.filter(r=>['manager','support_manager','premium_manager','food_manager','food_runner','tech'].includes(r.role)||(r.role==='warehouse_employee'&&String(r.pin||'')==='60000'));
           const pick=loginPickByName(lastNameRows,secret,r=>r.name,r=>r.employee_id);
           if(pick.people===1)acct=pick.rows[0];
           else if(pick.people>1){
