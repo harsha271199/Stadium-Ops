@@ -4,6 +4,18 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-1
+- **Manager portal:** the game-day banner (ASU vs Baylor) is now the first card on the home screen, same look as the Supervisor's. Under "All Stands" the **Inventory Tracker** is first and the duplicate "All Requests" button is gone.
+- **Team (manager / admin):** three clickable options only — **All stands · Workers · NPO**. The "Working stand", "Live now", the Fully staffed / Partial / None / Checked-in chips and the filter buttons are removed. Every worker row (in All stands, Workers and NPO) has ✓ check-in, **Check out** (once checked in), ✕ absent, ↔ move and ⭐ feedback.
+- **Requests:** "See Existing Requests" and "My IT Tickets" are removed for Stand Leads, workers and Supervisors, and the Supervisor's "All Requests" button is gone. Managers / Support Managers / Admin keep ONE "All Requests · today" monitor inside the Requests tile. Request lists show today only (6 AM rollover) and delivered / resolved Food requests no longer show to stands.
+- **IT form:** clear red notice — IT ONLY, not for food, stock, refunds. If the details read like food/stock and not a tech problem it asks before sending.
+- **Food form:** one box ("Food order — type the food and how many"). No menu suggestions, no separate quantity or notes boxes. Saved exactly as typed.
+- **Chat:** Refund, Customer complaint and Comp / price must include the item and price/detail before they send (SOS unchanged). All times in the app show in Arizona time (MST), chat times say MST.
+- **Force Restock** (and Quick Drop) only offers Chargeable items. The full sheet (including Non-Chargeable and Supplies) stays for counts and the end-of-game download.
+- **Inventory:** Count In and Count Out must be complete — every item needs a number (type 0 if none); blank items are highlighted and the count will not save. Add-on items stay optional.
+- **Check-out rules:** regular workers can no longer check themselves out — only their Stand Lead (or a Supervisor / Manager) can. A Stand Lead cannot check out until Count In **and** Count Out are complete (a half-filled count does not unlock it), and if the app cannot verify inventory (no signal) it refuses instead of letting them leave. Supervisors / Managers can still override with a recorded reason.
+- **Data (live database):** 6 new people scheduled (Shaik, Mansi Nayak at 229P Fan Fuel; Chasiti Thomas at 438); Saragadam moved to 334 San Tan; Krish Shah moved to 203P Beer Portable (to be assigned); inventory for all Stinger stands = Lemonade list; 219T BBQ Trailer and 221P Taco Bar = Fork 'Em BBQ list.
+
 ## 2026-10-02-grp-2
 - **Open-request limits per stand** (replaces the one-at-a-time rule from grp-1): **IT 1**, **Food 3**, **Stock 3** for portables and small kiosks (P / M / T / B stands) and **5** for the big stands. The moment a request is delivered or resolved its slot frees up and the stand can send the next. The old 10-minute Food hold is gone (the limit replaces it).
 - **Fresh game: no old requests anywhere.** Stock, Food and IT lists (stand screens, manager/support views, warehouse queue, "My IT tickets") only show requests from the current game day (the day rolls over at 6 AM). Chat already only showed the current day.

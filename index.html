@@ -1935,10 +1935,6 @@
         <span class="icon">🔄</span>
         <span class="text"><div>Stand Transfer Record</div><div class="sub">Today's stand-to-stand transfers</div></span>
       </button>
-      <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="mgrSimpleAllRequests()">
-        <span class="icon">📣</span>
-        <span class="text"><div>All Requests</div><div class="sub">Stock · Food · IT across all stands</div></span>
-      </button>
       <!-- "Stock request for another stand" removed as a separate button —
            Request Stock and Report IT Issue (in the Requests submenu) now
            both show a stand picker for supervisors, defaulting to their
@@ -2068,9 +2064,9 @@
     <div><div class="page-title">📦 Requests</div><div class="page-sub" id="request-hub-context">Fast game-day help</div></div>
   </div>
   <div class="content">
-    <button class="sub-menu-btn" style="border-left:4px solid #7C3AED" onclick="requestHubOpenExisting()">
+    <button class="sub-menu-btn" id="req-hub-existing-btn" style="display:none;border-left:4px solid #7C3AED" onclick="openLeadershipRequestMonitor()">
       <span class="smb-icon">📣</span>
-      <div><div class="smb-label">See Existing Requests <span id="stand-requests-badge" style="display:none;background:var(--aramark-red);color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;margin-left:6px"></span></div><div class="smb-sub">Check before sending another request</div></div>
+      <div><div class="smb-label">All Requests · today <span id="stand-requests-badge" style="display:none;background:var(--aramark-red);color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;margin-left:6px"></span></div><div class="smb-sub">Stock · Food · IT across all stands</div></div>
     </button>
 
     <div class="request-primary-note">Most game-day problems should use one of these three:</div>
@@ -2102,10 +2098,6 @@
         <button class="sub-menu-btn" id="incoming-transfers-btn" style="border-left:4px solid #00A651" onclick="goIncomingTransfers()">
           <span class="smb-icon">📥</span>
           <div><div class="smb-label">Incoming Transfers <span id="incoming-badge" style="display:none;background:var(--aramark-red);color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;margin-left:6px"></span></div><div class="smb-sub">Confirm stock another stand sent you</div></div>
-        </button>
-        <button class="sub-menu-btn" style="border-left:4px solid #888" onclick="goMyITTickets()">
-          <span class="smb-icon">🛠️</span>
-          <div><div class="smb-label">My IT Tickets <span id="my-it-badge" style="display:none;background:var(--aramark-red);color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;margin-left:6px"></span></div><div class="smb-sub">Check tech support status</div></div>
         </button>
         <button class="sub-menu-btn smb-green" onclick="goRefund()">
           <span class="smb-icon">💵</span>
@@ -2798,6 +2790,16 @@
   <div class="content">
     <!-- V11.11.4 — EXACT SUPERVISOR UI FOR SUPPORT / MANAGER / ADMIN -->
     <div id="mgr-simple-shell">
+      <div class="gameday-banner" id="mgr-gameday-info-card" style="display:none" onclick="mgrOpenGameDayInfo()" role="button" tabindex="0" aria-label="View game day details">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:10px;font-weight:800;letter-spacing:1px;opacity:0.85">GAME DAY</div>
+            <div style="font-size:15px;font-weight:800;margin-top:2px" id="mgr-gameday-title">Game Day Information</div>
+            <div style="font-size:11px;opacity:0.85;margin-top:1px" id="mgr-gameday-sub">Loading updated game details…</div>
+          </div>
+          <div style="font-size:20px;opacity:0.8">›</div>
+        </div>
+      </div>
       <div class="stand-card">
         <div class="greeting-line">Hi <span id="mgr-simple-firstname">—</span>! 👋</div>
         <div class="full-name" id="mgr-simple-name">—</div>
@@ -2812,16 +2814,6 @@
           <div class="working-stand-help">Choose once. Checks, Requests, Food Safety, Team and Force Restock follow this stand.</div>
         </div>
       </div>
-
-      <button class="big-action" id="mgr-gameday-info-card"
-        style="display:none;border-left:4px solid var(--asu-gold);margin:10px 0"
-        onclick="mgrOpenGameDayInfo()">
-        <span class="icon">🏟️</span>
-        <span class="text">
-          <div id="mgr-gameday-title">Game Day Information</div>
-          <div class="sub" id="mgr-gameday-sub">Loading updated game details…</div>
-        </span>
-      </button>
 
       <button class="gameday-report-btn" type="button" id="mgr-simple-feedback-btn" onclick="openGameDayFeedback()">
         <span>🗣️ Game-Day Feedback</span>
@@ -2856,6 +2848,10 @@
 
       <div id="mgr-simple-supervisor-actions">
         <div class="section-title" id="mgr-simple-allstands-title">Supervisor — All Stands</div>
+        <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goInvTracker()">
+          <span class="icon">📦</span>
+          <span class="text"><div>Inventory Tracker</div><div class="sub">Who finished Count In / Count Out · remind stands</div></span>
+        </button>
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAllStandsLive()">
           <span class="icon">📊</span>
           <span class="text"><div>All Stands Live</div><div class="sub">Who's working at every stand</div></span>
@@ -2864,10 +2860,6 @@
           <span class="icon">📋</span>
           <span class="text"><div>Stand Status</div><div class="sub">Checks · Inventory · Food Safety · tap missing work</div></span>
         </button>
-        <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goInvTracker()">
-          <span class="icon">📦</span>
-          <span class="text"><div>Inventory Tracker</div><div class="sub">Who finished Count In / Count Out · remind stands</div></span>
-        </button>
         <button class="big-action" id="mgr-alerts-check-btn" style="border-left:4px solid var(--asu-maroon);display:none" onclick="goAlertsCheck()">
           <span class="icon">📲</span>
           <span class="text"><div>Who has alerts on</div><div class="sub">Today's leads, supervisors, warehouse, food, IT</div></span>
@@ -2875,10 +2867,6 @@
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goStandTransferRecord()">
           <span class="icon">🔄</span>
           <span class="text"><div>Stand Transfer Record</div><div class="sub">Today's stand-to-stand transfers</div></span>
-        </button>
-        <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="mgrSimpleAllRequests()">
-          <span class="icon">📣</span>
-          <span class="text"><div>All Requests</div><div class="sub">Stock · Food · IT across all stands</div></span>
         </button>
       </div>
 
@@ -3075,14 +3063,12 @@
     <!-- Team tab: one place for stand staff + working-now view -->
     <div id="mgr-roster" style="display:none">
       <div class="mgr-v10-team-filters">
-        <button class="mgr-v10-team-filter" data-team-mode="stand" onclick="mgrTeamView('stand')">📍 Working stand</button>
-        <button class="mgr-v10-team-filter" data-team-mode="npo" onclick="mgrTeamView('npo')">🤝 NPO attendance</button>
-        <button class="mgr-v10-team-filter active" data-team-mode="live" onclick="mgrTeamView('live')">🟢 Live now</button>
-        <button class="mgr-v10-team-filter" data-team-mode="all" onclick="mgrTeamView('all')">▦ All stands</button>
+        <button class="mgr-v10-team-filter active" data-team-mode="all" onclick="mgrTeamView('all')">▦ All stands</button>
+        <button class="mgr-v10-team-filter" data-team-mode="workers" onclick="mgrTeamView('workers')">👥 Workers</button>
+        <button class="mgr-v10-team-filter" data-team-mode="npo" onclick="mgrTeamView('npo')">🤝 NPO</button>
       </div>
       <div class="leadership-team-toolbar" style="margin-bottom:10px">
         <button class="btn btn-primary" onclick="leadershipOpenWalkin()">＋ Add walk-in</button>
-        <button class="btn btn-ghost" onclick="mgrTeamView('npo')">🤝 NPO attendance</button>
       </div>
       <div id="mgr-team-live-inline" style="display:none">
         <div id="mgr-team-live-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>
@@ -3094,12 +3080,6 @@
           <button class="prem-export-btn" onclick="bcExportPDF()">🖨️ PDF</button>
         </div>
         <input class="form-input" type="text" id="bc-search" placeholder="🔍 Search worker or stand..." oninput="filterBedCheck()" style="margin-bottom:8px">
-        <div class="chip-row" id="bc-status-filters" style="margin-bottom:12px">
-          <button class="chip selected" data-f="all" onclick="bcSetStatusFilter('all',this)">All</button>
-          <button class="chip" data-f="full" onclick="bcSetStatusFilter('full',this)">Fully staffed</button>
-          <button class="chip" data-f="partial" onclick="bcSetStatusFilter('partial',this)">Partial</button>
-          <button class="chip" data-f="none" onclick="bcSetStatusFilter('none',this)">None here</button>
-        </div>
         <div id="bc-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>
       </div>
     </div>
@@ -3599,7 +3579,7 @@
       <label class="form-label" style="margin-top:0">Which stand?</label>
       <select class="form-input" id="it-stand-select" onchange="itStandChanged()"></select>
     </div>
-    <div class="notice">⚡ Alerts IT supervisor instantly. Be specific about the problem.</div>
+    <div class="notice" style="font-weight:700;border-left:4px solid #DC2626">🔧 IT ONLY — POS, handheld, tablet, TV / menu board, internet. <b>Do NOT use this for food, stock, ice, cups, refunds or anything else</b> — use the Food or Stock request buttons. Those requests will be ignored here.</div>
     <label class="form-label" style="margin-top:0">What's the issue? *</label>
     <div class="chip-row" id="it-cat-row">
       <button class="chip" onclick="selectITCat(this,'POS Handheld')">📱 POS Handheld</button>
@@ -3624,7 +3604,7 @@
       <button class="chip urgent" onclick="selectITUrg(this,'URGENT')">🔴 URGENT (stopped)</button>
     </div>
     <label class="form-label">Details *</label>
-    <textarea class="form-input" id="it-details" placeholder="e.g. POS frozen since 4:30, won't restart"></textarea>
+    <textarea class="form-input" id="it-details" placeholder="Tech problem only — e.g. POS 3 frozen since 4:30, won't restart"></textarea>
     <button class="btn btn-primary" onclick="submitITIssue()">Send to IT →</button>
   </div>
 </div>
@@ -3661,20 +3641,12 @@
       <div class="chip" onclick="selectKitchenUrgency(this,'URGENT',10)">🔴 URGENT</div>
     </div>
     <div style="font-size:11px;color:var(--text-2);margin:8px 0 12px">Target: <b id="kitchen-eta-label">30 minutes</b></div>
-    <label class="form-label">WHAT DO YOU NEED?</label>
-    <div class="food-delivery-note">Keep it simple: type the food and quantity. Example: <b>Watermelon · 3 trays</b> or <b>Burgers · 40</b>.</div>
-    <div class="food-quick-row">
-      <button class="food-quick" onclick="addFoodQuick('Burgers')">Burgers</button>
-      <button class="food-quick" onclick="addFoodQuick('Hot Dogs')">Hot Dogs</button>
-      <button class="food-quick" onclick="addFoodQuick('Watermelon')">Watermelon</button>
-      <button class="food-quick" onclick="addFoodQuick('Pizza')">Pizza</button>
-      <button class="food-quick" onclick="addFoodQuick('Pretzels')">Pretzels</button>
-    </div>
-    <div id="kitchen-draft-items"></div>
-    <button class="fs-add-btn" onclick="addKitchenDraftItem()">+ Add food item</button>
+    <label class="form-label">FOOD ORDER</label>
+    <div class="food-delivery-note">Type the <b>food</b> and <b>how many</b> in this one box. Write everything you need.</div>
+    <textarea class="form-input" id="kitchen-order-text" rows="4" placeholder="Food name and quantity" oninput="if(_kitchenDraft[0])_kitchenDraft[0].itemName=this.value"></textarea>
+    <div id="kitchen-draft-items" style="display:none"></div>
     <datalist id="kitchen-food-options"></datalist>
-    <label class="form-label">NOTES (OPTIONAL)</label>
-    <textarea class="form-input" id="kitchen-request-note" rows="2" placeholder="e.g. need cooked burgers, no cheese"></textarea>
+    <input type="hidden" id="kitchen-request-note" value="">
     <button class="btn btn-primary" id="kitchen-submit-btn" onclick="submitKitchenRequest()" style="margin-top:12px">Send Food Request →</button>
   </div>
 </div>
@@ -4400,7 +4372,15 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
-const BUILD_TAG = '2026-10-02-grp-2';
+// Every clock time in the app is shown in Arizona time (MST, no daylight saving),
+// whatever timezone the phone is set to.
+(function(){
+  ['toLocaleTimeString','toLocaleString','toLocaleDateString'].forEach(function(fn){
+    const orig=Date.prototype[fn];
+    Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
+  });
+})();
+const BUILD_TAG = '2026-10-03-fix-1';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7809,6 +7789,15 @@ function renderWorkerActions() {
     // NPO leaders don't track breaks — same reasoning as the roster
     // (voluntary, temporary, not employees on a tracked shift). Skips
     // straight to "Leave," no break step in between.
+    const canLeaveSelf = (typeof invLockMode === 'function') && invLockMode() !== null; // Stand Leads (and last person at lead-less stands) only
+    if (!canLeaveSelf) {
+      container.innerHTML = `
+      <button class="big-action warning" onclick="markBreakStart()">
+        <span class="icon">☕</span>
+        <span class="text"><div>Start break</div><div class="sub">Going on a break</div></span>
+      </button>
+      <div class="notice info" style="font-size:12px">⏹ Your Stand Lead checks you out at the end of your shift. You cannot check yourself out.</div>`;
+    } else
     container.innerHTML = u.isNpo ? `
       <button class="big-action danger" onclick="confirmLeave()">
         <span class="icon">🔴</span>
@@ -8026,8 +8015,9 @@ async function confirmLeave() {
     const stand = state.user.stand;
     const miss = await invMissingPhases(stand);
     if (miss === null) {
-      if (!(await confirmAction('Could not check inventory for ' + stand + ' (no connection). Only leave if Count In and Count Out are both submitted — your Manager will see if they are missing.', {title:'Inventory not verified', confirmLabel:'Leave anyway', danger:true}))) return;
-      return markLeft();
+      // Fail closed: if we cannot prove Count In and Count Out are complete, nobody leaves.
+      toast('Could not verify inventory for ' + stand + ' — check your connection and try again', 'error', 8000);
+      return;
     }
     if (miss.length) {
       const who = lockMode === 'last' ? 'You are the last one working here, so you' : 'Stand Leads';
@@ -8074,13 +8064,23 @@ async function invMissingPhases(stand) {
   if (!stand) return [];
   const enc = encodeURIComponent(stand);
   const [inv, sheet] = await Promise.all([
-    sb('inventory_entries?entry_date=eq.' + stadiumDay() + '&stand=eq.' + enc + '&phase=in.(%22Count%20In%22,%22Count%20Out%22)&select=phase').catch(()=>({_err:true})),
-    sb('stand_sheet_stands?stand=eq.' + enc + '&select=stand&limit=1').catch(()=>({_err:true}))
+    sb('inventory_entries?entry_date=eq.' + stadiumDay() + '&stand=eq.' + enc + '&phase=in.(%22Count%20In%22,%22Count%20Out%22)&select=phase,counts').catch(()=>({_err:true})),
+    api('getStandSheet', { stand }).catch(()=>({ok:false}))
   ]);
-  if (inv._err || sheet._err || !Array.isArray(inv) || !Array.isArray(sheet)) return null;
-  if (!sheet.length) return [];
-  const have = new Set(inv.map(r => r.phase));
-  return ['Count In','Count Out'].filter(p => !have.has(p));
+  if (inv._err || !Array.isArray(inv) || !sheet || !sheet.ok) return null;
+  // A phase only counts as done when EVERY (non add-on) item has a number —
+  // a half-filled Count In / Count Out does not unlock check-out.
+  const need = (sheet.items || []).filter(i => !i.isAddon).map(i => i.itemName);
+  if (!need.length) return [];
+  const miss = [];
+  [['Count In','countIn'],['Count Out','countOut']].forEach(function(pf) {
+    const have = {};
+    inv.filter(r => r.phase === pf[0]).forEach(r => Object.keys(r.counts || {}).forEach(function(n) {
+      const c = r.counts[n]; if (c && c[pf[1]] !== undefined && c[pf[1]] !== null && String(c[pf[1]]).trim() !== '') have[n] = 1;
+    }));
+    if (need.some(n => !have[n])) miss.push(pf[0]);
+  });
+  return miss;
 }
 async function invOpenPhase(stand, phase) {
   await goInventory(stand);
@@ -8112,6 +8112,7 @@ async function invClockOutGate(w, stand) {
   return ok ? ' [INVENTORY OVERRIDE — missing ' + miss.join(' + ') + ']' : null;
 }
 async function markLeft() {
+  if (invLockMode() === null) return toast('Ask your Stand Lead to check you out', 'error');
   await withLock(evtBtn(), 'Saving…', async () => {
     const res = await api('leftStand', { empId: state.user.empId, name: state.user.name, stand: state.user.stand });
     if (res.ok) { state.attendance = 'left'; localStorage.setItem('stadium_attend_'+state.user.empId, 'left'); localStorage.setItem('stadium_attend_date_'+state.user.empId, localISODate()); toast('🔴 Logged off'); renderWorkerActions(); }
@@ -10296,7 +10297,7 @@ async function loadManagerGameDayInfo(){
   const title=document.getElementById('mgr-gameday-title');
   const sub=document.getElementById('mgr-gameday-sub');
   if(card)card.style.display='';
-  if(title)title.textContent='🏟️ '+(row.event_name||'Game Day');
+  if(title)title.textContent=(row.event_name||'Game Day');
   if(sub){
     const pieces=[
       row.date_label||displayDateFromISO(row.event_date),
@@ -10399,6 +10400,7 @@ function requestHubRoleLabel(){
 function prepareRequestHub(){
   const more=document.getElementById('stand-request-more'); if(more)more.open=false;
   const leadership=!!(state.staffAccount&&state.staffAccount.group==='manager'&&['support_manager','manager','admin'].includes(state.staffAccount.role));
+  const exBtn=document.getElementById('req-hub-existing-btn'); if(exBtn)exBtn.style.display=leadership?'':'none'; // only leadership sees the all-requests monitor
   const who=getRequesterIdentity();
   const stand=getOperationalStand(who)||state.activeStand||who.homeStand||'';
   const sub=document.getElementById('request-hub-context');
@@ -11073,7 +11075,7 @@ function mgrV10View(view,preserve){
     }
   }else if(view==='team'){
     const roster=document.getElementById('mgr-roster');if(roster)roster.style.display='';
-    mgrTeamView(state.mgrV10TeamMode||'live');
+    mgrTeamView(state.mgrV10TeamMode||'all');
   }
   if(!preserve)window.scrollTo(0,0);
 }
@@ -11582,20 +11584,15 @@ function mgrTab(el, tab) {
 
 
 function mgrTeamView(mode){
+  // Three options only: All stands · Workers · NPO. (Old "Working stand" /
+  // "Live now" modes are gone — every worker row has the same actions now.)
+  if(!['all','workers','npo'].includes(mode))mode='all';
   state.mgrV10TeamMode=mode;
   document.querySelectorAll('.mgr-v10-team-filter').forEach(b=>b.classList.toggle('active',b.dataset.teamMode===mode));
   const all=document.getElementById('mgr-team-all'),live=document.getElementById('mgr-team-live-inline');
-  if(mode==='stand'){
-    const st=isManagerOpsSession()?mgrV10RequireStand():'';
-    if(isManagerOpsSession()&&!st)return;
-    if(st)state.myTeamStand=st;
-    state._mgrTeamStandalone=true;
-    goMyTeam();return;
-  }
-  if(all)all.style.display=(mode==='all'||mode==='npo')?'':'none';
-  if(live)live.style.display=mode==='live'?'':'none';
-  if(mode==='live')loadMgrLive();
-  if(mode==='all'||mode==='npo')loadMgrRoster();
+  if(all)all.style.display='';
+  if(live)live.style.display='none';
+  loadMgrRoster();
 }
 
 function loadBedCheck() {
@@ -14696,7 +14693,7 @@ function kitchenSaveLocalAssignments(rows){localStorage.setItem(KITCHEN_PREVIEW_
 function kitchenIsMissing(r){return !!(r&&r._err&&(r.status===404||String(r.error||'').toLowerCase().includes('kitchen_')));}
 function kitchenStatusLabel(s){return ({open:'📥 Requested',preparing:'👨‍🍳 Preparing',ready:'✅ Ready',on_the_way:'🏃 On the way',delivered:'✅ Delivered',cancelled:'Cancelled'})[s]||s||'Requested';}
 function kitchenEtaText(r){if(!r||!r.eta_deadline)return ''; const ms=new Date(r.eta_deadline).getTime()-Date.now(); if(ms<=0)return '🔴 '+fmtMins(Math.max(1,Math.round(-ms/60000)))+' overdue'; return '⏱ '+Math.max(1,Math.ceil(ms/60000))+'m left';}
-function kitchenItemsText(r){const a=r&&r.items_json&&Array.isArray(r.items_json.items)?r.items_json.items:[];return a.map(x=>escapeHtml(x.itemName)+' ×'+Number(x.qty||0)).join(' · ')||escapeHtml(r.items||'Food');}
+function kitchenItemsText(r){const a=r&&r.items_json&&Array.isArray(r.items_json.items)?r.items_json.items:[];return a.map(x=>x.free_text?escapeHtml(x.itemName):(escapeHtml(x.itemName)+' ×'+Number(x.qty||0))).join(' · ')||escapeHtml(r.items||'Food');}
 
 async function kitchenFetchRequests(){
   const rows=await sb('kitchen_requests?created_at=gte.'+encodeURIComponent(stadiumDay()+'T06:00:00-07:00')+'&order=created_at.desc&limit=200&select=*').catch(()=>({_err:true,status:0}));
@@ -14808,7 +14805,7 @@ async function goKitchenRequest(targetStand){
   const who=getRequesterIdentity();
   const canFoodRequest=['lead','supervisor','support_manager','manager','admin'].includes(who.tier)||isLimitedAreaLead();
   if(!canFoodRequest)return toast('Ask your Stand Lead or Supervisor to send a food request','error');
-  state.kitchenUrgency='Normal';state.kitchenETA=30;_kitchenDraft=[];addKitchenDraftItem();
+  state.kitchenUrgency='Normal';state.kitchenETA=30;_kitchenDraft=[{itemName:'',qty:1,free_text:true}];{const ot=document.getElementById('kitchen-order-text');if(ot)ot.value='';}
   // Same stable-uuid fix as Stock — generated once when the form opens,
   // reused on every submit attempt for this one request.
   state._kitchenRequestUuid=genUUID();
@@ -14880,7 +14877,7 @@ function kitchenDuplicateOverlap(items){
 function kitchenRequestBack(){if(state.standTaskReturnScreen==='screen-submenu-requests'){state.standTaskReturnScreen='';showScreen('screen-submenu-requests');return;}if(state.standTaskReturnScreen==='screen-bedcheck'||isManagerOpsSession()){state.standTaskReturnScreen='';showScreen('screen-bedcheck');restoreMgrSidebarState();if(isSupportManagerSession())supportOpsTab('food',true);return;}if(state.user){showScreen('screen-submenu-requests');return;}if(state.staffAccount&&state.staffAccount.group==='manager'){showScreen('screen-bedcheck');restoreMgrSidebarState();return;}showScreen('screen-home');}
 
 async function submitKitchenRequest(){
-  const who=getRequesterIdentity();const stand=state.kitchenTargetStand||getOperationalStand(who);const items=_kitchenDraft.filter(x=>x.itemName&&Number(x.qty)>0);if(!stand)return toast('Choose a stand','error');if(!items.length)return toast('Add at least one food item','error');
+  const who=getRequesterIdentity();const stand=state.kitchenTargetStand||getOperationalStand(who);const items=_kitchenDraft.filter(x=>x.itemName&&Number(x.qty)>0);if(!stand)return toast('Choose a stand','error');if(!items.length||String(items[0].itemName||'').trim().length<3)return toast('Type the food and how many in the box','error');
   { const gMsg=await openRequestGuard('food',stand); if(gMsg) return toast(gMsg,'error',8000); }
   // Real 10-minute hold, enforced here (not just shown as a notice) —
   // requires an override reason if fewer than 10 minutes have passed
@@ -14918,7 +14915,7 @@ async function submitKitchenRequest(){
   // assignment at all.
   const autoAssignId=(suggested&&suggested.employee_id&&!String(suggested.employee_id).startsWith('preview-'))?suggested.employee_id:null;
   const autoAssignName=autoAssignId?suggested.name:null;
-  const row={client_uuid:requestClientUuid,stand,requested_by:who.name,requested_by_id:who.empId||'',items:enriched.map(x=>x.qty+' × '+x.itemName).join(', '),items_json:{items:enriched},note:holdNote+document.getElementById('kitchen-request-note').value,urgency:state.kitchenUrgency||'Normal',eta_minutes:Number(state.kitchenETA)||30,eta_deadline:deadline,status:'open',assigned_runner_id:autoAssignId,assigned_runner_name:autoAssignName};
+  const row={client_uuid:requestClientUuid,stand,requested_by:who.name,requested_by_id:who.empId||'',items:enriched.map(x=>x.free_text?x.itemName:(x.qty+' × '+x.itemName)).join(', '),items_json:{items:enriched},note:holdNote+document.getElementById('kitchen-request-note').value,urgency:state.kitchenUrgency||'Normal',eta_minutes:Number(state.kitchenETA)||30,eta_deadline:deadline,status:'open',assigned_runner_id:autoAssignId,assigned_runner_name:autoAssignName};
   state._lastKitchenCreateError=null;const made=await kitchenCreate(row);if(!made){const e=state._lastKitchenCreateError||{};return toast('Could not send Food request'+(e.status?' · HTTP '+e.status:'')+(e.msg?' · '+String(e.msg).slice(0,90):''),'error',10000);}
   state._kitchenRequestUuid=null; // real request went through — next one gets its own fresh id
   state._kitchenHoldActive=false;
@@ -14953,7 +14950,7 @@ async function submitKitchenRequest(){
 }
 
 async function goMyKitchenRequests(){showScreen('screen-my-kitchen');await loadMyKitchenRequests();}
-async function loadMyKitchenRequests(){const who=getRequesterIdentity();const stand=getOperationalStand(who)||who.homeStand||state.kitchenTargetStand||'';const rows=await kitchenFetchRequests();document.getElementById('kitchen-req-preview-notice').style.display='none';const mine=rows.filter(r=>stand?r.stand===stand:(r.requested_by_id===who.empId));const el=document.getElementById('my-kitchen-list');if(!mine.length){el.innerHTML='<div class="empty"><div class="empty-icon">🍔</div><p>No Food requests yet.</p></div>';return;}el.innerHTML=mine.map(kitchenRequestCard).join('');}
+async function loadMyKitchenRequests(){const who=getRequesterIdentity();const stand=getOperationalStand(who)||who.homeStand||state.kitchenTargetStand||'';const rows=await kitchenFetchRequests();document.getElementById('kitchen-req-preview-notice').style.display='none';const mine=rows.filter(r=>stand?r.stand===stand:(r.requested_by_id===who.empId)).filter(r=>!['delivered','cancelled'].includes(r.status));const el=document.getElementById('my-kitchen-list');if(!mine.length){el.innerHTML='<div class="empty"><div class="empty-icon">🍔</div><p>No open Food requests.</p></div>';return;}el.innerHTML=mine.map(kitchenRequestCard).join('');}
 function kitchenRequestCard(r){const who=r.assigned_runner_name?' · '+escapeHtml(r.assigned_runner_name):'';return `<div class="req-card ${r.status==='delivered'?'done':r.urgency==='URGENT'?'urgent':''}"><div class="req-header"><div><div class="req-stand">${escapeHtml(r.stand)}</div><div class="req-time">${timeAgo(r.created_at)}</div></div><span class="status-pill ${r.status==='delivered'?'fulfilled':r.status==='on_the_way'?'claimed':'pending'}">${kitchenStatusLabel(r.status)}</span></div><div class="req-items">${kitchenItemsText(r)}</div><div class="req-qty">${kitchenEtaText(r)}${who}</div>${r.note?'<div class="req-wh-msg">💬 '+escapeHtml(r.note)+'</div>':''}</div>`;}
 
 function foodSessionIsRunner(){const role=state.staffAccount&&state.staffAccount.role||'';return ['food_runner','kitchen_runner'].includes(role);}
@@ -17533,9 +17530,9 @@ function bcToggleGroup(key) {
 // reference — same idea as _premScheduleRows, just built fresh each render
 // from state.bedCheckStands (still the real objects, not copies, so an
 // optimistic mutation here is the same mutation the next render will see).
-function bcBuildRowHtml(w, idx, npoMode) {
+function bcBuildRowHtml(w, idx, npoMode, showStand) {
   const cls = w.status === 'working' && !w.onBreak ? 'present' : w.status === 'absent' ? 'absent' : '';
-  const meta = npoMode ? escapeHtml(w.role || '') : escapeHtml(w.role || '') + (w.startTime ? ' · ' + escapeHtml(w.startTime) + '–' + escapeHtml(w.endTime || '') : '');
+  const meta = (showStand ? '📍 ' + escapeHtml(w.stand || '') + ' · ' : '') + (npoMode ? escapeHtml(w.role || '') : escapeHtml(w.role || '') + (w.startTime ? ' · ' + escapeHtml(w.startTime) + '–' + escapeHtml(w.endTime || '') : ''));
   let html = `<div class="prem-row ${cls}" id="bc-row-${idx}">
     <div class="prem-row-info">
       <div class="prem-row-name">${escapeHtml(w.name)}${w.onBreak ? ' <span style="font-size:9px;color:var(--info);font-weight:800">ON BREAK</span>' : ''}</div>
@@ -17543,6 +17540,7 @@ function bcBuildRowHtml(w, idx, npoMode) {
     </div>
     <div class="prem-row-actions">
       <button class="prem-status-btn p${w.status === 'working' && !w.onBreak ? ' on' : ''}" onclick="bcCheckIn(${idx})" aria-label="Present">✓</button>
+      ${w.status === 'working' ? `<button class="prem-move-btn" style="color:#DC2626;font-weight:800;width:auto;padding:0 8px;font-size:11px" onclick="bcCheckOut(${idx})" aria-label="Check out">Check out</button>` : ''}
       <button class="prem-status-btn a${w.status === 'absent' ? ' on' : ''}" onclick="bcMarkAbsent(${idx})" aria-label="Absent">✕</button>
       ${!npoMode ? `<button class="prem-move-btn" onclick="bcToggleMoveRow(${idx})" aria-label="Move">↔</button>` : ''}
       ${!npoMode ? `<button class="prem-move-btn" onclick="bcToggleFb(${idx})" aria-label="Feedback">⭐</button>` : ''}
@@ -17572,7 +17570,7 @@ function bcRenderSection(sectionKey, title, icon, stands, npoMode) {
   html += groups.map(g => {
     const present = g.workers.filter(w => w.status === 'working' && !w.onBreak).length;
     const key = sectionKey + ':' + g.stand;
-    const searching = !!(document.getElementById('bc-search').value || '').trim() || (state._bcStatusFilter || 'all') !== 'all';
+    const searching = !!(document.getElementById('bc-search').value || '').trim();
     const isOpen = searching || _bcOpenGroups.has(key);
     const rowsHtml = g.workers.map(w => { w.stand = g.stand; const idx = state._bcFlatWorkers.push(w) - 1; return bcBuildRowHtml(w, idx, npoMode); }).join('');
     return `<div class="prem-loc-group${isOpen ? ' open' : ''}" id="bc-group-${key.replace(/[^a-zA-Z0-9]/g, '_')}">
@@ -17598,20 +17596,8 @@ function renderBedCheck() {
   // same data already loaded, not a separate query.
   const statsEl = document.getElementById('bc-stats');
   if (statsEl) {
-    const total = stands.length;
-    const full = stands.filter(s => s.total > 0 && s.here === s.total).length;
-    const partial = stands.filter(s => s.here > 0 && s.here < s.total).length;
-    const none = stands.filter(s => s.here === 0).length;
-    const totalHere = stands.reduce((n, s) => n + s.here, 0);
-    statsEl.innerHTML = [
-      ['Locations', total, 'var(--text)'],
-      ['Fully staffed', full, 'var(--success)'],
-      ['Partial', partial, 'var(--warning)'],
-      ['None here', none, '#DC2626'],
-      ['Checked in', totalHere, 'var(--text)']
-    ].map(([label, val, color]) =>
-      '<div class="bc-stat"><div style="font-size:22px;font-weight:800;color:' + color + '">' + val + '</div><div style="font-size:11px;color:var(--text-2)">' + label + '</div></div>'
-    ).join('');
+    const here = stands.reduce((n, s) => n + s.here, 0), people = stands.reduce((n, s) => n + s.total, 0);
+    statsEl.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:8px">' + stands.length + ' stands · ' + here + ' of ' + people + ' checked in</div>';
   }
 
   const q = (document.getElementById('bc-search').value || '').toLowerCase().trim();
@@ -17622,7 +17608,7 @@ function renderBedCheck() {
       return s.workers.some(w => w.name.toLowerCase().indexOf(q) >= 0 || String(w.empId).indexOf(q) >= 0);
     });
   }
-  const statusFilter = state._bcStatusFilter || 'all';
+  const statusFilter = 'all';
   if (statusFilter !== 'all') {
     stands = stands.filter(s => {
       if (statusFilter === 'full') return s.total > 0 && s.here === s.total;
@@ -17650,6 +17636,16 @@ function renderBedCheck() {
   // employee stands keep the fuller action set (Move, Feedback) that was
   // already available one tap deeper in My Team.
   state._bcFlatWorkers = [];
+  if (state.mgrV10TeamMode === 'workers') {
+    const flat = [];
+    stands.forEach(s => (s.workers || []).filter(w => !w.isNpo).forEach(w => { w.stand = s.stand; flat.push(w); }));
+    flat.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    const qq = (document.getElementById('bc-search').value || '').toLowerCase().trim();
+    const list = qq ? flat.filter(w => w.name.toLowerCase().includes(qq) || String(w.empId).includes(qq) || w.stand.toLowerCase().includes(qq)) : flat;
+    c.innerHTML = noSchedBanner + '<div class="mgr-v10-section-label">👥 Workers · ' + list.length + '</div>' +
+      (list.map(w => { const idx = state._bcFlatWorkers.push(w) - 1; return bcBuildRowHtml(w, idx, false, true); }).join('') || '<div class="empty"><p>No workers match</p></div>');
+    return;
+  }
   const employeeHtml = bcRenderSection('emp', 'Employee Stands', '👥', npoOnly ? [] : stands, false);
   const npoHtml = bcRenderSection('npo', 'NPO Stands', '🤝', stands, true);
   c.innerHTML = (employeeHtml || npoHtml)
@@ -17669,6 +17665,12 @@ async function bcCheckIn(idx) {
     await sb('attendance', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({ employee_id: w.empId, worker_name: w.name, stand: w.stand, status:'working', notes: 'Checked in by ' + who.name }) });
     toast('✅ ' + w.name + ' checked in');
   } else { w.status = prevStatus; w.onBreak = prevBreak; renderBedCheck(); toast(res.error || 'Could not check in — try again', 'error'); }
+}
+async function bcCheckOut(idx) {
+  const w = state._bcFlatWorkers[idx]; if (!w) return;
+  state._mgrLiveWorkers = [{ empId: w.empId, name: w.name, stand: w.stand, hoursOverdue: null }];
+  await mgrClockOut(0);
+  loadMgrRoster();
 }
 async function bcMarkAbsent(idx) {
   const w = state._bcFlatWorkers[idx]; if (!w) return;
@@ -18512,6 +18514,25 @@ async function submitInventory() {
   
   if (entries.length === 0) return toast('Enter at least one count', 'error');
 
+  // Count In and Count Out must be COMPLETE: every item on the sheet needs a
+  // number typed in (type 0 if there is none). A blank box is not a zero.
+  // Add-on items are optional extras.
+  if (state.invPhase === 'Count In' || state.invPhase === 'Count Out') {
+    const reqField = state.invPhase === 'Count In' ? 'countIn' : 'countOut';
+    const missing = [];
+    (state.invItems || []).forEach(function(it, i) {
+      if (it.isAddon) return;
+      const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + i + '"][data-field="' + reqField + '"]');
+      if (inp) { inp.style.outline = ''; if (inp.value.trim() === '') { missing.push({it: it, inp: inp}); } }
+    });
+    if (missing.length) {
+      const search = document.getElementById('inv-search'); if (search && search.value) { search.value = ''; filterInvItems(''); }
+      missing.forEach(function(m) { m.inp.style.outline = '3px solid #DC2626'; });
+      try { missing[0].inp.scrollIntoView({behavior:'smooth', block:'center'}); missing[0].inp.focus(); } catch (e) {}
+      return toast(missing.length + ' item' + (missing.length === 1 ? '' : 's') + ' still blank — enter a number for every item (type 0 if none). First one: ' + missing[0].it.itemName, 'error', 9000);
+    }
+  }
+
   // adapter stores counts as an object keyed by item name
   const counts = {};
   entries.forEach(function(e){ counts[e.itemName] = e; });
@@ -19340,6 +19361,10 @@ async function chatRequest(kind) {
   const th = state._chatThread; if (!th) return;
   if (!th.people) th.people = await chatPeopleFor(th.stand).catch(()=>null);
   const input = document.getElementById('chat-input'), extra = String(input.value || '').trim();
+  // A request with no details is useless to the person who has to answer it:
+  // Refund / Complaint / Comp must say WHICH item and how much.
+  const NEEDS = {'Refund':'Item and amount? e.g. Hot dog $6','Customer complaint':'What happened? e.g. Cold food, wrong order','Comp / price':'Which item and what price? e.g. Pretzel — is it $7?'};
+  if (NEEDS[kind] && extra.length < 3) { input.placeholder = NEEDS[kind]; input.focus(); return toast('Type the item / price first, then tap ' + kind, 'error', 6000); }
   input.value = '';
   th.to = th.people && th.people.sup && th.people.sup.length ? 'sup' : 'mgr'; th._toTouched = true; chatRenderTo();
   chatSend('🙋 REQUEST · ' + kind + (extra ? ' — ' + extra : ''));
@@ -19485,7 +19510,7 @@ function chatRenderThread() {
   const me = chatMe(), lead = me.level === 'sup' || me.level === 'mgr';
   const all = th.rows.concat(th.pending);
   const nearBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 120);
-  const tm = r => r.created_at ? new Date(r.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : 'sending…';
+  const tm = r => r.created_at ? new Date(r.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) + ' MST' : 'sending…';
   let prev = null;
   const html = all.map(r => {
     const mine = String(r.sender_id) === me.id;
@@ -20086,6 +20111,9 @@ async function submitITIssue() {
   if (!state.itCategory) return toast('Pick an issue category', 'error');
   const details = document.getElementById('it-details').value.trim();
   if (!details) return toast('Add details about the issue', 'error');
+  if (/\b(food|hot ?dog|burger|pizza|nacho|pretzel|fries|stock|cases?|ice|cups?|lids?|napkins?|beer|water|soda|refund|cash)\b/i.test(details) && !/\b(pos|handheld|tablet|screen|menu board|tv|wifi|internet|printer|card|reader|network)\b/i.test(details)) {
+    if (!(await confirmAction('This looks like a FOOD / STOCK / other request, not a tech problem. IT cannot deliver food or stock.\n\nUse the Food or Stock request button instead. Send to IT anyway?', {title:'IT is for tech problems only', confirmLabel:'It is a tech problem — send', cancelLabel:'Go back'}))) return;
+  }
   const posNumEl = document.getElementById('it-pos-num');
   const posNum = (posNumEl && posNumEl.value.trim()) || '';
   if ((state.itCategory === 'POS Handheld' || state.itCategory === 'POS Tablet') && !posNum) {
@@ -20097,7 +20125,7 @@ async function submitITIssue() {
   // different unit/problem), rather than silently piling onto a queue
   // IT is already working.
   if (state._itHoldActive && !(state._itHoldOverrideReason||'').trim()) {
-    return toast('There\'s already an open ticket for this — explain why this is different, or check My IT Tickets instead of resubmitting', 'error', 7000);
+    return toast('There\'s already an open ticket for this — explain why this is different', 'error', 7000);
   }
   const overrideNote = state._itHoldActive ? ('[Second ticket — ' + state._itHoldOverrideReason.trim() + '] ') : '';
   const who = getRequesterIdentity();
@@ -22320,7 +22348,11 @@ async function openTransferStand(stand, source, transferId) {
 
   // Load item list from stand sheet for the datalist + force-stock suggestions
   const sheet = await api('getStandSheet', { stand }).catch(()=>({ok:false}));
-  const sheetItems = (sheet.ok && sheet.items) ? sheet.items.map(i=>i.itemName) : [];
+  // Force Restock / Quick Drop only offers CHARGEABLE items (the things a stand
+  // sells). Non-chargeable and supplies stay on the sheet for counts/downloads.
+  const onlyChargeable = isFieldForceStockSource(source) || source === 'qr';
+  const isChargeable = i => !/^(n|non|supp|false|no)/i.test(String(i.chargeable||'').trim());
+  const sheetItems = (sheet.ok && sheet.items) ? sheet.items.filter(i=>!onlyChargeable||isChargeable(i)).map(i=>i.itemName) : [];
   document.getElementById('ts-item-list').innerHTML = sheetItems.map(n=>'<option value="'+n.replace(/"/g,'&quot;')+'">').join('');
 
   // QR/self modes expose a real item menu; ordinary planned/request
