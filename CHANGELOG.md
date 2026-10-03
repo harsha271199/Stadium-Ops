@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-9
+- **Food Manager → Assign Runners uses the same 6 groups as the warehouse** (Inferno · West Concourse · Draft Houses · East Concourse · Upper West · Upper East). Orders from a stand go straight to the runner(s) of that group; runners see their group name at the top.
+- **Decline with a reply:** Food Manager can ✖ Decline an order with one tap reasons (Not available right now · Kitchen can't make it right now · Sold out · Duplicate order) or a typed reply. The stand gets an alert with the reason and sees it in red on the food form; the runner already assigned is told not to deliver. Stored in `kitchen_requests.declined_reason / declined_by`.
+- Delivered and declined orders leave the Food Manager's and runners' lists (the Food Manager can still open the "Delivered" count).
+- Removed old QA log files (`QA_PROGRESS.md`, `tests.json`) from the repo.
+
 ## 2026-10-03-fix-8
 - **Warehouse duplicates:** a person who had a temp walk-in account (…60000) and a real-ID account showed twice. Lists now show each person once (the roster / real-ID account wins); the three unused walk-in duplicates (Birhade, Vijayakumar, Chaudhari) were set inactive. The warehouse roster list also shows each person once.
 - **Food targets:** Normal 30 min, Urgent 15 min. A food order only counts as LATE 10 minutes after its target — until then it shows "due now". The Food Manager's late alert, red overdue labels and the managers' overdue counts all use the same 10-minute grace.

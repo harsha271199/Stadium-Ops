@@ -4364,7 +4364,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-8';
+const BUILD_TAG = '2026-10-03-fix-9';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -14949,9 +14949,12 @@ async function loadExistingKitchenRequestsForStand(stand){
   const rows=await kitchenFetchRequests().catch(()=>[]);
   const open=(rows||[]).filter(r=>r.stand===stand&&!['delivered','cancelled'].includes(r.status));
   state._existingOpenKitchenRequests=open;
+  // Orders the Food Manager declined in the last 2 hours, with their reply.
+  const declined=(rows||[]).filter(r=>r.stand===stand&&r.status==='cancelled'&&r.declined_reason&&Date.now()-new Date(r.updated_at||r.created_at||0).getTime()<2*3600000);
+  const declinedHtml=declined.length?'<div style="background:#FEE2E2;border:1px solid #FCA5A5;border-radius:10px;padding:10px 12px;margin-bottom:8px">'+declined.slice(0,3).map(r=>'<div style="font-size:13px;color:#991B1B;padding:2px 0"><b>❌ Declined:</b> '+kitchenItemsText(r)+'<br><span style="font-weight:700">“'+escapeHtml(r.declined_reason)+'”</span> <span style="font-size:11px;color:#7F1D1D">— '+escapeHtml(r.declined_by||'Food Manager')+'</span></div>').join('')+'</div>':'';
   const holdWrapEmpty=document.getElementById('kitchen-hold-override-wrap');
   if(!open.length){
-    el.innerHTML='';
+    el.innerHTML=declinedHtml;
     state._kitchenHoldActive=false;
     if(holdWrapEmpty){holdWrapEmpty.style.display='none';holdWrapEmpty.innerHTML='';}
     return;
@@ -14964,7 +14967,7 @@ async function loadExistingKitchenRequestsForStand(stand){
     const elapsed=mins<1?'just now':mins===1?'1 minute ago':mins+' minutes ago';
     return `<div style="padding:8px 0;border-top:1px solid rgba(0,0,0,0.08)"><b style="font-size:12px">${kitchenItemsText(r)}</b><br><span style="color:var(--text-2);font-size:11px">Sent ${elapsed} by ${escapeHtml(r.requested_by||'Someone')} · ${kitchenStatusLabel(r.status)}</span> ${kitchenEtaText(r)}</div>`;
   }).join('');
-  el.innerHTML=`<div class="notice warning" style="padding:12px 14px;font-size:12px"><b style="font-size:13px">✅ ${open.length} request${open.length===1?'':'s'} already went through — in the queue</b>${rowsHtml}<div style="margin-top:8px;font-weight:600">No need to send it again — a duplicate doesn't speed things up, and it makes it look to your manager like something's broken. If it's taking longer than expected, ask your Supervisor directly instead of resubmitting.</div></div>`;
+  el.innerHTML=declinedHtml+`<div class="notice warning" style="padding:12px 14px;font-size:12px"><b style="font-size:13px">✅ ${open.length} request${open.length===1?'':'s'} already went through — in the queue</b>${rowsHtml}<div style="margin-top:8px;font-weight:600">No need to send it again — a duplicate doesn't speed things up, and it makes it look to your manager like something's broken. If it's taking longer than expected, ask your Supervisor directly instead of resubmitting.</div></div>`;
   // Real 10-minute hold — a brand new food request for this stand while
   // the most recent one is still under 10 minutes old requires typing
   // why (genuinely different order), rather than the stand quietly
@@ -15083,10 +15086,8 @@ async function loadFoodCoverageForSession(){
   const mine=(rows||[]).find(x=>String(x.employee_id)===String(state.staffAccount.empId));
   state.foodCoverageStands=mine&&Array.isArray(mine.stands)?mine.stands.map(canonicalStandName2026):[];
   state.foodCoverageAreas=[];
-  try{
-    const areas=await coverageGetAreas('Mountain America Stadium');
-    state.foodCoverageAreas=areas.filter(a=>(a.stands||[]).some(s=>state.foodCoverageStands.includes(canonicalStandName2026(s)))).map(a=>a.area_name);
-  }catch(e){}
+  // Show the runner's group(s) by name — West Concourse, Upper East… — same groups as the warehouse.
+  { const lbl=whGroupLabelForStands(state.foodCoverageStands); if(lbl) state.foodCoverageAreas=lbl.split(' + '); }
   if(state.foodShowAll==null)state.foodShowAll=false;
   renderFoodCoverageBar();
 }
@@ -15299,6 +15300,7 @@ async function renderKitchenQueue(rows){
       ${r.note?'<div class="req-wh-msg">💬 '+escapeHtml(r.note)+'</div>':''}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><a href="#" onclick="document.getElementById('${rowId}').classList.toggle('open');return false" style="font-size:12px;font-weight:800;color:var(--asu-maroon)">${r.assigned_runner_id?'↔ Change runner':'👉 Pick a runner'}</a><span style="font-size:11px;color:var(--text-3)">by ${escapeHtml(r.requested_by||'stand')}</span></div>
       <div class="prem-move-row${r.assigned_runner_id?'':' open'}" id="${rowId}"><select class="form-input" onchange="kitchenAssignRunner('${r.id}',this.value,this.options[this.selectedIndex].text)" style="margin:6px 0 0;font-size:13px"><option value="">— No runner —</option>${opts}</select></div>
+      ${coord?`<div style="margin-top:8px;text-align:right"><button class="btn btn-ghost" style="width:auto;padding:6px 12px;margin:0;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="kitchenDeclineOpen('${r.id}')">✖ Decline</button></div>`:''}
     </div>`;
   };
   const doneRow=r=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);font-size:12px"><div><b>${escapeHtml(r.stand)}</b><div style="color:var(--text-2)">${kitchenItemsText(r)}</div></div><div style="text-align:right;white-space:nowrap;color:var(--text-2)">✅ ${escapeHtml(r.assigned_runner_name||'')}<br>${new Date(r.delivered_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</div></div>`;
@@ -15312,6 +15314,45 @@ async function renderKitchenQueue(rows){
   }
   const groups=[['🔴 No runner — pick one',r=>!r.assigned_runner_id],['⚠️ Slow — think about moving it',r=>stuck(r)],['⏳ Waiting for the runner',r=>isWaiting(r)&&!stuck(r)],['🏃 On the way',r=>r.status==='on_the_way']];
   el.innerHTML=groups.map(([title,fn])=>{const list=active.filter(fn);return list.length?'<div class="section-title" style="margin-top:12px">'+title+' · '+list.length+'</div>'+list.map(card).join(''):'';}).join('');
+}
+// ---- Food Manager: decline an order with a short reply to the stand ----
+const FOOD_DECLINE_REASONS=['Not available right now','Kitchen can\'t make it right now','Sold out','Duplicate order'];
+function kitchenDeclineOpen(id){
+  const rows=state._kitchenRowsCache||[];const r=rows.find(x=>String(x.id)===String(id));
+  const old=document.getElementById('food-decline-overlay');if(old)old.remove();
+  const ov=document.createElement('div');ov.id='food-decline-overlay';ov.className='contact-popup-overlay';
+  ov.innerHTML='<div class="contact-popup" style="max-width:440px">'+
+    '<div style="font-size:18px;font-weight:800">✖ Decline food order</div>'+
+    (r?'<div style="font-size:13px;color:var(--text-2);margin:4px 0 10px"><b>'+escapeHtml(r.stand)+'</b> · '+kitchenItemsText(r)+'</div>':'')+
+    '<div style="font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--text-2);margin-bottom:6px">REPLY TO THE STAND</div>'+
+    '<div id="food-decline-chips" style="display:flex;flex-wrap:wrap;gap:8px">'+FOOD_DECLINE_REASONS.map(t=>'<button class="chip" style="font-size:14px;padding:10px 12px" onclick="kitchenDeclinePick(this)">'+escapeHtml(t)+'</button>').join('')+'</div>'+
+    '<textarea class="form-input" id="food-decline-text" rows="2" placeholder="Or type a reply (e.g. Only 5 left — sending 5)" style="margin-top:10px"></textarea>'+
+    '<button class="btn btn-primary" style="margin-top:10px;min-height:52px;font-size:16px;background:#DC2626;border-color:#DC2626" onclick="kitchenDeclineSave(\''+String(id).replace(/'/g,'')+'\',this)">Send reply &amp; decline</button>'+
+    '<button class="btn btn-ghost" style="margin-top:6px" onclick="document.getElementById(\'food-decline-overlay\').remove()">Cancel</button></div>';
+  document.body.appendChild(ov);
+}
+function kitchenDeclinePick(btn){
+  document.querySelectorAll('#food-decline-chips .chip').forEach(c=>c.classList.toggle('selected',c===btn));
+  const t=document.getElementById('food-decline-text');if(t)t.value=btn.textContent;
+}
+async function kitchenDeclineSave(id,btn){
+  const reason=String((document.getElementById('food-decline-text')||{}).value||'').trim();
+  if(!reason)return toast('Pick a reply or type one','error');
+  const who=state.staffAccount||{};
+  await withLock(btn,'Sending…',async()=>{
+    const before=(state._kitchenRowsCache||[]).find(x=>String(x.id)===String(id))||{};
+    const r=await kitchenPatch(id,{status:'cancelled',declined_reason:reason,declined_by:who.name||'Food Manager',updated_at:new Date().toISOString()});
+    if(!r)return toast('Could not decline — try again','error');
+    const stand=r.stand||before.stand||'',items=String(r.items||before.items||'Food order').slice(0,60);
+    const ids=new Set();
+    if(r.requested_by_id)ids.add(String(r.requested_by_id));
+    ids.forEach(x=>sendPushTo(x,'❌ Food order declined · '+stand,reason+' — '+items));
+    if(stand)notifyStandPeople(stand,'❌ Food order declined · '+stand,reason+' — '+items);
+    if(before.assigned_runner_id)sendPushTo(String(before.assigned_runner_id),'❌ Food order cancelled · '+stand,'No need to deliver — '+reason);
+    const ov=document.getElementById('food-decline-overlay');if(ov)ov.remove();
+    toast('Declined — '+stand+' was told: '+reason);
+    loadKitchenConsole();
+  });
 }
 function foodSetFilter(k){state._foodFilter=(state._foodFilter===k?'all':k);loadKitchenConsole();}
 async function kitchenClaimForRunner(id,a){
@@ -15410,9 +15451,9 @@ async function renderKitchenAssignments(){
   _foodMgrCovPeople=await kitchenGetRunners();
   if(!_foodMgrCovPeople.length){el.innerHTML='<div class="notice">No Food Runner accounts yet. Add them in Admin → Access Center first.</div>';return;}
   _foodMgrCovAreas=await coverageGetAreas('Mountain America Stadium');
-  const sr=await sb('stands?select=stand_name&order=stand_name.asc').catch(()=>({_err:true}));
-  const names=new Set();
-  if(Array.isArray(sr))sr.forEach(x=>{if(x.stand_name)names.add(canonicalStandName2026(x.stand_name));});
+  const sr=await sb('stands?select=stand_name,venue&order=stand_name.asc').catch(()=>({_err:true}));
+  const names=new Set();state._foodOtherVenue=new Set();
+  if(Array.isArray(sr))sr.forEach(x=>{if(x.stand_name){const n=canonicalStandName2026(x.stand_name);names.add(n);if(x.venue&&!/^Mountain America/i.test(x.venue))state._foodOtherVenue.add(n);}});
   _foodMgrCovAreas.forEach(a=>(a.stands||[]).forEach(s=>names.add(canonicalStandName2026(s))));
   _foodMgrCovAllStands=[...names].sort((x,y)=>x.localeCompare(y,undefined,{numeric:true}));
   // Like warehouse coverage: give each runner their stands once; every order
@@ -15422,7 +15463,7 @@ async function renderKitchenAssignments(){
     '<div class="card" id="fm-cov-editor" style="padding:12px">'+
     '<label class="form-label" style="margin-top:0">Runner</label><select class="form-input" id="fm-cov-person" onchange="foodManagerCoveragePersonChanged()"><option value="">— Pick a runner —</option>'+_foodMgrCovPeople.map(r=>'<option value="'+escapeAttr(r.employee_id)+'">'+escapeHtml(r.name)+'</option>').join('')+'</select>'+
     '<div id="fm-cov-body" style="display:none">'+
-    '<label class="form-label">Whole areas</label><div class="coverage-area-chips" id="fm-cov-areas" style="margin-top:4px"></div>'+
+    '<label class="form-label">Groups (tap one or more)</label><div class="coverage-area-chips" id="fm-cov-areas" style="margin-top:4px"></div>'+
     '<label class="form-label">Stands <span id="fm-cov-count" style="font-weight:700"></span></label>'+
     '<input class="form-input" id="fm-cov-filter" placeholder="Find a stand — name or number" oninput="foodManagerCoverageRenderStands()" style="margin-bottom:6px">'+
     '<div class="coverage-area-chips" id="fm-cov-stands" style="max-height:230px;overflow:auto"></div>'+
@@ -15432,13 +15473,20 @@ async function renderKitchenAssignments(){
   _foodMgrCovStands=new Set();foodManagerCoverageRender();await foodManagerCoverageCurrent();
 }
 function foodManagerCoverageRender(){foodManagerCoverageRenderAreas();foodManagerCoverageRenderStands();}
+// Same 6 groups as the warehouse (Inferno, West Concourse, Draft Houses, East Concourse, Upper West, Upper East).
+function foodGroupStands(g){const other=state._foodOtherVenue||new Set();return _foodMgrCovAllStands.filter(n=>!other.has(n)&&g.test(n));}
 function foodManagerCoverageRenderAreas(){
   const el=document.getElementById('fm-cov-areas');if(!el)return;
-  el.innerHTML=_foodMgrCovAreas.map(a=>{
-    const st=(a.stands||[]).map(canonicalStandName2026);
+  el.innerHTML=WH_GROUPS.map(g=>{
+    const st=foodGroupStands(g);
     const full=st.length&&st.every(s=>_foodMgrCovStands.has(s));
-    return '<button class="coverage-area-chip '+(full?'selected':'')+'" onclick="foodManagerCoverageToggle(\''+escapeAttr(a.area_key)+'\')">'+escapeHtml(a.area_name)+'</button>';
+    return '<button class="coverage-area-chip '+(full?'selected':'')+'" onclick="foodManagerCoverageToggleGroup(\''+g.key+'\')">'+escapeHtml(g.name)+'</button>';
   }).join('');
+}
+function foodManagerCoverageToggleGroup(k){
+  const g=WH_GROUPS.find(x=>x.key===k);if(!g)return;const st=foodGroupStands(g);
+  if(st.every(s=>_foodMgrCovStands.has(s)))st.forEach(s=>_foodMgrCovStands.delete(s));else st.forEach(s=>_foodMgrCovStands.add(s));
+  foodManagerCoverageRender();
 }
 function foodManagerCoverageRenderStands(){
   const el=document.getElementById('fm-cov-stands');if(!el)return;
@@ -15494,7 +15542,7 @@ async function foodManagerCoverageCurrent(){
   const people=_foodMgrCovPeople.length?_foodMgrCovPeople:rows.map(r=>({employee_id:r.employee_id,name:r.name}));
   const summary=r=>{
     const canon=(r&&r.stands||[]).map(canonicalStandName2026),cs=new Set(canon),used=new Set();
-    const names=ar.filter(a=>{const st=(a.stands||[]).map(canonicalStandName2026);const full=st.length&&st.every(x=>cs.has(x));if(full)st.forEach(x=>used.add(x));return full;}).map(a=>a.area_name);
+    const names=WH_GROUPS.filter(g=>{const st=foodGroupStands(g);const full=st.length&&st.every(x=>cs.has(x));if(full)st.forEach(x=>used.add(x));return full;}).map(g=>g.name);
     const extra=canon.filter(x=>!used.has(x));
     return names.concat(extra.length?[extra.length>6?extra.length+' stands':extra.join(', ')]:[]).join(' · ');
   };
