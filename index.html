@@ -3330,6 +3330,13 @@
         <div id="adm-roster-upload-status" style="font-size:12px;margin-top:8px"></div>
       </div>
 
+      <div class="card" id="adm-wh-crew-card" style="display:none;margin-top:12px;padding:14px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">🏭 Warehouse walk-in &amp; check-in</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Add a walk-in or a new hire to today's warehouse crew, and check people in or out. They sign in with ID <b>60000</b> + their last name.</div>
+        <button class="btn btn-primary" id="adm-wh-crew-btn" onclick="admWhCrewToggle()">Open warehouse crew</button>
+        <div id="adm-wh-crew" style="margin-top:10px"></div>
+      </div>
+
       <div class="card" style="margin-top:12px;padding:14px">
         <div style="font-weight:700;font-size:14px;margin-bottom:4px">📦 Upload inventory (Yellow Dog CSV)</div>
         <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Columns needed: Stand, Item Name, Unit, Pack, Exp Start. Extra columns are OK.</div>
@@ -3935,6 +3942,7 @@
     <div class="page-header" id="wh-mgr-backbar" style="display:none;position:static;margin:0 0 14px;padding:0 0 10px;background:transparent">
       <div class="back-btn" role="button" tabindex="0" aria-label="Back to menu" onclick="whMgrBackToMenu()">←</div>
       <div><div class="page-title" id="wh-mgr-backbar-title">Menu</div></div>
+      <button class="btn btn-ghost" id="wh-mgr-tools-btn" style="display:none;width:auto;margin:0 0 0 auto;padding:10px 14px;font-weight:800" onclick="whMgrBackToMenu()">🛠️ Manager tools <span class="badge-count" id="wh-mgr-tools-count" style="display:none">0</span></button>
     </div>
 
     <div id="wh-panes-wrap">
@@ -3954,8 +3962,8 @@
            list + one main action), so this is a plain secondary button,
            not a tile — same weight as Quick Drop above it. -->
 
+      <div class="wh-emp-actions" style="margin:0 0 12px"><button onclick="whScanToOpen()">📷 Quick Drop</button><button id="wh-emp-cart-btn" onclick="goGolfCart()"><svg width="18" height="16"><use href="#gc-icon"/></svg> Golf Cart</button></div>
       <div id="wh-todeliver-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
-      <div class="wh-emp-actions"><button onclick="whScanToOpen()">📷 Quick Drop</button><button id="wh-emp-cart-btn" onclick="goGolfCart()"><svg width="18" height="16"><use href="#gc-icon"/></svg> Golf Cart</button></div>
     </div>
 
     <!-- MODE 0: TRANSFERS (assigned deliveries) -->
@@ -4364,7 +4372,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-11';
+const BUILD_TAG = '2026-10-03-fix-12';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5261,7 +5269,7 @@ async function api(action, data) {
       // worker Stand-Lead-level tools at that stand; OFF never blocks the
       // worker's ordinary scheduled login.
       let finalRole = mapRole(match.role);
-      const standName = match.location || match.event_name;
+      let standName = match.location || match.event_name;
       let leadAccessGranted = false;
       if (standName) {
         const standRow = await sb('stands?stand_name=eq.'+encodeURIComponent(standName)+'&select=lead_access_for_all,is_main_stand').catch(()=>({_err:true}));
@@ -5290,7 +5298,11 @@ async function api(action, data) {
         if(!access._err&&Array.isArray(access)&&access[0])accessRow=access[0];
       }
       if(accessRow&&Array.isArray(accessRow.stands)){
-        if(finalRole==='lead'&&accessRow.access_level==='supervisor_limited')supervisorStands=accessRow.stands.slice();
+        if((finalRole==='lead'||finalRole==='supervisor')&&accessRow.access_level==='supervisor_limited'&&accessRow.stands.length){
+          // A supervisor limited to an area works like a Stand Lead who can pick any stand in that area.
+          supervisorStands=accessRow.stands.slice();finalRole='lead';
+          if(!supervisorStands.includes(standName))standName=supervisorStands[0];
+        }
         if(finalRole==='worker'&&accessRow.access_level==='stand_lead_temp'&&accessRow.stands.includes(standName)){
           finalRole='lead';leadAccessGranted=true;tempLeadAccess=true;
         }
@@ -7357,6 +7369,8 @@ async function staffLogout() {
   state._myWhZoneStands = undefined;
   state.whZoneMode = null;
   state._todeliverDefaulted = false;
+  state._whLeadDefaulted = false;
+  state._whLeaderPane = undefined;
   state._whRequestMode = false;
   _kitchenMonitorReturn = '';
   showScreen('screen-login');
@@ -11908,7 +11922,13 @@ function whMgrOpenPane(mode) {
   if (panesWrap) panesWrap.style.display = 'block';
   if (backbar) backbar.style.display = 'flex';
   const strip = document.getElementById('wh-live-strip'); if (strip) strip.style.display = 'none';
-  if (backbarTitle) backbarTitle.textContent = WH_MGR_PANE_TITLES[mode] || 'Menu';
+  if (backbarTitle) backbarTitle.textContent = mode === 'todeliver' ? '📦 My Jobs' : (WH_MGR_PANE_TITLES[mode] || 'Menu');
+  // My Jobs is the leader's home (same list every warehouse person sees);
+  // everything else lives behind one "Manager tools" button.
+  const onHome = mode === 'todeliver';
+  const arrow = backbar && backbar.querySelector('.back-btn'); if (arrow) arrow.style.display = onHome ? 'none' : '';
+  const toolsBtn = document.getElementById('wh-mgr-tools-btn'); if (toolsBtn) toolsBtn.style.display = onHome ? '' : 'none';
+  state._whLeaderPane = mode;
   // Always switch the pane, even if no hidden tab element exists for this
   // mode — that dependency is exactly what left the wrong pane's content
   // showing under the right title twice (My Team, then Golf Cart).
@@ -11921,6 +11941,7 @@ function whMgrBackToMenu() {
   if (tilesSlot) tilesSlot.style.display = '';
   if (panesWrap) panesWrap.style.display = 'none';
   if (backbar) backbar.style.display = 'none';
+  state._whLeaderPane = 'menu';
   whRenderLiveStrip();
   loadWhTransfers();
 }
@@ -16449,7 +16470,9 @@ function sendPushTo(userId, title, body) {
 async function renderPushSwitch() {
   const el = document.getElementById('mgr-push-switch'); if (!el) return;
   const admin = !!(state.staffAccount && state.staffAccount.role === 'admin');
-  el.style.display = admin ? '' : 'none'; if (!admin) return;
+  el.style.display = admin ? '' : 'none';
+  { const c = document.getElementById('adm-wh-crew-card'); if (c) c.style.display = admin ? '' : 'none'; }
+  if (!admin) return;
   const st = await pushSettings(true);
   el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;border:2px solid ' + (st.v ? '#00A651' : '#DC2626') + ';background:var(--bg-card)">' +
     '<div><div style="font-weight:800;font-size:14px">🔔 Staff notifications: ' + (st.v ? '<span style="color:#00A651">ON (live)</span>' : '<span style="color:#DC2626">OFF (testing)</span>') + '</div>' +
@@ -20749,9 +20772,9 @@ function renderWarehouseForRole() {
   tilesSlot.innerHTML =
     '<div class="wh-big">' +
       '<div class="wh-big-card" id="wh-tile-approvals" onclick="showScreen(\'screen-wh-approvals\')"><div class="ic">✅</div><div><div class="lbl tile-label">Approvals</div><div class="tile-sub" id="wh-tile-approvals-sub">Loading…</div></div></div>' +
-      '<div class="wh-big-card" id="wh-tile-deliveries" onclick="whMgrOpenPane(\'todeliver\')"><div class="ic">📦</div><div><div class="lbl tile-label">Deliveries</div><div class="tile-sub" id="wh-sup-tile-deliveries-sub">Stands waiting</div></div></div>' +
+      '<div class="wh-big-card" id="wh-tile-deliveries" onclick="whMgrOpenPane(\'todeliver\')"><div class="ic">📦</div><div><div class="lbl tile-label">← My Jobs</div><div class="tile-sub" id="wh-sup-tile-deliveries-sub">Stands waiting</div></div></div>' +
     '</div>' +
-    '<div class="wh-tools-title">TOOLS</div>' +
+    '<div class="wh-tools-title">🛠️ MANAGER TOOLS</div>' +
     '<div class="wh-tools">' +
       tool("showScreen('screen-wh-create-transfer')", '🚚', 'Create Transfer') +
       tool("whMgrOpenPane('transfers')", '✍️', 'All Transfers', '', 'wh-sup-tile-transfers-sub') +
@@ -20767,6 +20790,8 @@ function renderWarehouseForRole() {
   whBuildInventoryPane();
   whBuildCartPane();
   whBuildRosterPane();
+  // Leaders come back to where they were — My Jobs unless they opened Manager tools.
+  if (state._whLeaderPane !== 'menu') whMgrOpenPane(state._whLeaderPane || 'todeliver');
 }
 // Was "Stock Report" (warehouse counts) with Stand Transfer Report tacked
 // on below it — dropped the counts half entirely (confirmed nobody
@@ -20837,13 +20862,14 @@ function whBuildCartPane() {
 // ONLY to warehouse staff for that date — never the full building roster.
 // Same "leader checks their own people in, not self-report" pattern
 // already established by My Team/Team Control.
-function whBuildRosterPane() {
-  const el = document.getElementById('wh-mode-roster');
+function whBuildRosterPane(targetId) {
+  const el = document.getElementById(targetId || 'wh-mode-roster');
   if (!el) return;
+  if (!targetId) { const adm = document.getElementById('adm-wh-crew'); if (adm && adm.innerHTML) { adm.innerHTML = ''; const b = document.getElementById('adm-wh-crew-btn'); if (b) b.textContent = 'Open warehouse crew'; } }
   // Real change, per direct request: uploading the roster is a Manager
   // (and Admin, from its own screen) job — Supervisor gets the check-in
   // list only, no upload card.
-  const isRealMgr = state.staffAccount && ['warehouse_manager','warehouse_supervisor'].includes(state.staffAccount.role);
+  const isRealMgr = isWhRosterLeader();
   el.innerHTML =
     '<div style="max-width:520px">' +
       (isRealMgr ?
@@ -20876,6 +20902,11 @@ function whBuildRosterPane() {
           '<div style="font-size:11px;color:var(--text-2);margin-bottom:8px">For walk-ins who work warehouse / runner today. Search the name, tap the person, and they can sign in with ID <b>60000</b> + their last name.</div>' +
           '<input class="form-input" type="text" id="wh-temp-search" placeholder="Search name or employee ID…" oninput="whTempSearch(this.value)" style="margin:0 0 6px">' +
           '<div id="wh-temp-results"></div>' +
+          '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;font-weight:800;padding:6px 0">🆕 New hire not in the list?</summary>' +
+            '<input class="form-input" type="text" inputmode="numeric" id="wh-new-id" placeholder="Employee ID (numbers)" style="margin:6px 0">' +
+            '<div style="display:flex;gap:6px"><input class="form-input" type="text" id="wh-new-last" placeholder="Last name" style="margin:0;flex:1"><input class="form-input" type="text" id="wh-new-first" placeholder="First name" style="margin:0;flex:1"></div>' +
+            '<button class="btn btn-primary" onclick="whNewHireAdd()" style="margin-top:8px">Add new hire to today →</button>' +
+          '</details>' +
         '</div>'
         : ''
       ) +
@@ -20913,11 +20944,22 @@ function whTempSearch(term) {
   }, 300);
 }
 async function whTempAdd(i) {
-  const role = state.staffAccount && state.staffAccount.role;
-  if (!['warehouse_manager', 'warehouse_supervisor'].includes(role)) return toast('Not authorized', 'error');
   const p = _whTempHits[i];
   if (!p) return;
-  const empId = String(p.employee_id), name = p.full_name;
+  return whTempAddPerson(String(p.employee_id), p.full_name);
+}
+// New hire who is not in the employee list yet: type the ID and name.
+async function whNewHireAdd() {
+  const v = id => String((document.getElementById(id) || { value: '' }).value || '').trim();
+  const empId = v('wh-new-id').replace(/\D/g, ''), last = v('wh-new-last'), first = v('wh-new-first');
+  if (empId.length < 5) return toast('Enter the employee ID (at least 5 digits)', 'error');
+  if (!last || !first) return toast('Enter first and last name', 'error');
+  const name = last.replace(/,/g, '') + ', ' + first.replace(/,/g, '');
+  const done = await whTempAddPerson(empId, name);
+  if (done) ['wh-new-id', 'wh-new-last', 'wh-new-first'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+}
+async function whTempAddPerson(empId, name) {
+  if (!isWhRosterLeader()) return toast('Not authorized', 'error');
   const ok = await confirmAction('Add ' + whDisp(name) + ' (ID ' + empId + ') as a warehouse worker for today?\n\nThey sign in with 60000 + last name.', { title: 'Add temp worker', confirmLabel: 'Add' });
   if (!ok) return;
   const box = document.getElementById('wh-temp-results');
@@ -20941,6 +20983,7 @@ async function whTempAdd(i) {
   if (box) box.innerHTML = '';
   const se = document.getElementById('wh-temp-search'); if (se) se.value = '';
   loadWhRoster();
+  return true;
 }
 async function adminUploadWarehouseRoster(prefix) {
   // Real change, per direct request: upload is Manager/Admin only —
@@ -21031,7 +21074,7 @@ async function loadWhRoster() {
   // Supervisor's roster is always TODAY, re-read every time — the date used
   // to be fixed when the pane was built, so a phone left open overnight kept
   // showing yesterday. Manager keeps the picker.
-  const isMgrView = state.staffAccount && ['warehouse_manager','warehouse_supervisor'].includes(state.staffAccount.role);
+  const isMgrView = isWhRosterLeader();
   const date = isMgrView ? ((dateEl && dateEl.value) || localISODate()) : localISODate();
   if (dateEl && (!dateEl.value || !isMgrView)) dateEl.value = date;
   const list = document.getElementById('wh-roster-list');
@@ -21117,7 +21160,17 @@ function renderWhRosterList() {
 }
 
 function isWhRosterLeader() {
-  return !!(state.staffAccount && ['warehouse_manager', 'warehouse_supervisor'].includes(state.staffAccount.role));
+  return !!(state.staffAccount && ['warehouse_manager', 'warehouse_supervisor', 'admin'].includes(state.staffAccount.role));
+}
+// Admin: same walk-in + check-in tools as the warehouse leaders, inside the Admin screen.
+function admWhCrewToggle() {
+  if (!(state.staffAccount && state.staffAccount.role === 'admin')) return toast('Admin only', 'error');
+  const box = document.getElementById('adm-wh-crew'), btn = document.getElementById('adm-wh-crew-btn');
+  if (!box) return;
+  if (box.innerHTML) { box.innerHTML = ''; if (btn) btn.textContent = 'Open warehouse crew'; return; }
+  const whPane = document.getElementById('wh-mode-roster'); if (whPane) whPane.innerHTML = ''; // one copy of the list on the page
+  whBuildRosterPane('adm-wh-crew');
+  if (btn) btn.textContent = 'Close warehouse crew';
 }
 async function whRosterCheckIn(idx) {
   if (!isWhRosterLeader()) return toast('Not authorized', 'error');
@@ -21890,9 +21943,9 @@ async function loadWarehouse() {
       loadWhToDeliver();
     }
   }
-  if (isWhSupervisor && requestsTab && !state._whSupDefaulted) {
-    state._whSupDefaulted = true;
-    whMode(requestsTab, 'requests');
+  if (!isEmployee && !state._whLeadDefaulted) {
+    state._whLeadDefaulted = true;
+    whMgrOpenPane('todeliver');
   }
 }
 
@@ -21965,10 +22018,12 @@ async function loadWhToDeliver() {
   const myId = state.staffAccount && state.staffAccount.empId;
   const myName = state.whName || (state.staffAccount && state.staffAccount.name) || '';
   const role = (state.staffAccount && state.staffAccount.role) || 'warehouse_employee';
+  // Leaders' My Jobs is the same personal list as everyone else; the full picture is in Manager tools.
+  const personalList = ['warehouse_employee','warehouse_supervisor','warehouse_manager'].includes(role);
   const transferRows = await whOpenTransfers();
   const deliveryWork = t => t.status === 'pending' || t.status === 'delivering';
   const transfers = (!transferRows._err && Array.isArray(transferRows))
-    ? (role === 'warehouse_employee'
+    ? (personalList
         ? transferRows.filter(t => deliveryWork(t) && (t.assigned_to_id === myId || t.delivered_by === myName || !t.assigned_to_id))
         : transferRows.filter(deliveryWork))
     : [];
@@ -21977,7 +22032,7 @@ async function loadWhToDeliver() {
   // another person claims a request it disappears from everyone else's
   // personal delivery list instead of looking like two people should do it.
   const requests = (state.wRequests || []).filter(r => {
-    if (role !== 'warehouse_employee') return r.status === 'Pending' || r.status === 'On the way';
+    if (!personalList) return r.status === 'Pending' || r.status === 'On the way';
     const routed=r.assignedToIds||[];
     const routedToMe=routed.length ? routed.includes(String(myId)) : null;
     const coveredByMe=state._myWhZoneStands&&state._myWhZoneStands.length ? state._myWhZoneStands.includes(r.stand) : null;
@@ -22430,6 +22485,11 @@ function whRenderLiveStrip() {
   const role = (state.staffAccount && state.staffAccount.role) || '';
   const tilesSlot = document.getElementById('wh-mgr-tiles-slot');
   const onMenu = tilesSlot && tilesSlot.style.display !== 'none';
+  { // red count on the "Manager tools" button while deliveries wait for sign-off
+    const c = state._whTfCache; const t = (c && Array.isArray(c.rows)) ? c.rows : [];
+    const n = t.filter(x => x.status === 'delivered' || x.status === 'verified').length;
+    const b = document.getElementById('wh-mgr-tools-count'); if (b) { b.textContent = n; b.style.display = n ? '' : 'none'; }
+  }
   if (!['warehouse_manager','warehouse_supervisor'].includes(role) || !onMenu) { el.style.display = 'none'; return; }
   const reqs = state.wRequests || [];
   const c = state._whTfCache; const tfs = (c && Array.isArray(c.rows)) ? c.rows : [];
@@ -24308,7 +24368,10 @@ function handleAppBack() {
   // tile menu, not fall through to the "Exit app?" prompt below.
   if (cur === 'screen-warehouse') {
     const backbar = document.getElementById('wh-mgr-backbar');
+    const leader = state.staffAccount && ['warehouse_manager','warehouse_supervisor'].includes(state.staffAccount.role);
+    if (leader && state._whLeaderPane === 'todeliver') return; // My Jobs is home
     if (backbar && backbar.style.display !== 'none') { whMgrBackToMenu(); return; }
+    if (leader && state._whLeaderPane === 'menu') { whMgrOpenPane('todeliver'); return; }
   }
 
   // screen-transfer-stand (force-stock) is reachable two genuinely

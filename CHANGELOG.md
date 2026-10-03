@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-12
+- Supervisor limited to an area (staff_stand_access `supervisor_limited`) now works for scheduled Supervisors too: Stand Lead tools + a picker of only those stands. Kijana Gaines → North concourse (215–221) for 10/3.
+- Warehouse Manager/Supervisor land on **My Jobs** (same list as every warehouse person, Quick Drop on top); everything else is behind one **🛠️ Manager tools** button (red count when deliveries wait for sign-off). Phone back: Manager tools → My Jobs.
+- Quick Drop moved to the top of the job list for everyone.
+- Admin: **🏭 Warehouse walk-in & check-in** card — add walk-ins or new hires (ID + name, even if not in the employee list) and check the crew in/out. New hires sign in with 60000 + last name.
+
 ## 2026-10-03-fix-11
 - Premium Managers can sign in with the last 5 of their ID + last name (same as Managers). Nestor Hernandez added as Premium Manager under his real ID 20532480.
 
