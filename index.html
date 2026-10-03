@@ -4366,7 +4366,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-03-fix-5';
+const BUILD_TAG = '2026-10-03-fix-6';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5186,7 +5186,8 @@ async function api(action, data) {
         if(!acct && secret && !/^\d{4}$/.test(secret)){
           const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
           const entered=norm(secret);
-          const lastNameRows=staffRows.filter(r=>['manager','support_manager','food_manager','food_runner'].includes(r.role));
+          // Warehouse runners / temp walk-ins (pin 60000) may also use their own last 5 + last name.
+          const lastNameRows=staffRows.filter(r=>['manager','support_manager','food_manager','food_runner'].includes(r.role)||(r.role==='warehouse_employee'&&String(r.pin||'')==='60000'));
           const pick=loginPickByName(lastNameRows,secret,r=>r.name,r=>r.employee_id);
           if(pick.people===1)acct=pick.rows[0];
           else if(pick.people>1){
@@ -5674,7 +5675,8 @@ async function api(action, data) {
         sb('food_safety_logs?log_date=eq.'+today+'&select=stand,submitted_by,created_at,sanitizer_data,units_data,cooking_data,holding_data')
       ]);
       if (sched._err) return {ok:false,error:'Network'};
-      let stands = [...new Set(sched.map(s => s.location || s.event_name))];
+      // Runner groups (Concession / Warehouse / Kitchen Runner) are people, not stands.
+      let stands = [...new Set(sched.map(s => s.location || s.event_name))].filter(st => !/\brunner\b/i.test(String(st||'')));
       // Stands run by an active NPO group are staffed too (no daily schedule), so they belong in the overview.
       if (!data.stand) {
         const npoG = await sb('npo_groups?is_active=eq.true&select=stand').catch(()=>({_err:true}));
@@ -5880,7 +5882,8 @@ async function api(action, data) {
       // specifically so a Stand Lead can see everyone assigned today
       // before they arrive — this brings the overview in line with that
       // same, now-established decision, so both screens agree.
-      const schedFiltered = sched;
+      // Warehouse Runners are managed by the warehouse team, not a concession stand.
+      const schedFiltered = sched.filter(r => r.location !== 'Warehouse Runner');
       // Same dedup already proven necessary in My Team — ReadyOn schedule
       // imports can occasionally list the same person twice for one
       // stand. Without this, this overview's count could be inflated
@@ -8078,7 +8081,7 @@ async function confirmLeave() {
     }
     if (miss.length) {
       const who = lockMode === 'last' ? 'You are the last one working here, so you' : 'Stand Leads';
-      const go = await confirmAction(stand + ' still needs: ' + miss.join(' and ') + '.\n\n' + who + ' must finish inventory before leaving the stand. If you cannot (sick, emergency), ask your Supervisor or Manager to clock you out.', {title:'Finish inventory first', confirmLabel:'Open ' + miss[0]});
+      const go = await confirmAction(stand + ' still needs: ' + miss.join(' and ') + '.\n\n' + who + ' must finish inventory before leaving the stand — every item needs a count. In an emergency, your Supervisor or Manager can finish the count for you, then check you out.', {title:'Finish inventory first', confirmLabel:'Open ' + miss[0]});
       if (go) invOpenPhase(stand, miss[0]);
       return;
     }
@@ -8091,8 +8094,8 @@ async function confirmLeave() {
 // Pay clock-out happens on the Kronos clock; this app's "Leave stand" is the
 // "done at my stand" step, so it is locked for leads until the stand's Count
 // In and Count Out are both submitted today. Stands with no stand sheet (no
-// inventory to count) are never locked. Supervisors/Managers can still clock
-// a lead out — that is logged as an inventory override.
+// inventory to count) are never locked. There is no override: Supervisors and
+// Managers must finish the count before they can check a lead out.
 // 'lead' = always locked (scheduled Stand Lead, NPO Lead).
 // 'last' = locked only for the last person still working at the stand —
 //          stands run without a Stand Lead, where everyone scheduled gets
@@ -8107,8 +8110,8 @@ function invLockMode() {
 function invLockApplies() { return !!invLockMode(); }
 // Other people whose latest status at this stand today is working / on break.
 // null = could not check (treated as "you may be last").
-async function invOthersStillWorking(stand) {
-  const me = String(state.user && state.user.empId || '');
+async function invOthersStillWorking(stand, exceptId) {
+  const me = String(exceptId || (state.user && state.user.empId) || '');
   const days = [...new Set([localISODate(), stadiumDay()])].join(',');
   const rows = await sb('attendance?stand=eq.' + encodeURIComponent(stand) + '&entry_date=in.(' + days + ')&order=id.desc&select=employee_id,status').catch(()=>({_err:true}));
   if (!Array.isArray(rows)) return null;
@@ -8154,22 +8157,46 @@ async function invWorkerIsLead(w, stand) {
   return !rows._err && Array.isArray(rows) && rows.some(r => /stand lead/i.test(String(r.role||'')));
 }
 // Called before a Supervisor/Manager/Lead clocks someone else out.
-// Returns '' (fine), an override note to append, or null (stop).
+// Returns '' (fine) or null (stop). There is NO override: a Stand Lead — or
+// the last person working at a stand with no Stand Lead — cannot be checked
+// out until Count In and Count Out are complete (every item counted).
+// Whoever is checking them out gets a button to open the missing count.
+async function standHasLeadToday(stand) {
+  const rows = await sb('schedule?is_test=neq.true&event_date=eq.' + stadiumDay() + '&location=eq.' + encodeURIComponent(stand) + '&role=ilike.*stand%20lead*&select=employee_id&limit=1').catch(()=>({_err:true}));
+  if (!Array.isArray(rows)) return true; // could not check — do not block regular workers on a network blip
+  if (rows.length) return true;
+  const g = await sb('npo_groups?is_active=eq.true&select=stand').catch(()=>({_err:true}));
+  const canon = canonicalStandName2026(stand);
+  return Array.isArray(g) && g.some(x => String(x.stand||'').split(',').some(t => canonicalStandName2026(t.trim()) === canon));
+}
 async function invClockOutGate(w, stand) {
-  if (!(await invWorkerIsLead(w, stand))) return '';
+  const isLead = await invWorkerIsLead(w, stand);
+  if (!isLead) {
+    if (await standHasLeadToday(stand)) return '';
+    const others = await invOthersStillWorking(stand, w.empId);
+    if (others && others.length) return ''; // not the last one here
+  }
   const miss = await invMissingPhases(stand);
-  if (!miss || !miss.length) return '';
-  const actorTier = getRequesterIdentity().tier;
-  const canOverride = isSupervisorSession() || isManagerOpsSession() || ['supervisor','support_manager','manager','admin'].includes(actorTier);
-  if (!canOverride) {
-    await confirmAction(stand + ' still needs ' + miss.join(' and ') + '. ' + w.name + ' is the Stand Lead and cannot be clocked out until inventory is done. Ask a Supervisor or Manager if this is an emergency.', {title:'Inventory not done', confirmLabel:'OK', hideCancel:true});
+  if (miss === null) {
+    await confirmAction('Could not check the inventory for ' + stand + ' — check the connection and try again.', {title:'Inventory check failed', hideCancel:true, confirmLabel:'OK'});
     return null;
   }
-  const ok = await confirmAction(w.name + ' is the Stand Lead and ' + stand + ' still needs ' + miss.join(' and ') + '.\n\nClock them out anyway? This is saved as an inventory override under your name.', {title:'Inventory not done', confirmLabel:'Override & clock out', danger:true});
-  return ok ? ' [INVENTORY OVERRIDE — missing ' + miss.join(' + ') + ']' : null;
+  if (!miss.length) return '';
+  const who = isLead ? w.name + ' is the Stand Lead' : w.name + ' is the last person working at this stand';
+  const go = await confirmAction(stand + ' still needs ' + miss.join(' and ') + '.\n\n' + who + ' and cannot be checked out until inventory is complete — every item needs a count.', {title:'Finish inventory first', confirmLabel:'Open ' + miss[0], cancelLabel:'Close'});
+  if (go) { state.standTaskReturnScreen = ''; invOpenPhase(stand, miss[0]); }
+  return null;
 }
 async function markLeft() {
-  if (invLockMode() === null) return toast('Ask your Stand Lead to check you out', 'error');
+  const lockMode = invLockMode();
+  if (lockMode === null) return toast('Ask your Stand Lead to check you out', 'error');
+  // Re-check inventory here too, so no path skips the lock.
+  const others = lockMode === 'last' ? await invOthersStillWorking(state.user.stand) : null;
+  if (lockMode === 'lead' || !(others && others.length)) {
+    const miss = await invMissingPhases(state.user.stand);
+    if (miss === null) return toast('Could not verify inventory — check your connection and try again', 'error', 8000);
+    if (miss.length) return toast('Finish ' + miss.join(' and ') + ' first — every item needs a count', 'error', 8000);
+  }
   await withLock(evtBtn(), 'Saving…', async () => {
     const res = await api('leftStand', { empId: state.user.empId, name: state.user.name, stand: state.user.stand });
     if (res.ok) { state.attendance = 'left'; localStorage.setItem('stadium_attend_'+state.user.empId, 'left'); localStorage.setItem('stadium_attend_date_'+state.user.empId, localISODate()); toast('🔴 Logged off'); renderWorkerActions(); }
@@ -12218,6 +12245,12 @@ async function mtCreateTransfer() {
     // gap flagged earlier: someone assigned a task with the app closed used
     // to have no way to find out until they happened to open it themselves.
     if (assignId) sendPushTo(assignId, '📦 New transfer assigned', stand + ' — ' + items.length + ' item' + (items.length===1?'':'s'));
+    else {
+      // Unassigned: alert only the warehouse people covering this stand (its group).
+      // Same lookup a stock request uses, so transfers and requests reach the same group.
+      const cov = await resolveWarehouseAssigneesForStand(stand).catch(() => null);
+      ((cov && cov.people) || []).forEach(p => { if (p.employee_id) sendPushTo(String(p.employee_id), '📦 New transfer · ' + stand, items.length + ' item' + (items.length===1?'':'s') + ' — open Warehouse to claim'); });
+    }
     toast('✅ Transfer created for ' + stand + (assignName ? ' — assigned to ' + assignName : ' — unassigned, self-serve claim'));
     document.getElementById('mt-stand').value = '';
     document.getElementById('mt-assign-to').value = '';
@@ -13247,7 +13280,7 @@ async function adminUploadSchedule() {
     if (!liveStands._err && Array.isArray(liveStands)) {
       liveStands.forEach(s => { if (s.stand_name) currentStandSet.add(canonicalStandName2026(s.stand_name)); });
     }
-    const allowedNonStandAreas = new Set(['Kitchen Runner']);
+    const allowedNonStandAreas = new Set(['Kitchen Runner','Concession Runner','Warehouse Runner']);
 
     const out = [];
     const invalidAreas = new Set();
@@ -16073,13 +16106,19 @@ async function warehouseCoverageInit(){const card=document.getElementById('wh-co
 // stands by stand number (no setup). A person's coverage is still stored as
 // plain stands, so request routing/"My Stands" work exactly as before.
 const WH_GROUPS=[
-  {key:'g1',name:'Group 1 · Gates & Inferno',test:n=>/^(SE Gate|SW Gate)/i.test(n)||[140,142].includes(parseInt(n,10))},
-  {key:'g2',name:'Group 2 · West 203–210',test:n=>{const k=parseInt(n,10);return k>=203&&k<=210;}},
-  {key:'g3',name:'Group 3 · West 211–221',test:n=>{const k=parseInt(n,10);return k>=211&&k<=221;}},
-  {key:'g4',name:'Group 4 · East 222–234',test:n=>{const k=parseInt(n,10);return k>=222&&k<=234;}},
-  {key:'g5',name:'Group 5 · 300s',test:n=>{const k=parseInt(n,10);return k>=300&&k<400;}},
-  {key:'g6',name:'Group 6 · 400s',test:n=>{const k=parseInt(n,10);return k>=400&&k<500;}}
+  // Stand number = the leading number of the stand name (e.g. "212P Beer Portable" = 212).
+  {key:'g1',name:'Group 1 · Inferno',short:'Inferno',test:n=>[140,142].includes(parseInt(n,10))},
+  {key:'g2',name:'Group 2 · West Concourse',short:'West Concourse',test:n=>{const k=parseInt(n,10);return k>=203&&k<=214;}},
+  {key:'g3',name:'Group 3 · Draft Houses 215–221',short:'Draft Houses',test:n=>{const k=parseInt(n,10);return k>=215&&k<=221;}},
+  {key:'g4',name:'Group 4 · East Concourse',short:'East Concourse',test:n=>{const k=parseInt(n,10);return k>=222&&k<=234;}},
+  {key:'g5',name:'Group 5 · Upper West',short:'Upper West',test:n=>{const k=parseInt(n,10);return (k>=300&&k<330)||(k>=401&&k<=414);}},
+  {key:'g6',name:'Group 6 · Upper East',short:'Upper East',test:n=>{const k=parseInt(n,10);return (k>=330&&k<400)||(k>=415&&k<500);}}
 ];
+// Which group(s) a list of stands belongs to — used to label warehouse people.
+function whGroupLabelForStands(stands){
+  const hit=WH_GROUPS.filter(g=>(stands||[]).some(n=>g.test(String(n||''))));
+  return hit.map(g=>g.short).join(' + ');
+}
 function whGroupStands(g){return (_whCovStandsList||[]).filter(n=>(_whCovStandVenue[n]||'Mountain America Stadium')==='Mountain America Stadium'&&g.test(n));}
 function whGroupCovered(g,stands){const gs=whGroupStands(g);if(!gs.length)return false;const set=new Set(stands||[]);return gs.every(x=>set.has(x));}
 function whGroupPeopleCount(g,exceptEmp){return _whCovRows.filter(r=>String(r.employee_id)!==String(exceptEmp||'')&&whGroupCovered(g,r.direct_stands)).length;}
@@ -18208,7 +18247,7 @@ function renderInvItems() {
     
     if (phase === 'Count In') {
       html += '<label style="font-size:11px;color:var(--text-2);display:block;margin-bottom:4px">Count In (your physical count)</label>';
-      html += '<input type="number" min="0" step="any" class="form-input" data-inv-idx="' + i + '" data-field="countIn" placeholder="0" inputmode="decimal" style="font-size:18px;font-weight:600">';
+      html += '<input type="number" min="0" step="any" class="form-input" data-inv-idx="' + i + '" data-field="countIn" placeholder="" inputmode="decimal" style="font-size:18px;font-weight:600">';
     } else if (phase === 'Transfer') {
       const ledgerQty = state._invLedgerTotals ? (state._invLedgerTotals[item.itemName] || 0) : 0;
       const outQty = state._invLedgerOutTotals ? (state._invLedgerOutTotals[item.itemName] || 0) : 0;
@@ -18223,7 +18262,7 @@ function renderInvItems() {
     } else if (phase === 'Count Out') {
       html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
       html += '<div><label style="font-size:11px;color:var(--text-2);display:block;margin-bottom:4px">Count Out (closing)</label>';
-      html += '<input type="number" min="0" step="any" class="form-input" data-inv-idx="' + i + '" data-field="countOut" placeholder="0" inputmode="decimal" style="font-size:18px;font-weight:600"></div>';
+      html += '<input type="number" min="0" step="any" class="form-input" data-inv-idx="' + i + '" data-field="countOut" placeholder="" inputmode="decimal" style="font-size:18px;font-weight:600"></div>';
       html += '<div><label style="font-size:11px;color:var(--text-2);display:block;margin-bottom:4px">Waste</label>';
       html += '<input type="number" min="0" step="any" class="form-input" data-inv-idx="' + i + '" data-field="waste" placeholder="0" inputmode="decimal"></div>';
       html += '</div>';
@@ -18640,13 +18679,13 @@ async function submitInventory() {
     (state.invItems || []).forEach(function(it, i) {
       if (it.isAddon) return;
       const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + i + '"][data-field="' + reqField + '"]');
-      if (inp) { inp.style.outline = ''; if (inp.value.trim() === '') { missing.push({it: it, inp: inp}); } }
+      if (inp) { inp.style.outline = ''; const v = inp.value.trim(); if (v === '' || isNaN(Number(v)) || Number(v) < 0) { missing.push({it: it, inp: inp}); } }
     });
     if (missing.length) {
       const search = document.getElementById('inv-search'); if (search && search.value) { search.value = ''; filterInvItems(''); }
       missing.forEach(function(m) { m.inp.style.outline = '3px solid #DC2626'; });
       try { missing[0].inp.scrollIntoView({behavior:'smooth', block:'center'}); missing[0].inp.focus(); } catch (e) {}
-      return toast(missing.length + ' item' + (missing.length === 1 ? '' : 's') + ' still blank — enter a number for every item (type 0 if none). First one: ' + missing[0].it.itemName, 'error', 9000);
+      return toast(missing.length + ' item' + (missing.length === 1 ? '' : 's') + ' still blank or not a valid number — type the real count for every item (type 0 only if there are none). First one: ' + missing[0].it.itemName, 'error', 9000);
     }
   }
 
@@ -19225,7 +19264,7 @@ function chatLevel() {
 function chatSide() { const l = chatLevel(); return !l ? null : (l === 'crew' || l === 'lead') ? 'stand' : 'leader'; }
 function chatMe() {
   const who = getRequesterIdentity(), u = state.user, lvl = chatLevel();
-  let role = lvl === 'whl' ? (state.staffAccount.role === 'warehouse_manager' ? 'Warehouse Manager' : 'Warehouse Supervisor') : (CHAT_LEVEL_LABEL[lvl] || '');
+  let role = lvl === 'whl' ? (state.staffAccount.role === 'warehouse_manager' ? 'Warehouse Manager' : 'Warehouse Supervisor') + (state._myWhGroupLabel ? ' · ' + state._myWhGroupLabel : '') : (CHAT_LEVEL_LABEL[lvl] || '');
   if (u && u.isNpo) role = u.npoIsLead ? 'NPO Lead' : 'NPO';
   return {id:String(who.empId||''), name:who.name||'', role, level:lvl};
 }
@@ -19393,6 +19432,13 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) chat
 async function goChat(stand) {
   const lvl = chatLevel();
   if (!lvl) return toast('Chat is for stand crews, Stand Leads, Supervisors and Managers', 'error');
+  if (lvl === 'whl') {
+    // Show which group this warehouse leader covers today (West Concourse, Upper East…).
+    const me = String(state.staffAccount.empId || '');
+    const rows = await coverageGetAssignments(stadiumDay(), '').catch(() => []);
+    const mine = (rows || []).filter(r => String(r.employee_id) === me && r.team === 'warehouse');
+    state._myWhGroupLabel = whGroupLabelForStands(mine.flatMap(r => r.direct_stands || []));
+  }
   if (state.currentScreen !== 'screen-chat') state._chatReturn = state.currentScreen;
   showScreen('screen-chat');
   updateFloatingContactVisibility();

@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-03-fix-6
+- **Runners split:** the old "Kitchen Runner" list is now **Concession Runner** (the 5 Food Runners) and **Warehouse Runner** (9 people, added to the Oct 3 warehouse roster). Warehouse Runners can sign in with 60000 + last name or their own last 5 + last name, and land in Warehouse. Runner groups no longer show up as "stands" in Stand Status, and Warehouse Runners are not in the concession Team list.
+- **Warehouse groups (Assign & Team):** 1 Inferno (140, 142) · 2 West Concourse (203–214) · 3 Draft Houses (215–221) · 4 East Concourse (222–234) · 5 Upper West (310, 316, 401–414) · 6 Upper East (334, 348, 438, 442). Stock requests alert only the people assigned to that stand's group; an unassigned manager transfer now alerts that group too. Warehouse leaders' chat name shows their group (e.g. "Warehouse Supervisor · West Concourse").
+- **Inventory counts:** Count In / Count Out boxes start empty (no grey 0). Every item must have a real number (0 only if there are none); blanks and negative numbers are refused.
+- **No inventory override:** a Stand Lead — or the last person at a stand with no Stand Lead — cannot be checked out by anyone (lead, supervisor, manager, admin) until Count In and Count Out are complete. The block offers "Open Count Out" so whoever is checking them out can finish it. The lead's own Leave button re-checks too.
+
 ## 2026-10-03-fix-5
 - **All Requests (managers / Support Managers / supervisors):** the "View requests" picker is now a stand drop-down — **All stands** first, then NPO stands, then every other stand. Pick one to see only that stand's Stock / Food / IT requests.
 
