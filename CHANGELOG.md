@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-31
+- Report IT Issue: new category **🛒 Self Checkout** (Mashgin / self-checkout kiosks), alongside POS Handheld, POS Tablet, POS Menu, TV / Menu Board, Other.
+- Manager check-in grid: full names now show (no more "Alcorn, …"); the name and role take the full row and the ✓ / Check out / ✕ / ↔ / ⭐ buttons sit on the line below.
+
 ## 2026-10-04-fix-30
 - Managers / Support Managers / Admin (and Warehouse Manager/Supervisor) get **✅ Mark delivered** next to **❌ Deny wrong request** on every open stock request card (All Requests, manager board, support view). Confirms first; closes the request as delivered (by the manager if nobody claimed it), notifies the requester.
 
