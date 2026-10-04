@@ -3124,6 +3124,7 @@
         <button class="btn btn-primary" onclick="loadMgrInventory()" style="margin-top:8px">Load inventory</button>
         <button class="btn btn-ghost" onclick="exportInvCSV()" style="margin-top:8px">⬇️ Download CSV</button>
         <button class="btn btn-ghost" onclick="printInvReport()" style="margin-top:8px">🖨️ Printable view</button>
+        <button class="btn btn-ghost" onclick="ydPasteOpen()" style="margin-top:8px">📋 Yellow Dog copy-paste (sheet order)</button>
       </div>
       <div style="height:1px;background:var(--border);margin:14px 0"></div>
       <div style="max-width:480px">
@@ -4384,7 +4385,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-39';
+const BUILD_TAG = '2026-10-04-fix-40';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6509,9 +6510,11 @@ async function api(action, data) {
         venueRows,
         scheduleRows
       ] = await Promise.all([
-        qualifyingStands.length
-          ? sb('stand_sheets?stand=in.(' + qualifyingStands.map(s => encodeURIComponent('"' + s.replace(/"/g,'\\"') + '"')).join(',') + ')&order=sort_order.asc.nullslast,id.asc&select=*')
-          : Promise.resolve([]),
+        // One request per stand: a single in.(...) query over every stand
+        // hits the server's 1000-row cap, so stands past ~24 items lost
+        // their sheet order (items after row ~25 came out scrambled).
+        Promise.all(qualifyingStands.map(s => sb('stand_sheets?stand=eq.' + encodeURIComponent(s) + '&order=sort_order.asc.nullslast,id.asc&select=*')))
+          .then(parts => parts.some(p => p && p._err) ? { _err: true } : [].concat(...parts)),
         sb('stock_requests?status=eq.delivered&created_at=gte.'+t0+'&created_at=lt.'+t1+'&select=*'),
         sb('stock_ledger?game_date=eq.'+d+'&movement_type=in.(transfer_in,force_stock,stand_transfer)&select=*'),
         // Compatibility only for older movement rows created before game_date
@@ -6541,6 +6544,11 @@ async function api(action, data) {
         if (it.onHand === undefined) it.onHand = r.on_hand;
         if (it.restock === undefined) it.restock = r.restock;
         it.isAddon = !!r.is_addon;
+        // Yellow Dog tab: Chargeables vs Non-Chargeables & Supplies. Sheets
+        // store the type in `chargeable` ('Supplies') or in `category` with
+        // chargeable 'true'/'false', depending on how they were uploaded.
+        const ty = String(r.chargeable || '') + ' ' + String(r.category || '');
+        it.ydType = /suppl/i.test(ty) ? 'Supplies' : (/non/i.test(ty) || String(r.chargeable).toLowerCase() === 'false') ? 'Non-Chargeable' : 'Chargeable';
       });
 
       // Delivered stock requests are useful for audit/display. These are NOT
@@ -13091,6 +13099,116 @@ function exportInvCSV() {
   a.click();
   URL.revokeObjectURL(url);
   toast('📥 CSV downloaded');
+}
+
+// ---- Yellow Dog copy-paste ----
+// Same order as the stand sheet (sort_order), split like Yellow Dog's tabs:
+//   Reconciliation (Chargeables): Count In, Waste, Count Out
+//   Non-Chargeables & Supplies:   Count Out only
+// Items added in the app (not on the printed sheet) are listed separately
+// and left out of the copy, so the pasted column lines up row for row.
+function ydNum(v) { if (v === undefined || v === null || String(v).trim() === '') return 0; const n = parseFloat(v); return isNaN(n) ? 0 : Math.round(n * 100) / 100; }
+// Optional saved Yellow Dog order per stand/tab (pasted Description list).
+// Yellow Dog's tabs can show fewer items, or a different order, than the
+// printed sheet; when a list is saved the copy follows it exactly.
+function ydKey(stand, tab) { return 'ydOrder:' + String(stand).trim().toLowerCase() + ':' + tab; }
+function ydNorm(v) { return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+function ydGetOrder(stand, tab) { try { const v = JSON.parse(localStorage.getItem(ydKey(stand, tab)) || 'null'); return Array.isArray(v) && v.length ? v : null; } catch (e) { return null; } }
+function ydSplit(s) {
+  const onSheet = it => it.paperRow !== '' && it.paperRow !== undefined && !it.isAddon && it.ydType;
+  const g = {
+    charge: s.items.filter(it => onSheet(it) && it.ydType === 'Chargeable'),
+    nonch: s.items.filter(it => onSheet(it) && it.ydType !== 'Chargeable'),
+    extra: s.items.filter(it => !onSheet(it)),
+    custom: {}
+  };
+  const byName = {}; s.items.forEach(it => { byName[ydNorm(it.itemName)] = it; });
+  ['charge', 'nonch'].forEach(tab => {
+    const ord = ydGetOrder(s.stand, tab); if (!ord) return;
+    g.custom[tab] = true;
+    const used = new Set();
+    g[tab] = ord.map(name => { const it = byName[ydNorm(name)]; if (it) { used.add(it); return it; } return { itemName: name, missing: true }; });
+    // Anything the sheet had in this tab but Yellow Dog doesn't list
+    g.extra = g.extra.concat(s.items.filter(it => onSheet(it) && (tab === 'charge' ? it.ydType === 'Chargeable' : it.ydType !== 'Chargeable') && !used.has(it) && !g.extra.includes(it)));
+  });
+  return g;
+}
+function ydOrderSave(tab) {
+  const s = state.mgrInvData.stands[state._ydIdx || 0];
+  const ta = document.getElementById('yd-order-' + tab); if (!s || !ta) return;
+  const names = s.items.map(it => ydNorm(it.itemName));
+  // A copied Yellow Dog row can be "SKU <tab> Description <tab> Size <tab> Type…":
+  // keep the cell that matches an app item, else the longest text cell.
+  const lines = ta.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+    const cells = l.split('\t').map(c => c.trim()).filter(Boolean);
+    return cells.find(c => names.includes(ydNorm(c))) || cells.filter(c => !/^\d+(\.\d+)?$/.test(c)).sort((a, b) => b.length - a.length)[0] || l;
+  });
+  try { if (lines.length) localStorage.setItem(ydKey(s.stand, tab), JSON.stringify(lines)); else localStorage.removeItem(ydKey(s.stand, tab)); } catch (e) {}
+  toast(lines.length ? '✅ Yellow Dog order saved for ' + s.stand : 'Order cleared — using sheet order');
+  ydPasteOpen(state._ydIdx || 0);
+}
+function ydPasteOpen(idx) {
+  const data = state.mgrInvData;
+  if (!data || !data.stands || !data.stands.length) return toast('Tap "Load inventory" first', 'error');
+  idx = Math.max(0, Math.min(data.stands.length - 1, Number(idx) || 0));
+  state._ydIdx = idx;
+  const s = data.stands[idx], g = ydSplit(s);
+  const th = 'padding:4px;font-size:10px;color:var(--text-2);text-align:right;white-space:nowrap';
+  const td = 'padding:5px 4px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;font-weight:700';
+  const nm = it => '<td style="padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px' + (it.missing ? ';color:#DC2626' : '') + '">' + escapeHtml(it.itemName) + (it.missing ? ' <b>(not counted in app → 0)</b>' : '') + '</td>';
+  const ordBox = tab => '<details style="margin:6px 0"' + '><summary style="cursor:pointer;font-size:12px;color:var(--text-2)">' + (g.custom[tab] ? '✅ Using saved Yellow Dog order — change' : 'Rows don\'t line up with Yellow Dog? Match its order') + '</summary>' +
+    '<div style="font-size:11px;color:var(--text-2);margin:4px 0">Paste the Description column from this Yellow Dog tab (one item per line, top to bottom). Saved on this device for this stand. Clear the box and save to go back to sheet order.</div>' +
+    '<textarea id="yd-order-' + tab + '" class="form-input" rows="5" style="font-size:11px">' + escapeHtml((ydGetOrder(s.stand, tab) || []).join('\n')) + '</textarea>' +
+    '<button class="btn btn-ghost" style="margin:4px 0 0" onclick="ydOrderSave(\'' + tab + '\')">Save order</button></details>';
+  const tbl = (head, rows) => '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="' + th + ';text-align:left">#</th><th style="' + th + ';text-align:left">Description</th>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  const n = (i) => '<td style="padding:5px 4px;border-bottom:1px solid var(--border);font-size:10px;color:var(--text-3)">' + (i + 1) + '</td>';
+  const cRows = g.charge.map((it, i) => '<tr>' + n(i) + nm(it) + '<td style="' + td + '">' + ydNum(it.countIn) + '</td><td style="' + td + '">' + ydNum(it.waste) + '</td><td style="' + td + '">' + ydNum(it.countOut) + '</td></tr>').join('');
+  const nRows = g.nonch.map((it, i) => '<tr>' + n(i) + nm(it) + '<td style="' + td + '">' + ydNum(it.countOut) + '</td></tr>').join('');
+  const opts = data.stands.map((x, i) => '<option value="' + i + '"' + (i === idx ? ' selected' : '') + '>' + escapeHtml(x.stand) + '</option>').join('');
+  whSheet('<div style="font-weight:850;font-size:17px">📋 Yellow Dog copy-paste</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">' + escapeHtml(data.date) + ' · same order as the stand sheet. In Yellow Dog click the first number cell, then paste.</div>' +
+    '<select class="form-input" onchange="ydPasteOpen(this.value)" style="margin:0 0 8px">' + opts + '</select>' +
+    '<div style="display:flex;gap:6px;margin-bottom:10px"><button class="btn btn-ghost" style="margin:0;flex:1" ' + (idx > 0 ? 'onclick="ydPasteOpen(' + (idx - 1) + ')"' : 'disabled') + '>‹ Prev stand</button><button class="btn btn-ghost" style="margin:0;flex:1" ' + (idx < data.stands.length - 1 ? 'onclick="ydPasteOpen(' + (idx + 1) + ')"' : 'disabled') + '>Next stand ›</button></div>' +
+    '<div style="font-weight:800;margin-top:4px">Reconciliation — Chargeables (' + g.charge.length + ')</div>' +
+    '<button class="btn btn-primary" style="margin:6px 0" onclick="ydCopy(\'charge\')">📋 Copy Count In · Waste · Count Out</button>' +
+    (g.charge.length ? tbl('<th style="' + th + '">Count In</th><th style="' + th + '">Waste</th><th style="' + th + '">Count Out</th>', cRows) : '<div style="font-size:12px;color:var(--text-3)">None</div>') +
+    ordBox('charge') +
+    '<div style="font-weight:800;margin-top:14px">Non-Chargeables & Supplies (' + g.nonch.length + ')</div>' +
+    '<button class="btn btn-primary" style="margin:6px 0" onclick="ydCopy(\'nonch\')">📋 Copy Count Out</button>' +
+    (g.nonch.length ? tbl('<th style="' + th + '">Count Out</th>', nRows) : '<div style="font-size:12px;color:var(--text-3)">None</div>') +
+    ordBox('nonch') +
+    (g.extra.length ? '<div style="font-weight:800;margin-top:14px;color:#B45309">⚠️ Not in the copy (' + g.extra.length + ') — enter by hand if Yellow Dog has them</div>' +
+      g.extra.map(it => '<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)">' + escapeHtml(it.itemName) + ' — In ' + ydNum(it.countIn) + ' · Waste ' + ydNum(it.waste) + ' · Out ' + ydNum(it.countOut) + '</div>').join('') : '') +
+    '<button class="btn btn-ghost" style="margin-top:12px" onclick="ydPasteCSV()">⬇️ Download all stands (Yellow Dog order)</button>');
+}
+function ydCopy(which) {
+  const data = state.mgrInvData, s = data && data.stands && data.stands[state._ydIdx || 0];
+  if (!s) return;
+  const g = ydSplit(s);
+  const txt = which === 'charge'
+    ? g.charge.map(it => [ydNum(it.countIn), ydNum(it.waste), ydNum(it.countOut)].join('\t')).join('\n')
+    : g.nonch.map(it => String(ydNum(it.countOut))).join('\n');
+  const n = which === 'charge' ? g.charge.length : g.nonch.length;
+  const done = () => toast('📋 Copied ' + n + ' rows — paste into Yellow Dog');
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Copy blocked — use the download instead', 'error'); } ta.remove(); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fallback); else fallback();
+}
+function ydPasteCSV() {
+  const data = state.mgrInvData;
+  if (!data || !data.stands) return toast('Load inventory first', 'error');
+  const q = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  let csv = 'Stand,Tab,#,Description,Count In,Waste,Count Out\n';
+  data.stands.forEach(s => {
+    const g = ydSplit(s);
+    g.charge.forEach((it, i) => { csv += [s.stand, 'Chargeables', i + 1, it.itemName, ydNum(it.countIn), ydNum(it.waste), ydNum(it.countOut)].map(q).join(',') + '\n'; });
+    g.nonch.forEach((it, i) => { csv += [s.stand, 'Non-Chargeables & Supplies', i + 1, it.itemName, '', '', ydNum(it.countOut)].map(q).join(',') + '\n'; });
+    g.extra.forEach(it => { csv += [s.stand, 'NOT ON SHEET - enter by hand', '', it.itemName, ydNum(it.countIn), ydNum(it.waste), ydNum(it.countOut)].map(q).join(',') + '\n'; });
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'yellowdog_' + String(data.date).replace(/\//g, '-') + '.csv';
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast('📥 Downloaded');
 }
 
 // Replicates the real Yellow Dog "Stand Sheet" paper form as closely as

@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-40 (warehouse screens still exactly as fix-34)
+- **Fixed scrambled item order in the inventory Download CSV / Printable view.** All stands' sheets were fetched in one request, which the server caps at 1000 rows — on a 43-stand day each stand only got its first ~24 items in sheet order and the rest came out in random order (e.g. gloves XL/MED/LARGE). Each stand's sheet is now fetched on its own, so every row follows the stand sheet.
+- New **📋 Yellow Dog copy-paste (sheet order)** in Manager → Inventory (the existing CSV and print are unchanged). Per stand, in sheet order: **Chargeables** with Count In · Waste · Count Out, and **Non-Chargeables & Supplies** with Count Out only. One tap copies just the numbers to paste into Yellow Dog's grid; Prev/Next stand; "Download all stands (Yellow Dog order)" CSV. Items added in the app (not on the sheet) are listed separately to enter by hand, so the pasted column lines up.
+- Optional **Match Yellow Dog order** per stand/tab: paste Yellow Dog's Description list once (saved on that device) and the copy follows it exactly, including items Yellow Dog lists that weren't counted (0).
+
 ## 2026-10-04-fix-39 (warehouse screens still exactly as fix-34)
 - Checkout & Inventory Tracker: every stand with a count has **👁 View counts** — item by item: Count In, transfers in/out, waste, Count Out and Used (In + transfers − waste − Out; negative shown red = count likely wrong), plus who submitted Count In / Count Out and when.
 
