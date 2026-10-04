@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-26';
+const BUILD_TAG = '2026-10-04-fix-27';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -17944,7 +17944,8 @@ function bcRenderSection(sectionKey, title, icon, stands, npoMode) {
   if (!groups.length) return '';
   let html = '<div class="mgr-v10-section-label">' + icon + ' ' + title + ' · ' + groups.length + '</div>';
   html += groups.map(g => {
-    const present = g.workers.filter(w => w.status === 'working' && !w.onBreak).length;
+    // Checked in = working or on break (same count as My Team and the totals line).
+    const present = g.workers.filter(w => w.status === 'working').length;
     const key = sectionKey + ':' + g.stand;
     const searching = !!(document.getElementById('bc-search').value || '').trim();
     const isOpen = searching || _bcOpenGroups.has(key);
@@ -17972,7 +17973,9 @@ function renderBedCheck() {
   // same data already loaded, not a separate query.
   const statsEl = document.getElementById('bc-stats');
   if (statsEl) {
-    const here = stands.reduce((n, s) => n + s.here, 0), people = stands.reduce((n, s) => n + s.total, 0);
+    // Counted from the rows on screen, so a tap on ✓ / ✕ / Check out updates it instantly.
+    const allW = stands.flatMap(s => s.workers || []);
+    const here = allW.filter(w => w.status === 'working').length, people = allW.length || stands.reduce((n, s) => n + s.total, 0);
     statsEl.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:8px">' + stands.length + ' stands · ' + here + ' of ' + people + ' checked in</div>';
   }
 

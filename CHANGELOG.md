@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-27
+- Manager check-in grid: stand badge (e.g. 207 "19/19") and the totals line now count checked-in = working or on break, computed from the rows on screen, so they match My Team and update the instant ✓ / ✕ / Check out is tapped. With fix-25 an Absent person (e.g. Alla at 207) shows ✕ and is not counted (207 = 18/19).
+
 ## 2026-10-04-fix-26
 - Requests menu: Stand Leads and Supervisors now get the requests list button too ("My Stand · Requests today" / "All My Stands · Requests today" for multi-stand leads) — Stock, Food and IT for their stand(s) with live status. Managers keep "All Requests · today".
 
