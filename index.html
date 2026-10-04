@@ -3599,8 +3599,8 @@
       <button class="chip soon" onclick="selectITUrg(this,'Soon')">🟡 Soon</button>
       <button class="chip urgent" onclick="selectITUrg(this,'URGENT')">🔴 URGENT (stopped)</button>
     </div>
-    <label class="form-label">Details * <span style="font-weight:600;color:#DC2626;text-transform:none;letter-spacing:0">— IT problems only (POS, handheld, tablet, TV, internet)</span></label>
-    <textarea class="form-input" id="it-details" placeholder="Tech problem only — e.g. POS 3 frozen since 4:30, won't restart"></textarea>
+    <label class="form-label">What is the issue? * <span style="font-weight:600;color:#DC2626;text-transform:none;letter-spacing:0">— describe what is wrong (IT problems only)</span></label>
+    <textarea class="form-input" id="it-details" rows="3" placeholder="What is not working and since when? e.g. POS 3 frozen since 4:30, won't restart / card reader says 'declined' for every card"></textarea>
     <button class="btn btn-primary" onclick="submitITIssue()">Send to IT →</button>
   </div>
 </div>
@@ -4379,7 +4379,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-34';
+const BUILD_TAG = '2026-10-04-fix-35';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -20656,7 +20656,7 @@ function itStandChanged() {
 async function submitITIssue() {
   if (!state.itCategory) return toast('Pick an issue category', 'error');
   const details = document.getElementById('it-details').value.trim();
-  if (!details) return toast('Add details about the issue', 'error');
+  if (details.replace(/\s+/g,' ').length < 10) return toast('Write what the issue is (a short sentence) so IT knows what to bring', 'error', 6000);
   if (/\b(food|hot ?dog|burger|pizza|nacho|pretzel|fries|stock|cases?|ice|cups?|lids?|napkins?|beer|water|soda|refund|cash)\b/i.test(details) && !/\b(pos|handheld|tablet|screen|menu board|tv|wifi|internet|printer|card|reader|network)\b/i.test(details)) {
     if (!(await confirmAction('This looks like a FOOD / STOCK / other request, not a tech problem. IT cannot deliver food or stock.\n\nUse the Food or Stock request button instead. Send to IT anyway?', {title:'IT is for tech problems only', confirmLabel:'It is a tech problem — send', cancelLabel:'Go back'}))) return;
   }
@@ -22325,10 +22325,12 @@ async function loadWhToDeliver() {
     const bring=s.requests.map(r=>r.items).filter(Boolean).join('; ');
     const bringRow=bring?'<div style="font-size:11px;color:var(--text-2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(bring.length>90?bring.slice(0,88)+'…':bring)+'</div>':'';
     const tag=s.transferMine?'<span style="display:inline-block;font-size:10px;font-weight:800;color:#fff;background:var(--asu-maroon);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px">ASSIGNED TO YOU</span>':'';
-    return `<div class="delivery-card${s.urgent?' urgent':''}${s.mine?' mine':''}" onclick="whStartDeliveryForStand('${escapeAttr(s.stand)}',${s.transferId || 'null'})">
+    const quickDone = mine ? `<button class="btn btn-primary" style="margin:8px 0 0;padding:14px;font-size:16px;background:#00A651;border-color:#00A651" onclick="event.stopPropagation();whQuickDelivered('${escapeAttr(s.stand)}')">✅ Delivered</button>` : '';
+    return `<div class="delivery-card${s.urgent?' urgent':''}${s.mine?' mine':''}" style="flex-wrap:wrap" onclick="whStartDeliveryForStand('${escapeAttr(s.stand)}',${s.transferId || 'null'})">
       <span style="font-size:28px">📦</span>
       <div style="flex:1;min-width:0">${urgentBadge}<div style="font-weight:750;font-size:14px">${escapeHtml(s.stand)}${tag}</div><div class="delivery-status">${sub}</div>${bringRow}${etaRow}</div>
       <span style="font-size:22px;color:var(--text-2)">›</span>
+      ${quickDone ? '<div style="flex:1 1 100%">' + quickDone + '</div>' : ''}
     </div>`;
   }).join('');
   el.dataset.loadedOnce = '1';
@@ -22392,6 +22394,21 @@ async function whGetOrCreateRequestTransfer(stand){
   return created[0].id;
 }
 
+// One tap: every request for this stand that is on the way with me becomes Delivered.
+async function whQuickDelivered(stand) {
+  const me = state.whName || (state.staffAccount && state.staffAccount.name) || '';
+  const mine = (state.wRequests || []).filter(r => r.stand === stand && r.status === 'On the way' && r.claimedBy === me);
+  if (!mine.length) { loadWarehouse(); return toast('Nothing on the way with you for ' + stand, 'error'); }
+  if (!(await confirmAction('Delivered everything to ' + stand + '?', { title: '✅ Delivered', confirmLabel: '✅ Yes, delivered' }))) return;
+  let done = 0;
+  for (const r of mine) {
+    const res = await api('updateStockStatus', { requestId: r.id, status: 'Fulfilled', warehouseMessage: 'Delivered by ' + me }).catch(() => ({ ok: false }));
+    if (res.ok) { done++; if (res.requesterId) sendPushTo(res.requesterId, '✅ Stock delivered', stand + ' — delivered by ' + me); }
+  }
+  if (done) notifyStandLeadsAndSupervisors(stand, '✅ Stock delivered · ' + stand, 'Delivered by ' + me, []);
+  toast(done ? '✅ Delivered to ' + stand : 'Could not update — try again', done ? 'success' : 'error');
+  loadWarehouse();
+}
 // Tapping a waiting stand first shows the whole order; "On my way" is its own tap.
 async function whStartDeliveryForStand(stand, transferId) {
   const who = state.whName || (state.staffAccount && state.staffAccount.name) || 'Warehouse';
@@ -24175,7 +24192,8 @@ function renderWarehouse() {
     const overdueReq = (r.status === 'Pending' || r.status === 'On the way') && r.etaDeadline && new Date(r.etaDeadline).getTime() < Date.now();
     const live = r.status === 'Pending' || r.status === 'On the way';
     const reassignBtn = leaderView && live
-      ? `<button class="btn ${overdueReq ? 'btn-primary' : 'btn-ghost'}" style="margin:8px 0 0;padding:10px" onclick="whReassignOpen('${r.id}')">👤 ${overdueReq ? 'Overdue — give to someone else' : 'Reassign'}</button>` +
+      ? `<button class="btn btn-primary" style="margin:8px 0 0;padding:12px;font-size:15px" onclick="whReassignOpen('${r.id}','onway')">🚚 ${r.status === 'On the way' ? 'Change who is bringing it' : 'Assign & On the way'}</button>` +
+        `<button class="btn ${overdueReq ? 'btn-primary' : 'btn-ghost'}" style="margin:6px 0 0;padding:10px" onclick="whReassignOpen('${r.id}')">👤 ${overdueReq ? 'Overdue — give to someone else' : 'Reassign (they tap On my way)'}</button>` +
         `<div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-ghost" style="margin:0;padding:10px;flex:1" onclick="whEditOpen('${r.id}')">✏️ Edit</button><button class="btn btn-ghost" style="margin:0;padding:10px;flex:1;color:#DC2626;border-color:#DC2626" onclick="whDenyOpen('${r.id}')">❌ Deny</button></div>`
       : (r.status === 'Denied' ? `<div class="req-qty" style="color:#DC2626;font-weight:700">❌ Denied${r.deniedBy ? ' by ' + escapeHtml(r.deniedBy) : ''}${r.deniedReason ? ' — ' + escapeHtml(r.deniedReason) : ''}</div>` : '');
     if (r.status === 'Pending') actions = `<div class="req-actions"><button class="btn-claim" onclick="claimReq('${r.id}')">🚚 On my way</button><button class="btn-fulfill" onclick="openTransferStand('${standJs}','list',null)">📦 View items</button></div>`;
@@ -24249,7 +24267,37 @@ function itMgrActionsHtml(r) {
   const id = escapeAttr(String(r.id));
   return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">' +
     '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#00A651;border-color:#00A651" onclick="event.stopPropagation();itMgrClose(\'' + id + '\',\'fixed\')">✅ Mark fixed</button>' +
-    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="event.stopPropagation();itMgrClose(\'' + id + '\',\'decline\')">❌ Decline</button></div>';
+    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#7C3AED;border-color:#7C3AED" onclick="event.stopPropagation();itMgrMove(\'' + id + '\',\'stock\')">↪ Move to Warehouse</button>' +
+    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#7C3AED;border-color:#7C3AED" onclick="event.stopPropagation();itMgrMove(\'' + id + '\',\'food\')">↪ Move to Food</button></div>';
+}
+// IT ticket that is really stock/food → becomes a Stock or Food request; ticket closed as "Moved".
+async function itMgrMove(id, to) {
+  if (!canManageAnyRequest()) return toast('Not authorized', 'error');
+  const rows = await sb('it_issues?id=eq.' + encodeURIComponent(id) + '&select=*').catch(() => ({ _err: true }));
+  const t = Array.isArray(rows) && rows[0]; if (!t) return toast('Could not load the ticket', 'error');
+  if (t.status === 'resolved') { refreshAfterStockChange(); return toast('Already closed', 'error'); }
+  const label = to === 'food' ? 'Food Delivery' : 'the Warehouse';
+  if (!(await confirmAction('Move this IT ticket for ' + t.stand + ' to ' + label + '?\n\n' + String(t.description || t.category || '').slice(0, 140), { title: 'Move ticket', confirmLabel: '↪ Move' }))) return;
+  const me = (state.staffAccount && state.staffAccount.name) || 'Manager';
+  const text = String(t.description || t.category || 'Moved from IT');
+  const deadline = new Date(Date.now() + 30 * 60000).toISOString();
+  let ok = false, who = '';
+  if (to === 'food') {
+    const sug = await kitchenSuggestedRunner(t.stand).catch(() => null);
+    const rid = sug && sug.employee_id && !String(sug.employee_id).startsWith('preview-') ? sug.employee_id : null;
+    const made = await kitchenCreate({ client_uuid: genUUID(), stand: t.stand, requested_by: t.reported_by || 'Stand', requested_by_id: '', items: text, items_json: { items: [{ itemName: text, qty: 1, free_text: true }] }, note: 'Moved from IT by ' + me, urgency: urgNorm(t.urgency) === 'URGENT' ? 'URGENT' : 'Normal', eta_minutes: 30, eta_deadline: deadline, status: 'open', assigned_runner_id: rid, assigned_runner_name: rid ? sug.name : null });
+    ok = !!made; if (rid) { sendPushTo(rid, '🍔 Food delivery assigned', t.stand + ' — ' + text.slice(0, 55)); who = sug.name; }
+  } else {
+    const cov = await resolveWarehouseAssigneesForStand(t.stand).catch(() => ({ people: [] }));
+    const ids = (cov.people || []).map(p => String(p.employee_id || '')).filter(Boolean), names = (cov.people || []).map(p => p.name || p.employee_id).filter(Boolean);
+    const made = await sb('stock_requests', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ client_uuid: genUUID(), stand: t.stand, requested_by: t.reported_by || 'Stand', requested_by_id: '', items: text, urgency: urgNorm(t.urgency), status: 'open', note: 'Moved from IT by ' + me, eta_minutes: 30, eta_deadline: deadline, items_json: { items: [], other: text, meta: { eta_minutes: 30, eta_deadline: deadline, assigned_to_ids: ids, assigned_to_names: names, moved_from: 'it', moved_by: me } } }) }).catch(() => ({ _err: true }));
+    ok = !made._err && Array.isArray(made) && made.length; ids.forEach(x => sendPushTo(x, '📥 New request for your stand', t.stand + ' — ' + text.slice(0, 55))); who = names.join(', ');
+  }
+  if (!ok) return toast('Could not create the new request — nothing was changed', 'error');
+  await sb('it_issues?id=eq.' + encodeURIComponent(id), { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'resolved', resolution_note: 'Moved to ' + label + ' by ' + me, updated_at: new Date().toISOString() }) }).catch(() => {});
+  if (t.claimed_by) pushOnDuty(['tech'], '↪ IT ticket moved · ' + t.stand, 'Moved to ' + label + ' — no need to go');
+  toast('↪ Moved to ' + label + (who ? ' · ' + who : ''), 'success', 6000);
+  refreshAfterStockChange();
 }
 async function itMgrClose(id, how) {
   if (!canManageAnyRequest()) return toast('Not authorized', 'error');
@@ -24411,8 +24459,9 @@ async function whEditSave(id) {
 // Hands the request to one person: it goes back to "waiting" routed only to
 // them (so it shows in their My Jobs with Start delivery) and they get a push.
 let _whReassignPeople = [];
-async function whReassignOpen(id) {
+async function whReassignOpen(id, mode) {
   if (!whIsLeader()) return toast('Only the Warehouse Manager or Supervisor can reassign', 'error');
+  state._whReassignMode = mode === 'onway' ? 'onway' : 'give';
   const r = (state.wRequests || []).find(x => String(x.id) === String(id)); if (!r) return toast('Request not found — refresh', 'error');
   const [accts, duty] = await Promise.all([
     sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor,warehouse_manager)&is_active=eq.true&select=employee_id,name,role').catch(() => ({ _err: true })),
@@ -24434,7 +24483,7 @@ async function whReassignOpen(id) {
   ov.onclick = e => { if (e.target === ov) ov.remove(); };
   const now = r.claimedBy ? 'On the way with ' + r.claimedBy : (r.assignedToNames && r.assignedToNames.length ? 'Sent to ' + r.assignedToNames.join(', ') : 'Not sent to anyone');
   ov.innerHTML = '<div style="width:min(560px,100%);max-height:82vh;display:flex;flex-direction:column;background:var(--bg-card);border-radius:20px 20px 0 0;padding:16px 16px calc(14px + env(safe-area-inset-bottom))">' +
-    '<div style="font-weight:850;font-size:17px">👤 Give this request to…</div>' +
+    '<div style="font-weight:850;font-size:17px">' + (state._whReassignMode === 'onway' ? '🚚 Who is taking it? (marked On the way)' : '👤 Give this request to…') + '</div>' +
     '<div style="font-size:12px;color:var(--text-2);margin:3px 0 10px">' + escapeHtml(r.stand) + ' · ' + escapeHtml(now) + '</div>' +
     '<input class="form-input" id="wh-reassign-q" placeholder="🔍 Search name…" oninput="whReassignRender(\'' + escapeAttr(String(id)) + '\')" style="margin:0 0 8px">' +
     '<div id="wh-reassign-list" style="overflow:auto;flex:1"></div>' +
@@ -24463,12 +24512,24 @@ async function whReassignSave(id, idx) {
   if (!j || typeof j !== 'object') return toast('Could not read this request — try again', 'error'); // never overwrite the item list
   const me = (state.staffAccount && state.staffAccount.name) || 'Warehouse';
   const meta = Object.assign({}, j.meta || {}, { assigned_to_ids: [p.id], assigned_to_names: [p.name], reassigned_by: me, reassigned_at: new Date().toISOString(), reassigned_from: row.claimed_by || ((j.meta && j.meta.assigned_to_names) || []).join(', ') });
-  const patch = { status: 'open', claimed_by: null, claimed_at: null, items_json: Object.assign({}, j, { meta }) };
-  const r = await sb('stock_requests?id=eq.' + encodeURIComponent(id) + '&status=neq.delivered', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) }).catch(() => ({ _err: true }));
+  const onway = state._whReassignMode === 'onway';
+  // Assign & On the way: the leader sends it out; the worker only taps Delivered.
+  const patch = onway ? { status: 'claimed', claimed_by: p.name, claimed_at: new Date().toISOString(), items_json: Object.assign({}, j, { meta: Object.assign({}, meta, { sent_out_by: me }) }) }
+    : { status: 'open', claimed_by: null, claimed_at: null, items_json: Object.assign({}, j, { meta }) };
+  const r = await sb('stock_requests?id=eq.' + encodeURIComponent(id) + '&status=in.(open,claimed)', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) }).catch(() => ({ _err: true }));
   if (r._err || !Array.isArray(r) || !r.length) return toast('Could not reassign — it may have just been delivered', 'error');
   const o = document.getElementById('wh-reassign-overlay'); if (o) o.remove();
-  sendPushTo(p.id, '📥 Request given to you', row.stand + ' — from ' + me);
-  toast('✅ ' + row.stand + ' given to ' + whDisp(p.name), 'success', 5000);
+  if (onway) {
+    sendPushTo(p.id, '🚚 Take this to ' + row.stand, 'From ' + me + ' — tap ✅ Delivered when it is there');
+    const req = await sb('stock_requests?id=eq.' + encodeURIComponent(id) + '&select=requested_by_id').catch(() => null);
+    const rid = Array.isArray(req) && req[0] && req[0].requested_by_id;
+    if (rid) sendPushTo(rid, '🚚 Stock is on the way', whDisp(p.name) + ' is bringing your request to ' + row.stand);
+    notifyStandLeadsAndSupervisors(row.stand, '🚚 Stock on the way · ' + row.stand, whDisp(p.name) + ' is bringing it', rid ? [rid] : []);
+    toast('🚚 ' + whDisp(p.name) + ' is on the way to ' + row.stand, 'success', 5000);
+  } else {
+    sendPushTo(p.id, '📥 Request given to you', row.stand + ' — from ' + me);
+    toast('✅ ' + row.stand + ' given to ' + whDisp(p.name), 'success', 5000);
+  }
   loadWarehouse();
 }
 

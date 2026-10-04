@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-35
+- Warehouse leader dispatch: every open request has **🚚 Assign & On the way** — pick the worker, the request is marked On the way with them (stand notified, worker gets "Take this to …"). The worker's My Jobs card then shows one big **✅ Delivered** button (confirm → delivered, stand notified). "Reassign (they tap On my way)" is still there.
+- IT tickets (managers): **✅ Mark fixed**, **↪ Move to Warehouse**, **↪ Move to Food** (Decline removed). Moving creates the new request for the same stand and closes the ticket as "Moved to …".
+- Report IT Issue: the box is now "What is the issue? *" and needs a short sentence (10+ characters).
+
 ## 2026-10-04-fix-34
 - Move history: every move is logged (new `worker_moves` table: who, from stand, to stand, moved by, time). Manager check-in screen has **📍 Moves** (today's list + CSV). Today's earlier moves were recovered from check-in notes (7 moves).
 - Walk-in for someone already on today's schedule (e.g. a Warehouse Runner now working a stand) no longer fails with "already on today's schedule": if the ID **and** name match, they are moved to the chosen stand (logged), and keep the same login.
