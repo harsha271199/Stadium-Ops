@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-26
+- Requests menu: Stand Leads and Supervisors now get the requests list button too ("My Stand · Requests today" / "All My Stands · Requests today" for multi-stand leads) — Stock, Food and IT for their stand(s) with live status. Managers keep "All Requests · today".
+
 ## 2026-10-04-fix-25
 - Check-in counts: Team Control / bedcheck counted people marked **Absent** as "here" (334 San Tan showed 10 with 8 working + 2 absent); the manager live view also counted them. Absent now counts as absent everywhere (same rule as My Team), with an ABSENT group in the support view.
 - Move worker: moving someone who is not on today's concession schedule (warehouse crew, roster-only walk-in) changed nothing but still said "moved". It now adds them to the destination stand for today (and still carries a checked-in status over).

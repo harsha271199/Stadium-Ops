@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-25';
+const BUILD_TAG = '2026-10-04-fix-26';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10607,7 +10607,18 @@ function requestHubRoleLabel(){
 function prepareRequestHub(){
   const more=document.getElementById('stand-request-more'); if(more)more.open=false;
   const leadership=!!(state.staffAccount&&state.staffAccount.group==='manager'&&['support_manager','manager','admin'].includes(state.staffAccount.role));
-  const exBtn=document.getElementById('req-hub-existing-btn'); if(exBtn)exBtn.style.display=leadership?'':'none'; // only leadership sees the all-requests monitor
+  // Managers: every stand. Stand Leads / Supervisors: their stand (multi-stand leads: all
+  // their stands; supervisors can switch stands) — Stock, Food and IT in one list.
+  const standLeader=!!(state.user&&['lead','supervisor'].includes(state.user.role));
+  const exBtn=document.getElementById('req-hub-existing-btn');
+  if(exBtn){
+    exBtn.style.display=(leadership||standLeader)?'':'none';
+    exBtn.onclick=leadership?openLeadershipRequests:requestHubOpenExisting;
+    const lbl=exBtn.querySelector('.smb-label');
+    if(lbl&&lbl.firstChild&&lbl.firstChild.nodeType===3)lbl.firstChild.nodeValue=leadership?'All Requests · today ':(isLimitedAreaLead()?'All My Stands · Requests today ':'My Stand · Requests today ');
+    const sub=exBtn.querySelector('.smb-sub');
+    if(sub)sub.textContent=leadership?'Stock · Food · IT across all stands':(state.user&&state.user.role==='supervisor'?'Stock · Food · IT · pick any stand or all':'Stock · Food · IT · see what is coming');
+  }
   const who=getRequesterIdentity();
   const stand=getOperationalStand(who)||state.activeStand||who.homeStand||'';
   const sub=document.getElementById('request-hub-context');
