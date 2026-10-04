@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-22';
+const BUILD_TAG = '2026-10-04-fix-23';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5238,23 +5238,13 @@ async function api(action, data) {
       // Only today's shift (or, before 6 AM, last night's game) can sign in.
       // It used to fall back to the person's most recent schedule row, so
       // someone not working today landed on their last game's stand.
-      const today = localISODate(), gameDay = stadiumDay();
-      const todaysRows = candidates.filter(r => r.event_date === today || r.event_date === gameDay);
-      let match = candidates.find(r => r.is_test);
-      if (!match && todaysRows.length) {
-        match = todaysRows.length === 1 ? todaysRows[0] : pickCurrentShift(todaysRows);
-      }
+      const today = localISODate();
       // Stand Leads and Supervisors can always sign in: on a day they aren't
       // scheduled they land on their most recent stand (or their next one if
       // they've never worked a shift). Workers still need today's schedule.
-      let offSchedule = false;
-      if (!match) {
-        const leaders = candidates.filter(r => ['lead','supervisor'].includes(mapRole(r.role)));
-        const past = leaders.filter(r => (r.event_date || '') <= gameDay).sort((a,b) => String(b.event_date||'').localeCompare(String(a.event_date||'')));
-        const next = leaders.filter(r => (r.event_date || '') > gameDay).sort((a,b) => String(a.event_date||'').localeCompare(String(b.event_date||'')));
-        match = past[0] || next[0] || null;
-        if (match) offSchedule = true;
-      }
+      const picked = pickScheduleRowForLogin(candidates);
+      let match = picked.row;
+      let offSchedule = picked.offSchedule;
       if (!match) return { ok:false, error:"You're not on today's schedule — ask your Stand Lead or Supervisor to add you as a walk-in" };
 
       // Portable/outside stands (bartender carts, off-site booths) often
@@ -5298,16 +5288,9 @@ async function api(action, data) {
         const access=await sb('staff_stand_access?employee_id=eq.'+encodeURIComponent(match.employee_id)+'&event_date=eq.'+encodeURIComponent(match.event_date||today)+'&is_active=eq.true&select=stands,access_level,updated_by').catch(()=>({_err:true}));
         if(!access._err&&Array.isArray(access)&&access[0])accessRow=access[0];
       }
-      if(accessRow&&Array.isArray(accessRow.stands)){
-        if((finalRole==='lead'||finalRole==='supervisor')&&accessRow.access_level==='supervisor_limited'&&accessRow.stands.length){
-          // A supervisor limited to an area works like a Stand Lead who can pick any stand in that area.
-          supervisorStands=accessRow.stands.slice();finalRole='lead';
-          if(!supervisorStands.includes(standName))standName=supervisorStands[0];
-        }
-        if(finalRole==='worker'&&accessRow.access_level==='stand_lead_temp'&&accessRow.stands.includes(standName)){
-          finalRole='lead';leadAccessGranted=true;tempLeadAccess=true;
-        }
-      }
+      { const acc=applyAreaAccess(finalRole,standName,accessRow);
+        finalRole=acc.role;standName=acc.stand;supervisorStands=acc.supervisorStands;
+        if(acc.tempLead){leadAccessGranted=true;tempLeadAccess=true;} }
 
       return { ok:true, user:{
         empId: match.employee_id,
@@ -6053,7 +6036,19 @@ async function api(action, data) {
         const counts={};sched.forEach(r=>{const l=String(r.location||'').trim();if(l)counts[l]=(counts[l]||0)+1;});
         const best=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];if(best)attendanceStand=best[0];
       }
-      const att=await sb('attendance?stand=eq.'+encodeURIComponent(attendanceStand)+'&entry_date=eq.'+today+'&order=updated_at.desc&select=*');
+      // Status follows the PERSON, not the stand name it was tapped under: a check-in
+      // done by a manager, a supervisor at another stand, or before a move must show
+      // the same here as on the manager screen. Stand rows still bring in NPO people.
+      const teamIds=[...new Set((Array.isArray(sched)?sched:[]).map(r=>String(r.employee_id||'')).filter(Boolean))];
+      const [attStand,attPeople]=await Promise.all([
+        sb('attendance?stand=eq.'+encodeURIComponent(attendanceStand)+'&entry_date=eq.'+today+'&order=updated_at.desc&select=*'),
+        teamIds.length?sb('attendance?employee_id=in.('+teamIds.map(encodeURIComponent).join(',')+')&entry_date=eq.'+today+'&order=updated_at.desc&select=*'):Promise.resolve([])
+      ]);
+      let att=attStand;
+      if(!attStand._err&&!attPeople._err&&Array.isArray(attPeople)){
+        const seenIds=new Set();att=[...attStand,...attPeople].filter(a=>{const k=a.id!=null?String(a.id):JSON.stringify(a);if(seenIds.has(k))return false;seenIds.add(k);return true;})
+          .sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||'')));
+      }
       // Real "Batch 1 / Batch 2" cutover — the earlier per-person
       // approach only re-evaluated people who happened to have MULTIPLE
       // rows today (a lead working both games); anyone with just one
@@ -6195,7 +6190,15 @@ async function api(action, data) {
       const patch={location:data.toStand};
       if(targetEvent)patch.event_name=targetEvent;
       const r = await sb('schedule?employee_id=eq.'+encodeURIComponent(data.empId)+'&event_date=eq.'+encodeURIComponent(today), { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify(patch) });
-      return r._err ? {ok:false} : {ok:true, ambiguousCrew};
+      if (r._err) return {ok:false};
+      // A checked-in person stays checked in — now at the new stand — so every
+      // screen (manager live view, both Stand Leads' My Team) agrees right away.
+      const lastAtt=await sb('attendance?employee_id=eq.'+encodeURIComponent(data.empId)+'&entry_date=eq.'+encodeURIComponent(localISODate())+'&order=updated_at.desc&limit=1&select=status,stand').catch(()=>({_err:true}));
+      const la=Array.isArray(lastAtt)&&lastAtt[0];
+      if(la&&['working','break'].includes(la.status)&&la.stand!==data.toStand){
+        await sb('attendance',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({employee_id:data.empId,worker_name:data.name,stand:data.toStand,status:la.status,notes:'Moved from '+(la.stand||data.fromStand||'')+' by '+(data.movedBy||'manager')})}).catch(()=>{});
+      }
+      return {ok:true, ambiguousCrew};
     }
 
     case 'addWalkin': {
@@ -6753,6 +6756,36 @@ function stockRequestMeta(r) {
 // Which crew (event_name) a stand's own team uses: the most common crew name
 // among non-supervisor rows at that exact location. Generic "Concession Stand (…)"
 // names never count, and a stand number alone is not enough (229P is not 229).
+// One rule for which schedule row a person signs in to (login AND app reopen):
+// today's real shift first (current shift if two), then a test row, then — leads
+// and supervisors only — their latest past (or next) stand. Never a future game.
+function pickScheduleRowForLogin(candidates){
+  const today = localISODate(), gameDay = stadiumDay();
+  const real = candidates.filter(r => !r.is_test);
+  const todays = real.filter(r => r.event_date === today || r.event_date === gameDay);
+  if (todays.length) return { row: todays.length === 1 ? todays[0] : pickCurrentShift(todays), offSchedule:false };
+  const test = candidates.find(r => r.is_test);
+  if (test) return { row:test, offSchedule:false };
+  const leaders = real.filter(r => ['lead','supervisor'].includes(mapRole(r.role)));
+  const past = leaders.filter(r => (r.event_date || '') <= gameDay).sort((a,b) => String(b.event_date||'').localeCompare(String(a.event_date||'')));
+  const next = leaders.filter(r => (r.event_date || '') > gameDay).sort((a,b) => String(a.event_date||'').localeCompare(String(b.event_date||'')));
+  const row = past[0] || next[0] || null;
+  return { row, offSchedule: !!row };
+}
+// Admin "Multi-Stand Coverage": a Stand Lead or Supervisor limited to some stands
+// works as a Stand Lead with a picker of only those stands (login AND reopen).
+function applyAreaAccess(role, stand, accessRow){
+  let supervisorStands = [], tempLead = false;
+  if (accessRow && Array.isArray(accessRow.stands)) {
+    if ((role === 'lead' || role === 'supervisor') && accessRow.access_level === 'supervisor_limited' && accessRow.stands.length) {
+      supervisorStands = accessRow.stands.slice(); role = 'lead';
+      if (!supervisorStands.includes(stand)) stand = supervisorStands[0];
+    } else if (role === 'worker' && accessRow.access_level === 'stand_lead_temp' && accessRow.stands.includes(stand)) {
+      role = 'lead'; tempLead = true;
+    }
+  }
+  return { role, stand, supervisorStands, tempLead };
+}
 function crewForStandRows(rows, stand){
   const generic=n=>/^Concession Stand \(/i.test(n)||/^Walk-in/i.test(n);
   const counts={};
@@ -24450,17 +24483,16 @@ async function init() {
       // Same shift-aware picking as the login handler — with two shifts
       // on the same day, this needs to know which one's actually
       // happening right now, not just grab the first today-dated row.
-      const todaysRowsInit = freshRows.filter(r => r.event_date === todayInit);
-      let freshMatch = freshRows.find(r => r.is_test);
-      if (!freshMatch && todaysRowsInit.length) {
-        freshMatch = todaysRowsInit.length === 1 ? todaysRowsInit[0] : pickCurrentShift(todaysRowsInit);
-      }
-      if (!freshMatch) freshMatch = freshRows.sort((a,b) => (b.event_date||'').localeCompare(a.event_date||''))[0];
+      // Only THIS person's rows: same full ID (the last-5 query can also return
+      // someone else whose ID ends the same), else same last-5 AND same name.
+      const exactId = freshRows.filter(r => String(r.employee_id) === String(state.user.empId));
+      const mineRows = exactId.length ? exactId : loginPickByName(freshRows, String(state.user.name||'').split(',')[0], r => r.worker_name, r => r.employee_id).rows;
+      let freshMatch = mineRows.length ? pickScheduleRowForLogin(mineRows).row : null;
       if (freshMatch) {
         // Portable access is an upgrade only. A real scheduled worker is
         // never signed out just because a stand is marked non-main.
         let freshRole = mapRole(freshMatch.role);
-        const freshStand = freshMatch.location || freshMatch.event_name;
+        let freshStand = freshMatch.location || freshMatch.event_name;
         let freshLeadGranted = false;
         if (freshStand) {
           const standRow = await sb('stands?stand_name=eq.'+encodeURIComponent(freshStand)+'&select=lead_access_for_all,is_main_stand').catch(()=>({_err:true}));
@@ -24479,12 +24511,9 @@ async function init() {
           const access=await sb('staff_stand_access?employee_id=eq.'+encodeURIComponent(freshMatch.employee_id)+'&event_date=eq.'+encodeURIComponent(freshMatch.event_date||todayInit)+'&is_active=eq.true&select=stands,access_level,updated_by').catch(()=>({_err:true}));
           if(!access._err&&Array.isArray(access)&&access[0])freshAccessRow=access[0];
         }
-        if(freshAccessRow&&Array.isArray(freshAccessRow.stands)){
-          if(freshRole==='lead'&&freshAccessRow.access_level==='supervisor_limited')freshSupervisorStands=freshAccessRow.stands.slice();
-          if(freshRole==='worker'&&freshAccessRow.access_level==='stand_lead_temp'&&freshAccessRow.stands.includes(freshStand)){
-            freshRole='lead';freshLeadGranted=true;freshTempLeadAccess=true;
-          }
-        }
+        { const acc=applyAreaAccess(freshRole,freshStand,freshAccessRow);
+          freshRole=acc.role;freshStand=acc.stand;freshSupervisorStands=acc.supervisorStands;
+          if(acc.tempLead){freshLeadGranted=true;freshTempLeadAccess=true;} }
 
         state.user = {
           ...state.user,

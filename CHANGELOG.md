@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-23
+- Check-in sync: Stand Lead / Supervisor My Team now reads each person's latest check-in by PERSON (plus the stand's own rows for NPO), the same as the manager screen — a check-in made by a manager, a supervisor at another stand, or before a move no longer shows "Not arrived" in My Team.
+- Moving a checked-in worker carries their status to the new stand (attendance row "Moved from X by Y"), so the manager live view and both Stand Leads agree immediately.
+- Sign-in / app reopen use one shared rule: today's real shift first (current shift if two), a test row only when there is no real shift today, never a future game for workers. App reopen now only uses rows with the person's exact ID (or last-5 + same name) — a different person sharing the last 5 digits, an old test row or a future game could send portable workers to another stand. Reopen keeps a Supervisor's Multi-Stand Coverage limit (it was dropped on reopen).
+
 ## 2026-10-04-fix-22
 - Move worker / walk-in: the destination crew is now the crew most of that stand's own (non-supervisor) team uses, matching the full stand code (229P ≠ 229). Before, moving to 229P Fan Fuel put people in the 229 Sun Devil Burger crew, and generic "Concession Stand (…)" walk-ins belonged to no Stand Lead's team. Move uses the stadium day (still right after midnight).
 - Data (10/3): fixed 7 schedule rows — Venkatesh & Sakthivel (229 → 229P crew), Dewan (229P), Lavang (207), Rollins (210P), Tammie & Liyada (438) moved from the generic crew into their stand's crew.
