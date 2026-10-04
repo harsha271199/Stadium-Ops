@@ -4384,7 +4384,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-37';
+const BUILD_TAG = '2026-10-04-fix-38';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -8254,6 +8254,9 @@ async function confirmLeave() {
 // null   = never locked (regular workers, who have no inventory screen).
 function invLockMode() {
   const u = state.user;
+  // Supervisors (incl. multi-stand leads) rank above Stand Leads: they check
+  // themselves out, and a stand's Count In/Out is the Stand Lead's job, not theirs.
+  if (u && (u.role === 'supervisor' || isLimitedAreaLead())) return 'supervisor';
   if (!u || u.role !== 'lead') return null;
   if (u.isNpo) return u.npoIsLead ? 'lead' : 'last';
   return u.leadAccessGranted ? 'last' : 'lead';
@@ -8321,6 +8324,7 @@ async function standHasLeadToday(stand) {
   return Array.isArray(g) && g.some(x => String(x.stand||'').split(',').some(t => canonicalStandName2026(t.trim()) === canon));
 }
 async function invClockOutGate(w, stand) {
+  if (w && /supervisor/i.test(String(w.role || ''))) return ''; // supervisors are not inventory-locked
   const isLead = await invWorkerIsLead(w, stand);
   if (!isLead) {
     if (await standHasLeadToday(stand)) return '';
@@ -8341,9 +8345,9 @@ async function invClockOutGate(w, stand) {
 async function markLeft() {
   const lockMode = invLockMode();
   if (lockMode === null) return toast('Ask your Stand Lead to check you out', 'error');
-  // Re-check inventory here too, so no path skips the lock.
+  // Re-check inventory here too, so no path skips the lock (supervisors are not locked).
   const others = lockMode === 'last' ? await invOthersStillWorking(state.user.stand) : null;
-  if (lockMode === 'lead' || !(others && others.length)) {
+  if (lockMode === 'lead' || (lockMode === 'last' && !(others && others.length))) {
     const miss = await invMissingPhases(state.user.stand);
     if (miss === null) return toast('Could not verify inventory — check your connection and try again', 'error', 8000);
     if (miss.length) return toast('Finish ' + miss.join(' and ') + ' first — every item needs a count', 'error', 8000);

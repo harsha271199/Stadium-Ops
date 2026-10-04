@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-38 (warehouse screens still exactly as fix-34)
+- Supervisors (and multi-stand leads like Kijana) can check themselves out — no more "Ask your Stand Lead to check you out". They are not held by a stand's Count In/Out lock (that stays the Stand Lead's job); a manager checking a supervisor out isn't blocked either.
+
 ## 2026-10-04-fix-37 (warehouse screens still exactly as fix-34)
 - Managers / Support Managers / Admin can send Food requests again, with **GIVE TO RUNNER** (pick a runner, or Auto = the runner who covers the stand).
 - Food request form shows a clear **FOOD ONLY** banner: cups, ice, lids, napkins, candy, drinks, utensils and supplies go to Request Stock (Warehouse).
