@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-28
+- Moved people follow their new stand live: a signed-in worker/lead re-checks today's schedule every 30 s, on returning to the app, and right before any Stock / Food / IT request is opened or sent. If a manager moved them, the phone switches to the new stand ("📍 You were moved to …") and requests go there — plain workers/leads can only request for their current stand. (Steve LNU was moved 207P → 310P but his phone still requested for 207P.) Multi-stand leads keep their assigned area; NPO unchanged.
+- Data: request #1012 (Steve, wine + peanuts) moved from 207P to 310P and re-routed to Upper East (Martin, Robles, Vasquez). 310P / 316P people given their own crew names (Steve had 207P's, Patil had 222M's).
+
 ## 2026-10-04-fix-27
 - Manager check-in grid: stand badge (e.g. 207 "19/19") and the totals line now count checked-in = working or on break, computed from the rows on screen, so they match My Team and update the instant ✓ / ✕ / Check out is tapped. With fix-25 an Absent person (e.g. Alla at 207) shows ✕ and is not counted (207 = 18/19).
 

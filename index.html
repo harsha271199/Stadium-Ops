@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-27';
+const BUILD_TAG = '2026-10-04-fix-28';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6804,6 +6804,40 @@ function applyAreaAccess(role, stand, accessRow){
   }
   return { role, stand, supervisorStands, tempLead };
 }
+// A manager can move a worker/lead while they are signed in. Their phone used to
+// keep the old stand until they signed out, so requests went to the OLD stand
+// (Steve moved 207P → 310P still requested for 207P). Re-check today's schedule
+// every 30 s, when the app comes back, and right before any request is sent.
+let _standSyncAt=0;
+async function syncMyStandFromSchedule(force){
+  const u=state.user;
+  if(!u||!u.empId||String(u.empId).startsWith('NPO-')||u.isNpo)return;
+  if(!force&&Date.now()-_standSyncAt<30000)return;
+  _standSyncAt=Date.now();
+  const rows=await sb('schedule?employee_id=like.*'+encodeURIComponent(String(u.empId).slice(-5))+'&event_date=in.('+[...new Set([localISODate(),stadiumDay()])].join(',')+')&is_test=neq.true&select=employee_id,worker_name,location,event_name,role').catch(()=>({_err:true}));
+  if(rows._err||!Array.isArray(rows)||!rows.length)return;
+  const mine=rows.filter(r=>String(r.employee_id)===String(u.empId));
+  let pick=mine.length?mine:loginPickByName(rows,String(u.name||'').split(',')[0],r=>r.worker_name,r=>r.employee_id).rows;
+  // Old sessions can carry a short/walk-in ID or a different spelling of the name:
+  // if only ONE person today has this ID ending, that's them.
+  if(!pick.length&&new Set(rows.map(r=>String(r.employee_id))).size===1)pick=rows;
+  const row=pick&&pick.length?(pick.length===1?pick[0]:pickCurrentShift(pick)):null;
+  const loc=row&&(row.location||row.event_name);
+  if(!loc||loc===u.stand)return;
+  // Multi-stand leads keep their area; just follow if the new stand is inside it.
+  if(isLimitedAreaLead()&&!(u.supervisorStands||[]).includes(loc))return;
+  const old=u.stand;
+  u.stand=loc;u.eventName=row.event_name||u.eventName;
+  try{localStorage.setItem('stadium_user',JSON.stringify(u));}catch(e){}
+  if(!isSupervisorSession()||state.activeStand===old){
+    state.activeStand=loc;state.checksTargetStand=loc;state.inventoryTargetStand=loc;
+    state.stockTargetStand=loc;state.myTeamStand=loc;state.itTargetStand=loc;state.kitchenTargetStand=loc;state.standRequestsStand=loc;
+  }
+  toast('📍 You were moved to '+loc+' — requests now go there','success',7000);
+  if(state.currentScreen==='screen-home'&&typeof renderHome==='function')renderHome();
+}
+setInterval(()=>{syncMyStandFromSchedule().catch(()=>{});},30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncMyStandFromSchedule(true).catch(()=>{});});
 function crewForStandRows(rows, stand){
   const generic=n=>/^Concession Stand \(/i.test(n)||/^Walk-in/i.test(n);
   const counts={};
@@ -9010,6 +9044,7 @@ function canTypeFreeRequests(){
 const TIER_LABELS = { supervisor:'Supervisor', support_manager:'Manager', manager:'Manager', admin:'Admin' };
 
 async function goStock() {
+  await syncMyStandFromSchedule(true).catch(()=>{});
   const who = getRequesterIdentity();
   state.stockItems = [];
   state.stockQty = {};
@@ -9221,6 +9256,8 @@ async function submitStock() {
   let itemsText = lines.join('; ');
   if (other) itemsText += (itemsText ? '; ' : '') + 'Other: ' + other;
   const who = getRequesterIdentity();
+  await syncMyStandFromSchedule(true).catch(()=>{});
+  if (state.user && !isSupervisorSession() && !isLimitedAreaLead() && state.user.stand) state.stockTargetStand = state.user.stand;
   const targetStand = state.stockTargetStand || who.homeStand;
   if (!targetStand) return toast('Pick a stand first', 'error');
   // No more "(Supervisor — for X)" framing — that implied an exception to
@@ -15059,6 +15096,7 @@ function applyFoodRequestAccess(){
   document.querySelectorAll('[onclick*="requestHubGoKitchen"],[onclick*="mgrV10NewKitchen"],[onclick*="standReqNewKitchen"]').forEach(el=>{el.style.display=ok?'':'none';});
 }
 async function goKitchenRequest(targetStand){
+  await syncMyStandFromSchedule(true).catch(()=>{});
   const who=getRequesterIdentity();
   if(!canRequestFood())return toast('Food requests are for Stand Leads and Supervisors only — use Request Stock for warehouse items','error',6000);
   state.kitchenUrgency='Normal';state.kitchenETA=30;_kitchenDraft=[{itemName:'',qty:1,free_text:true}];{const ot=document.getElementById('kitchen-order-text');if(ot)ot.value='';}
@@ -15136,6 +15174,7 @@ function kitchenDuplicateOverlap(items){
 function kitchenRequestBack(){if(state.standTaskReturnScreen==='screen-submenu-requests'){state.standTaskReturnScreen='';showScreen('screen-submenu-requests');return;}if(state.standTaskReturnScreen==='screen-bedcheck'||isManagerOpsSession()){state.standTaskReturnScreen='';showScreen('screen-bedcheck');restoreMgrSidebarState();if(isSupportManagerSession())supportOpsTab('food',true);return;}if(state.user){showScreen('screen-submenu-requests');return;}if(state.staffAccount&&state.staffAccount.group==='manager'){showScreen('screen-bedcheck');restoreMgrSidebarState();return;}showScreen('screen-home');}
 
 async function submitKitchenRequest(){
+  await syncMyStandFromSchedule(true).catch(()=>{});if(state.user&&!isSupervisorSession()&&!isLimitedAreaLead()&&state.user.stand)state.kitchenTargetStand=state.user.stand;
   const who=getRequesterIdentity();const stand=state.kitchenTargetStand||getOperationalStand(who);const items=_kitchenDraft.filter(x=>x.itemName&&Number(x.qty)>0);if(!stand)return toast('Choose a stand','error');if(!items.length||String(items[0].itemName||'').trim().length<3)return toast('Type the food and how many in the box','error');
   { const gMsg=await openRequestGuard('food',stand); if(gMsg) return toast(gMsg,'error',8000); }
   // Real 10-minute hold, enforced here (not just shown as a notice) —
@@ -20539,6 +20578,7 @@ function selectITUrg(btn, urg) {
 // Same supervisor-only "any stand" upgrade as goStock() — one screen
 // instead of a separate "for another stand" flow.
 async function goITReportSetup() {
+  await syncMyStandFromSchedule(true).catch(()=>{});
   const who = getRequesterIdentity();
   state.itTargetStand = getOperationalStand(who);
   const picker = document.getElementById('it-stand-picker');
@@ -20584,6 +20624,8 @@ async function submitITIssue() {
   }
   const overrideNote = state._itHoldActive ? ('[Second ticket — ' + state._itHoldOverrideReason.trim() + '] ') : '';
   const who = getRequesterIdentity();
+  await syncMyStandFromSchedule(true).catch(()=>{});
+  if (state.user && !isSupervisorSession() && !isLimitedAreaLead() && state.user.stand) state.itTargetStand = state.user.stand;
   const targetStand = state.itTargetStand || who.homeStand;
   if (!targetStand) return toast('Pick a stand first', 'error');
   const requestedBy = TIER_LABELS[who.tier] ? who.name + ' (' + TIER_LABELS[who.tier] + ')' : who.name;
