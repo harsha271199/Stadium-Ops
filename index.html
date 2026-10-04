@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-24';
+const BUILD_TAG = '2026-10-04-fix-25';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4407,6 +4407,7 @@ function initTheme() {
 
 // ============ UTIL ============
 function showScreen(id) {
+  try{applyFoodRequestAccess();}catch(e){}
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   state.currentScreen = id;
@@ -5844,7 +5845,7 @@ async function api(action, data) {
       if (!todaySched._err) todaySched.forEach(s => { endTimes[s.employee_id] = s.end_time; });
       const latest = latestByEmp(rows);
       const byStand = {};
-      latest.filter(a=>a.status!=='ended' && !testIds.has(a.employee_id)).forEach(a=>{
+      latest.filter(a=>['working','break'].includes(a.status) && !testIds.has(a.employee_id)).forEach(a=>{
         // Hours overdue past their scheduled end time — the actual basis
         // for flagging "forgot to clock out," not just how long they've
         // been checked in (someone genuinely working a long shift isn't
@@ -5906,13 +5907,21 @@ async function api(action, data) {
       dedupedSched.forEach(s=>{
         const st = s.location || s.event_name;
         const a = latest[s.employee_id];
-        const status = a ? (a.status==='ended'?'left':'working') : 'scheduled';
+        // Same status rule as My Team: absent is absent (never "here").
+        let status='scheduled';
+        if(a){
+          if(a.status==='absent')status='absent';
+          else if(a.status==='ended')status=/absent/i.test(String(a.notes||''))?'absent':'left';
+          else if(a.status==='scheduled')status='scheduled';
+          else status='working';
+        }
         const onBreak = a ? a.status==='break' : false;
         (standsMap[st] = standsMap[st] || {stand:st,total:0,here:0,onBreak:0,left:0,absent:0,pending:0,workers:[],hasNpo:false});
         standsMap[st].total++;
         if (status==='working' && onBreak) { standsMap[st].here++; standsMap[st].onBreak++; }
         else if (status==='working') standsMap[st].here++;
         else if (status==='left') standsMap[st].left++;
+        else if (status==='absent') standsMap[st].absent++;
         else standsMap[st].pending++;
         standsMap[st].workers.push({ empId:s.employee_id, name:s.worker_name, role:s.role, startTime:s.start_time, endTime:s.end_time, status, onBreak });
       });
@@ -6189,8 +6198,17 @@ async function api(action, data) {
       }
       const patch={location:data.toStand};
       if(targetEvent)patch.event_name=targetEvent;
-      const r = await sb('schedule?employee_id=eq.'+encodeURIComponent(data.empId)+'&event_date=eq.'+encodeURIComponent(today), { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify(patch) });
+      const r = await sb('schedule?employee_id=eq.'+encodeURIComponent(data.empId)+'&event_date=eq.'+encodeURIComponent(today), { method:'PATCH', headers:{Prefer:'return=representation'}, body: JSON.stringify(patch) });
       if (r._err) return {ok:false};
+      // Not on today's concession schedule (warehouse crew, roster-only walk-in):
+      // the move used to change nothing and still say "moved". Add them to the
+      // destination stand for today instead, so every screen shows them there.
+      if (!Array.isArray(r) || !r.length) {
+        const row={event_date:today,event_name:targetEvent||('Walk-in · '+data.toStand),location:data.toStand,worker_name:data.name||String(data.empId),employee_id:String(data.empId),
+          role:(data.role&&!/warehouse/i.test(data.role))?data.role:'Concession Stand Worker',work_schedule_type:'Moved by '+(data.movedBy||'manager'),site:'Mountain America Stadium',start_time:'',end_time:'',is_test:false};
+        const ins=await sb('schedule',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)}).catch(()=>({_err:true}));
+        if(ins._err||!Array.isArray(ins)||!ins.length)return {ok:false,error:'Could not add '+(data.name||'this person')+' to '+data.toStand};
+      }
       // A checked-in person stays checked in — now at the new stand — so every
       // screen (manager live view, both Stand Leads' My Team) agrees right away.
       const lastAtt=await sb('attendance?employee_id=eq.'+encodeURIComponent(data.empId)+'&entry_date=eq.'+encodeURIComponent(localISODate())+'&order=updated_at.desc&limit=1&select=status,stand').catch(()=>({_err:true}));
@@ -10920,6 +10938,7 @@ function supportTeamWorkerHtml(w){
   let icon='🟢',status='WORKING',cls='',meta='';
   if(w.status==='working'&&w.onBreak){icon='🟡';status='ON BREAK';}
   else if(w.status==='left'){icon='🟣';status='LEFT';cls='left';}
+  else if(w.status==='absent'){icon='❌';status='ABSENT';cls='left';}
   else if(w.status==='scheduled'&&supportTeamWorkerLate(w)){icon='🔴';status='LATE / NOT IN';cls='late';}
   else if(w.status==='scheduled'){icon='⚪';status='NOT IN YET';}
   if(w.status==='working'&&w.liveSince)meta='Since '+fmtTime(w.liveSince);
@@ -10944,7 +10963,8 @@ function supportTeamStandHtml(st,forceOpen){
     ['ON BREAK',workers.filter(w=>w.status==='working'&&w.onBreak)],
     ['WORKING',workers.filter(w=>w.status==='working'&&!w.onBreak)],
     ['NOT IN YET',workers.filter(w=>w.status==='scheduled'&&!supportTeamWorkerLate(w))],
-    ['LEFT',workers.filter(w=>w.status==='left')]
+    ['LEFT',workers.filter(w=>w.status==='left')],
+    ['ABSENT',workers.filter(w=>w.status==='absent')]
   ];
   let body='';
   groups.forEach(([label,rows])=>{if(rows.length)body+='<div class="support-worker-section">'+label+' · '+rows.length+'</div>'+rows.map(supportTeamWorkerHtml).join('');});
@@ -15015,10 +15035,21 @@ function addKitchenDraftItem(name,qty){_kitchenDraft.push({itemName:name||'',qty
 function removeKitchenDraftItem(i){_kitchenDraft.splice(i,1);renderKitchenDraft();}
 function renderKitchenDraft(){const el=document.getElementById('kitchen-draft-items');if(!el)return;el.innerHTML=_kitchenDraft.map((x,i)=>`<div class="card" style="padding:10px;margin-bottom:8px;display:flex;gap:8px;align-items:center"><input class="form-input" list="kitchen-food-options" value="${escapeAttr(x.itemName||'')}" placeholder="Food item" oninput="_kitchenDraft[${i}].itemName=this.value" style="margin:0;flex:1"><input class="form-input" type="number" min="1" inputmode="numeric" value="${Number(x.qty||1)}" oninput="_kitchenDraft[${i}].qty=Number(this.value)||1" style="margin:0;width:78px"><button onclick="removeKitchenDraftItem(${i})" style="border:none;background:none;color:#DC2626;font-size:20px">×</button></div>`).join('');}
 
+// Food delivery requests: real Stand Leads and Supervisors only (incl. multi-stand
+// leads). Not workers, not portable/temporary stand access, not managers.
+function canRequestFood(){
+  const u=state.user;if(!u)return false;
+  if(u.role==='supervisor'||isLimitedAreaLead())return true;
+  return u.role==='lead'&&!u.leadAccessGranted&&!u.tempLeadAccess;
+}
+// Hide every "new Food request" button for anyone who can't use it.
+function applyFoodRequestAccess(){
+  const ok=canRequestFood();
+  document.querySelectorAll('[onclick*="requestHubGoKitchen"],[onclick*="mgrV10NewKitchen"],[onclick*="standReqNewKitchen"]').forEach(el=>{el.style.display=ok?'':'none';});
+}
 async function goKitchenRequest(targetStand){
   const who=getRequesterIdentity();
-  const canFoodRequest=['lead','supervisor','support_manager','manager','admin'].includes(who.tier)||isLimitedAreaLead();
-  if(!canFoodRequest)return toast('Ask your Stand Lead or Supervisor to send a food request','error');
+  if(!canRequestFood())return toast('Food requests are for Stand Leads and Supervisors only — use Request Stock for warehouse items','error',6000);
   state.kitchenUrgency='Normal';state.kitchenETA=30;_kitchenDraft=[{itemName:'',qty:1,free_text:true}];{const ot=document.getElementById('kitchen-order-text');if(ot)ot.value='';}
   // Same stable-uuid fix as Stock — generated once when the form opens,
   // reused on every submit attempt for this one request.

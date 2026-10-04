@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-25
+- Check-in counts: Team Control / bedcheck counted people marked **Absent** as "here" (334 San Tan showed 10 with 8 working + 2 absent); the manager live view also counted them. Absent now counts as absent everywhere (same rule as My Team), with an ABSENT group in the support view.
+- Move worker: moving someone who is not on today's concession schedule (warehouse crew, roster-only walk-in) changed nothing but still said "moved". It now adds them to the destination stand for today (and still carries a checked-in status over).
+- Food delivery requests: only real Stand Leads and Supervisors (incl. multi-stand leads). Workers, portable/temporary stand access, managers, support managers and admin no longer see "Request Food Delivery" / "+ Food" (viewing Food requests is unchanged).
+
 ## 2026-10-04-fix-24
 - 310P and 316P Beer Portable moved from Upper West to **Upper East** (with 334, 348, 438, 442) everywhere areas are used: warehouse Assign & Team, request routing, Food Manager runner areas, Admin area buttons. Upper West = 401–414.
 - Data: saved warehouse assignments updated — Selle, Gilmer, Rodriquez no longer cover 310P/316P; Martin, Robles, Vasquez (Upper East) now do.
