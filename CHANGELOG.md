@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-22
+- Move worker / walk-in: the destination crew is now the crew most of that stand's own (non-supervisor) team uses, matching the full stand code (229P ≠ 229). Before, moving to 229P Fan Fuel put people in the 229 Sun Devil Burger crew, and generic "Concession Stand (…)" walk-ins belonged to no Stand Lead's team. Move uses the stadium day (still right after midnight).
+- Data (10/3): fixed 7 schedule rows — Venkatesh & Sakthivel (229 → 229P crew), Dewan (229P), Lavang (207), Rollins (210P), Tammie & Liyada (438) moved from the generic crew into their stand's crew.
+
 ## 2026-10-03-fix-21
 - Multi-stand leads/supervisors open Stand Requests on **📋 All my stands** (every request across their assigned stands, each card labelled with its stand), with two big buttons to flip between All my stands and the stand they are working.
 
