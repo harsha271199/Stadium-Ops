@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-36 (built on fix-34 — warehouse screens exactly as fix-34)
+- fix-35's warehouse "Assign & On the way" / one-tap Delivered is **not** included (reverted while the game is running).
+- Kept from fix-35: IT tickets (managers) ✅ Mark fixed / ↪ Move to Warehouse / ↪ Move to Food; "What is the issue? *" with a short sentence required.
+- Manager check-in now lists **Warehouse Runner** people (own group) so they can be checked in or moved to a stand.
+- Food Manager (Jeremy) on each open order: 🙋 I'll deliver it / 🏃 On my way / ✅ Delivered (his own), **✅ Mark delivered**, **↪ Move to Warehouse**, ✖ Decline.
+
 ## 2026-10-04-fix-35
 - Warehouse leader dispatch: every open request has **🚚 Assign & On the way** — pick the worker, the request is marked On the way with them (stand notified, worker gets "Take this to …"). The worker's My Jobs card then shows one big **✅ Delivered** button (confirm → delivered, stand notified). "Reassign (they tap On my way)" is still there.
 - IT tickets (managers): **✅ Mark fixed**, **↪ Move to Warehouse**, **↪ Move to Food** (Decline removed). Moving creates the new request for the same stand and closes the ticket as "Moved to …".
