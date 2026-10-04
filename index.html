@@ -4385,7 +4385,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-40';
+const BUILD_TAG = '2026-10-04-fix-41';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -13114,23 +13114,121 @@ function ydNum(v) { if (v === undefined || v === null || String(v).trim() === ''
 function ydKey(stand, tab) { return 'ydOrder:' + String(stand).trim().toLowerCase() + ':' + tab; }
 function ydNorm(v) { return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
 function ydGetOrder(stand, tab) { try { const v = JSON.parse(localStorage.getItem(ydKey(stand, tab)) || 'null'); return Array.isArray(v) && v.length ? v : null; } catch (e) { return null; } }
+// Parses a Yellow Dog "Stand Sheet Pre-Event" PDF → { event, stands: { name: [{no,item,type}] } }
+async function ydParseStandSheetPdf(pdf) {
+  const out = {}; let event = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const vp = page.getViewport({ scale: 1 });
+    const tc = await page.getTextContent();
+    const raw = tc.items.filter(t => String(t.str).trim() !== '');
+    const strs = raw.map(t => String(t.str).trim());
+    const iN = strs.indexOf('Notes');
+    if (iN < 0) continue;
+    if (!event) event = strs[iN - 1] || '';
+    const head = [];
+    for (let k = iN + 1; k < strs.length && head.length < 4; k++) {
+      if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(strs[k])) break;
+      head.push(strs[k]);
+    }
+    const stand = head.join(' ').replace(/\s+/g, ' ').trim();
+    if (!stand) continue;
+    // Positions in top-down page coordinates (pdf.js y is from the bottom).
+    const foot = /^(Page \d+|\(C\) YDS.*|Support:.*|\d{1,2}[\/-]\d{1,2}[\/-]\d{4}\s+\d{1,2}:\d{2}.*)$/;
+    const sp = raw.map(t => ({ x: t.transform[4], y: vp.height - t.transform[5], t: String(t.str).trim() })).filter(o => o.y > 160 && !foot.test(o.t) && !/^Item - Size/.test(o.t));
+    // Row numbers ≥100 wrap: "10" with "0" just under it = 100.
+    const n0 = sp.filter(o => o.x < 50 && /^\d+$/.test(o.t)).sort((a, b) => a.y - b.y), nums = [];
+    n0.forEach(o => { const last = nums[nums.length - 1]; if (last && o.y - last.y > 4 && o.y - last.y < 16) last.t += o.t; else nums.push({ ...o }); });
+    const list = out[stand] || (out[stand] = []);
+    nums.forEach(nm => {
+      const body = sp.filter(o => o.x >= 90 && o.y >= nm.y - 16 && o.y <= nm.y + 22);
+      const typ = body.filter(o => o.x < 101 && o.y > nm.y + 10);
+      const rest = body.filter(o => !typ.includes(o));
+      const nameParts = rest.filter(o => o.x < 105);
+      if (!nameParts.length) return;
+      const ny = Math.min(...nameParts.map(o => o.y));
+      const item = nameParts.filter(o => o.y < ny + 3).map(o => o.t).join(' ').replace(/\s+/g, ' ').trim();
+      const type = typ.map(o => o.t).join(' ') || (list.length ? list[list.length - 1].type : 'Chargeable');
+      if (item) list.push({ no: list.length + 1, item, type });
+    });
+  }
+  return { event, stands: out };
+}
+// Yellow Dog stand sheet loaded from its PDF (per device). Its order is
+// exactly what Yellow Dog's Reconciliation / Non-Chargeables tabs show.
+function ydSheetGet() { try { const v = JSON.parse(localStorage.getItem('ydSheet') || 'null'); return v && v.stands ? v : null; } catch (e) { return null; } }
+function ydLoadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  return new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+    sc.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; res(window.pdfjsLib); };
+    sc.onerror = () => rej(new Error('Could not load the PDF reader — check internet'));
+    document.head.appendChild(sc);
+  });
+}
+async function ydPdfPicked(inp) {
+  const f = inp.files && inp.files[0]; if (!f) return;
+  const st = document.getElementById('yd-pdf-status'); if (st) st.textContent = 'Reading ' + f.name + '…';
+  try {
+    const lib = await ydLoadPdfJs();
+    const pdf = await lib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+    const r = await ydParseStandSheetPdf(pdf);
+    const n = Object.keys(r.stands).length;
+    if (!n) throw new Error('No stand sheets found — is this the Yellow Dog "Stand Sheet Pre-Event" PDF?');
+    const compact = {}; Object.keys(r.stands).forEach(k => { compact[k] = r.stands[k].map(x => [x.item, x.type === 'Chargeable' ? 'C' : x.type === 'Supplies' ? 'S' : 'N']); });
+    localStorage.setItem('ydSheet', JSON.stringify({ event: r.event, file: f.name, at: new Date().toISOString(), stands: compact }));
+    toast('✅ Yellow Dog sheet loaded — ' + n + ' stands');
+  } catch (e) { toast((e && e.message) || 'Could not read that PDF', 'error'); if (st) st.textContent = '⚠️ ' + ((e && e.message) || 'Could not read that PDF'); return; }
+  ydPasteOpen(state._ydIdx || 0);
+}
+function ydSheetClear() { try { localStorage.removeItem('ydSheet'); } catch (e) {} ydPasteOpen(state._ydIdx || 0); }
+// App stand → Yellow Dog stand: saved choice, else exact name, else same
+// number + same kind, else same kind with the nearest number (e.g. app
+// "203P Beer Portable" → Yellow Dog "202P Beer Portable").
+function ydMapStand(appStand) {
+  const sh = ydSheetGet(); if (!sh) return '';
+  const ydNames = Object.keys(sh.stands);
+  let saved = null; try { saved = localStorage.getItem('ydMap:' + appStand); } catch (e) {}
+  if (saved === '-') return '';
+  if (saved && sh.stands[saved]) return saved;
+  const k = n => ydNorm(n);
+  const ex = ydNames.find(y => k(y) === k(appStand)); if (ex) return ex;
+  const appNames = ((state.mgrInvData && state.mgrInvData.stands) || []).map(x => x.stand);
+  const exactTaken = new Set(ydNames.filter(y => appNames.some(a => k(a) === k(y))));
+  const num = invStandNum(appStand), fam = invFamily(appStand);
+  const free = ydNames.filter(y => !exactTaken.has(y));
+  const same = free.filter(y => invStandNum(y) === num && invFamily(y) === fam); if (same.length === 1) return same[0];
+  const fams = free.filter(y => invFamily(y) === fam && invStandNum(y));
+  if (fams.length && num) { fams.sort((x, y) => Math.abs(invStandNum(x) - num) - Math.abs(invStandNum(y) - num)); if (Math.abs(invStandNum(fams[0]) - num) <= 2) return fams[0]; }
+  return '';
+}
+function ydMapSet(v) { const s = state.mgrInvData.stands[state._ydIdx || 0]; try { localStorage.setItem('ydMap:' + s.stand, v); } catch (e) {} ydPasteOpen(state._ydIdx || 0); }
 function ydSplit(s) {
   const onSheet = it => it.paperRow !== '' && it.paperRow !== undefined && !it.isAddon && it.ydType;
   const g = {
     charge: s.items.filter(it => onSheet(it) && it.ydType === 'Chargeable'),
     nonch: s.items.filter(it => onSheet(it) && it.ydType !== 'Chargeable'),
-    extra: s.items.filter(it => !onSheet(it)),
-    custom: {}
+    extra: [], custom: {}, source: 'app'
   };
-  const byName = {}; s.items.forEach(it => { byName[ydNorm(it.itemName)] = it; });
+  const byName = {}; s.items.forEach(it => { if (!byName[ydNorm(it.itemName)]) byName[ydNorm(it.itemName)] = it; });
+  const lists = {};
+  const sh = ydSheetGet(), ys = sh && ydMapStand(s.stand);
+  if (ys && sh.stands[ys]) {
+    g.source = 'pdf'; g.ydStand = ys;
+    lists.charge = sh.stands[ys].filter(x => x[1] === 'C').map(x => x[0]);
+    lists.nonch = sh.stands[ys].filter(x => x[1] !== 'C').map(x => x[0]);
+  }
+  ['charge', 'nonch'].forEach(tab => { const ord = ydGetOrder(s.stand, tab); if (ord) { lists[tab] = ord; g.custom[tab] = true; } });
+  const used = new Set();
   ['charge', 'nonch'].forEach(tab => {
-    const ord = ydGetOrder(s.stand, tab); if (!ord) return;
-    g.custom[tab] = true;
-    const used = new Set();
-    g[tab] = ord.map(name => { const it = byName[ydNorm(name)]; if (it) { used.add(it); return it; } return { itemName: name, missing: true }; });
-    // Anything the sheet had in this tab but Yellow Dog doesn't list
-    g.extra = g.extra.concat(s.items.filter(it => onSheet(it) && (tab === 'charge' ? it.ydType === 'Chargeable' : it.ydType !== 'Chargeable') && !used.has(it) && !g.extra.includes(it)));
+    if (!lists[tab]) { g[tab].forEach(it => used.add(it)); return; }
+    g[tab] = lists[tab].map(name => { const it = byName[ydNorm(name)]; if (it && !used.has(it)) { used.add(it); return it; } return { itemName: name, missing: true }; });
   });
+  // Counted in the app but not on the Yellow Dog list → enter by hand.
+  // (Uncounted extras are skipped when Yellow Dog's own list is in use.)
+  const counted = it => ['countIn', 'waste', 'countOut'].some(f => ydNum(it[f]) !== 0);
+  g.extra = s.items.filter(it => !used.has(it) && (g.source === 'app' && !Object.keys(g.custom).length ? true : counted(it)));
   return g;
 }
 function ydOrderSave(tab) {
@@ -13168,6 +13266,7 @@ function ydPasteOpen(idx) {
   whSheet('<div style="font-weight:850;font-size:17px">📋 Yellow Dog copy-paste</div>' +
     '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">' + escapeHtml(data.date) + ' · same order as the stand sheet. In Yellow Dog click the first number cell, then paste.</div>' +
     '<select class="form-input" onchange="ydPasteOpen(this.value)" style="margin:0 0 8px">' + opts + '</select>' +
+    ydSheetHtml(s, g) +
     '<div style="display:flex;gap:6px;margin-bottom:10px"><button class="btn btn-ghost" style="margin:0;flex:1" ' + (idx > 0 ? 'onclick="ydPasteOpen(' + (idx - 1) + ')"' : 'disabled') + '>‹ Prev stand</button><button class="btn btn-ghost" style="margin:0;flex:1" ' + (idx < data.stands.length - 1 ? 'onclick="ydPasteOpen(' + (idx + 1) + ')"' : 'disabled') + '>Next stand ›</button></div>' +
     '<div style="font-weight:800;margin-top:4px">Reconciliation — Chargeables (' + g.charge.length + ')</div>' +
     '<button class="btn btn-primary" style="margin:6px 0" onclick="ydCopy(\'charge\')">📋 Copy Count In · Waste · Count Out</button>' +
@@ -13180,6 +13279,25 @@ function ydPasteOpen(idx) {
     (g.extra.length ? '<div style="font-weight:800;margin-top:14px;color:#B45309">⚠️ Not in the copy (' + g.extra.length + ') — enter by hand if Yellow Dog has them</div>' +
       g.extra.map(it => '<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)">' + escapeHtml(it.itemName) + ' — In ' + ydNum(it.countIn) + ' · Waste ' + ydNum(it.waste) + ' · Out ' + ydNum(it.countOut) + '</div>').join('') : '') +
     '<button class="btn btn-ghost" style="margin-top:12px" onclick="ydPasteCSV()">⬇️ Download all stands (Yellow Dog order)</button>');
+}
+function ydSheetHtml(s, g) {
+  const sh = ydSheetGet();
+  const pick = '<label style="display:block;margin:0"><input type="file" accept="application/pdf,.pdf" style="display:none" onchange="ydPdfPicked(this)"><span class="btn btn-ghost" style="margin:6px 0 0;display:block;text-align:center">📄 ' + (sh ? 'Load a different Yellow Dog PDF' : 'Load Yellow Dog stand sheet PDF') + '</span></label>';
+  if (!sh) return '<div class="card" style="padding:10px 12px;margin-bottom:10px;border-left:4px solid #F59E0B"><div style="font-weight:800;font-size:13px">Match Yellow Dog exactly</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin-top:3px">Load this event\'s Yellow Dog <b>Stand Sheet Pre-Event (All Items)</b> PDF once. Every stand then copies in Yellow Dog\'s own order. Until then this uses the app\'s sheet order.</div>' + pick +
+    '<div id="yd-pdf-status" style="font-size:11px;color:var(--text-3);margin-top:4px"></div></div>';
+  const num = invStandNum(s.stand), fam = invFamily(s.stand);
+  const score = n => (invStandNum(n) === num ? 0 : 2) + (invFamily(n) === fam ? 0 : 1);
+  const names = Object.keys(sh.stands).sort((a, b) => score(a) - score(b) || a.localeCompare(b, undefined, { numeric: true }));
+  const cur = g.ydStand || '';
+  const opts = '<option value="-"' + (cur ? '' : ' selected') + '>— not in Yellow Dog (use app order) —</option>' + names.map(n => '<option value="' + escapeHtml(n) + '"' + (n === cur ? ' selected' : '') + '>' + escapeHtml(n) + '</option>').join('');
+  return '<div class="card" style="padding:10px 12px;margin-bottom:10px;border-left:4px solid ' + (cur ? '#10B981' : '#DC2626') + '">' +
+    '<div style="font-size:11px;color:var(--text-2)">Yellow Dog sheet: <b>' + escapeHtml(sh.event || sh.file || '') + '</b> · ' + names.length + ' stands</div>' +
+    '<label class="form-label" style="margin:6px 0 2px">Yellow Dog stand for ' + escapeHtml(s.stand) + '</label>' +
+    '<select class="form-input" style="margin:0" onchange="ydMapSet(this.value)">' + opts + '</select>' +
+    (cur ? '' : '<div style="font-size:11px;color:#DC2626;margin-top:4px">No Yellow Dog stand picked — rows follow the app sheet and may not line up.</div>') +
+    '<div id="yd-pdf-status" style="font-size:11px;color:var(--text-3);margin-top:4px"></div>' +
+    '<div style="display:flex;gap:6px">' + pick.replace('display:block;text-align:center', 'display:block;text-align:center;font-size:12px;padding:8px') + '<button class="btn btn-ghost" style="margin:6px 0 0;width:auto;font-size:12px;padding:8px" onclick="ydSheetClear()">Remove</button></div></div>';
 }
 function ydCopy(which) {
   const data = state.mgrInvData, s = data && data.stands && data.stands[state._ydIdx || 0];
@@ -13197,12 +13315,12 @@ function ydPasteCSV() {
   const data = state.mgrInvData;
   if (!data || !data.stands) return toast('Load inventory first', 'error');
   const q = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  let csv = 'Stand,Tab,#,Description,Count In,Waste,Count Out\n';
+  let csv = 'Stand,Yellow Dog Stand,Tab,#,Description,Count In,Waste,Count Out\n';
   data.stands.forEach(s => {
-    const g = ydSplit(s);
-    g.charge.forEach((it, i) => { csv += [s.stand, 'Chargeables', i + 1, it.itemName, ydNum(it.countIn), ydNum(it.waste), ydNum(it.countOut)].map(q).join(',') + '\n'; });
-    g.nonch.forEach((it, i) => { csv += [s.stand, 'Non-Chargeables & Supplies', i + 1, it.itemName, '', '', ydNum(it.countOut)].map(q).join(',') + '\n'; });
-    g.extra.forEach(it => { csv += [s.stand, 'NOT ON SHEET - enter by hand', '', it.itemName, ydNum(it.countIn), ydNum(it.waste), ydNum(it.countOut)].map(q).join(',') + '\n'; });
+    const g = ydSplit(s), y = g.ydStand || '(app sheet order)';
+    g.charge.forEach((it, i) => { csv += [s.stand, y, 'Chargeables', i + 1, it.itemName, ydNum(it.countIn), ydNum(it.waste), ydNum(it.countOut)].map(q).join(',') + '\n'; });
+    g.nonch.forEach((it, i) => { csv += [s.stand, y, 'Non-Chargeables & Supplies', i + 1, it.itemName, '', '', ydNum(it.countOut)].map(q).join(',') + '\n'; });
+    g.extra.forEach(it => { csv += [s.stand, y, 'NOT IN YELLOW DOG LIST - enter by hand', '', it.itemName, ydNum(it.countIn), ydNum(it.waste), ydNum(it.countOut)].map(q).join(',') + '\n'; });
   });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
