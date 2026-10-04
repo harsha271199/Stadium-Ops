@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-39 (warehouse screens still exactly as fix-34)
+- Checkout & Inventory Tracker: every stand with a count has **👁 View counts** — item by item: Count In, transfers in/out, waste, Count Out and Used (In + transfers − waste − Out; negative shown red = count likely wrong), plus who submitted Count In / Count Out and when.
+
 ## 2026-10-04-fix-38 (warehouse screens still exactly as fix-34)
 - Supervisors (and multi-stand leads like Kijana) can check themselves out — no more "Ask your Stand Lead to check you out". They are not held by a stand's Count In/Out lock (that stays the Stand Lead's job); a manager checking a supervisor out isn't blocked either.
 

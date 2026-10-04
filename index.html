@@ -4384,7 +4384,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-38';
+const BUILD_TAG = '2026-10-04-fix-39';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -19544,6 +19544,7 @@ function renderInvTracker() {
            : '<button class="btn btn-primary" style="width:auto;padding:8px 12px;margin:0;font-size:13px" onclick="invtReceiveOpen(' + i + ')">📦 Receive box</button>') + '</div>' +
       '<div style="font-size:12px;color:var(--text-2);margin:4px 0 6px">Runs it: ' + leadTxt + '<span style="font-size:11px">' + ago + '</span></div>' +
       chip('Count In', r.countIn) + chip('Count Out', r.countOut) + boxChip +
+      ((r.countIn || r.countOut) ? '<button class="btn btn-ghost" style="width:auto;padding:4px 10px;margin:0 0 4px;font-size:11px;font-weight:800" onclick="invtViewCounts(' + i + ')">👁 View counts</button>' : '') +
       (miss.length ? '<div style="font-size:12px;font-weight:700;color:#B45309;margin-top:4px">Missing: ' + miss.map(escapeHtml).join(', ') + '</div>' : '') +
       (!rec ? '<div style="font-size:11px;color:var(--text-3);margin-top:4px">Box: ' + invtBoxItems(r).map(escapeHtml).join(', ') + '</div>' : '') +
       (done ? '' : '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-ghost" style="width:auto;padding:4px 10px;margin:0;font-size:11px" onclick="invtOpen(' + i + ')">Open ' + (r.countIn ? 'Count Out' : 'Count In') + ' ›</button><button class="btn btn-ghost" style="width:auto;padding:4px 10px;margin:0;font-size:11px" onclick="invtRemind(' + i + ')">🔔 Remind</button></div>') +
@@ -19555,6 +19556,29 @@ function renderInvTracker() {
   }
   if (state._invtReceiptsOk === false) html = '<div class="notice warning" style="font-size:12px">Box check-in is not available right now — try again in a moment.</div>' + html;
   el.innerHTML = html;
+}
+// ---- Manager: see exactly what a stand counted (Count In / Transfers / Waste / Count Out) ----
+async function invtViewCounts(i) {
+  const r = (state._invtRows || [])[i]; if (!r) return;
+  const rows = await sb('inventory_entries?entry_date=eq.' + stadiumDay() + '&stand=eq.' + encodeURIComponent(r.stand) + '&select=phase,submitted_by,created_at,counts&order=created_at.asc').catch(() => ({ _err: true }));
+  if (rows._err || !Array.isArray(rows)) return toast('Could not load the counts', 'error');
+  const parse = c => { if (typeof c === 'string') { try { return JSON.parse(c); } catch (e) { return {}; } } return c || {}; };
+  const num = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
+  const items = {}, order = [];
+  const get = (name, it) => { if (!items[name]) { items[name] = { name, unit: it.unit || '', start: it.expStart, cin: null, tin: 0, tout: 0, waste: 0, cout: null }; order.push(name); } return items[name]; };
+  const lastCin = rows.filter(x => x.phase === 'Count In').pop(), lastCout = rows.filter(x => x.phase === 'Count Out').pop();
+  if (lastCin) Object.values(parse(lastCin.counts)).forEach(it => { if (it && it.itemName) { const x = get(it.itemName, it); x.cin = num(it.countIn != null ? it.countIn : it.count); } });
+  rows.filter(x => x.phase !== 'Count In' && x.phase !== 'Count Out').forEach(e => Object.values(parse(e.counts)).forEach(it => { if (!it || !it.itemName) return; const x = get(it.itemName, it); x.tin += num(it.transferIn) || 0; x.tout += num(it.transferOut) || 0; x.waste += num(it.waste) || 0; }));
+  if (lastCout) Object.values(parse(lastCout.counts)).forEach(it => { if (it && it.itemName) { const x = get(it.itemName, it); x.cout = num(it.countOut != null ? it.countOut : it.count); x.waste += num(it.waste) || 0; } });
+  const t = e => e ? whDisp(e.submitted_by || '') + ' · ' + new Date(e.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Phoenix' }) : '<span style="color:#DC2626">not done</span>';
+  const cell = v => v == null ? '<span style="color:#DC2626">—</span>' : (Math.round(v * 100) / 100);
+  const td = 'padding:5px 4px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap';
+  const body = order.map(n => { const x = items[n]; const used = (x.cin != null && x.cout != null) ? Math.round((x.cin + x.tin - x.tout - x.waste - x.cout) * 100) / 100 : null;
+    return '<tr><td style="padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px">' + escapeHtml(n) + (x.unit ? ' <span style="opacity:.6">' + escapeHtml(x.unit) + '</span>' : '') + '</td><td style="' + td + '">' + cell(x.cin) + '</td><td style="' + td + '">' + (x.tin || x.tout ? (x.tin ? '+' + x.tin : '') + (x.tout ? ' −' + x.tout : '') : '') + '</td><td style="' + td + '">' + (x.waste || '') + '</td><td style="' + td + '">' + cell(x.cout) + '</td><td style="' + td + ';font-weight:800;color:' + (used != null && used < 0 ? '#DC2626' : 'inherit') + '">' + (used == null ? '' : used) + '</td></tr>'; }).join('');
+  whSheet('<div style="font-weight:850;font-size:17px">👁 ' + escapeHtml(r.stand) + '</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 10px">Count In: ' + t(lastCin) + '<br>Count Out: ' + t(lastCout) + '</div>' +
+    (order.length ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="font-size:10px;color:var(--text-2);text-align:right"><th style="text-align:left;padding:4px">Item</th><th style="padding:4px">In</th><th style="padding:4px">Transfer</th><th style="padding:4px">Waste</th><th style="padding:4px">Out</th><th style="padding:4px">Used</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
+      '<div style="font-size:10px;color:var(--text-3);margin-top:6px">Used = In + transfers in − transfers out − waste − Out. A red (negative) Used means a count is likely wrong.</div>' : '<div style="font-size:12px;color:var(--text-3)">No counts entered yet.</div>'));
 }
 // ---- Receive a stand's checkout box (managers at the exit table) ----
 function invtReceiveOpen(i) {
