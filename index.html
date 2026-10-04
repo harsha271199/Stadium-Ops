@@ -4378,7 +4378,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-32';
+const BUILD_TAG = '2026-10-04-fix-33';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5040,8 +5040,13 @@ async function openRequestGuard(kind, stand){
   if(kind==='stock'){url='stock_requests?stand=eq.'+st+'&status=in.(open,claimed)&created_at=gte.'+since+'&order=created_at.desc&select=requested_by,created_at,status';label='Stock';}
   else if(kind==='food'){url='kitchen_requests?stand=eq.'+st+'&status=not.in.(delivered,cancelled)&created_at=gte.'+since+'&order=created_at.desc&select=requested_by,created_at,status';label='Food';}
   else {url='it_issues?stand=eq.'+st+'&status=neq.resolved&created_at=gte.'+since+'&order=created_at.desc&select=reported_by,created_at,status';label='IT';}
-  const rows=await sb(url).catch(()=>({_err:true}));
-  if(rows._err||!Array.isArray(rows)||rows.length<limit)return null;
+  let rows=await sb(url).catch(()=>({_err:true}));
+  if(rows._err||!Array.isArray(rows))return null;
+  // An order nobody closed (runner forgot "Delivered") must not lock the stand
+  // for hours: only requests from the last 45 min (IT: 60) count toward the limit.
+  const staleMin=kind==='it'?60:45;
+  rows=rows.filter(x=>Date.now()-new Date(x.created_at).getTime()<staleMin*60000);
+  if(rows.length<limit)return null;
   const r=rows[0];
   const mins=Math.max(0,Math.round((Date.now()-new Date(r.created_at))/60000));
   const ago=mins<1?'just now':mins===1?'1 min ago':mins+' min ago';
@@ -9659,7 +9664,7 @@ function standRequestCompactCard(kind,r,isOpen,showStand){
     </div>
     <div style="font-size:9px;color:var(--text-2);margin-top:5px">${requestedBy?'Requested by '+escapeHtml(requestedBy)+' · ':''}${timeAgo(when)}</div>
     ${extra?`<div style="font-size:10px;color:var(--text-2);margin-top:4px">${extra}</div>`:''}
-    ${kind==='stock'?stockDenyBtnHtml(r):kind==='kitchen'?foodMgrActionsHtml(r):''}
+    ${kind==='stock'?stockDenyBtnHtml(r):kind==='kitchen'?foodMgrActionsHtml(r):itMgrActionsHtml(r)}
   </div>`;
 }
 async function loadStandRequests(){
@@ -11180,7 +11185,7 @@ function supportOpsRequestCard(kind,r){
     ' · '+label+'</div></div><div class="support-req-status" style="color:'+color+'">'+
     escapeHtml(String(status))+(supportReqIsOverdue(kind,r)?'<span class="support-overdue-pill">OVERDUE</span>':'')+
     '</div></div><div class="support-req-body">'+body+
-    '</div><div class="support-req-meta">'+meta+'</div>'+(kind==='stock'?stockDenyBtnHtml(r):kind==='food'?foodMgrActionsHtml(r):'')+'</div>';
+    '</div><div class="support-req-meta">'+meta+'</div>'+(kind==='stock'?stockDenyBtnHtml(r):kind==='food'?foodMgrActionsHtml(r):itMgrActionsHtml(r))+'</div>';
 }
 
 function supportReqSearchInput(kind){
@@ -11647,7 +11652,7 @@ function mgrV10RequestCard(kind,r){
       <div class="mgr-v10-request-status" style="color:${color}">${escapeHtml(String(status))}</div>
     </div>
     <div class="mgr-v10-request-meta">${by?'By '+escapeHtml(by)+' · ':''}${timeAgo(mgrV10ReqTime(kind,r))}${extra?'<br>'+extra:''}</div>
-    ${kind==='stock'?stockDenyBtnHtml(r):kind==='kitchen'?foodMgrActionsHtml(r):''}
+    ${kind==='stock'?stockDenyBtnHtml(r):kind==='kitchen'?foodMgrActionsHtml(r):itMgrActionsHtml(r)}
   </div>`;
 }
 
@@ -24191,8 +24196,45 @@ function foodMgrActionsHtml(r) {
   if (!canManageAnyRequest() || !r || ['delivered', 'cancelled'].includes(r.status)) return '';
   const id = escapeAttr(String(r.id)), st = escapeAttr(String(r.stand || ''));
   return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">' +
+    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#00A651;border-color:#00A651" onclick="event.stopPropagation();foodMarkDelivered(\'' + id + '\',\'' + st + '\')">✅ Mark delivered</button>' +
     '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#7C3AED;border-color:#7C3AED" onclick="event.stopPropagation();requestMoveFoodToStock(\'' + id + '\')">↪ Move to Warehouse</button>' +
     '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="event.stopPropagation();kitchenDeclineOpen(\'' + id + '\',\'' + st + '\')">❌ Decline</button></div>';
+}
+async function foodMarkDelivered(id, standHint) {
+  if (!canDeclineFood()) return toast('Not authorized', 'error');
+  if (!(await confirmAction('Mark this Food order for ' + (standHint || 'the stand') + ' as delivered?', { title: 'Mark delivered', confirmLabel: '✅ Delivered' }))) return;
+  const me = (state.staffAccount && state.staffAccount.name) || 'Manager';
+  const r = await kitchenPatch(id, { status: 'delivered', delivered_at: new Date().toISOString(), delivery_method: 'manager_marked', updated_at: new Date().toISOString() });
+  if (!r) return toast('Could not update — try again', 'error');
+  if (r.requested_by_id) sendPushTo(String(r.requested_by_id), '✅ Food delivered', (r.stand || standHint || '') + ' — marked delivered by ' + me);
+  toast('✅ Marked delivered', 'success');
+  if (state.currentScreen === 'screen-kitchen') loadKitchenConsole(); else refreshAfterStockChange();
+}
+// IT ticket buttons for managers: close it as fixed, or decline it (not an IT problem).
+function itMgrActionsHtml(r) {
+  if (!canManageAnyRequest() || !r || r.status === 'Resolved') return '';
+  const id = escapeAttr(String(r.id));
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">' +
+    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#00A651;border-color:#00A651" onclick="event.stopPropagation();itMgrClose(\'' + id + '\',\'fixed\')">✅ Mark fixed</button>' +
+    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="event.stopPropagation();itMgrClose(\'' + id + '\',\'decline\')">❌ Decline</button></div>';
+}
+async function itMgrClose(id, how) {
+  if (!canManageAnyRequest()) return toast('Not authorized', 'error');
+  const me = (state.staffAccount && state.staffAccount.name) || 'Manager';
+  let note;
+  if (how === 'decline') {
+    note = prompt('Why is this ticket declined? (the stand sees this)', 'Not an IT issue');
+    if (note === null) return; note = String(note).trim(); if (!note) return toast('A reason is required', 'error');
+    note = 'Declined by ' + me + ': ' + note;
+  } else {
+    if (!(await confirmAction('Mark this IT ticket as fixed?', { title: 'Mark fixed', confirmLabel: '✅ Fixed' }))) return;
+    note = 'Marked fixed by ' + me;
+  }
+  const r = await sb('it_issues?id=eq.' + encodeURIComponent(id) + '&status=neq.resolved', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'resolved', resolution_note: note, updated_at: new Date().toISOString() }) }).catch(() => ({ _err: true }));
+  if (r._err || !Array.isArray(r) || !r.length) { refreshAfterStockChange(); return toast('Already closed or could not update', 'error'); }
+  const t = r[0]; if (t.stand) notifyStandLeadsAndSupervisors(t.stand, (how === 'decline' ? '❌ IT ticket declined · ' : '✅ IT ticket closed · ') + t.stand, note, []);
+  toast(how === 'decline' ? 'Ticket declined' : '✅ Marked fixed', 'success');
+  refreshAfterStockChange();
 }
 // Food request that is really a warehouse item → becomes a Stock request for the same stand.
 async function requestMoveFoodToStock(id) {

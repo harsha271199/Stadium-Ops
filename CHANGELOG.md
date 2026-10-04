@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-33
+- Stands no longer get locked out by orders nobody closed: only Stock/Food requests from the last 45 min (IT tickets: 60 min) count toward the per-stand open-request limit (Food 3, Stock 3 portables / 5 stands, IT 1).
+- Managers / Support Managers / Admin can close anything that's stuck: Food cards get **✅ Mark delivered** (plus Move to Warehouse / Decline); IT tickets get **✅ Mark fixed** and **❌ Decline** (reason shown to the stand's leads/supervisors). Stock already had Mark delivered / Move to Food / Deny.
+
 ## 2026-10-04-fix-32
 - Managers / Support Managers / Admin on every open request card (All Requests, manager board, support view):
   - Food: **↪ Move to Warehouse** (becomes a Stock request for the same stand, routed to that area's warehouse people; food order cancelled with "Moved to Warehouse") and **❌ Decline** (same reply sheet as the Food Manager).
