@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-34
+- Move history: every move is logged (new `worker_moves` table: who, from stand, to stand, moved by, time). Manager check-in screen has **📍 Moves** (today's list + CSV). Today's earlier moves were recovered from check-in notes (7 moves).
+- Walk-in for someone already on today's schedule (e.g. a Warehouse Runner now working a stand) no longer fails with "already on today's schedule": if the ID **and** name match, they are moved to the chosen stand (logged), and keep the same login.
+
 ## 2026-10-04-fix-33
 - Stands no longer get locked out by orders nobody closed: only Stock/Food requests from the last 45 min (IT tickets: 60 min) count toward the per-stand open-request limit (Food 3, Stock 3 portables / 5 stands, IT 1).
 - Managers / Support Managers / Admin can close anything that's stuck: Food cards get **✅ Mark delivered** (plus Move to Warehouse / Decline); IT tickets get **✅ Mark fixed** and **❌ Decline** (reason shown to the stand's leads/supervisors). Stock already had Mark delivered / Move to Food / Deny.

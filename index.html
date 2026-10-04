@@ -3063,6 +3063,7 @@
       <div id="mgr-team-all">
         <div id="bc-stats" class="bc-stats-bar"></div>
         <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px">
+          <button class="prem-export-btn" onclick="moveHistoryOpen()">📍 Moves</button>
           <button class="prem-export-btn" onclick="bcExportCSV()">⬇️ CSV</button>
           <button class="prem-export-btn" onclick="bcExportPDF()">🖨️ PDF</button>
         </div>
@@ -4378,7 +4379,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-33';
+const BUILD_TAG = '2026-10-04-fix-34';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6187,6 +6188,9 @@ async function api(action, data) {
     }
     case 'managerMoveWorker': {
       const today=stadiumDay();
+      // Where they really are right now (the screen's copy can be stale) — for the move log.
+      const curRow=await sb('schedule?employee_id=eq.'+encodeURIComponent(data.empId)+'&event_date=eq.'+encodeURIComponent(today)+'&select=location&limit=1').catch(()=>({_err:true}));
+      const realFrom=(Array.isArray(curRow)&&curRow[0]&&curRow[0].location)||data.fromStand||'';
       // Move both the physical location AND the crew/event grouping. Stand Lead
       // My Team is crew-based, so changing location alone would make the worker
       // invisible to the destination Stand Lead.
@@ -6226,7 +6230,9 @@ async function api(action, data) {
       if(la&&['working','break'].includes(la.status)&&la.stand!==data.toStand){
         await sb('attendance',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({employee_id:data.empId,worker_name:data.name,stand:data.toStand,status:la.status,notes:'Moved from '+(la.stand||data.fromStand||'')+' by '+(data.movedBy||'manager')})}).catch(()=>{});
       }
-      return {ok:true, ambiguousCrew};
+      // Move history: who, from where, to where, by whom, when.
+      await sb('worker_moves',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({event_date:today,employee_id:String(data.empId),worker_name:data.name||'',from_stand:realFrom||null,to_stand:data.toStand,moved_by:data.movedBy||'manager',note:data.note||null})}).catch(()=>{});
+      return {ok:true, ambiguousCrew, movedFrom:realFrom};
     }
 
     case 'addWalkin': {
@@ -6242,7 +6248,17 @@ async function api(action, data) {
       const todayExisting=await sb('schedule?employee_id=like.*'+encodeURIComponent(loginId)+'&event_date=eq.'+encodeURIComponent(today)+'&select=employee_id,worker_name,location,event_name').catch(()=>({_err:true}));
       if(!todayExisting._err&&Array.isArray(todayExisting)&&todayExisting.length){
         const exact=todayExisting.find(r=>String(r.employee_id||'').endsWith(loginId));
-        if(exact)return {ok:false,error:(exact.worker_name||'This employee')+' is already on today’s schedule at '+(exact.location||exact.event_name||'a stand')+' — use Move stand'};
+        if(exact){
+          // Already on today's schedule (often a Warehouse Runner who is now working a stand):
+          // move them here instead of refusing — the move is logged with where they came from.
+          if(!loginPickByName([exact],name,r=>r.worker_name,r=>r.employee_id).rows.length)
+            return {ok:false,error:'ID '+loginId+' is '+(exact.worker_name||'someone else')+' on today’s schedule — check the ID or name'};
+          if((exact.location||'')===data.stand)return {ok:false,error:(exact.worker_name||'This employee')+' is already on '+data.stand+' today'};
+          const mv=await api('managerMoveWorker',{empId:exact.employee_id,name:exact.worker_name||name,fromStand:exact.location||'',toStand:data.stand,role:'',movedBy:data.addedBy||(state.staffAccount&&state.staffAccount.name)||(state.user&&state.user.name)||'Manager',note:'Added as walk-in'});
+          if(!(mv&&mv.ok))return {ok:false,error:'Could not move '+(exact.worker_name||'this employee')+' from '+(exact.location||'their stand')};
+          const ln=String(exact.worker_name||name).includes(',')?String(exact.worker_name||name).split(',')[0].trim():String(exact.worker_name||name).split(/\s+/).pop();
+          return {ok:true,loginId,lastName:ln,storedEmployeeId:exact.employee_id,moved:true,movedFrom:exact.location||'',ambiguousCrew:!!mv.ambiguousCrew};
+        }
       }
 
       // If Manager only knows last 5, reuse the worker's real historical full
@@ -9520,6 +9536,7 @@ async function submitWalkin() {
     const res = await api('addWalkin', { name, empId, stand });
     if (res.ok) {
       if(res.ambiguousCrew) toast('⚠️ '+name+' added · login '+empId+' — this stand has more than one crew name and none could be matched automatically, so they were given their own walk-in crew group. They may not appear in a specific Stand Lead\'s My Team until an admin sorts the crew out.','error',12000);
+      else if(res.moved) toast('📍 '+name+' moved from '+res.movedFrom+' to '+stand+' · login '+empId+' + last name','success',7000);
       else toast('✅ '+name+' added · login '+empId+' + last name');
       document.getElementById('walkin-name').value = ''; document.getElementById('walkin-empid').value = '';
       if(leadership||state._walkinReturn==='manager_team'){
@@ -10195,6 +10212,7 @@ async function teamSaveWalkin(){
     if(res.ok){
       teamCloseWalkin();
       if(res.ambiguousCrew) toast('⚠️ '+name+' added · login '+res.loginId+' — this stand has more than one crew name and none could be matched automatically, so they were given their own walk-in crew group. They may not appear in a specific Stand Lead\'s My Team until an admin sorts the crew out.','error',12000);
+      else if(res.moved) toast('📍 '+name+' moved from '+res.movedFrom+' to '+stand+' · login '+res.loginId+' + last name','success',7000);
       else toast('✅ '+name+' added · login '+res.loginId+' + last name');
       loadMyTeam();
     } else toast(res.error||'Could not add worker','error');
@@ -18164,6 +18182,21 @@ async function bcSubmitFb(idx) {
 // pattern as Premium's premiumExportCheckinsCSV/PDF — covers both Employee
 // and NPO stands with a Type column so the two stay distinguishable in the
 // exported record even though they're separate sections on screen.
+// Move history for today's game: who moved, from where, to where, by whom, when.
+async function moveHistoryOpen() {
+  const rows = await sb('worker_moves?event_date=eq.' + stadiumDay() + '&order=moved_at.asc&select=*').catch(() => ({ _err: true }));
+  if (rows._err || !Array.isArray(rows)) return toast('Could not load move history', 'error');
+  state._moveHistory = rows;
+  const t = x => { try { return new Date(x).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Phoenix' }); } catch (e) { return ''; } };
+  const list = rows.length ? rows.map(r => '<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><b>' + escapeHtml(whDisp(r.worker_name || r.employee_id)) + '</b> <span style="color:var(--text-2);font-size:11px">' + escapeHtml(t(r.moved_at)) + '</span><div>' + escapeHtml(r.from_stand || '?') + ' → <b>' + escapeHtml(r.to_stand) + '</b></div><div style="font-size:11px;color:var(--text-2)">' + (r.moved_by ? 'by ' + escapeHtml(r.moved_by) : '') + (r.note ? ' · ' + escapeHtml(r.note) : '') + '</div></div>').join('') : '<div style="font-size:12px;color:var(--text-3);padding:10px 0">No moves recorded today.</div>';
+  whSheet('<div style="font-weight:850;font-size:17px">📍 Moves today · ' + rows.length + '</div><div style="font-size:12px;color:var(--text-2);margin:3px 0 8px">Who was moved, from where to where, by whom.</div>' + list +
+    (rows.length ? '<button class="btn btn-ghost" style="margin-top:8px" onclick="moveHistoryCSV()">⬇️ Download CSV</button>' : ''));
+}
+function moveHistoryCSV() {
+  const rows = state._moveHistory || []; const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const csv = ['Time,Employee ID,Name,From,To,Moved by,Note'].concat(rows.map(r => [new Date(r.moved_at).toLocaleString('en-US', { timeZone: 'America/Phoenix' }), r.employee_id, r.worker_name, r.from_stand, r.to_stand, r.moved_by, r.note].map(q).join(','))).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'moves-' + stadiumDay() + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+}
 function bcExportCSV() {
   const stands = state.bedCheckStands || [];
   if (!stands.length) return toast('Nothing to export', 'error');
