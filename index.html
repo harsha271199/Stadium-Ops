@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-23';
+const BUILD_TAG = '2026-10-04-fix-24';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -16286,8 +16286,9 @@ const WH_GROUPS=[
   {key:'g2',name:'Group 2 · West Concourse',short:'West Concourse',test:n=>{const k=parseInt(n,10);return k>=203&&k<=214;}},
   {key:'g3',name:'Group 3 · Draft Houses 215–221',short:'Draft Houses',test:n=>{const k=parseInt(n,10);return k>=215&&k<=221;}},
   {key:'g4',name:'Group 4 · East Concourse',short:'East Concourse',test:n=>{const k=parseInt(n,10);return k>=222&&k<=234;}},
-  {key:'g5',name:'Group 5 · Upper West',short:'Upper West',test:n=>{const k=parseInt(n,10);return (k>=300&&k<330)||(k>=401&&k<=414);}},
-  {key:'g6',name:'Group 6 · Upper East',short:'Upper East',test:n=>{const k=parseInt(n,10);return (k>=330&&k<400)||(k>=415&&k<500);}}
+  // All 300-level stands (310P, 316P, 334, 348) are Upper East; Upper West is 401–414.
+  {key:'g5',name:'Group 5 · Upper West',short:'Upper West',test:n=>{const k=parseInt(n,10);return k>=401&&k<=414;}},
+  {key:'g6',name:'Group 6 · Upper East',short:'Upper East',test:n=>{const k=parseInt(n,10);return (k>=300&&k<400)||(k>=415&&k<500);}}
 ];
 // Which group(s) a list of stands belongs to — used to label warehouse people.
 function whGroupLabelForStands(stands){

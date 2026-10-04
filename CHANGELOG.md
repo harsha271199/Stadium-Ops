@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-24
+- 310P and 316P Beer Portable moved from Upper West to **Upper East** (with 334, 348, 438, 442) everywhere areas are used: warehouse Assign & Team, request routing, Food Manager runner areas, Admin area buttons. Upper West = 401–414.
+- Data: saved warehouse assignments updated — Selle, Gilmer, Rodriquez no longer cover 310P/316P; Martin, Robles, Vasquez (Upper East) now do.
+
 ## 2026-10-04-fix-23
 - Check-in sync: Stand Lead / Supervisor My Team now reads each person's latest check-in by PERSON (plus the stand's own rows for NPO), the same as the manager screen — a check-in made by a manager, a supervisor at another stand, or before a move no longer shows "Not arrived" in My Team.
 - Moving a checked-in worker carries their status to the new stand (attendance row "Moved from X by Y"), so the manager live view and both Stand Leads agree immediately.
