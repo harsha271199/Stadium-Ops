@@ -3636,8 +3636,13 @@
       <div class="chip" onclick="selectKitchenUrgency(this,'URGENT',15)">🔴 Urgent · 15m</div>
     </div>
     <div style="font-size:11px;color:var(--text-2);margin:8px 0 12px">Target: <b id="kitchen-eta-label">30 minutes</b></div>
+    <div class="notice warning" style="font-size:12px;margin:0 0 10px">🍔 <b>FOOD ONLY.</b> Cups, ice, lids, napkins, candy, drinks, utensils and other supplies are <b>Stock</b> — use <b>Request Stock</b> (Warehouse) for those.</div>
+    <div id="kitchen-req-runner-wrap" style="display:none">
+      <label class="form-label">GIVE TO RUNNER</label>
+      <select class="form-input" id="kitchen-req-runner"><option value="">Auto — runner who covers this stand</option></select>
+    </div>
     <label class="form-label">FOOD ORDER</label>
-    <div class="food-delivery-note">Type the <b>food</b> and <b>how many</b> in this one box. Write everything you need.</div>
+    <div class="food-delivery-note">Type the <b>food</b> and <b>how many</b> in this one box. Food items only.</div>
     <textarea class="form-input" id="kitchen-order-text" rows="4" placeholder="Food name and quantity" oninput="if(_kitchenDraft[0])_kitchenDraft[0].itemName=this.value"></textarea>
     <div id="kitchen-draft-items" style="display:none"></div>
     <datalist id="kitchen-food-options"></datalist>
@@ -4379,7 +4384,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-36';
+const BUILD_TAG = '2026-10-04-fix-37';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15118,6 +15123,8 @@ function renderKitchenDraft(){const el=document.getElementById('kitchen-draft-it
 // Food delivery requests: real Stand Leads and Supervisors only (incl. multi-stand
 // leads). Not workers, not portable/temporary stand access, not managers.
 function canRequestFood(){
+  // Managers / Support Managers / Admin may send Food requests (and pick the runner).
+  if(state.staffAccount&&state.staffAccount.group==='manager'&&['manager','support_manager','admin'].includes(state.staffAccount.role))return true;
   const u=state.user;if(!u)return false;
   if(u.role==='supervisor'||isLimitedAreaLead())return true;
   return u.role==='lead'&&!u.leadAccessGranted&&!u.tempLeadAccess;
@@ -15129,6 +15136,12 @@ function applyFoodRequestAccess(){
 }
 async function goKitchenRequest(targetStand){
   await syncMyStandFromSchedule(true).catch(()=>{});
+  { // Managers choose which runner gets it (or leave Auto).
+    const isMgr=!!(state.staffAccount&&state.staffAccount.group==='manager'&&['manager','support_manager','admin'].includes(state.staffAccount.role));
+    const wrap=document.getElementById('kitchen-req-runner-wrap'),sel=document.getElementById('kitchen-req-runner');
+    if(wrap)wrap.style.display=isMgr?'':'none';
+    if(isMgr&&sel){const rs=await kitchenGetRunners().catch(()=>[]);sel.innerHTML='<option value="">Auto — runner who covers this stand</option>'+(rs||[]).filter(x=>!String(x.employee_id).startsWith('preview-')).map(x=>'<option value="'+escapeAttr(x.employee_id)+'">'+escapeHtml(x.name)+'</option>').join('');}
+  }
   const who=getRequesterIdentity();
   if(!canRequestFood())return toast('Food requests are for Stand Leads and Supervisors only — use Request Stock for warehouse items','error',6000);
   state.kitchenUrgency='Normal';state.kitchenETA=30;_kitchenDraft=[{itemName:'',qty:1,free_text:true}];{const ot=document.getElementById('kitchen-order-text');if(ot)ot.value='';}
@@ -15243,8 +15256,10 @@ async function submitKitchenRequest(){
   // it's just no longer the default action needed for every order), but
   // the common case (a runner already covers this area) needs zero manual
   // assignment at all.
-  const autoAssignId=(suggested&&suggested.employee_id&&!String(suggested.employee_id).startsWith('preview-'))?suggested.employee_id:null;
-  const autoAssignName=autoAssignId?suggested.name:null;
+  let autoAssignId=(suggested&&suggested.employee_id&&!String(suggested.employee_id).startsWith('preview-'))?suggested.employee_id:null;
+  let autoAssignName=autoAssignId?suggested.name:null;
+  { const sel=document.getElementById('kitchen-req-runner'),wrap=document.getElementById('kitchen-req-runner-wrap');
+    if(sel&&wrap&&wrap.style.display!=='none'&&sel.value){autoAssignId=sel.value;autoAssignName=sel.options[sel.selectedIndex].text;} }
   const row={client_uuid:requestClientUuid,stand,requested_by:who.name,requested_by_id:who.empId||'',items:enriched.map(x=>x.free_text?x.itemName:(x.qty+' × '+x.itemName)).join(', '),items_json:{items:enriched},note:holdNote+document.getElementById('kitchen-request-note').value,urgency:state.kitchenUrgency||'Normal',eta_minutes:Number(state.kitchenETA)||30,eta_deadline:deadline,status:'open',assigned_runner_id:autoAssignId,assigned_runner_name:autoAssignName};
   state._lastKitchenCreateError=null;const made=await kitchenCreate(row);if(!made){const e=state._lastKitchenCreateError||{};return toast('Could not send Food request'+(e.status?' · HTTP '+e.status:'')+(e.msg?' · '+String(e.msg).slice(0,90):''),'error',10000);}
   state._kitchenRequestUuid=null; // real request went through — next one gets its own fresh id

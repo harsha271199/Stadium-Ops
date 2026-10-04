@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-37 (warehouse screens still exactly as fix-34)
+- Managers / Support Managers / Admin can send Food requests again, with **GIVE TO RUNNER** (pick a runner, or Auto = the runner who covers the stand).
+- Food request form shows a clear **FOOD ONLY** banner: cups, ice, lids, napkins, candy, drinks, utensils and supplies go to Request Stock (Warehouse).
+
 ## 2026-10-04-fix-36 (built on fix-34 — warehouse screens exactly as fix-34)
 - fix-35's warehouse "Assign & On the way" / one-tap Delivered is **not** included (reverted while the game is running).
 - Kept from fix-35: IT tickets (managers) ✅ Mark fixed / ↪ Move to Warehouse / ↪ Move to Food; "What is the issue? *" with a short sentence required.
