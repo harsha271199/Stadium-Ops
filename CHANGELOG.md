@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-29
+- Managers, Support Managers and Admin can deny wrong warehouse (stock) requests: "❌ Deny wrong request" on every open Stock card in All Requests / Stand Requests, the manager request board and the support-manager view. Same Deny sheet as the Warehouse Manager (pick/type reason → stand, its leads/supervisors notified; request leaves waiting/overdue).
+
 ## 2026-10-04-fix-28
 - Moved people follow their new stand live: a signed-in worker/lead re-checks today's schedule every 30 s, on returning to the app, and right before any Stock / Food / IT request is opened or sent. If a manager moved them, the phone switches to the new stand ("📍 You were moved to …") and requests go there — plain workers/leads can only request for their current stand. (Steve LNU was moved 207P → 310P but his phone still requested for 207P.) Multi-stand leads keep their assigned area; NPO unchanged.
 - Data: request #1012 (Steve, wine + peanuts) moved from 207P to 310P and re-routed to Upper East (Martin, Robles, Vasquez). 310P / 316P people given their own crew names (Steve had 207P's, Patil had 222M's).

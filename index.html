@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-28';
+const BUILD_TAG = '2026-10-04-fix-29';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9654,6 +9654,7 @@ function standRequestCompactCard(kind,r,isOpen,showStand){
     </div>
     <div style="font-size:9px;color:var(--text-2);margin-top:5px">${requestedBy?'Requested by '+escapeHtml(requestedBy)+' · ':''}${timeAgo(when)}</div>
     ${extra?`<div style="font-size:10px;color:var(--text-2);margin-top:4px">${extra}</div>`:''}
+    ${kind==='stock'?stockDenyBtnHtml(r):''}
   </div>`;
 }
 async function loadStandRequests(){
@@ -11174,7 +11175,7 @@ function supportOpsRequestCard(kind,r){
     ' · '+label+'</div></div><div class="support-req-status" style="color:'+color+'">'+
     escapeHtml(String(status))+(supportReqIsOverdue(kind,r)?'<span class="support-overdue-pill">OVERDUE</span>':'')+
     '</div></div><div class="support-req-body">'+body+
-    '</div><div class="support-req-meta">'+meta+'</div></div>';
+    '</div><div class="support-req-meta">'+meta+'</div>'+(kind==='stock'?stockDenyBtnHtml(r):'')+'</div>';
 }
 
 function supportReqSearchInput(kind){
@@ -11641,6 +11642,7 @@ function mgrV10RequestCard(kind,r){
       <div class="mgr-v10-request-status" style="color:${color}">${escapeHtml(String(status))}</div>
     </div>
     <div class="mgr-v10-request-meta">${by?'By '+escapeHtml(by)+' · ':''}${timeAgo(mgrV10ReqTime(kind,r))}${extra?'<br>'+extra:''}</div>
+    ${kind==='stock'?stockDenyBtnHtml(r):''}
   </div>`;
 }
 
@@ -24165,20 +24167,35 @@ async function whLoadRawRequest(id) {
   return row;
 }
 const WH_DENY_REASONS = ['Out of stock', 'Already delivered / duplicate', 'Not a warehouse item', 'Wrong stand', 'Too much — call warehouse'];
-function whDenyOpen(id) {
-  if (!whIsLeader()) return toast('Only the Warehouse Manager or Supervisor can deny', 'error');
-  const r = (state.wRequests || []).find(x => String(x.id) === String(id)); if (!r) return;
+// Who may deny a stock request: Warehouse Manager/Supervisor and Managers/Support Managers/Admin.
+function canDenyStockRequest() {
+  return whIsLeader() || !!(state.staffAccount && state.staffAccount.group === 'manager' && ['manager', 'support_manager', 'admin'].includes(state.staffAccount.role));
+}
+// Small "❌ Deny" button for an open stock request card (manager screens).
+function stockDenyBtnHtml(r) {
+  if (!canDenyStockRequest() || !r || !(r.status === 'Pending' || r.status === 'On the way')) return '';
+  return '<button class="btn btn-ghost" style="width:auto;margin:6px 0 0;padding:6px 12px;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="event.stopPropagation();whDenyOpen(\'' + escapeAttr(String(r.id)) + '\',\'' + escapeAttr(String(r.stand || '')) + '\')">❌ Deny wrong request</button>';
+}
+function refreshAfterStockChange() {
+  if (state.currentScreen === 'screen-warehouse') return loadWarehouse();
+  if (state.currentScreen === 'screen-stand-requests') return loadStandRequests();
+  try { if (typeof mgrV10LoadRequests === 'function' && document.getElementById('mgr-v10-request-list')) mgrV10LoadRequests(state.mgrV10RequestFilter || 'stock'); } catch (e) {}
+  try { if (state.supportOpsTab === 'stock' && typeof supportOpsLoadRequests === 'function') supportOpsLoadRequests('stock'); } catch (e) {}
+}
+function whDenyOpen(id, standHint) {
+  if (!canDenyStockRequest()) return toast('Only managers and the Warehouse Manager/Supervisor can deny', 'error');
+  const r = (state.wRequests || []).find(x => String(x.id) === String(id)) || { id, stand: standHint || 'This stand' };
   whSheet('<div style="font-weight:850;font-size:17px">❌ Deny request</div><div style="font-size:12px;color:var(--text-2);margin:3px 0 10px">' + escapeHtml(r.stand) + ' · the stand sees the reason</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">' + WH_DENY_REASONS.map(x => '<button class="chip" onclick="document.getElementById(\'wh-deny-reason\').value=this.textContent">' + escapeHtml(x) + '</button>').join('') + '</div>' +
     '<input class="form-input" id="wh-deny-reason" placeholder="Reason (tap one above or type)" style="margin:0 0 8px">' +
     '<button class="btn btn-primary" style="background:#DC2626;border-color:#DC2626" onclick="whDenySave(\'' + escapeAttr(String(id)) + '\')">Deny request</button>');
 }
 async function whDenySave(id) {
-  if (!whIsLeader()) return toast('Not authorized', 'error');
+  if (!canDenyStockRequest()) return toast('Not authorized', 'error');
   const reason = String((document.getElementById('wh-deny-reason') || { value: '' }).value || '').trim();
   if (!reason) return toast('Pick or type a reason', 'error');
   const row = await whLoadRawRequest(id); if (!row) return;
-  if (!['open', 'claimed'].includes(row.status)) { whSheetClose(); loadWarehouse(); return toast('This request is already closed', 'error'); }
+  if (!['open', 'claimed'].includes(row.status)) { whSheetClose(); refreshAfterStockChange(); return toast('This request is already closed', 'error'); }
   const me = (state.staffAccount && state.staffAccount.name) || 'Warehouse';
   const j = row._j || { items: [], other: '' };
   const patch = { status: 'denied', note: 'Denied: ' + reason, items_json: Object.assign({}, j, { meta: Object.assign({}, j.meta || {}, { denied_reason: reason, denied_by: me, denied_at: new Date().toISOString() }) }) };
@@ -24188,7 +24205,7 @@ async function whDenySave(id) {
   if (row.requested_by_id) sendPushTo(row.requested_by_id, '❌ Stock request denied', row.stand + ' — ' + reason);
   notifyStandLeadsAndSupervisors(row.stand, '❌ Stock request denied · ' + row.stand, reason + ' (' + me + ')', [row.requested_by_id]);
   toast('Request denied — the stand was told why', 'success');
-  loadWarehouse();
+  refreshAfterStockChange();
 }
 let _whEditItems = [];
 async function whEditOpen(id) {
