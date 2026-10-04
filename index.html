@@ -4378,7 +4378,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-31';
+const BUILD_TAG = '2026-10-04-fix-32';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9659,7 +9659,7 @@ function standRequestCompactCard(kind,r,isOpen,showStand){
     </div>
     <div style="font-size:9px;color:var(--text-2);margin-top:5px">${requestedBy?'Requested by '+escapeHtml(requestedBy)+' · ':''}${timeAgo(when)}</div>
     ${extra?`<div style="font-size:10px;color:var(--text-2);margin-top:4px">${extra}</div>`:''}
-    ${kind==='stock'?stockDenyBtnHtml(r):''}
+    ${kind==='stock'?stockDenyBtnHtml(r):kind==='kitchen'?foodMgrActionsHtml(r):''}
   </div>`;
 }
 async function loadStandRequests(){
@@ -11180,7 +11180,7 @@ function supportOpsRequestCard(kind,r){
     ' · '+label+'</div></div><div class="support-req-status" style="color:'+color+'">'+
     escapeHtml(String(status))+(supportReqIsOverdue(kind,r)?'<span class="support-overdue-pill">OVERDUE</span>':'')+
     '</div></div><div class="support-req-body">'+body+
-    '</div><div class="support-req-meta">'+meta+'</div>'+(kind==='stock'?stockDenyBtnHtml(r):'')+'</div>';
+    '</div><div class="support-req-meta">'+meta+'</div>'+(kind==='stock'?stockDenyBtnHtml(r):kind==='food'?foodMgrActionsHtml(r):'')+'</div>';
 }
 
 function supportReqSearchInput(kind){
@@ -11647,7 +11647,7 @@ function mgrV10RequestCard(kind,r){
       <div class="mgr-v10-request-status" style="color:${color}">${escapeHtml(String(status))}</div>
     </div>
     <div class="mgr-v10-request-meta">${by?'By '+escapeHtml(by)+' · ':''}${timeAgo(mgrV10ReqTime(kind,r))}${extra?'<br>'+extra:''}</div>
-    ${kind==='stock'?stockDenyBtnHtml(r):''}
+    ${kind==='stock'?stockDenyBtnHtml(r):kind==='kitchen'?foodMgrActionsHtml(r):''}
   </div>`;
 }
 
@@ -15479,7 +15479,10 @@ async function renderKitchenQueue(rows){
       ${r.note?'<div class="req-wh-msg">💬 '+escapeHtml(r.note)+'</div>':''}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><a href="#" onclick="document.getElementById('${rowId}').classList.toggle('open');return false" style="font-size:12px;font-weight:800;color:var(--asu-maroon)">${r.assigned_runner_id?'↔ Change runner':'👉 Pick a runner'}</a><span style="font-size:11px;color:var(--text-3)">by ${escapeHtml(r.requested_by||'stand')}</span></div>
       <div class="prem-move-row${r.assigned_runner_id?'':' open'}" id="${rowId}"><select class="form-input" onchange="kitchenAssignRunner('${r.id}',this.value,this.options[this.selectedIndex].text)" style="margin:6px 0 0;font-size:13px"><option value="">— No runner —</option>${opts}</select></div>
-      ${coord?`<div style="margin-top:8px;text-align:right"><button class="btn btn-ghost" style="width:auto;padding:6px 12px;margin:0;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="kitchenDeclineOpen('${r.id}')">✖ Decline</button></div>`:''}
+      ${coord?(()=>{const me=state.staffAccount||{},mine=String(r.assigned_runner_id||'')===String(me.empId||'');
+        const self=mine?(r.status==='on_the_way'?`<button class="btn btn-primary" style="width:auto;padding:8px 14px;margin:0;font-size:13px" onclick="kitchenRunnerDeliver('${r.id}')">✅ Delivered</button>`:`<button class="btn btn-primary" style="width:auto;padding:8px 14px;margin:0;font-size:13px" onclick="kitchenRunnerPickup('${r.id}')">🏃 On my way</button>`)
+          :`<button class="btn btn-ghost" style="width:auto;padding:6px 12px;margin:0;font-size:12px;color:var(--success);border-color:var(--success)" onclick="kitchenAssignRunner('${r.id}','${escapeAttr(String(me.empId||''))}','${escapeAttr(String(me.name||'Food Manager'))}')">🙋 I'll deliver it</button>`;
+        return `<div style="margin-top:8px;display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap">${self}<button class="btn btn-ghost" style="width:auto;padding:6px 12px;margin:0;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="kitchenDeclineOpen('${r.id}')">✖ Decline</button></div>`;})():''}
     </div>`;
   };
   const doneRow=r=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);font-size:12px"><div><b>${escapeHtml(r.stand)}</b><div style="color:var(--text-2)">${kitchenItemsText(r)}</div></div><div style="text-align:right;white-space:nowrap;color:var(--text-2)">✅ ${escapeHtml(r.assigned_runner_name||'')}<br>${new Date(r.delivered_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</div></div>`;
@@ -15502,9 +15505,10 @@ async function renderKitchenQueue(rows){
 }
 // ---- Food Manager: decline an order with a short reply to the stand ----
 const FOOD_DECLINE_REASONS=['Not available right now','Kitchen can\'t make it right now','Sold out','Duplicate order'];
-function kitchenDeclineOpen(id){
-  if(!foodIsManagerSession())return toast('Only the Food Manager can decline an order','error');
-  const rows=state._kitchenRowsCache||[];const r=rows.find(x=>String(x.id)===String(id));
+function kitchenDeclineOpen(id,standHint){
+  if(!canDeclineFood())return toast('Only the Food Manager or a manager can decline an order','error');
+  const pool=[...(state._kitchenRowsCache||[]),...((state._v10RequestRows&&state._v10RequestRows.kitchen)||[])];
+  const r=pool.find(x=>String(x.id)===String(id))||(standHint?{stand:standHint,items:''}:null);
   const old=document.getElementById('food-decline-overlay');if(old)old.remove();
   const ov=document.createElement('div');ov.id='food-decline-overlay';ov.className='contact-popup-overlay';
   ov.innerHTML='<div class="contact-popup" style="max-width:440px">'+
@@ -15523,7 +15527,7 @@ function kitchenDeclinePick(btn){
 }
 function foodIsManagerSession(){const r=state.staffAccount&&state.staffAccount.role||'';return ['food_manager','kitchen_coordinator'].includes(r);}
 async function kitchenDeclineSave(id,btn){
-  if(!foodIsManagerSession())return toast('Only the Food Manager can decline an order','error');
+  if(!canDeclineFood())return toast('Only the Food Manager or a manager can decline an order','error');
   const reason=String((document.getElementById('food-decline-text')||{}).value||'').trim();
   if(!reason)return toast('Pick a reply or type one','error');
   const who=state.staffAccount||{};
@@ -15539,7 +15543,7 @@ async function kitchenDeclineSave(id,btn){
     if(before.assigned_runner_id)sendPushTo(String(before.assigned_runner_id),'❌ Food order cancelled · '+stand,'No need to deliver — '+reason);
     const ov=document.getElementById('food-decline-overlay');if(ov)ov.remove();
     toast('Declined — '+stand+' was told: '+reason);
-    loadKitchenConsole();
+    if(state.currentScreen==='screen-kitchen')loadKitchenConsole();else refreshAfterStockChange();
   });
 }
 function foodSetFilter(k){state._foodFilter=(state._foodFilter===k?'all':k);loadKitchenConsole();}
@@ -15586,8 +15590,9 @@ async function kitchenAssignRunner(id,runnerId,runnerName){
   if(clearing){
     toast('↩️ Delivery returned to Unclaimed');
   }else{
-    if(!String(runnerId).startsWith('preview-'))sendPushTo(runnerId,'🍔 Food delivery assigned',r.stand+' · '+kitchenItemsText(r).replace(/<[^>]+>/g,''));
-    toast('🏃 Assigned to '+runnerName);
+    const self=state.staffAccount&&String(state.staffAccount.empId)===String(runnerId);
+    if(!self&&!String(runnerId).startsWith('preview-'))sendPushTo(runnerId,'🍔 Food delivery assigned',r.stand+' · '+kitchenItemsText(r).replace(/<[^>]+>/g,''));
+    toast(self?'🙋 It\'s yours — tap On my way when you leave':'🏃 Assigned to '+runnerName);
   }
   if(oldRunner&&!oldRunner.startsWith('preview-'))sendPushTo(oldRunner,'↔ Order moved',r.stand+(clearing?' was taken off your list':' was handed to '+runnerName)+' — no need to bring it');
   loadKitchenConsole();
@@ -24177,12 +24182,70 @@ const WH_DENY_REASONS = ['Out of stock', 'Already delivered / duplicate', 'Not a
 function canDenyStockRequest() {
   return whIsLeader() || !!(state.staffAccount && state.staffAccount.group === 'manager' && ['manager', 'support_manager', 'admin'].includes(state.staffAccount.role));
 }
+function canManageAnyRequest() {
+  return !!(state.staffAccount && state.staffAccount.group === 'manager' && ['manager', 'support_manager', 'admin'].includes(state.staffAccount.role));
+}
+function canDeclineFood() { return foodIsManagerSession() || canManageAnyRequest(); }
+// Manager buttons on an open FOOD card: decline it, or move it to the Warehouse as a stock request.
+function foodMgrActionsHtml(r) {
+  if (!canManageAnyRequest() || !r || ['delivered', 'cancelled'].includes(r.status)) return '';
+  const id = escapeAttr(String(r.id)), st = escapeAttr(String(r.stand || ''));
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">' +
+    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#7C3AED;border-color:#7C3AED" onclick="event.stopPropagation();requestMoveFoodToStock(\'' + id + '\')">↪ Move to Warehouse</button>' +
+    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="event.stopPropagation();kitchenDeclineOpen(\'' + id + '\',\'' + st + '\')">❌ Decline</button></div>';
+}
+// Food request that is really a warehouse item → becomes a Stock request for the same stand.
+async function requestMoveFoodToStock(id) {
+  if (!canManageAnyRequest()) return toast('Only managers can move requests', 'error');
+  const rows = await sb('kitchen_requests?id=eq.' + encodeURIComponent(id) + '&select=*').catch(() => ({ _err: true }));
+  const k = Array.isArray(rows) && rows[0]; if (!k) return toast('Could not load the food request', 'error');
+  if (['delivered', 'cancelled'].includes(k.status)) { refreshAfterStockChange(); return toast('This food request is already closed', 'error'); }
+  if (!(await confirmAction('Move this Food request for ' + k.stand + ' to the Warehouse as a Stock request?\n\n' + String(k.items || '').slice(0, 140), { title: 'Move to Warehouse', confirmLabel: '↪ Move' }))) return;
+  const me = (state.staffAccount && state.staffAccount.name) || 'Manager';
+  const coverage = await resolveWarehouseAssigneesForStand(k.stand).catch(() => ({ people: [] }));
+  const ids = (coverage.people || []).map(p => String(p.employee_id || '')).filter(Boolean), names = (coverage.people || []).map(p => p.name || p.employee_id).filter(Boolean);
+  const etaMins = 30, etaDeadline = new Date(Date.now() + etaMins * 60000).toISOString();
+  const body = { client_uuid: genUUID(), stand: k.stand, requested_by: k.requested_by || 'Stand', requested_by_id: k.requested_by_id || '', items: k.items || 'Moved from Food', urgency: urgNorm(k.urgency), status: 'open',
+    note: 'Moved from Food by ' + me + (k.note ? ' · ' + k.note : ''), eta_minutes: etaMins, eta_deadline: etaDeadline,
+    items_json: { items: [], other: k.items || '', meta: { eta_minutes: etaMins, eta_deadline: etaDeadline, assigned_to_ids: ids, assigned_to_names: names, moved_from: 'food', moved_by: me } } };
+  const made = await sb('stock_requests', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(body) }).catch(() => ({ _err: true }));
+  if (made._err || !Array.isArray(made) || !made.length) return toast('Could not create the stock request — nothing was changed', 'error');
+  await kitchenPatch(id, { status: 'cancelled', declined_reason: 'Moved to Warehouse (stock request)', declined_by: me, updated_at: new Date().toISOString() });
+  ids.forEach(x => sendPushTo(x, '📥 New request for your stand', k.stand + ' — ' + String(k.items || '').slice(0, 55)));
+  if (k.requested_by_id) sendPushTo(k.requested_by_id, '↪ Sent to Warehouse', 'Your request for ' + k.stand + ' is now a Stock request');
+  if (k.assigned_runner_id) sendPushTo(String(k.assigned_runner_id), '❌ Food order cancelled · ' + k.stand, 'Moved to the Warehouse — no need to deliver');
+  toast('↪ Moved to Warehouse' + (names.length ? ' · ' + names.join(', ') : ''), 'success', 6000);
+  refreshAfterStockChange();
+}
+// Stock request that is really food → becomes a Food request (goes to that stand's runner).
+async function requestMoveStockToFood(id) {
+  if (!canManageAnyRequest()) return toast('Only managers can move requests', 'error');
+  const row = await whLoadRawRequest(id); if (!row) return;
+  if (!['open', 'claimed'].includes(row.status)) { refreshAfterStockChange(); return toast('This request is already closed', 'error'); }
+  if (!(await confirmAction('Move this Stock request for ' + row.stand + ' to Food Delivery?\n\n' + String(row.items || '').slice(0, 140), { title: 'Move to Food', confirmLabel: '↪ Move' }))) return;
+  const me = (state.staffAccount && state.staffAccount.name) || 'Manager';
+  const suggested = await kitchenSuggestedRunner(row.stand).catch(() => null);
+  const runnerId = suggested && suggested.employee_id && !String(suggested.employee_id).startsWith('preview-') ? suggested.employee_id : null;
+  const deadline = new Date(Date.now() + 30 * 60000).toISOString();
+  const k = { client_uuid: genUUID(), stand: row.stand, requested_by: row.requested_by || 'Stand', requested_by_id: row.requested_by_id || '', items: row.items || 'Moved from Warehouse',
+    items_json: { items: [{ itemName: row.items || 'Moved from Warehouse', qty: 1, free_text: true }] }, note: 'Moved from Warehouse by ' + me, urgency: urgNorm(row.urgency) === 'URGENT' ? 'URGENT' : 'Normal',
+    eta_minutes: 30, eta_deadline: deadline, status: 'open', assigned_runner_id: runnerId, assigned_runner_name: runnerId ? suggested.name : null };
+  const made = await kitchenCreate(k);
+  if (!made) return toast('Could not create the food request — nothing was changed', 'error');
+  const j = row._j || { items: [], other: '' };
+  await sb('stock_requests?id=eq.' + encodeURIComponent(id) + '&status=in.(open,claimed)', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'denied', note: 'Moved to Food Delivery by ' + me, items_json: Object.assign({}, j, { meta: Object.assign({}, j.meta || {}, { denied_reason: 'Moved to Food Delivery', denied_by: me, denied_at: new Date().toISOString() }) }) }) }).catch(() => {});
+  if (runnerId) sendPushTo(runnerId, '🍔 Food delivery assigned', row.stand + ' — ' + String(row.items || '').slice(0, 55));
+  if (row.requested_by_id) sendPushTo(row.requested_by_id, '↪ Sent to Food Delivery', 'Your request for ' + row.stand + ' is now a Food request');
+  toast('↪ Moved to Food' + (runnerId ? ' · ' + suggested.name : ' · Food Manager will assign a runner'), 'success', 6000);
+  refreshAfterStockChange();
+}
 // Small "❌ Deny" button for an open stock request card (manager screens).
 function stockDenyBtnHtml(r) {
   if (!canDenyStockRequest() || !r || !(r.status === 'Pending' || r.status === 'On the way')) return '';
   const id = escapeAttr(String(r.id)), st = escapeAttr(String(r.stand || ''));
   return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">' +
     '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#00A651;border-color:#00A651" onclick="event.stopPropagation();stockMarkDelivered(\'' + id + '\',\'' + st + '\')">✅ Mark delivered</button>' +
+    (canManageAnyRequest() ? '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#7C3AED;border-color:#7C3AED" onclick="event.stopPropagation();requestMoveStockToFood(\'' + id + '\')">↪ Move to Food</button>' : '') +
     '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="event.stopPropagation();whDenyOpen(\'' + id + '\',\'' + st + '\')">❌ Deny wrong request</button></div>';
 }
 // Manager closes a stock request as delivered (they brought it, or confirmed it arrived).
@@ -24205,7 +24268,7 @@ function refreshAfterStockChange() {
   if (state.currentScreen === 'screen-warehouse') return loadWarehouse();
   if (state.currentScreen === 'screen-stand-requests') return loadStandRequests();
   try { if (typeof mgrV10LoadRequests === 'function' && document.getElementById('mgr-v10-request-list')) mgrV10LoadRequests(state.mgrV10RequestFilter || 'stock'); } catch (e) {}
-  try { if (state.supportOpsTab === 'stock' && typeof supportOpsLoadRequests === 'function') supportOpsLoadRequests('stock'); } catch (e) {}
+  try { if (['stock', 'food', 'it'].includes(state.supportOpsTab) && typeof supportOpsLoadRequests === 'function') supportOpsLoadRequests(state.supportOpsTab); } catch (e) {}
 }
 function whDenyOpen(id, standHint) {
   if (!canDenyStockRequest()) return toast('Only managers and the Warehouse Manager/Supervisor can deny', 'error');

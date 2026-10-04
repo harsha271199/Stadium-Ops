@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-32
+- Managers / Support Managers / Admin on every open request card (All Requests, manager board, support view):
+  - Food: **↪ Move to Warehouse** (becomes a Stock request for the same stand, routed to that area's warehouse people; food order cancelled with "Moved to Warehouse") and **❌ Decline** (same reply sheet as the Food Manager).
+  - Stock: **↪ Move to Food** (becomes a Food request, auto-assigned to that stand's runner; stock request closed as "Moved to Food Delivery"), plus ✅ Mark delivered / ❌ Deny.
+- Food Manager (Jeremy): **🙋 I'll deliver it** on any open order assigns it to himself, then **🏃 On my way** → **✅ Delivered** on the same card.
+
 ## 2026-10-04-fix-31
 - Report IT Issue: new category **🛒 Self Checkout** (Mashgin / self-checkout kiosks), alongside POS Handheld, POS Tablet, POS Menu, TV / Menu Board, Other.
 - Manager check-in grid: full names now show (no more "Alcorn, …"); the name and role take the full row and the ✓ / Check out / ✕ / ↔ / ⭐ buttons sit on the line below.
