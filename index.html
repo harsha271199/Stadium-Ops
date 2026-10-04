@@ -4373,7 +4373,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-29';
+const BUILD_TAG = '2026-10-04-fix-30';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -24174,7 +24174,26 @@ function canDenyStockRequest() {
 // Small "❌ Deny" button for an open stock request card (manager screens).
 function stockDenyBtnHtml(r) {
   if (!canDenyStockRequest() || !r || !(r.status === 'Pending' || r.status === 'On the way')) return '';
-  return '<button class="btn btn-ghost" style="width:auto;margin:6px 0 0;padding:6px 12px;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="event.stopPropagation();whDenyOpen(\'' + escapeAttr(String(r.id)) + '\',\'' + escapeAttr(String(r.stand || '')) + '\')">❌ Deny wrong request</button>';
+  const id = escapeAttr(String(r.id)), st = escapeAttr(String(r.stand || ''));
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">' +
+    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#00A651;border-color:#00A651" onclick="event.stopPropagation();stockMarkDelivered(\'' + id + '\',\'' + st + '\')">✅ Mark delivered</button>' +
+    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="event.stopPropagation();whDenyOpen(\'' + id + '\',\'' + st + '\')">❌ Deny wrong request</button></div>';
+}
+// Manager closes a stock request as delivered (they brought it, or confirmed it arrived).
+async function stockMarkDelivered(id, standHint) {
+  if (!canDenyStockRequest()) return toast('Not authorized', 'error');
+  const me = (state.staffAccount && state.staffAccount.name) || (state.user && state.user.name) || 'Manager';
+  if (!(await confirmAction('Mark this request for ' + (standHint || 'the stand') + ' as delivered?', { title: 'Mark delivered', confirmLabel: '✅ Delivered' }))) return;
+  const row = await whLoadRawRequest(id); if (!row) return;
+  if (!['open', 'claimed'].includes(row.status)) { refreshAfterStockChange(); return toast('This request is already closed', 'error'); }
+  const j = row._j || { items: [], other: '' };
+  const patch = { status: 'delivered', delivered_at: new Date().toISOString(), claimed_by: row.claimed_by || me, note: 'Marked delivered by ' + me,
+    items_json: Object.assign({}, j, { meta: Object.assign({}, j.meta || {}, { delivered_marked_by: me }) }) };
+  const r = await sb('stock_requests?id=eq.' + encodeURIComponent(id) + '&status=in.(open,claimed)', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) }).catch(() => ({ _err: true }));
+  if (r._err || !Array.isArray(r) || !r.length) return toast('Could not update — it may have just changed', 'error');
+  if (row.requested_by_id) sendPushTo(row.requested_by_id, '✅ Stock delivered', row.stand + ' — marked delivered by ' + me);
+  toast('✅ Marked delivered', 'success');
+  refreshAfterStockChange();
 }
 function refreshAfterStockChange() {
   if (state.currentScreen === 'screen-warehouse') return loadWarehouse();

@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-04-fix-30
+- Managers / Support Managers / Admin (and Warehouse Manager/Supervisor) get **✅ Mark delivered** next to **❌ Deny wrong request** on every open stock request card (All Requests, manager board, support view). Confirms first; closes the request as delivered (by the manager if nobody claimed it), notifies the requester.
+
 ## 2026-10-04-fix-29
 - Managers, Support Managers and Admin can deny wrong warehouse (stock) requests: "❌ Deny wrong request" on every open Stock card in All Requests / Stand Requests, the manager request board and the support-manager view. Same Deny sheet as the Warehouse Manager (pick/type reason → stand, its leads/supervisors notified; request leaves waiting/overdue).
 
