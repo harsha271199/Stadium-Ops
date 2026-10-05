@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-05-fix-43 (warehouse screens still exactly as fix-34)
+- **Admin → 📄 Upload Yellow Dog stand sheet PDF.** Upload the Yellow Dog "Stand Sheet Pre-Event (All Items)" PDF directly (no CSV, no SQL). The app reads every stand (verified on the Oct 3 football PDF and the Oct 4 volleyball PDF: 2,640 item rows — name, unit, pack, On-Hand, Restock, Exp Start, type — all exact), shows Yellow Dog stand → app stand with a picker per stand, then replaces each stand's item list in the PDF's exact order. Items added in the app that Yellow Dog doesn't list (e.g. Sno Blast) are kept after the sheet. If saving a stand fails, its old list is put back.
+  - Matching prefers the stand name staff actually counted under (★ = counted in the last 60 days), only guesses a neighbouring number when it's exactly one apart (e.g. Yellow Dog 202P Beer Portable → app 203P Beer Portable), and warns when staff used a different name for the same stand number (e.g. 334 San Tan Favorites).
+  - Saving also loads the PDF into the Yellow Dog copy-paste screen on that device.
+- **Inventory Tracker → 👁 View counts** now lists items in the stand sheet's order (it was following the order the database stores counts in).
+- Manager inventory download/print/copy-paste match old and new spellings of the same item when ordering rows.
+
 ## 2026-10-05-fix-42 (warehouse screens still exactly as fix-34)
 - Yellow Dog copy-paste matches items whose names differ between the app and Yellow Dog (e.g. "CANDY MIKE N IKE MEGA" = "CANDY - MIKE AND IKE MEGA MIX", Swedish Fish, Sour Spaghetti, Gold Bears, Nitrile small gloves, Popcorn 85OZ/850Z). Items staff added by hand (Gatorade, Aquafina, Life Water, Archer Roose…) now land on their Yellow Dog row instead of "enter by hand". Verified on DFA 143 volleyball: all 86 Yellow Dog rows line up.
 

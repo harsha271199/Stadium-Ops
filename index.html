@@ -3353,6 +3353,14 @@
         <div id="up-inv-status" style="font-size:12px;margin-top:8px"></div>
       </div>
 
+      <div class="card" style="margin-top:12px;padding:14px;border-left:4px solid #10B981">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">📄 Upload Yellow Dog stand sheet PDF</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">The "Stand Sheet Pre-Event (All Items)" PDF from Yellow Dog. Each stand's item list is replaced with the PDF's items in the exact same order, names, units, packs and On-Hand / Exp Start — so counting screens, View counts, downloads, print and Yellow Dog copy-paste all follow it. Do it <b>before Count In</b> starts.</div>
+        <input type="file" id="up-ydpdf-file" accept="application/pdf,.pdf" class="form-input" style="padding:10px">
+        <button class="btn btn-primary" id="up-ydpdf-btn" onclick="admYdPdfRead()">📄 Read PDF</button>
+        <div id="up-ydpdf-status" style="font-size:12px;margin-top:8px"></div>
+      </div>
+
       <div class="card" style="margin-top:12px;padding:14px">
         <div style="font-weight:700;font-size:14px;margin-bottom:4px">🔄 Roll Count Out → next Exp Start</div>
         <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">
@@ -4385,7 +4393,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-05-fix-42';
+const BUILD_TAG = '2026-10-05-fix-43';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6602,26 +6610,26 @@ async function api(action, data) {
       (Array.isArray(sheets) ? sheets : []).forEach(r => {
         const realStand = standKeys[(r.stand||'').trim().toLowerCase()] || r.stand;
         if (!orderByStand[realStand]) orderByStand[realStand] = {};
-        if (!(r.item_name in orderByStand[realStand])) {
+        if (!(ydItemKey(r.item_name) in orderByStand[realStand])) {
           // Stable paper row number for this stand. This comes from the
           // canonical stand_sheets order, not from which items happened to be
           // counted on a particular game. A 60-item stand therefore always
           // prints rows 1..60 in the same order on every event.
-          orderByStand[realStand][r.item_name] = Object.keys(orderByStand[realStand]).length;
+          orderByStand[realStand][ydItemKey(r.item_name)] = Object.keys(orderByStand[realStand]).length;
         }
       });
 
       const stands = Object.values(standsMap).map(S => {
         const order = orderByStand[S.stand] || {};
         const items = Object.values(S.itemsMap).sort((a, b) => {
-          const ai = order[a.itemName], bi = order[b.itemName];
+          const ai = order[ydItemKey(a.itemName)], bi = order[ydItemKey(b.itemName)];
           if (ai === undefined && bi === undefined) return 0;
           if (ai === undefined) return 1;
           if (bi === undefined) return -1;
           return ai - bi;
         });
         items.forEach(it => {
-          const idx = order[it.itemName];
+          const idx = order[ydItemKey(it.itemName)];
           it.paperRow = idx === undefined ? '' : (idx + 1);
         });
 
@@ -13156,7 +13164,11 @@ async function ydParseStandSheetPdf(pdf) {
       const ny = Math.min(...nameParts.map(o => o.y));
       const item = nameParts.filter(o => o.y < ny + 3).map(o => o.t).join(' ').replace(/\s+/g, ' ').trim();
       const type = typ.map(o => o.t).join(' ') || (list.length ? list[list.length - 1].type : 'Chargeable');
-      if (item) list.push({ no: list.length + 1, item, type });
+      const below = rest.filter(o => o.y >= ny + 3);
+      const col = (a, b) => { const c = rest.find(o => o.x >= a && o.x < b && o.y >= ny + 3); return c ? c.t : ''; };
+      const unit = below.filter(o => o.x < 137).map(o => o.t).join(' ').trim();
+      const pack = below.filter(o => o.x >= 137 && o.x < 200).sort((a, b) => a.y - b.y).map(o => o.t).join(' ').replace(/\s+/g, ' ').trim();
+      if (item) list.push({ no: list.length + 1, item, type, unit, pack, onHand: col(200, 233), restock: col(235, 273), expStart: col(275, 306) });
     });
   }
   return { event, stands: out };
@@ -13947,6 +13959,116 @@ async function adminRollCountOut(){
       '<div style="margin-top:4px;color:var(--text-2)">Each stand\'s last Count Out is now its Exp Start / On-Hand. Reload an inventory sheet to see it.</div>';
     toast('✅ Counts rolled forward');
   });
+}
+// ============ YELLOW DOG STAND SHEET PDF → INVENTORY ============
+// Reads the Yellow Dog "Stand Sheet Pre-Event (All Items)" PDF and replaces
+// each chosen stand's stand_sheets list with the PDF's rows, numbered 1..N
+// in the PDF's order (sort_order). Items people added in the app
+// (is_addon) that the PDF doesn't have are kept after the sheet.
+// Pass 1 = same name / same number + same kind; pass 2 = same kind one
+// number away (Yellow Dog "202P Beer Portable" = app "203P Beer Portable").
+// Names staff actually counted under recently win ties.
+function ydSuggestAppStand(ydName, appNames, taken, pass, active) {
+  const k = n => ydNorm(canonicalStandName2026(n) || n);
+  const free = appNames.filter(a => !taken.has(a));
+  const pref = list => list.slice().sort((x, y) => (active.has(y) ? 1 : 0) - (active.has(x) ? 1 : 0));
+  const num = invStandNum(ydName), fam = invFamily(ydName), kind = invKind(ydName);
+  if (pass === 1) {
+    const ex = free.filter(a => k(a) === k(ydName) || ydNorm(a) === ydNorm(ydName));
+    const same = free.filter(a => num && invStandNum(a) === num && invFamily(a) === fam && (!kind || !invKind(a) || invKind(a) === kind));
+    // The spelling staff actually count under beats an unused exact copy.
+    const act = pref(ex.concat(same)).filter(a => active.has(a)); if (act.length) return act[0];
+    if (ex.length) return ex[0];
+    return same.length === 1 ? same[0] : '';
+  }
+  const near = pref(free.filter(a => num && invFamily(a) === fam && invStandNum(a) && Math.abs(invStandNum(a) - num) === 1));
+  return near.length === 1 || (near.length && active.has(near[0])) ? near[0] : '';
+}
+async function admYdPdfRead() {
+  if (!isAdminSession()) return toast('Admin access required', 'error');
+  const f = document.getElementById('up-ydpdf-file').files[0];
+  const st = document.getElementById('up-ydpdf-status');
+  if (!f) return toast('Pick the Yellow Dog PDF first', 'error');
+  await withLock(document.getElementById('up-ydpdf-btn'), 'Reading…', async () => {
+    st.style.color = ''; st.textContent = 'Reading ' + f.name + '…';
+    let r;
+    try {
+      const lib = await ydLoadPdfJs();
+      const pdf = await lib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+      r = await ydParseStandSheetPdf(pdf);
+    } catch (e) { st.style.color = '#DC2626'; st.textContent = '⚠️ ' + ((e && e.message) || 'Could not read that PDF'); return; }
+    const ydStands = Object.keys(r.stands).filter(k => r.stands[k].length);
+    if (!ydStands.length) { st.style.color = '#DC2626'; st.textContent = '⚠️ No stand sheets found — is this the Yellow Dog "Stand Sheet Pre-Event (All Items)" PDF?'; return; }
+    // Also feed the Yellow Dog copy-paste screen on this device.
+    try { const compact = {}; ydStands.forEach(k => { compact[k] = r.stands[k].map(x => [x.item, x.type === 'Chargeable' ? 'C' : x.type === 'Supplies' ? 'S' : 'N']); });
+      localStorage.setItem('ydSheet', JSON.stringify({ event: r.event, file: f.name, at: new Date().toISOString(), stands: compact })); } catch (e) {}
+    // App stands = names the counting screens use today (stand_sheets) + every active stand.
+    const sheetNames = await sb('stand_sheets?select=stand').catch(() => ({ _err: true }));
+    const names = new Set(Array.isArray(sheetNames) ? sheetNames.map(x => x.stand) : []);
+    (await allVenueStands()).forEach(x => names.add(x.name));
+    // Save under each stand's official name — that is the name the counting
+    // screen reads first (standDbCandidateNames2026), so the new list is used.
+    const appNames = [...new Set([...names].filter(Boolean).map(n => canonicalStandName2026(n) || n))]
+      .filter(n => !isHiddenInactiveStand2026(n) && !/warehouse/i.test(n)).sort(standSort);
+    const since = localISODate(new Date(Date.now() - 60 * 864e5));
+    const recent = await sb('inventory_entries?entry_date=gte.' + since + '&select=stand').catch(() => ({ _err: true }));
+    const active = new Set(Array.isArray(recent) ? recent.map(x => canonicalStandName2026(x.stand) || x.stand) : []);
+    const taken = new Set(), plan = ydStands.map(y => ({ yd: y, app: '' }));
+    [1, 2].forEach(pass => plan.forEach(p => { if (p.app) return; const a = ydSuggestAppStand(p.yd, appNames, taken, pass, active); if (a) { p.app = a; taken.add(a); } }));
+    state._ydPdfUpload = { event: r.event, file: f.name, stands: r.stands, plan, appNames, active };
+    admYdPdfRender();
+  });
+}
+function admYdPdfRender() {
+  const u = state._ydPdfUpload, st = document.getElementById('up-ydpdf-status'); if (!u || !st) return;
+  const opt = sel => '<option value="">— skip —</option>' + u.appNames.map(a => '<option value="' + escapeHtml(a) + '"' + (a === sel ? ' selected' : '') + '>' + (u.active.has(a) ? '★ ' : '') + escapeHtml(a) + '</option>').join('');
+  const count = {}; u.plan.forEach(p => { if (p.app) count[p.app] = (count[p.app] || 0) + 1; });
+  const rows = u.plan.map((p, i) => {
+    const dup = p.app && count[p.app] > 1, exact = p.app && ydNorm(p.app) === ydNorm(p.yd);
+    // Staff counted under a different name with the same stand number?
+    const alt = (!p.app || !u.active.has(p.app)) ? u.appNames.filter(a => a !== p.app && !count[a] && u.active.has(a) && invStandNum(a) && invStandNum(a) === invStandNum(p.yd)) : [];
+    return '<div style="padding:6px 0;border-bottom:1px solid var(--border)"><div style="font-size:12px;font-weight:700">' + escapeHtml(p.yd) + ' <span style="font-weight:400;color:var(--text-3)">· ' + u.stands[p.yd].length + ' items</span></div>' +
+      '<select class="form-input" style="margin:3px 0 0;font-size:12px;padding:8px' + (dup ? ';border-color:#DC2626' : !p.app ? ';border-color:#F59E0B' : '') + '" onchange="state._ydPdfUpload.plan[' + i + '].app=this.value;admYdPdfRender()">' + opt(p.app) + '</select>' +
+      (alt.length ? '<div style="font-size:11px;color:#B45309">⚠️ Staff counted under <b>' + alt.map(escapeHtml).join('</b> / <b>') + '</b> recently — pick that if it\'s the same stand</div>' : '') +
+      (dup ? '<div style="font-size:11px;color:#DC2626">Two Yellow Dog stands go to this app stand — pick one</div>' : !p.app ? '<div style="font-size:11px;color:#B45309">No app stand picked — will be skipped</div>' : !exact ? '<div style="font-size:11px;color:#2563EB">Different name — check this is the same stand</div>' : '') + '</div>';
+  }).join('');
+  const n = u.plan.filter(p => p.app).length, dups = Object.values(count).some(c => c > 1);
+  st.innerHTML = '<div style="font-weight:800;margin:6px 0">' + escapeHtml(u.event || u.file) + ' · ' + u.plan.length + ' stands in PDF</div>' +
+    '<div style="font-size:11px;color:var(--text-2);margin-bottom:6px">Yellow Dog stand → app stand. ★ = stand counted in the app in the last 60 days. Blue = different name (check it); orange = skipped.</div>' + rows +
+    '<button class="btn btn-primary" style="margin-top:10px" ' + (dups || !n ? 'disabled' : 'onclick="admYdPdfSave()"') + '>✅ Save ' + n + ' stand' + (n === 1 ? '' : 's') + ' to inventory</button>';
+}
+async function admYdPdfSave() {
+  const u = state._ydPdfUpload, st = document.getElementById('up-ydpdf-status'); if (!u) return;
+  const plan = u.plan.filter(p => p.app);
+  const total = plan.reduce((a, p) => a + u.stands[p.yd].length, 0);
+  if (!(await confirmAction('Replace the item list of ' + plan.length + ' stands with the Yellow Dog PDF (' + total + ' items), in the PDF\'s exact order? Do this before Count In starts — items renamed mid-event won\'t line up with counts already entered.', { title: 'Replace stand item lists?', confirmLabel: 'Replace lists' }))) return;
+  const numOrNull = v => { const t = String(v == null ? '' : v).replace(/[, ]/g, ''); if (!t) return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
+  let done = 0; const failed = [];
+  for (const p of plan) {
+    st.textContent = 'Saving ' + p.app + ' (' + (done + 1) + ' / ' + plan.length + ')…';
+    const enc = encodeURIComponent(p.app);
+    const old = await sb('stand_sheets?stand=eq.' + enc + '&select=*');
+    if (old._err) { failed.push(p.app); continue; }
+    const items = u.stands[p.yd];
+    const have = new Set(items.map(x => ydItemKey(x.item)));
+    const rows = items.map((x, i) => ({ stand: p.app, item_name: x.item, unit: x.unit || '', pack: x.pack || '', on_hand: numOrNull(x.onHand), restock: numOrNull(x.restock), exp_start: numOrNull(x.expStart),
+      chargeable: x.type || 'Chargeable', category: String(x.type || 'Chargeable').toUpperCase(), is_addon: false, sort_order: i + 1 }));
+    // Keep items people added in the app that Yellow Dog doesn't list (e.g. Sno Blast), after the sheet.
+    (old || []).filter(o => o.is_addon && !have.has(ydItemKey(o.item_name))).forEach((o, j) => rows.push({ stand: p.app, item_name: o.item_name, unit: o.unit || '', pack: o.pack || '', on_hand: o.on_hand, restock: o.restock, exp_start: o.exp_start,
+      chargeable: o.chargeable || 'Chargeable', category: o.category || null, is_addon: true, sort_order: 1000 + j }));
+    const del = await sb('stand_sheets?stand=eq.' + enc, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+    if (del && del._err) { failed.push(p.app); continue; }
+    const ins = await sbBulkInsert('stand_sheets', rows, st);
+    if (ins._err) {
+      // Put the old list back so the stand is never left empty.
+      if ((old || []).length) await sbBulkInsert('stand_sheets', old.map(o => { const c = { ...o }; delete c.id; return c; }), st);
+      failed.push(p.app); continue;
+    }
+    try { localStorage.setItem('ydMap:' + p.app, p.yd); } catch (e) {}
+    done++;
+  }
+  st.innerHTML = '<div style="color:' + (failed.length ? '#DC2626' : 'var(--success)') + ';font-weight:800">' + (failed.length ? '⚠️ ' : '✅ ') + done + ' stand' + (done === 1 ? '' : 's') + ' updated from the Yellow Dog PDF' + (failed.length ? ' · failed: ' + escapeHtml(failed.join(', ')) + ' (old list kept — try again)' : '') + '</div>';
+  toast(failed.length ? 'Some stands failed — see the list' : '✅ Inventory lists updated from Yellow Dog');
 }
 // ============ INVENTORY FILE → STANDS MATCHING ============
 // Every stand in the uploaded file is matched to a stand in the app:
@@ -19815,6 +19937,14 @@ async function invtViewCounts(i) {
   if (lastCin) Object.values(parse(lastCin.counts)).forEach(it => { if (it && it.itemName) { const x = get(it.itemName, it); x.cin = num(it.countIn != null ? it.countIn : it.count); } });
   rows.filter(x => x.phase !== 'Count In' && x.phase !== 'Count Out').forEach(e => Object.values(parse(e.counts)).forEach(it => { if (!it || !it.itemName) return; const x = get(it.itemName, it); x.tin += num(it.transferIn) || 0; x.tout += num(it.transferOut) || 0; x.waste += num(it.waste) || 0; }));
   if (lastCout) Object.values(parse(lastCout.counts)).forEach(it => { if (it && it.itemName) { const x = get(it.itemName, it); x.cout = num(it.countOut != null ? it.countOut : it.count); x.waste += num(it.waste) || 0; } });
+  // Saved counts come back with their keys re-ordered by the database, so
+  // put rows back in the stand sheet's order (same as Yellow Dog's sheet).
+  const sheet = await sb('stand_sheets?stand=eq.' + encodeURIComponent(r.stand) + '&order=sort_order.asc.nullslast,id.asc&select=item_name').catch(() => ({ _err: true }));
+  if (Array.isArray(sheet) && sheet.length) {
+    const pos = {}; sheet.forEach((x, i) => { const k = ydItemKey(x.item_name); if (!(k in pos)) pos[k] = i; });
+    const seen = order.slice();
+    order.sort((a, b) => { const pa = pos[ydItemKey(a)], pb = pos[ydItemKey(b)]; if (pa === undefined && pb === undefined) return seen.indexOf(a) - seen.indexOf(b); if (pa === undefined) return 1; if (pb === undefined) return -1; return pa - pb; });
+  }
   const t = e => e ? whDisp(e.submitted_by || '') + ' · ' + new Date(e.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Phoenix' }) : '<span style="color:#DC2626">not done</span>';
   const cell = v => v == null ? '<span style="color:#DC2626">—</span>' : (Math.round(v * 100) / 100);
   const td = 'padding:5px 4px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap';
