@@ -4385,7 +4385,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-04-fix-41';
+const BUILD_TAG = '2026-10-05-fix-42';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -13113,6 +13113,13 @@ function ydNum(v) { if (v === undefined || v === null || String(v).trim() === ''
 // printed sheet; when a list is saved the copy follows it exactly.
 function ydKey(stand, tab) { return 'ydOrder:' + String(stand).trim().toLowerCase() + ':' + tab; }
 function ydNorm(v) { return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+// Same item, different spelling in the app vs Yellow Dog (normalized keys).
+const YD_ALIAS = {
+  CANDYMIKENIKEMEGA: 'CANDYMIKEANDIKEMEGAMIX', CANDYMIKENIKEORIGINAL: 'CANDYMIKEANDIKEORIGINAL', CANDYMIKENIKESOUR: 'CANDYMIKEANDIKESOUR',
+  CANDYSWEDISHFISH: 'CANDYSWEEDISHREDFISH', CANDYSOURSPAGHETTI: 'CANDYSOURSGHETTI', CANDYGOLDBEARS: 'CANDYGUMMYBEARSGOLDEN',
+  GLOVESNITRLIEFOODSERVICEPOWDERFREESMALL: 'GLOVESNITRLIESMALL', POPCORNBAGASU85OZ: 'POPCORNBAGASU850Z'
+};
+function ydItemKey(v) { const k = ydNorm(v); return YD_ALIAS[k] || k; }
 function ydGetOrder(stand, tab) { try { const v = JSON.parse(localStorage.getItem(ydKey(stand, tab)) || 'null'); return Array.isArray(v) && v.length ? v : null; } catch (e) { return null; } }
 // Parses a Yellow Dog "Stand Sheet Pre-Event" PDF → { event, stands: { name: [{no,item,type}] } }
 async function ydParseStandSheetPdf(pdf) {
@@ -13211,7 +13218,9 @@ function ydSplit(s) {
     nonch: s.items.filter(it => onSheet(it) && it.ydType !== 'Chargeable'),
     extra: [], custom: {}, source: 'app'
   };
-  const byName = {}; s.items.forEach(it => { if (!byName[ydNorm(it.itemName)]) byName[ydNorm(it.itemName)] = it; });
+  const byName = {};
+  // Prefer an item that actually has counts when two spellings exist.
+  s.items.forEach(it => { const k = ydItemKey(it.itemName), o = byName[k]; if (!o || (!['countIn', 'waste', 'countOut'].some(f => ydNum(o[f]) !== 0) && ['countIn', 'waste', 'countOut'].some(f => ydNum(it[f]) !== 0))) byName[k] = it; });
   const lists = {};
   const sh = ydSheetGet(), ys = sh && ydMapStand(s.stand);
   if (ys && sh.stands[ys]) {
@@ -13223,7 +13232,7 @@ function ydSplit(s) {
   const used = new Set();
   ['charge', 'nonch'].forEach(tab => {
     if (!lists[tab]) { g[tab].forEach(it => used.add(it)); return; }
-    g[tab] = lists[tab].map(name => { const it = byName[ydNorm(name)]; if (it && !used.has(it)) { used.add(it); return it; } return { itemName: name, missing: true }; });
+    g[tab] = lists[tab].map(name => { const it = byName[ydItemKey(name)]; if (it && !used.has(it)) { used.add(it); return it; } return { itemName: name, missing: true }; });
   });
   // Counted in the app but not on the Yellow Dog list → enter by hand.
   // (Uncounted extras are skipped when Yellow Dog's own list is in use.)

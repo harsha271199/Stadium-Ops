@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-05-fix-42 (warehouse screens still exactly as fix-34)
+- Yellow Dog copy-paste matches items whose names differ between the app and Yellow Dog (e.g. "CANDY MIKE N IKE MEGA" = "CANDY - MIKE AND IKE MEGA MIX", Swedish Fish, Sour Spaghetti, Gold Bears, Nitrile small gloves, Popcorn 85OZ/850Z). Items staff added by hand (Gatorade, Aquafina, Life Water, Archer Roose…) now land on their Yellow Dog row instead of "enter by hand". Verified on DFA 143 volleyball: all 86 Yellow Dog rows line up.
+
 ## 2026-10-04-fix-41 (warehouse screens still exactly as fix-34)
 - Yellow Dog copy-paste now follows **Yellow Dog's own order**: tap **📄 Load Yellow Dog stand sheet PDF** once per event (the "Stand Sheet Pre-Event (All Items)" PDF). The app reads every stand's list from it (handles 2-line stand names, items numbered 100+, and stands with a second list) and copies Chargeables (Count In · Waste · Count Out) and Non-Chargeables & Supplies (Count Out) in exactly that order — including Yellow Dog items nobody counted (0) — so the paste lines up row for row.
 - Each app stand is matched to its Yellow Dog stand (same name, else same number + kind, else same kind with the nearest number — e.g. app 203P Beer Portable → Yellow Dog 202P Beer Portable). A picker lets you change it; the choice is remembered on that device. Stands with no match are flagged red.
