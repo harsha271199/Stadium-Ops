@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-07-fix-44 (warehouse screens still exactly as fix-34)
+- Premium → Check-ins → ⬇️ CSV now includes **Employee ID** (kept exactly — no lost leading zeros in Excel), plus **Checked In** and **Checked Out** times (Phoenix time). The 🖨️ PDF also shows an Emp ID column.
+
 ## 2026-10-05-fix-43 (warehouse screens still exactly as fix-34)
 - **Admin → 📄 Upload Yellow Dog stand sheet PDF.** Upload the Yellow Dog "Stand Sheet Pre-Event (All Items)" PDF directly (no CSV, no SQL). The app reads every stand (verified on the Oct 3 football PDF and the Oct 4 volleyball PDF: 2,640 item rows — name, unit, pack, On-Hand, Restock, Exp Start, type — all exact), shows Yellow Dog stand → app stand with a picker per stand, then replaces each stand's item list in the PDF's exact order. Items added in the app that Yellow Dog doesn't list (e.g. Sno Blast) are kept after the sheet. If saving a stand fails, its old list is put back.
   - Matching prefers the stand name staff actually counted under (★ = counted in the last 60 days), only guesses a neighbouring number when it's exactly one apart (e.g. Yellow Dog 202P Beer Portable → app 203P Beer Portable), and warns when staff used a different name for the same stand number (e.g. 334 San Tan Favorites).

@@ -4393,7 +4393,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-05-fix-43';
+const BUILD_TAG = '2026-10-07-fix-44';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -22149,9 +22149,12 @@ function premiumRenderCheckinsList() {
 function premiumExportCheckinsCSV() {
   if (!_premScheduleRows.length) return toast('Nothing to export', 'error');
   const esc = v => { const t = String(v == null ? '' : v); return (t.indexOf(',') >= 0 || t.indexOf('"') >= 0) ? '"' + t.replace(/"/g, '""') + '"' : t; };
-  let csv = 'Location,Name,Role,Start,End,Status,Walk-in\n';
+  // Excel drops leading zeros and shows long IDs as 3.2E+07 — ="…" keeps the ID exactly as typed.
+  const idCell = v => { const t = String(v == null ? '' : v).trim(); return t ? '="' + t.replace(/"/g, '') + '"' : ''; };
+  const tm = v => v ? new Date(v).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Phoenix' }) : '';
+  let csv = 'Location,Employee ID,Name,Role,Start,End,Status,Checked In,Checked Out,Walk-in\n';
   [..._premScheduleRows].sort((a, b) => a.location_name.localeCompare(b.location_name) || a.worker_name.localeCompare(b.worker_name)).forEach(r => {
-    csv += [r.location_name, r.worker_name, r.role_title || '', r.start_time || '', r.end_time || '', r.status, r.is_walkin ? 'Yes' : ''].map(esc).join(',') + '\n';
+    csv += [r.location_name, '\u0000ID', r.worker_name, r.role_title || '', r.start_time || '', r.end_time || '', r.status, tm(r.checked_in_at), tm(r.checked_out_at), r.is_walkin ? 'Yes' : ''].map(esc).join(',').replace('\u0000ID', idCell(r.employee_id)) + '\n';
   });
   downloadCSV(csv, 'premium_checkins_' + premiumCheckinDate() + '.csv');
   toast('⬇️ Check-ins CSV downloaded');
@@ -22196,8 +22199,8 @@ function premiumExportCheckinsPDF() {
     locNames.map(loc => {
       const rows = byLoc[loc].slice().sort((a, b) => a.worker_name.localeCompare(b.worker_name));
       return '<div class="loc">' + escapeHtml(loc) + ' (' + rows.filter(r => r.status === 'present').length + '/' + rows.length + ')</div>' +
-        '<table><thead><tr><th>Name</th><th>Role</th><th>Time</th><th style="width:70px">Status</th></tr></thead><tbody>' +
-        rows.map(r => '<tr><td>' + escapeHtml(r.worker_name) + (r.is_walkin ? ' <small>(walk-in)</small>' : '') + '</td><td>' + escapeHtml(r.role_title || '') + '</td><td>' + escapeHtml(r.start_time || '') + '–' + escapeHtml(r.end_time || '') + '</td><td class="st ' + r.status + '">' + escapeHtml(r.status) + '</td></tr>').join('') +
+        '<table><thead><tr><th style="width:80px">Emp ID</th><th>Name</th><th>Role</th><th>Time</th><th style="width:70px">Status</th></tr></thead><tbody>' +
+        rows.map(r => '<tr><td>' + escapeHtml(r.employee_id || '') + '</td><td>' + escapeHtml(r.worker_name) + (r.is_walkin ? ' <small>(walk-in)</small>' : '') + '</td><td>' + escapeHtml(r.role_title || '') + '</td><td>' + escapeHtml(r.start_time || '') + '–' + escapeHtml(r.end_time || '') + '</td><td class="st ' + r.status + '">' + escapeHtml(r.status) + '</td></tr>').join('') +
         '</tbody></table>';
     }).join('') +
     '<scr' + 'ipt>window.print()<\/scr' + 'ipt></body></html>';
