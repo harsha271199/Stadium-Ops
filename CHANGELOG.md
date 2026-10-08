@@ -4,6 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-08-fix-47
+- **Subcontractor stands can now log in** (they had sheets but no schedule, so 0 counts were ever entered): ID **50000** + the stand number (e.g. `205`; `206 stinger` / `219 chick` where a number is shared — the app lists the choices, and a one-letter typo in the name is OK). The app then asks their first name, so counts show "Maria · Subcontractor".
+  - Their home has just two things: **Inventory — Count In / Count Out** (with today's status) and **Requests** (Warehouse stock, IT, Refund — no Food).
+  - Supervisors/Managers see these stands grouped under "🏪 Subcontractor stands" in every stand picker, so they can count or request for them from their own login.
+  - Printable card with every stand's login: `Subcontractor_Stand_Logins.pdf`.
+- **Inventory screen focuses on finishing every line**: sections follow Yellow Dog (💲 Chargeables / 🧾 Non-Chargeables / 📦 Supplies / ➕ Add-ons optional), every line numbered like the sheet, a sticky bar "Count In: 10 / 28 counted" with what is left per section and **Next blank ↓**, finished lines turn green, and the button says "Submit Count In (18 left)". Submitting with blanks is still blocked.
+- **Manager Inventory Tracker**: subcontractor stands are listed on game days ("Subcontractor — stand login 50000 + 205P"). Tapping **Count In ✓** or **Count Out ✓** opens that count in the exact Yellow Dog sheet order (numbered, with section headers, every sheet line shown, red — for lines not counted, and a "N lines not counted" warning), with tabs for Count In / Count Out / All columns. The order now comes from the same sheet lookup the count screen uses, so stands whose saved name differs from the sheet name no longer come out scrambled.
+
 ## 2026-10-08-fix-46
 - **New 🛒 "Order for my stand" — one screen, one Send, two departments** (only visible with `?test=1` for now):
   - **📦 Warehouse part**: just the stand's drinks, popcorn, candy, snacks and ice from its own sheet, grouped as Beer · seltzer · wine / Soda · water · sports drinks / Popcorn · candy · snacks / Ice, with + / − in cases. Supplies (gloves, soap, napkins, cups, lids, CO2, BIB, janitorial…) and kitchen food are left out; the screen says to ask a Supervisor for supplies.

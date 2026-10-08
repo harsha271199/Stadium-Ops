@@ -1647,6 +1647,7 @@
   .ord-done{border-radius:12px;padding:12px;margin-bottom:9px;font-size:14px;font-weight:700}
   .ord-done.ok{background:rgba(22,163,74,.1);border:1px solid #16A34A}
   .ord-done.bad{background:rgba(220,38,38,.08);border:1px solid #DC2626}
+  .sc-howto{background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.35);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.4;margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -1758,7 +1759,7 @@
   <div class="content" style="padding-top:0">
     <div class="login-card">
       <label class="form-label" style="margin-top:0">ID (last 5 digits)</label>
-      <input class="form-input" type="tel" inputmode="numeric" pattern="[0-9]*" id="login-empid" placeholder="e.g. 65764" maxlength="5" autocomplete="off">
+      <input class="form-input" type="tel" inputmode="numeric" pattern="[0-9]*" id="login-empid" placeholder="e.g. 65764" maxlength="5" autocomplete="off" oninput="scLoginLabel()">
 
       <label class="form-label" id="login-secret-label">Last Name or Personal PIN</label>
       <input class="form-input" type="text" id="login-lastname" placeholder="Last name or personal PIN" autocomplete="off">
@@ -1766,6 +1767,7 @@
       <div class="smart-login-hint">
         Use the last 5 digits of your employee ID and the sign-in credential provided for your role.
       </div>
+      <div class="smart-login-hint" style="margin-top:6px">🏪 <b>Subcontractor stand?</b> ID <b>50000</b> + your stand number (e.g. <b>205</b>).</div>
       <div class="smart-login-role" id="smart-login-role"></div>
       <button class="btn btn-primary" id="login-submit-btn" onclick="doLogin()">Sign in →</button>
     </div>
@@ -1938,6 +1940,19 @@
     <div id="status-bar-container"></div>
 
     <div id="worker-actions"></div>
+
+    <div id="sc-actions" style="display:none">
+      <div class="sc-howto">🏪 <b>Subcontractor stand.</b> Two jobs in this app: <b>count your inventory</b> at opening and closing, and <b>request stock</b> from the Warehouse.</div>
+      <button class="big-action primary" onclick="goInventory()" style="border-left:5px solid #16A34A">
+        <span class="icon">📋</span>
+        <span class="text"><div>Inventory — Count In / Count Out</div><div class="sub" id="sc-inv-status">Count In at opening · Count Out at closing · every line</div></span>
+      </button>
+      <button class="big-action" onclick="showScreen('screen-submenu-requests')" style="border-left:5px solid #DC2626">
+        <span class="icon">📦</span>
+        <span class="text"><div>Requests</div><div class="sub">Stock from Warehouse · IT problem · Refund</div></span>
+      </button>
+      <div class="sc-howto" style="margin-top:10px;font-size:12px">Need help? Your Supervisor can also do these for you from their own login.</div>
+    </div>
 
     <div id="lead-actions" style="display:none">
 
@@ -3667,7 +3682,8 @@
       <button class="chip" onclick="selectInvPhase(this,'Transfer')">🚚 Transfer (During)<div id="inv-status-transfer" style="font-size:9px;font-weight:400"></div></button>
       <button class="chip" onclick="selectInvPhase(this,'Count Out')">🔴 Count Out (Closing)<div id="inv-status-countout" style="font-size:9px;font-weight:400"></div></button>
     </div>
-    <div class="notice info" style="font-size:12px" id="inv-info">💡 Skip items not at your stand. Items show Exp Start from warehouse.</div>
+    <div class="notice info" style="font-size:12px" id="inv-info">💡 Count <b>every line</b> — Chargeables, Non-Chargeables <b>and</b> Supplies. Type <b>0</b> if you have none. Items show Exp Start from warehouse.</div>
+    <div id="inv-progress" class="card" style="display:none;position:sticky;top:0;z-index:5;padding:10px 12px;margin:8px 0;border:2px solid #F59E0B"></div>
     <input type="text" class="form-input" id="inv-search" placeholder="🔍 Search items…" style="margin-bottom:10px" oninput="filterInvItems(this.value)">
     <div id="inv-missing-item-hint" style="display:none;margin-bottom:10px"></div>
     <div id="inv-active-warning"></div>
@@ -4504,7 +4520,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-08-fix-46';
+const BUILD_TAG = '2026-10-08-fix-47';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5244,6 +5260,18 @@ async function api(action, data) {
           if(secret!==d.pin)return {ok:false,error:'Wrong PIN'};
           return {ok:true,isStaffSmart:true,staffAccount:{empId:d.employee_id,name:d.name,role:d.role,group:'food'}};
         }
+      }
+
+      // SUBCONTRACTOR STAND LOGIN — one login per subcontractor stand, no
+      // schedule needed: ID 50000 + the stand number ("205", "219 chick").
+      // Gives that stand Inventory (Count In / Count Out) and Requests only.
+      if(idInput==='50000'){
+        const m=scMatchStands(secret);
+        if(!m.list.length)return {ok:false,error:m.num?('No subcontractor stand '+m.num+' — check the number on your stand sign'):'Type your stand number, e.g. 205'};
+        if(m.list.length>1)return {ok:false,error:'More than one stand '+m.num+' — type the number and name: '+m.list.map(scStandHint).join(' · ')};
+        const stand=m.list[0];
+        return {ok:true,user:{empId:'SC-'+stand.replace(/[^A-Za-z0-9]+/g,'').slice(0,24),name:'Subcontractor crew',stand,role:'subcontractor',roleLabel:'🏪 Subcontractor',
+          isSubcontractor:true,startTime:'',endTime:'',site:'',shiftDate:localISODate(),eventName:''}};
       }
 
       // V11.10.4 — WAREHOUSE COMMON LOGIN
@@ -6971,7 +6999,7 @@ function applyAreaAccess(role, stand, accessRow){
 let _standSyncAt=0;
 async function syncMyStandFromSchedule(force){
   const u=state.user;
-  if(!u||!u.empId||String(u.empId).startsWith('NPO-')||u.isNpo)return;
+  if(!u||!u.empId||String(u.empId).startsWith('NPO-')||u.isNpo||u.isSubcontractor)return;
   if(!force&&Date.now()-_standSyncAt<30000)return;
   _standSyncAt=Date.now();
   const rows=await sb('schedule?employee_id=like.*'+encodeURIComponent(String(u.empId).slice(-5))+'&event_date=in.('+[...new Set([localISODate(),stadiumDay()])].join(',')+')&is_test=neq.true&select=employee_id,worker_name,location,event_name,role').catch(()=>({_err:true}));
@@ -7134,6 +7162,10 @@ async function doLogin() {
 
     state.staffAccount=null;
     localStorage.removeItem('stadium_staff');
+    if(res.user&&res.user.isSubcontractor){
+      const nm=(prompt('Signed in to '+res.user.stand+'.\n\nYour first name? (so the manager knows who did the counts)')||'').trim().replace(/[<>]/g,'').slice(0,30);
+      res.user.name=nm?'Subcontractor, '+nm:'Subcontractor crew';
+    }
     state.user=res.user;
     localStorage.setItem('stadium_user',JSON.stringify(res.user));
     state.attendance=localStorage.getItem('stadium_attend_'+empId)||'not_started';
@@ -7905,6 +7937,9 @@ function renderRoleHomeUX(u) {
       : 'NPO member self-login · ' + u.stand;
     if (teamLabel) teamLabel.textContent = 'My Group';
     if (teamSub) teamSub.textContent = u.npoCanManageTeam ? 'Roster · Present · Absent · Clock out' : 'Approved roster';
+  } else if (u.isSubcontractor) {
+    if (standLabel) standLabel.textContent = 'Subcontractor stand';
+    scopeText = 'Inventory + Requests for ' + u.stand;
   } else if (u.role === 'supervisor') {
     if (standLabel) standLabel.textContent = 'Home stand';
     scopeText = 'Supervisor · home ' + u.stand + ' · working ' + (state.activeStand || u.stand);
@@ -7997,9 +8032,13 @@ function renderHome() {
   if(u.role==='supervisor')pollSupervisorRefundBadge();
   if (u.isNpo) document.getElementById('home-fullname').textContent = u.name + ' — ' + u.npoGroup;
   renderRoleHomeUX(u);
+  { const sc=!!u.isSubcontractor, el=document.getElementById('sc-actions'); if(el)el.style.display=sc?'':'none';
+    if(sc){ ['lead-actions','supervisor-actions'].forEach(id=>{const x=document.getElementById(id);if(x)x.style.display='none';});
+      document.getElementById('home-time').textContent='Stand login · '+(u.shiftDate?new Date(u.shiftDate+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'today');
+      scHomeInvStatus(); } }
   setupSupervisorWorkingStand();
   renderWorkerActions();
-  syncAttendanceFromServer();
+  if(!u.isSubcontractor)syncAttendanceFromServer();
   // Load contacts and show on home screen
   // Contacts stay loaded for every event (genuinely useful regardless of
   // sport) — only the automatic popup on login is football-specific, since
@@ -8116,6 +8155,7 @@ function renderWorkerActions() {
   const container = document.getElementById('worker-actions');
   const status = document.getElementById('status-bar-container');
   const u = state.user;
+  if (u && u.isSubcontractor) { container.innerHTML = ''; status.innerHTML = ''; return; }
   if (state.attendance === 'not_started') {
     status.innerHTML = '<div class="status-bar away">⏸ Not started at this stand yet</div>';
     container.innerHTML = `<button class="big-action primary" onclick="markStarted()">
@@ -9274,10 +9314,16 @@ async function populateStandPicker(selectId, defaultStand) {
     }
   }
 
-  if(isLeadership&&npoSet.size){
+  const scInList=isLeadership?stands.filter(s=>isSubcontractorStand(s)&&!npoSet.has(s)):[];
+  if(isLeadership&&(npoSet.size||scInList.length)){
     const npoStands=stands.filter(s=>npoSet.has(s));
-    const other=stands.filter(s=>!npoSet.has(s));
+    const other=stands.filter(s=>!npoSet.has(s)&&!scInList.includes(s));
     let html='<option value="">— Select a stand —</option>';
+    if(scInList.length){
+      html+='<optgroup label="🏪 Subcontractor stands">'+scInList.map(s=>
+        '<option value="'+escapeAttr(s)+'"'+(s===defaultStand?' selected':'')+'>'+escapeHtml(s)+' · Subcontractor</option>'
+      ).join('')+'</optgroup>';
+    }
     if(npoStands.length){
       html+='<optgroup label="🤝 NPO assigned stands">'+npoStands.map(s=>
         '<option value="'+escapeAttr(s)+'"'+(s===defaultStand?' selected':'')+'>'+escapeHtml(s)+' · NPO</option>'
@@ -9477,6 +9523,43 @@ async function submitStock() {
   });
 }
 
+// ============ SUBCONTRACTOR STANDS — one stand login each ============
+// Subcontractor stands have Yellow Dog sheets but nobody on the schedule, so
+// no one could count or request for them. Login: ID 50000 + stand number.
+function scStandList(){
+  if(state._scStands)return state._scStands;
+  return (state._scStands=[...new Set(STAND_SOURCE_2026.filter(s=>s.operator==='Subcontractor').map(s=>canonicalStandName2026(s.name)).filter(Boolean))].sort(standSort));
+}
+function isSubcontractorStand(stand){const c=canonicalStandName2026(stand);return scStandList().includes(c);}
+function scStandHint(s){const num=(String(s).match(/\d{3}\s*P?/i)||[''])[0].replace(/\s+/g,'');const w=String(s).replace(/^.*?\d{3}\s*P?\b/i,'').replace(/\b(SC|Gate)\b/gi,'').replace(/[^A-Za-z' ]+/g,' ').trim().split(/\s+/)[0]||'';return (num+' '+w).trim();}
+function scMatchStands(secret){
+  const t=String(secret||'').toUpperCase().trim();
+  const num=(t.match(/\d{3}/)||[])[0]||'';
+  if(!num)return {num:'',list:[]};
+  const words=t.replace(/\d+\s*P\b/g,' ').replace(/\d+/g,' ').replace(/[^A-Z ]/g,' ').split(/\s+/).filter(w=>w.length>=3&&w!=='STAND');
+  const plain=x=>String(x).toUpperCase().replace(/[^A-Z ]/g,' ');
+  let list=scStandList().filter(s=>(String(s).match(/\d{3}/)||[])[0]===num);
+  // Name words forgive a typo ("stinger" finds "Stiger", "bahama" finds "Bahamas").
+  const wordHit=(x,s)=>plain(s).split(/\s+/).filter(w=>w.length>=3).some(w=>w.startsWith(x)||x.startsWith(w)||(x.length>=5&&loginDist(x,w)<=1));
+  if(words.length){const w=list.filter(s=>words.some(x=>wordHit(x,s)));if(w.length)list=w;}
+  if(list.length>1){const wantP=new RegExp(num+'\\s*P\\b').test(t);const p=list.filter(s=>new RegExp(num+'\\s*P\\b','i').test(s)===wantP);if(p.length)list=p;}
+  return {num,list};
+}
+function scLoginLabel(){
+  const v=(document.getElementById('login-empid')||{}).value||'';
+  const l=document.getElementById('login-secret-label'),i=document.getElementById('login-lastname');
+  if(!l||!i)return;
+  if(v==='50000'){l.textContent='Your stand number';i.placeholder='e.g. 205 or 219 chick';}
+  else{l.textContent='Last Name or Personal PIN';i.placeholder='Last name or personal PIN';}
+}
+async function scHomeInvStatus(){
+  const u=state.user,el=document.getElementById('sc-inv-status');if(!u||!el)return;
+  const rows=await sb('inventory_entries?stand=eq.'+encodeURIComponent(u.stand)+'&entry_date=eq.'+stadiumDay()+'&phase=in.(%22Count%20In%22,%22Count%20Out%22)&select=phase').catch(()=>({_err:true}));
+  if(!Array.isArray(rows))return;
+  const has=p=>rows.some(r=>r.phase===p);
+  el.innerHTML=(has('Count In')?'✅ Count In done':'⬜ <b>Count In</b> not done')+' · '+(has('Count Out')?'✅ Count Out done':'⬜ <b>Count Out</b> not done');
+}
+
 // ============ ONE ORDER — Warehouse + Food from one screen ============
 // 10/3 review: stands sent food requests for beer/ice/candy and stock requests
 // for burgers, so this one screen sorts it for them. Warehouse part = only the
@@ -9532,6 +9615,7 @@ async function goOrder(){
   document.querySelectorAll('#order-eta .chip').forEach(c=>c.classList.toggle('selected',c.textContent.trim()==='30m'));
   document.querySelectorAll('#order-urgency .chip').forEach((c,i)=>c.classList.toggle('selected',i===0));
   showScreen('screen-order');
+  { const f=document.querySelector('#screen-order .ord-sec-food'); if(f)f.style.display=(state.user&&state.user.isSubcontractor)?'none':''; }
   orderRenderFood();
   const picker=document.getElementById('order-stand-picker');
   const needsPicker=isSupervisorSession()||['support_manager','manager','admin'].includes(who.tier||'')||!who.homeStand||isLimitedAreaLead();
@@ -11021,7 +11105,8 @@ function prepareRequestHub(){
   const leadership=!!(state.staffAccount&&state.staffAccount.group==='manager'&&['support_manager','manager','admin'].includes(state.staffAccount.role));
   // Managers: every stand. Stand Leads / Supervisors: their stand (multi-stand leads: all
   // their stands; supervisors can switch stands) — Stock, Food and IT in one list.
-  const standLeader=!!(state.user&&['lead','supervisor'].includes(state.user.role));
+  const standLeader=!!(state.user&&(['lead','supervisor'].includes(state.user.role)||state.user.isSubcontractor));
+  { const sc=!!(state.user&&state.user.isSubcontractor); document.querySelectorAll('#screen-submenu-requests [onclick="requestHubGoKitchen()"], #stand-request-more').forEach(b=>{b.style.display=sc?'none':'';}); }
   const exBtn=document.getElementById('req-hub-existing-btn');
   if(exBtn){
     exBtn.style.display=(leadership||standLeader)?'':'none';
@@ -19264,9 +19349,10 @@ function renderInvItems() {
   const phase = state.invPhase;
   if (!phase) {
     document.getElementById('inv-items-list').innerHTML = '<div class="notice info">👆 Pick a phase above to start counting.</div>';
+    invUpdateProgress();
     return;
   }
-  const catIcon = {ALCOHOL:'🍺',BEVERAGE:'🥤',FOOD:'🍔',SUPPLIES:'📦',OTHER:'📋'};
+  const catIcon = {CHARGEABLES:'💲','NON-CHARGEABLES':'🧾',SUPPLIES:'📦','ADD-ONS (OPTIONAL)':'➕'};
   let html = '';
   let lastCat = null;
   // Items arrive in the exact order of the real paper form (getStandSheet
@@ -19279,14 +19365,16 @@ function renderInvItems() {
   // which is correct, since it honestly signals they're a later addition
   // rather than part of the original numbered sheet.
   state.invItems.forEach(function(item, i) {
-    const cat = (item.category || 'OTHER').toUpperCase();
+    // Sections follow Yellow Dog: Chargeables / Non-Chargeables / Supplies,
+    // so nobody stops after the beer and skips the cups, gloves and BIBs.
+    const cat = invSectionOf(item);
     if (cat !== lastCat) {
-      html += '<div style="position:sticky;top:0;background:var(--bg-elevated);padding:6px 10px;font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-2);border-radius:6px;margin:10px 0 4px" class="inv-cat-header" data-cat="' + escapeAttr(cat) + '">' + (catIcon[cat]||'📋') + ' ' + escapeHtml(cat) + '</div>';
+      html += '<div style="position:sticky;top:0;z-index:2;background:var(--bg-elevated);padding:7px 10px;font-size:12px;font-weight:900;letter-spacing:1px;color:var(--text);border-radius:6px;margin:12px 0 4px;border-left:4px solid ' + (cat === 'SUPPLIES' ? '#7C3AED' : cat === 'NON-CHARGEABLES' ? '#D97706' : '#16A34A') + '" class="inv-cat-header" data-cat="' + escapeAttr(cat) + '">' + (catIcon[cat]||'📋') + ' ' + escapeHtml(cat) + ' <span class="inv-sec-left" data-sec="' + escapeAttr(cat) + '" style="font-weight:700;letter-spacing:0;color:var(--text-2)"></span></div>';
       lastCat = cat;
     }
     const chargeable = (item.chargeable || '').toUpperCase().indexOf('N') === 0 ? ' · <span style="color:var(--text-3);font-size:10px;text-transform:uppercase;letter-spacing:0.05em">Non-Chargeable</span>' : '';
     html += '<div class="card inv-item-card" data-search="' + escapeAttr((item.itemName||'').toLowerCase()) + '" data-cat="' + escapeAttr(cat) + '" style="padding:12px 14px;margin-bottom:8px">';
-    html += '<div style="font-weight:600;font-size:13px;line-height:1.3;margin-bottom:4px">' + escapeHtml(item.itemName) + '</div>';
+    html += '<div style="font-weight:600;font-size:13px;line-height:1.3;margin-bottom:4px"><span style="color:var(--text-3);font-weight:700;margin-right:4px">' + (i + 1) + '.</span>' + escapeHtml(item.itemName) + '</div>';
     html += '<div style="font-size:11px;color:var(--text-2);margin-bottom:10px">' + escapeHtml(item.unit) + ' · ' + escapeHtml(item.pack) + ' · Exp Start: <strong>' + escapeHtml(item.expStart) + '</strong>' + chargeable + '</div>';
     
     if (phase === 'Count In') {
@@ -19317,6 +19405,48 @@ function renderInvItems() {
   const search = document.getElementById('inv-search');
   if (search) { search.value = ''; filterInvItems(''); }
   invDraftRestore(getInventoryTargetStand(), phase);
+  invUpdateProgress();
+}
+function invSectionOf(item) {
+  const ch = String(item.chargeable || '').trim(), cat = String(item.category || '').trim();
+  if (item.isAddon || item.is_addon) return 'ADD-ONS (OPTIONAL)';
+  if (/suppl/i.test(ch) || (/^suppl/i.test(cat) && !/^(y|true|chargeable)$/i.test(ch))) return 'SUPPLIES';
+  if (/^(non|false$|n$)/i.test(ch) || /^non/i.test(cat)) return 'NON-CHARGEABLES';
+  return 'CHARGEABLES';
+}
+// Live "what's left" bar for Count In / Count Out: every line on the sheet —
+// chargeables, non-chargeables AND supplies — needs a number (0 if none).
+function invUpdateProgress() {
+  const box = document.getElementById('inv-progress'); if (!box) return;
+  const phase = state.invPhase, btn = document.getElementById('inv-submit-btn');
+  if (phase !== 'Count In' && phase !== 'Count Out') { box.style.display = 'none'; if (btn) btn.textContent = 'Submit count →'; return; }
+  const field = phase === 'Count In' ? 'countIn' : 'countOut';
+  const sec = {}; let total = 0, done = 0;
+  (state.invItems || []).forEach(function(it, i) {
+    if (it.isAddon) return;
+    const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + i + '"][data-field="' + field + '"]'); if (!inp) return;
+    const k = invSectionOf(it), v = inp.value.trim(), ok = v !== '' && !isNaN(Number(v)) && Number(v) >= 0;
+    sec[k] = sec[k] || {t:0, d:0}; sec[k].t++; total++; if (ok) { sec[k].d++; done++; }
+    const card = inp.closest('.inv-item-card'); if (card) card.style.borderLeft = ok ? '4px solid #16A34A' : '';
+  });
+  if (!total) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  const left = total - done, pct = Math.round(done / total * 100);
+  const lbl = {CHARGEABLES:'💲 Chargeables','NON-CHARGEABLES':'🧾 Non-chargeables',SUPPLIES:'📦 Supplies'};
+  box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:900;font-size:15px">' + (left ? phase + ': ' + done + ' / ' + total + ' counted' : '✅ All ' + total + ' lines counted') + '</div>' +
+    (left ? '<button type="button" class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px;font-weight:800" onclick="invJumpNextBlank()">Next blank ↓</button>' : '') + '</div>' +
+    '<div style="height:7px;background:var(--border);border-radius:4px;margin:7px 0;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:' + (left ? '#F59E0B' : '#16A34A') + '"></div></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px">' + ['CHARGEABLES','NON-CHARGEABLES','SUPPLIES'].filter(k => sec[k]).map(k => { const x = sec[k], l = x.t - x.d;
+      return '<span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;background:' + (l ? '#FEF3C7;color:#92400E' : '#DCFCE7;color:#166534') + '">' + lbl[k] + ' ' + (l ? l + ' left' : '✓') + '</span>'; }).join('') + '</div>';
+  document.querySelectorAll('#inv-items-list .inv-sec-left').forEach(function(el) { const x = sec[el.dataset.sec]; el.textContent = x ? '· ' + x.d + '/' + x.t : ''; });
+  if (btn) btn.textContent = left ? 'Submit ' + phase + ' (' + left + ' left) →' : 'Submit ' + phase + ' ✓';
+}
+function invJumpNextBlank() {
+  const field = state.invPhase === 'Count In' ? 'countIn' : 'countOut';
+  const search = document.getElementById('inv-search'); if (search && search.value) { search.value = ''; filterInvItems(''); }
+  const i = (state.invItems || []).findIndex(function(it, k) { if (it.isAddon) return false; const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + k + '"][data-field="' + field + '"]'); return inp && inp.value.trim() === ''; });
+  const inp = i >= 0 && document.querySelector('#inv-items-list input[data-inv-idx="' + i + '"][data-field="' + field + '"]');
+  if (inp) { try { inp.scrollIntoView({behavior:'smooth', block:'center'}); inp.focus(); } catch (e) {} }
 }
 
 // Filters by hiding non-matching cards (display:none), never by removing them
@@ -19450,6 +19580,7 @@ async function selectInvPhase(btn, phase) {
       '</div>';
     const submitBtn = document.getElementById('inv-submit-btn');
     if (submitBtn) submitBtn.style.display = 'none';
+    invUpdateProgress();
     return;
   }
   const submitBtn = document.getElementById('inv-submit-btn');
@@ -19635,6 +19766,7 @@ function invDraftClear(stand, phase) {
   let saveTimer = null;
   document.addEventListener('input', function(e) {
     if (!(e.target && e.target.matches && e.target.matches('#inv-items-list input[data-inv-idx]'))) return;
+    invUpdateProgress();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(invDraftSave, 400);
   });
@@ -19671,6 +19803,7 @@ async function invContinuePartialEntry(stand, phase, entryId){
   }
   const submitBtn = document.getElementById('inv-submit-btn');
   if (submitBtn) submitBtn.style.display = '';
+  invUpdateProgress();
   toast('Filled-in items are shown — add the rest and submit');
 }
 
@@ -19704,6 +19837,7 @@ async function submitInventory() {
   if (!stand) return toast('Pick a stand first', 'error');
   if (!state.invPhase) return toast('Pick a phase first', 'error');
   if (!state.invItems || state.invItems.length === 0) return toast('No items to count', 'error');
+  invUpdateProgress();
   
   const entries = [];
   document.querySelectorAll('input[data-inv-idx]').forEach(function(inp) {
@@ -20250,12 +20384,16 @@ async function loadInvTracker() {
   const set = new Set(sched.map(r => r.location).filter(Boolean).filter(x => !/\brunner\b/i.test(x)));
   if (Array.isArray(npoAtt)) npoAtt.forEach(r => { if (r.stand) set.add(r.stand); });
   if (Array.isArray(npoGroups)) npoGroups.forEach(g => String(g.stand || '').split(',').map(x => x.trim()).filter(Boolean).forEach(x => set.add(x)));
-  const stands = [...set].filter(st => !sheets || sheets.has(st));
+  // Subcontractor stands have nobody on the schedule — add them on game days
+  // (they count with the stand login, 50000 + stand number).
+  if (sched.length) scStandList().forEach(st => set.add(st));
+  const hasSheet = st => !sheets || sheets.has(st) || standDbCandidateNames2026(st).some(c => sheets.has(c));
+  const stands = [...set].filter(hasSheet);
   const kitOf = {}; if (Array.isArray(kits)) kits.forEach(k => { kitOf[canonicalStandName2026(k.stand)] = k.items; });
   const recOf = {}; if (Array.isArray(receipts)) receipts.forEach(r => { if (r.status === 'received') recOf[r.stand] = r; });
   state._invtReceiptsOk = Array.isArray(receipts);
   const latest = (st, ph) => inv.find(r => r.stand === st && r.phase === ph) || null;
-  state._invtRows = stands.map(st => ({stand:st, countIn:latest(st,'Count In'), countOut:latest(st,'Count Out'), leads:leads[st] || [], kit:kitOf[canonicalStandName2026(st)] || '', receipt:recOf[st] || null}));
+  state._invtRows = stands.map(st => ({stand:st, countIn:latest(st,'Count In'), countOut:latest(st,'Count Out'), leads:leads[st] || [], kit:kitOf[canonicalStandName2026(st)] || '', receipt:recOf[st] || null, isSC:isSubcontractorStand(st)}));
   state._invtOverrides = Array.isArray(ovr) ? ovr : [];
   renderInvTracker();
 }
@@ -20277,11 +20415,12 @@ function renderInvTracker() {
   if (btn) btn.style.display = ((f === 'in' || f === 'out') && list.length) ? '' : 'none';
   const el = document.getElementById('invt-list'); if (!el) return;
   const t = e => e ? new Date(e.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
-  const chip = (label, e) => '<span style="display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;margin:0 6px 4px 0;background:' + (e ? '#DCFCE7;color:#166534' : '#FEE2E2;color:#991B1B') + '">' + label + ' ' + (e ? '✓ ' + escapeHtml(e.submitted_by||'') + ' ' + t(e) : '✗') + '</span>';
+  // Tap a done Count In / Count Out to see that count in Yellow Dog sheet order.
+  const chip = (label, e, i) => '<span' + (e ? ' role="button" tabindex="0" onclick="invtViewCounts(' + i + ',\'' + label + '\')"' : '') + ' style="display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;margin:0 6px 4px 0;' + (e ? 'cursor:pointer;text-decoration:underline;' : '') + 'background:' + (e ? '#DCFCE7;color:#166534' : '#FEE2E2;color:#991B1B') + '">' + label + ' ' + (e ? '✓ ' + escapeHtml(e.submitted_by||'') + ' ' + t(e) + ' ›' : '✗') + '</span>';
   const reminded = state._invtReminded || {};
   let html = list.length ? list.map(r => {
     const i = rows.indexOf(r);
-    const leadTxt = r.leads.length ? r.leads.map(x => escapeHtml(x.name)).join(', ') : '<span style="color:#D97706">No Stand Lead — Supervisor responsible</span>';
+    const leadTxt = r.leads.length ? r.leads.map(x => escapeHtml(x.name)).join(', ') : r.isSC ? '<span style="color:#7C3AED;font-weight:700">🏪 Subcontractor — stand login 50000 + ' + escapeHtml(scStandHint(r.stand)) + '</span>' : '<span style="color:#D97706">No Stand Lead — Supervisor responsible</span>';
     const rec = r.receipt, miss = rec ? (rec.missing_items || []) : [];
     const done = r.countIn && r.countOut;
     const color = rec ? (miss.length ? '#D97706' : '#00A651') : done ? '#2563EB' : '#DC2626';
@@ -20294,7 +20433,7 @@ function renderInvTracker() {
       (rec ? '<button class="btn btn-ghost" style="width:auto;padding:6px 10px;margin:0;font-size:12px" onclick="invtReceiveOpen(' + i + ')">Edit</button>'
            : '<button class="btn btn-primary" style="width:auto;padding:8px 12px;margin:0;font-size:13px" onclick="invtReceiveOpen(' + i + ')">📦 Receive box</button>') + '</div>' +
       '<div style="font-size:12px;color:var(--text-2);margin:4px 0 6px">Runs it: ' + leadTxt + '<span style="font-size:11px">' + ago + '</span></div>' +
-      chip('Count In', r.countIn) + chip('Count Out', r.countOut) + boxChip +
+      chip('Count In', r.countIn, i) + chip('Count Out', r.countOut, i) + boxChip +
       ((r.countIn || r.countOut) ? '<button class="btn btn-ghost" style="width:auto;padding:4px 10px;margin:0 0 4px;font-size:11px;font-weight:800" onclick="invtViewCounts(' + i + ')">👁 View counts</button>' : '') +
       (miss.length ? '<div style="font-size:12px;font-weight:700;color:#B45309;margin-top:4px">Missing: ' + miss.map(escapeHtml).join(', ') + '</div>' : '') +
       (!rec ? '<div style="font-size:11px;color:var(--text-3);margin-top:4px">Box: ' + invtBoxItems(r).map(escapeHtml).join(', ') + '</div>' : '') +
@@ -20309,35 +20448,58 @@ function renderInvTracker() {
   el.innerHTML = html;
 }
 // ---- Manager: see exactly what a stand counted (Count In / Transfers / Waste / Count Out) ----
-async function invtViewCounts(i) {
+// phase: 'Count In' / 'Count Out' shows just that count; empty = everything.
+// Rows always follow the stand's sheet order (= Yellow Dog's numbered sheet),
+// with every sheet line shown — a blank is a line nobody counted.
+async function invtViewCounts(i, phase) {
   const r = (state._invtRows || [])[i]; if (!r) return;
-  const rows = await sb('inventory_entries?entry_date=eq.' + stadiumDay() + '&stand=eq.' + encodeURIComponent(r.stand) + '&select=phase,submitted_by,created_at,counts&order=created_at.asc').catch(() => ({ _err: true }));
+  const [rows, sheetRes] = await Promise.all([
+    sb('inventory_entries?entry_date=eq.' + stadiumDay() + '&stand=eq.' + encodeURIComponent(r.stand) + '&select=phase,submitted_by,created_at,counts&order=created_at.asc').catch(() => ({ _err: true })),
+    api('getStandSheet', { stand: r.stand }).catch(() => ({ ok: false }))
+  ]);
   if (rows._err || !Array.isArray(rows)) return toast('Could not load the counts', 'error');
   const parse = c => { if (typeof c === 'string') { try { return JSON.parse(c); } catch (e) { return {}; } } return c || {}; };
   const num = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
   const items = {}, order = [];
-  const get = (name, it) => { if (!items[name]) { items[name] = { name, unit: it.unit || '', start: it.expStart, cin: null, tin: 0, tout: 0, waste: 0, cout: null }; order.push(name); } return items[name]; };
+  const sheetItems = (sheetRes && sheetRes.ok && Array.isArray(sheetRes.items)) ? sheetRes.items : [];
+  const byKey = {};
+  const get = (name, it) => {
+    const k = ydItemKey(name);
+    if (byKey[k]) return byKey[k];
+    const x = { name, unit: (it && it.unit) || '', cin: null, tin: 0, tout: 0, waste: 0, cout: null, sec: it ? invSectionOf(it) : 'CHARGEABLES', extra: !!(it && it.extra) };
+    items[name] = x; byKey[k] = x; order.push(name); return x;
+  };
+  sheetItems.forEach(it => get(it.itemName, it));
   const lastCin = rows.filter(x => x.phase === 'Count In').pop(), lastCout = rows.filter(x => x.phase === 'Count Out').pop();
-  if (lastCin) Object.values(parse(lastCin.counts)).forEach(it => { if (it && it.itemName) { const x = get(it.itemName, it); x.cin = num(it.countIn != null ? it.countIn : it.count); } });
-  rows.filter(x => x.phase !== 'Count In' && x.phase !== 'Count Out').forEach(e => Object.values(parse(e.counts)).forEach(it => { if (!it || !it.itemName) return; const x = get(it.itemName, it); x.tin += num(it.transferIn) || 0; x.tout += num(it.transferOut) || 0; x.waste += num(it.waste) || 0; }));
-  if (lastCout) Object.values(parse(lastCout.counts)).forEach(it => { if (it && it.itemName) { const x = get(it.itemName, it); x.cout = num(it.countOut != null ? it.countOut : it.count); x.waste += num(it.waste) || 0; } });
-  // Saved counts come back with their keys re-ordered by the database, so
-  // put rows back in the stand sheet's order (same as Yellow Dog's sheet).
-  const sheet = await sb('stand_sheets?stand=eq.' + encodeURIComponent(r.stand) + '&order=sort_order.asc.nullslast,id.asc&select=item_name').catch(() => ({ _err: true }));
-  if (Array.isArray(sheet) && sheet.length) {
-    const pos = {}; sheet.forEach((x, i) => { const k = ydItemKey(x.item_name); if (!(k in pos)) pos[k] = i; });
-    const seen = order.slice();
-    order.sort((a, b) => { const pa = pos[ydItemKey(a)], pb = pos[ydItemKey(b)]; if (pa === undefined && pb === undefined) return seen.indexOf(a) - seen.indexOf(b); if (pa === undefined) return 1; if (pb === undefined) return -1; return pa - pb; });
-  }
+  if (lastCin) Object.values(parse(lastCin.counts)).forEach(it => { if (it && it.itemName) { const x = get(it.itemName, { ...it, extra: true }); x.cin = num(it.countIn != null ? it.countIn : it.count); } });
+  rows.filter(x => x.phase !== 'Count In' && x.phase !== 'Count Out').forEach(e => Object.values(parse(e.counts)).forEach(it => { if (!it || !it.itemName) return; const x = get(it.itemName, { ...it, extra: true }); x.tin += num(it.transferIn) || 0; x.tout += num(it.transferOut) || 0; x.waste += num(it.waste) || 0; }));
+  if (lastCout) Object.values(parse(lastCout.counts)).forEach(it => { if (it && it.itemName) { const x = get(it.itemName, { ...it, extra: true }); x.cout = num(it.countOut != null ? it.countOut : it.count); x.waste += num(it.waste) || 0; } });
   const t = e => e ? whDisp(e.submitted_by || '') + ' · ' + new Date(e.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Phoenix' }) : '<span style="color:#DC2626">not done</span>';
   const cell = v => v == null ? '<span style="color:#DC2626">—</span>' : (Math.round(v * 100) / 100);
   const td = 'padding:5px 4px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap';
-  const body = order.map(n => { const x = items[n]; const used = (x.cin != null && x.cout != null) ? Math.round((x.cin + x.tin - x.tout - x.waste - x.cout) * 100) / 100 : null;
-    return '<tr><td style="padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px">' + escapeHtml(n) + (x.unit ? ' <span style="opacity:.6">' + escapeHtml(x.unit) + '</span>' : '') + '</td><td style="' + td + '">' + cell(x.cin) + '</td><td style="' + td + '">' + (x.tin || x.tout ? (x.tin ? '+' + x.tin : '') + (x.tout ? ' −' + x.tout : '') : '') + '</td><td style="' + td + '">' + (x.waste || '') + '</td><td style="' + td + '">' + cell(x.cout) + '</td><td style="' + td + ';font-weight:800;color:' + (used != null && used < 0 ? '#DC2626' : 'inherit') + '">' + (used == null ? '' : used) + '</td></tr>'; }).join('');
-  whSheet('<div style="font-weight:850;font-size:17px">👁 ' + escapeHtml(r.stand) + '</div>' +
-    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 10px">Count In: ' + t(lastCin) + '<br>Count Out: ' + t(lastCout) + '</div>' +
-    (order.length ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="font-size:10px;color:var(--text-2);text-align:right"><th style="text-align:left;padding:4px">Item</th><th style="padding:4px">In</th><th style="padding:4px">Transfer</th><th style="padding:4px">Waste</th><th style="padding:4px">Out</th><th style="padding:4px">Used</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
-      '<div style="font-size:10px;color:var(--text-3);margin-top:6px">Used = In + transfers in − transfers out − waste − Out. A red (negative) Used means a count is likely wrong.</div>' : '<div style="font-size:12px;color:var(--text-3)">No counts entered yet.</div>'));
+  const only = phase === 'Count In' ? 'in' : phase === 'Count Out' ? 'out' : '';
+  const secName = {CHARGEABLES:'💲 Chargeables','NON-CHARGEABLES':'🧾 Non-Chargeables',SUPPLIES:'📦 Supplies','ADD-ONS (OPTIONAL)':'➕ Add-ons'};
+  const cols = only === 'in' ? 3 : only === 'out' ? 4 : 7;
+  let lastSec = null, blanks = 0;
+  const body = order.map((n, k) => {
+    const x = items[n];
+    let head = '';
+    if (x.sec !== lastSec && !x.extra) { head = '<tr><td colspan="' + cols + '" style="padding:8px 4px 3px;font-size:11px;font-weight:900;letter-spacing:.5px;color:var(--text-2)">' + secName[x.sec] + '</td></tr>'; lastSec = x.sec; }
+    const used = (x.cin != null && x.cout != null) ? Math.round((x.cin + x.tin - x.tout - x.waste - x.cout) * 100) / 100 : null;
+    if (!x.sec.startsWith('ADD-ONS') && ((only === 'in' && x.cin == null) || (only === 'out' && x.cout == null))) blanks++;
+    const name = '<td style="padding:5px 4px;border-bottom:1px solid var(--border);color:var(--text-3);font-size:10px;text-align:right">' + (x.extra ? '+' : k + 1) + '</td><td style="padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px">' + escapeHtml(n) + (x.unit ? ' <span style="opacity:.6">' + escapeHtml(x.unit) + '</span>' : '') + '</td>';
+    if (only === 'in') return head + '<tr>' + name + '<td style="' + td + ';font-weight:800">' + cell(x.cin) + '</td></tr>';
+    if (only === 'out') return head + '<tr>' + name + '<td style="' + td + ';font-weight:800">' + cell(x.cout) + '</td><td style="' + td + '">' + (x.waste || '') + '</td></tr>';
+    return head + '<tr>' + name + '<td style="' + td + '">' + cell(x.cin) + '</td><td style="' + td + '">' + (x.tin || x.tout ? (x.tin ? '+' + x.tin : '') + (x.tout ? ' −' + x.tout : '') : '') + '</td><td style="' + td + '">' + (x.waste || '') + '</td><td style="' + td + '">' + cell(x.cout) + '</td><td style="' + td + ';font-weight:800;color:' + (used != null && used < 0 ? '#DC2626' : 'inherit') + '">' + (used == null ? '' : used) + '</td></tr>';
+  }).join('');
+  const th = only === 'in' ? '<th style="padding:4px">Count In</th>' : only === 'out' ? '<th style="padding:4px">Count Out</th><th style="padding:4px">Waste</th>' : '<th style="padding:4px">In</th><th style="padding:4px">Transfer</th><th style="padding:4px">Waste</th><th style="padding:4px">Out</th><th style="padding:4px">Used</th>';
+  const tabs = '<div class="chip-row" style="margin:0 0 8px">' + [['Count In', 'Count In'], ['Count Out', 'Count Out'], ['', 'All columns']].map(([p, l]) => '<button class="chip' + ((phase || '') === p ? ' selected' : '') + '" onclick="invtViewCounts(' + i + ',\'' + p + '\')">' + l + '</button>').join('') + '</div>';
+  whSheet('<div style="font-weight:850;font-size:17px">👁 ' + escapeHtml(r.stand) + (only ? ' · ' + escapeHtml(phase) : '') + '</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Count In: ' + t(lastCin) + '<br>Count Out: ' + t(lastCout) + '<br><span style="color:var(--text-3)">Same order as the Yellow Dog stand sheet' + (sheetItems.length ? ' (' + sheetItems.length + ' lines)' : '') + '.</span></div>' + tabs +
+    (only && blanks ? '<div class="notice warning" style="font-size:12px;margin-bottom:6px">⚠️ ' + blanks + ' line' + (blanks === 1 ? '' : 's') + ' not counted (red —)</div>' : '') +
+    (order.length ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="font-size:10px;color:var(--text-2);text-align:right"><th style="padding:4px">#</th><th style="text-align:left;padding:4px">Item</th>' + th + '</tr></thead><tbody>' + body + '</tbody></table></div>' +
+      (only ? '' : '<div style="font-size:10px;color:var(--text-3);margin-top:6px">Used = In + transfers in − transfers out − waste − Out. A red (negative) Used means a count is likely wrong.</div>') +
+      (order.some(n => items[n].extra) ? '<div style="font-size:10px;color:var(--text-3);margin-top:4px">+ = counted but not on the stand sheet.</div>' : '') : '<div style="font-size:12px;color:var(--text-3)">No counts entered yet.</div>'));
 }
 // ---- Receive a stand's checkout box (managers at the exit table) ----
 function invtReceiveOpen(i) {
