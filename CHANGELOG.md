@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-08-fix-51
+- **Coke → Pepsi: Coke products are hidden in the app, kept in downloads.** Any sheet item named COKE or SPRITE (Bottled 20oz Coke / Diet Coke / Coke Zero / Sprite, and the BIB Coke / Diet Coke / Coke Zero / Sprite boxes) no longer shows on Count In / Count Out / Transfers, Request Stock, Order for my stand, Force Restock, warehouse screens or item search.
+  - Downloads (inventory CSV, printable view, **Yellow Dog copy-paste**) keep those rows in their exact sheet position with **0** for Count In and Count Out, so copy-paste rows still line up.
+  - Works for every future game automatically — matched by name, so a new Yellow Dog PDF upload still keeps the rows in place for downloads and hidden in the app.
+  - Line numbers on the count screen stay the Yellow Dog numbers (e.g. 1, 2, 7, 8…) so staff can still match the paper sheet. The manager's View counts lists them greyed "not sold · 0" and never flags them as missing.
+
 ## 2026-10-08-fix-50
 - **"🛒 Order for my stand" is now visible to everyone** on the Requests menu (it was only shown when the site was opened with `?test=1`, so it was invisible in the installed app). `?test=1` now only switches on TEST mode (orders marked [TEST], no notifications).
 - **⭐ Most ordered here** at the top of the Warehouse list: items this stand ordered before (×3 weight) plus what stands of the same type order — Beer Portables, Game Day, BarS, Beverage MKTs, Draft Houses, Nacho, Pizza, main stands, subcontractors (last 120 days of stock requests, recalculated automatically). Each shows "ordered here 2×" or "popular at beer portables".

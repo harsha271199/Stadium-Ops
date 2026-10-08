@@ -4583,7 +4583,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-08-fix-50';
+const BUILD_TAG = '2026-10-08-fix-51';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5289,6 +5289,13 @@ function loginPickByName(rows,entered,nameOf,idOf){
   const people=new Set(hits.map(r=>String(idOf(r))));
   return {rows:hits,people:people.size,tier:best};
 }
+// ── Products we no longer sell (switched from Coke to Pepsi, Oct 2026) ──
+// Matched by name, so it keeps working after every new Yellow Dog upload.
+// Hidden everywhere in the app (counts, requests, orders), but kept in the
+// downloads (CSV / print / Yellow Dog copy-paste) in their sheet position
+// with 0, so the copy-paste rows still line up.
+const RETIRED_ITEM_RE=/\b(COKE|SPRITE)\b/i;
+function isRetiredItem(name){ return RETIRED_ITEM_RE.test(String(name||'')); }
 async function api(action, data) {
   data = data || {};
   try {
@@ -6543,7 +6550,10 @@ async function api(action, data) {
         if(rows.length)break;
       }
       if(lastErr&&(!Array.isArray(rows)||!rows.length)) return {ok:false,error:'Network'};
-      return { ok:true, items: (rows||[]).map((r,i)=>({ seq:i+1, itemName:r.item_name, unit:r.unit, pack:r.pack, onHand:r.on_hand, restock:r.restock, expStart:r.exp_start, chargeable:r.chargeable, category:r.category||'', vendor:r.vendor||'', isAddon:!!r.is_addon })) };
+      // seq = position on the Yellow Dog sheet, counted BEFORE hiding retired
+      // items, so numbers on screen still match the paper/Yellow Dog rows.
+      const all = (rows||[]).map((r,i)=>({ seq:i+1, itemName:r.item_name, unit:r.unit, pack:r.pack, onHand:r.on_hand, restock:r.restock, expStart:r.exp_start, chargeable:r.chargeable, category:r.category||'', vendor:r.vendor||'', isAddon:!!r.is_addon, retired:isRetiredItem(r.item_name) }));
+      return { ok:true, items: data.includeRetired ? all : all.filter(x=>!x.retired) };
     }
     case 'submitInventoryEntry': {
       const today = stadiumDay();
@@ -6754,6 +6764,12 @@ async function api(action, data) {
         if (it.onHand === undefined) it.onHand = r.on_hand;
         if (it.restock === undefined) it.restock = r.restock;
         it.isAddon = !!r.is_addon;
+        // No longer sold (Coke → Pepsi): row stays in its place, counted as 0.
+        if (isRetiredItem(r.item_name)) {
+          it.retired = true;
+          ['countIn','countOut'].forEach(f => { if (it[f] === undefined || it[f] === '') it[f] = '0'; });
+          it.counted = true;
+        }
         // Yellow Dog tab: Chargeables vs Non-Chargeables & Supplies. Sheets
         // store the type in `chargeable` ('Supplies') or in `category` with
         // chargeable 'true'/'false', depending on how they were uploaded.
@@ -19508,7 +19524,7 @@ function renderInvItems() {
     const meta = [item.pack, (item.expStart !== '' && item.expStart != null) ? 'Exp start ' + item.expStart : ''].filter(Boolean).map(escapeHtml).join(' · ');
     const box = (field, big, extra) => '<input type="number" min="0" step="any" class="form-input inv-num' + (big ? '' : ' inv-num-sm') + '" data-inv-idx="' + i + '" data-field="' + field + '" inputmode="decimal" enterkeyhint="next" autocomplete="off" placeholder="' + (big ? '' : '0') + '"' + (extra || '') + '>';
     html += '<div class="card inv-item-card inv-row" data-search="' + escapeAttr((item.itemName||'').toLowerCase()) + '" data-cat="' + escapeAttr(cat) + '">';
-    const head = '<div class="inv-row-name"><span class="inv-row-no">' + (i + 1) + '.</span>' + escapeHtml(item.itemName) + '<div class="inv-row-meta">' + meta + '</div></div>';
+    const head = '<div class="inv-row-name"><span class="inv-row-no">' + (item.seq || i + 1) + '.</span>' + escapeHtml(item.itemName) + '<div class="inv-row-meta">' + meta + '</div></div>';
     if (phase === 'Count In' || phase === 'Count Out') {
       const field = phase === 'Count In' ? 'countIn' : 'countOut';
       const cin = phase === 'Count Out' && state._invCinMap ? state._invCinMap[ydItemKey(item.itemName)] : undefined;
@@ -19697,6 +19713,7 @@ function searchWiderItemCatalog(q, visibleCount){
   _invWiderSearchTimer = setTimeout(async ()=>{
     const safe = encodeURIComponent('*'+q.replace(/[*,()]/g,'')+'*');
     const rows = await sb('stand_sheets?item_name=ilike.'+safe+'&order=item_name.asc&limit=25&select=item_name,unit,pack,stand').catch(()=>({_err:true}));
+    if(Array.isArray(rows)) { const keep = rows.filter(r=>!isRetiredItem(r.item_name)); rows.length = 0; keep.forEach(r=>rows.push(r)); }
     if(rows._err||!Array.isArray(rows)||!rows.length){
       hint.innerHTML='<div class="notice info" style="font-size:11px;padding:8px 10px">No item matching “'+escapeHtml(q)+'” found at any stand. Check the spelling, or use Request Stock → Other to describe it.</div>';
       return;
@@ -20736,7 +20753,7 @@ async function invtViewCounts(i, phase) {
   const r = (state._invtRows || [])[i]; if (!r) return;
   const [rows, sheetRes] = await Promise.all([
     sb('inventory_entries?entry_date=eq.' + stadiumDay() + '&stand=eq.' + encodeURIComponent(r.stand) + '&select=phase,submitted_by,created_at,counts&order=created_at.asc').catch(() => ({ _err: true })),
-    api('getStandSheet', { stand: r.stand }).catch(() => ({ ok: false }))
+    api('getStandSheet', { stand: r.stand, includeRetired: true }).catch(() => ({ ok: false }))
   ]);
   if (rows._err || !Array.isArray(rows)) return toast('Could not load the counts', 'error');
   const parse = c => { if (typeof c === 'string') { try { return JSON.parse(c); } catch (e) { return {}; } } return c || {}; };
@@ -20747,7 +20764,8 @@ async function invtViewCounts(i, phase) {
   const get = (name, it) => {
     const k = ydItemKey(name);
     if (byKey[k]) return byKey[k];
-    const x = { name, unit: (it && it.unit) || '', cin: null, tin: 0, tout: 0, waste: 0, cout: null, sec: it ? invSectionOf(it) : 'CHARGEABLES', extra: !!(it && it.extra) };
+    const x = { name, unit: (it && it.unit) || '', cin: null, tin: 0, tout: 0, waste: 0, cout: null, sec: it ? invSectionOf(it) : 'CHARGEABLES', extra: !!(it && it.extra), retired: !!(it && it.retired) };
+    if (x.retired) { x.cin = 0; x.cout = 0; }
     items[name] = x; byKey[k] = x; order.push(name); return x;
   };
   sheetItems.forEach(it => get(it.itemName, it));
@@ -20770,10 +20788,10 @@ async function invtViewCounts(i, phase) {
     const sheetIt = sheetItems.find(s => ydItemKey(s.itemName) === ydItemKey(n));
     const zIn = x.cin === 0 && sheetIt && (parseFloat(sheetIt.expStart) || 0) > 0;
     const zOut = x.cout === 0 && ((x.cin || 0) + x.tin) > 0;
-    const zFlag = (only === 'in' && zIn) || (only === 'out' && zOut) || (!only && (zIn || zOut));
+    const zFlag = !x.retired && ((only === 'in' && zIn) || (only === 'out' && zOut) || (!only && (zIn || zOut)));
     if (zFlag) zeroRows++;
-    if (!x.sec.startsWith('ADD-ONS') && ((only === 'in' && x.cin == null) || (only === 'out' && x.cout == null))) blanks++;
-    const name = '<td style="padding:5px 4px;border-bottom:1px solid var(--border);color:var(--text-3);font-size:10px;text-align:right">' + (x.extra ? '+' : k + 1) + '</td><td style="padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px' + (zFlag ? ';background:#FEF3C7;color:#92400E;font-weight:700' : '') + '">' + (zFlag ? '⚠ ' : '') + escapeHtml(n) + (x.unit ? ' <span style="opacity:.6">' + escapeHtml(x.unit) + '</span>' : '') + '</td>';
+    if (!x.retired && !x.sec.startsWith('ADD-ONS') && ((only === 'in' && x.cin == null) || (only === 'out' && x.cout == null))) blanks++;
+    const name = '<td style="padding:5px 4px;border-bottom:1px solid var(--border);color:var(--text-3);font-size:10px;text-align:right">' + (x.extra ? '+' : k + 1) + '</td><td style="padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px' + (zFlag ? ';background:#FEF3C7;color:#92400E;font-weight:700' : '') + '">' + (zFlag ? '⚠ ' : '') + (x.retired ? '<span style="opacity:.45;text-decoration:line-through">' + escapeHtml(n) + '</span> <span style="font-size:9px;font-weight:800;color:var(--text-3)">not sold · 0</span>' : escapeHtml(n) + (x.unit ? ' <span style="opacity:.6">' + escapeHtml(x.unit) + '</span>' : '')) + '</td>';
     if (only === 'in') return head + '<tr>' + name + '<td style="' + td + ';font-weight:800">' + cell(x.cin) + '</td></tr>';
     if (only === 'out') return head + '<tr>' + name + '<td style="' + td + ';font-weight:800">' + cell(x.cout) + '</td><td style="' + td + '">' + (x.waste || '') + '</td></tr>';
     return head + '<tr>' + name + '<td style="' + td + '">' + cell(x.cin) + '</td><td style="' + td + '">' + (x.tin || x.tout ? (x.tin ? '+' + x.tin : '') + (x.tout ? ' −' + x.tout : '') : '') + '</td><td style="' + td + '">' + (x.waste || '') + '</td><td style="' + td + '">' + cell(x.cout) + '</td><td style="' + td + ';font-weight:800;color:' + (used != null && used < 0 ? '#DC2626' : 'inherit') + '">' + (used == null ? '' : used) + '</td></tr>';
