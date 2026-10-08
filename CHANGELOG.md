@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-08-fix-48
+- **Checks is now the shift in 3 steps** (all stands, all roles that open Checks): **1 Opening** (Opening Checklist + Count In) → **2 During the game** (During-Event Check; Transfers and Log Wastage marked "only if needed") → **3 Closing** (Count Out + Closing Checklist). Top line says "2 of 5 done · Next: Count Out"; finished tasks turn green, the current step and next task are outlined. Count In / Transfers / Count Out open straight on that phase, and Back returns to Checks. Home tile reads "Opening · Count In · During · Count Out · Closing".
+- **Counting on a phone**: one compact row per item (number, name, pack/Exp start on the left; a big box with the **unit under it — BOTTLE / CASE / EACH** — on the right), a **0 / none** button that fills 0 and jumps to the next empty box, **Enter / Next on the keyboard moves to the next item**, and tapping a filled box selects it so typing replaces it.
+- **Count Out** shows "Count In was 12 bottle" under each item, so cases-vs-cans mistakes are visible while typing; **Waste** only appears on chargeables (Yellow Dog counts non-chargeables & supplies at Count Out only). Transfers use the same compact rows.
+- Fixed: a complete count was shown as "28 of 32 — partial" because optional add-on items were counted in the total.
+
 ## 2026-10-08-fix-47
 - **Subcontractor stands can now log in** (they had sheets but no schedule, so 0 counts were ever entered): ID **50000** + the stand number (e.g. `205`; `206 stinger` / `219 chick` where a number is shared — the app lists the choices, and a one-letter typo in the name is OK). The app then asks their first name, so counts show "Maria · Subcontractor".
   - Their home has just two things: **Inventory — Count In / Count Out** (with today's status) and **Requests** (Warehouse stock, IT, Refund — no Food).

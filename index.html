@@ -1648,6 +1648,41 @@
   .ord-done.ok{background:rgba(22,163,74,.1);border:1px solid #16A34A}
   .ord-done.bad{background:rgba(220,38,38,.08);border:1px solid #DC2626}
   .sc-howto{background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.35);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.4;margin-bottom:10px}
+  /* Checks = shift timeline */
+  .chk-progress{font-size:13px;font-weight:800;padding:10px 12px;border-radius:12px;background:var(--bg-elevated);border:1px solid var(--border);margin-bottom:12px}
+  .chk-step{border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:12px;background:var(--bg-card)}
+  .chk-step.now{border:2px solid #F59E0B;box-shadow:0 0 0 3px rgba(245,158,11,.15)}
+  .chk-step.done{opacity:.75}
+  .chk-step-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .chk-dot{width:28px;height:28px;border-radius:50%;color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .chk-step.done .chk-dot{background:#16A34A!important}
+  .chk-step-t{font-size:17px;font-weight:900}
+  .chk-step-s{font-size:12px;color:var(--text-2)}
+  .chk-task{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--bg-elevated);border:1px solid var(--border);border-radius:12px;padding:13px 12px;margin-top:7px;cursor:pointer;font-family:inherit;color:var(--text);min-height:62px}
+  .chk-task.ok{border-color:#16A34A;background:rgba(22,163,74,.07)}
+  .chk-task.next{border:2px solid #F59E0B}
+  .chk-ic{font-size:22px;flex-shrink:0}
+  .chk-tl{font-weight:800;font-size:15px}
+  .chk-ts{font-size:12px;color:var(--text-2);margin-top:2px}
+  .chk-go{margin-left:auto;font-size:22px;color:var(--text-3)}
+  .chk-tag{font-size:10px;font-weight:800;background:#DBEAFE;color:#1E40AF;border-radius:6px;padding:2px 6px;margin-left:4px;vertical-align:middle}
+  .chk-tag-opt{background:#F3F4F6;color:#4B5563}
+  /* Inventory rows — compact, phone-first */
+  .inv-row{display:block!important;padding:10px 12px!important;margin-bottom:6px!important}
+  .inv-row-main{display:flex;align-items:center;gap:8px}
+  .inv-row-name{flex:1;min-width:0;font-weight:700;font-size:13px;line-height:1.25}
+  .inv-row-no{color:var(--text-3);font-weight:800;margin-right:4px}
+  .inv-row-meta{font-size:11px;font-weight:500;color:var(--text-2);margin-top:2px}
+  .inv-row-in{width:86px;flex-shrink:0;text-align:center}
+  .inv-num{font-size:20px!important;font-weight:800!important;text-align:center;padding:9px 4px!important;margin:0!important}
+  .inv-unit{font-size:10px;font-weight:800;color:var(--text-2);margin-top:2px;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inv-zero span{display:block;font-size:9px;font-weight:700;line-height:1;margin-top:1px}
+  .inv-zero{width:44px;height:46px;line-height:1.1;flex-shrink:0;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text-2);font-weight:900;font-size:16px;font-family:inherit;cursor:pointer;align-self:flex-start}
+  .inv-row-sub{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:7px;font-size:12px}
+  .inv-cin{color:var(--text-2)}
+  .inv-cin b{color:var(--text)}
+  .inv-waste{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text-2)}
+  .inv-num-sm{width:64px!important;font-size:15px!important;padding:6px 4px!important}
 </style>
 </head>
 <body>
@@ -1963,7 +1998,7 @@
         <div class="action-tile" onclick="goChecks()">
           <span class="tile-icon">📋</span>
           <div class="tile-label">Checks</div>
-          <div class="tile-sub">Opening · During · Closing</div>
+          <div class="tile-sub">Opening · Count In · During · Count Out · Closing</div>
         </div>
 
 
@@ -2102,29 +2137,27 @@
     <div><div class="page-title">📋 Checks</div><div class="page-sub" id="checks-sub">Select a checklist</div></div>
   </div>
   <div class="content">
-    <div class="notice info" style="font-size:12px;margin-bottom:16px">Complete each checklist at the right time during your shift.</div>
     <div id="checks-stand-picker" style="display:none"><select id="checks-stand-select" onchange="checksStandChanged()"></select></div>
-    <button class="sub-menu-btn smb-green" onclick="goChecklist('opening')">
-      <span class="smb-icon">🟢</span>
-      <div><div class="smb-label">Opening Checklist</div><div class="smb-sub" id="checks-status-opening">Before doors open · 23 items</div></div>
-    </button>
-    <button class="sub-menu-btn smb-orange" onclick="goChecklist('during')">
-      <span class="smb-icon">🟡</span>
-      <div><div class="smb-label">During-Event Check</div><div class="smb-sub" id="checks-status-during">Mid-game · 9 items · includes alcohol policy</div></div>
-    </button>
-    <button class="sub-menu-btn smb-purple" onclick="goChecklist('closing')">
-      <span class="smb-icon">🌙</span>
-      <div><div class="smb-label">Closing Checklist</div><div class="smb-sub" id="checks-status-closing">End of game · 20 items</div></div>
-    </button>
-    <div style="height:1px;background:var(--border);margin:8px 0 14px"></div>
-    <button class="sub-menu-btn smb-blue" onclick="goInventory(getChecksTargetStand())">
-      <span class="smb-icon">📊</span>
-      <div><div class="smb-label">Inventory Count</div><div class="smb-sub">Count In · Transfer · Count Out</div></div>
-    </button>
-    <button class="sub-menu-btn smb-orange" onclick="goWastage()">
-      <span class="smb-icon">🗑️</span>
-      <div><div class="smb-label">Log Wastage</div><div class="smb-sub">Record thrown / spoiled items</div></div>
-    </button>
+    <div id="chk-progress" class="chk-progress">Your shift has 3 steps — do them in order.</div>
+
+    <div class="chk-step" data-step="opening">
+      <div class="chk-step-h"><span class="chk-dot" style="background:#16A34A">1</span><div><div class="chk-step-t">Opening</div><div class="chk-step-s">Before doors open</div></div></div>
+      <button class="chk-task" data-task="opening" onclick="goChecklist('opening')"><span class="chk-ic">✅</span><div><div class="chk-tl">Opening Checklist</div><div class="chk-ts" id="checks-status-opening">Before doors open · 23 items</div></div><span class="chk-go">›</span></button>
+      <button class="chk-task" data-task="countin" onclick="checksOpenInv('Count In')"><span class="chk-ic">📋</span><div><div class="chk-tl">Count In <span class="chk-tag">Inventory</span></div><div class="chk-ts" id="checks-status-countin">Count every line before you sell</div></div><span class="chk-go">›</span></button>
+    </div>
+
+    <div class="chk-step" data-step="during">
+      <div class="chk-step-h"><span class="chk-dot" style="background:#D97706">2</span><div><div class="chk-step-t">During the game</div><div class="chk-step-s">Mid-game · as things happen</div></div></div>
+      <button class="chk-task" data-task="during" onclick="goChecklist('during')"><span class="chk-ic">🟡</span><div><div class="chk-tl">During-Event Check</div><div class="chk-ts" id="checks-status-during">Mid-game · 9 items · includes alcohol policy</div></div><span class="chk-go">›</span></button>
+      <button class="chk-task chk-opt" data-task="transfer" onclick="checksOpenInv('Transfer')"><span class="chk-ic">🚚</span><div><div class="chk-tl">Transfers <span class="chk-tag chk-tag-opt">only if needed</span></div><div class="chk-ts" id="checks-status-transfer">Stock you gave to / got from another stand</div></div><span class="chk-go">›</span></button>
+      <button class="chk-task chk-opt" data-task="waste" onclick="goWastage()"><span class="chk-ic">🗑️</span><div><div class="chk-tl">Log Wastage <span class="chk-tag chk-tag-opt">only if needed</span></div><div class="chk-ts">Dropped · spoiled · thrown away</div></div><span class="chk-go">›</span></button>
+    </div>
+
+    <div class="chk-step" data-step="closing">
+      <div class="chk-step-h"><span class="chk-dot" style="background:#7C3AED">3</span><div><div class="chk-step-t">Closing</div><div class="chk-step-s">After the last sale</div></div></div>
+      <button class="chk-task" data-task="countout" onclick="checksOpenInv('Count Out')"><span class="chk-ic">📋</span><div><div class="chk-tl">Count Out <span class="chk-tag">Inventory</span></div><div class="chk-ts" id="checks-status-countout">Count every line again before you leave</div></div><span class="chk-go">›</span></button>
+      <button class="chk-task" data-task="closing" onclick="goChecklist('closing')"><span class="chk-ic">🌙</span><div><div class="chk-tl">Closing Checklist</div><div class="chk-ts" id="checks-status-closing">End of game · 20 items</div></div><span class="chk-go">›</span></button>
+    </div>
   </div>
 </div>
 
@@ -2943,7 +2976,7 @@
           <div class="action-tile" onclick="mgrSimpleChecks()">
             <span class="tile-icon">📋</span>
             <div class="tile-label">Checks</div>
-            <div class="tile-sub">Opening · During · Closing</div>
+            <div class="tile-sub">Opening · Count In · During · Count Out · Closing</div>
           </div>
           <div class="action-tile tile-red" onclick="mgrSimpleRequests()">
             <span class="tile-icon">📦</span>
@@ -4520,7 +4553,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-08-fix-47';
+const BUILD_TAG = '2026-10-08-fix-48';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7919,6 +7952,7 @@ function returnAfterStandTaskOrHome() {
   const dest = state.standTaskReturnScreen || 'screen-home';
   state.standTaskReturnScreen = '';
   if (dest === 'screen-all-checks') showScreen('screen-all-checks');
+  else if (dest === 'screen-submenu-checks') showScreen('screen-submenu-checks');
   else if (dest === 'screen-bedcheck' || isManagerOpsSession()) { showScreen('screen-bedcheck'); restoreMgrSidebarState(); }
   else { renderHome(); goRoleHome(); }
 }
@@ -19372,32 +19406,34 @@ function renderInvItems() {
       html += '<div style="position:sticky;top:0;z-index:2;background:var(--bg-elevated);padding:7px 10px;font-size:12px;font-weight:900;letter-spacing:1px;color:var(--text);border-radius:6px;margin:12px 0 4px;border-left:4px solid ' + (cat === 'SUPPLIES' ? '#7C3AED' : cat === 'NON-CHARGEABLES' ? '#D97706' : '#16A34A') + '" class="inv-cat-header" data-cat="' + escapeAttr(cat) + '">' + (catIcon[cat]||'📋') + ' ' + escapeHtml(cat) + ' <span class="inv-sec-left" data-sec="' + escapeAttr(cat) + '" style="font-weight:700;letter-spacing:0;color:var(--text-2)"></span></div>';
       lastCat = cat;
     }
-    const chargeable = (item.chargeable || '').toUpperCase().indexOf('N') === 0 ? ' · <span style="color:var(--text-3);font-size:10px;text-transform:uppercase;letter-spacing:0.05em">Non-Chargeable</span>' : '';
-    html += '<div class="card inv-item-card" data-search="' + escapeAttr((item.itemName||'').toLowerCase()) + '" data-cat="' + escapeAttr(cat) + '" style="padding:12px 14px;margin-bottom:8px">';
-    html += '<div style="font-weight:600;font-size:13px;line-height:1.3;margin-bottom:4px"><span style="color:var(--text-3);font-weight:700;margin-right:4px">' + (i + 1) + '.</span>' + escapeHtml(item.itemName) + '</div>';
-    html += '<div style="font-size:11px;color:var(--text-2);margin-bottom:10px">' + escapeHtml(item.unit) + ' · ' + escapeHtml(item.pack) + ' · Exp Start: <strong>' + escapeHtml(item.expStart) + '</strong>' + chargeable + '</div>';
-    
-    if (phase === 'Count In') {
-      html += '<label style="font-size:11px;color:var(--text-2);display:block;margin-bottom:4px">Count In (your physical count)</label>';
-      html += '<input type="number" min="0" step="any" class="form-input" data-inv-idx="' + i + '" data-field="countIn" placeholder="" inputmode="decimal" style="font-size:18px;font-weight:600">';
+    // One compact row per item on a phone: name + unit on the left, a big box
+    // on the right with the unit under it, and a "0" shortcut for "none".
+    const unit = String(item.unit || '').trim();
+    const unitWord = unit ? unit.toUpperCase() : 'COUNT';
+    const meta = [item.pack, (item.expStart !== '' && item.expStart != null) ? 'Exp start ' + item.expStart : ''].filter(Boolean).map(escapeHtml).join(' · ');
+    const box = (field, big, extra) => '<input type="number" min="0" step="any" class="form-input inv-num' + (big ? '' : ' inv-num-sm') + '" data-inv-idx="' + i + '" data-field="' + field + '" inputmode="decimal" enterkeyhint="next" autocomplete="off" placeholder="' + (big ? '' : '0') + '"' + (extra || '') + '>';
+    html += '<div class="card inv-item-card inv-row" data-search="' + escapeAttr((item.itemName||'').toLowerCase()) + '" data-cat="' + escapeAttr(cat) + '">';
+    const head = '<div class="inv-row-name"><span class="inv-row-no">' + (i + 1) + '.</span>' + escapeHtml(item.itemName) + '<div class="inv-row-meta">' + meta + '</div></div>';
+    if (phase === 'Count In' || phase === 'Count Out') {
+      const field = phase === 'Count In' ? 'countIn' : 'countOut';
+      const cin = phase === 'Count Out' && state._invCinMap ? state._invCinMap[ydItemKey(item.itemName)] : undefined;
+      html += '<div class="inv-row-main">' + head +
+        '<div class="inv-row-in">' + box(field, true) + '<div class="inv-unit">' + escapeHtml(unitWord) + '</div></div>' +
+        '<button type="button" class="inv-zero" tabindex="-1" onclick="invSetZero(' + i + ',\'' + field + '\')" aria-label="None — type 0">0<span>none</span></button></div>';
+      // Waste only matters for chargeables (Yellow Dog: non-chargeables & supplies are Count Out only).
+      if (phase === 'Count Out') {
+        const sub = [];
+        if (cin !== undefined) sub.push('<span class="inv-cin">Count In was <b>' + escapeHtml(cin) + '</b> ' + escapeHtml(unitWord.toLowerCase()) + '</span>');
+        if (cat === 'CHARGEABLES' || cat.startsWith('ADD-ONS')) sub.push('<label class="inv-waste">Waste ' + box('waste', false) + '</label>');
+        if (sub.length) html += '<div class="inv-row-sub">' + sub.join('') + '</div>';
+      }
     } else if (phase === 'Transfer') {
       const ledgerQty = state._invLedgerTotals ? (state._invLedgerTotals[item.itemName] || 0) : 0;
       const outQty = state._invLedgerOutTotals ? (state._invLedgerOutTotals[item.itemName] || 0) : 0;
-      const prefillTag = ledgerQty > 0 ? '<div style="font-size:10px;color:#00A651;font-weight:700;margin-bottom:4px">📋 ' + ledgerQty + ' already logged — edit if this looks wrong</div>' : '';
-      const outPrefillTag = outQty > 0 ? '<div style="font-size:10px;color:#00A651;font-weight:700;margin-bottom:4px">📋 ' + outQty + ' confirmed sent — edit if this looks wrong</div>' : '';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-      html += '<div>' + prefillTag + '<label style="font-size:11px;color:var(--text-2);display:block;margin-bottom:4px">+ Transfer IN</label>';
-      html += '<input type="number" min="0" step="any" class="form-input" data-inv-idx="' + i + '" data-field="transferIn" data-ledger-qty="' + ledgerQty + '" placeholder="0" inputmode="decimal" value="' + (ledgerQty > 0 ? ledgerQty : '') + '"></div>';
-      html += '<div>' + outPrefillTag + '<label style="font-size:11px;color:var(--text-2);display:block;margin-bottom:4px">− Transfer OUT</label>';
-      html += '<input type="number" min="0" step="any" class="form-input" data-inv-idx="' + i + '" data-field="transferOut" data-ledger-qty="' + outQty + '" placeholder="0" inputmode="decimal" value="' + (outQty > 0 ? outQty : '') + '"></div>';
-      html += '</div>';
-    } else if (phase === 'Count Out') {
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-      html += '<div><label style="font-size:11px;color:var(--text-2);display:block;margin-bottom:4px">Count Out (closing)</label>';
-      html += '<input type="number" min="0" step="any" class="form-input" data-inv-idx="' + i + '" data-field="countOut" placeholder="" inputmode="decimal" style="font-size:18px;font-weight:600"></div>';
-      html += '<div><label style="font-size:11px;color:var(--text-2);display:block;margin-bottom:4px">Waste</label>';
-      html += '<input type="number" min="0" step="any" class="form-input" data-inv-idx="' + i + '" data-field="waste" placeholder="0" inputmode="decimal"></div>';
-      html += '</div>';
+      html += head;
+      if (ledgerQty > 0 || outQty > 0) html += '<div style="font-size:10px;color:#00A651;font-weight:700;margin:4px 0">📋 ' + [ledgerQty > 0 ? ledgerQty + ' already logged in' : '', outQty > 0 ? outQty + ' confirmed sent' : ''].filter(Boolean).join(' · ') + ' — edit if wrong</div>';
+      html += '<div class="inv-row-sub"><label class="inv-waste">+ IN ' + box('transferIn', false, ' data-ledger-qty="' + ledgerQty + '" value="' + (ledgerQty > 0 ? ledgerQty : '') + '"') + '</label>' +
+        '<label class="inv-waste">− OUT ' + box('transferOut', false, ' data-ledger-qty="' + outQty + '" value="' + (outQty > 0 ? outQty : '') + '"') + '</label><span class="inv-cin">' + escapeHtml(unitWord.toLowerCase()) + '</span></div>';
     }
     html += '</div>';
   });
@@ -19441,6 +19477,34 @@ function invUpdateProgress() {
   document.querySelectorAll('#inv-items-list .inv-sec-left').forEach(function(el) { const x = sec[el.dataset.sec]; el.textContent = x ? '· ' + x.d + '/' + x.t : ''; });
   if (btn) btn.textContent = left ? 'Submit ' + phase + ' (' + left + ' left) →' : 'Submit ' + phase + ' ✓';
 }
+function invSetZero(i, field) {
+  const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + i + '"][data-field="' + field + '"]'); if (!inp) return;
+  inp.value = '0'; inp.style.outline = '';
+  inp.dispatchEvent(new Event('input', {bubbles:true}));
+  invFocusNext(inp, true);
+}
+// Next count box in the list (skips rows hidden by search). blankOnly: next empty one.
+function invFocusNext(fromInp, blankOnly) {
+  const all = [...document.querySelectorAll('#inv-items-list input.inv-num:not(.inv-num-sm)')].filter(x => x.offsetParent !== null);
+  const rest = all.slice(all.indexOf(fromInp) + 1);
+  const nx = blankOnly ? (rest.find(x => x.value.trim() === '') || null) : rest[0];
+  if (nx) { try { nx.focus({preventScroll:true}); nx.scrollIntoView({behavior:'smooth', block:'center'}); } catch (e) {} }
+  else { try { document.activeElement && document.activeElement.blur(); } catch (e) {} }
+}
+// Enter / Next on the phone keyboard jumps to the next count box.
+document.addEventListener('keydown', function(e) {
+  const t = e.target;
+  if (e.key === 'Enter' && t && t.matches && t.matches('#inv-items-list input[data-inv-idx]')) {
+    e.preventDefault();
+    const main = t.classList.contains('inv-num-sm') ? (t.closest('.inv-row').querySelector('input.inv-num:not(.inv-num-sm)') || t) : t;
+    invFocusNext(main, false);
+  }
+});
+// Tapping a box that already has a number selects it, so typing replaces it.
+document.addEventListener('focusin', function(e) {
+  const t = e.target;
+  if (t && t.matches && t.matches('#inv-items-list input[data-inv-idx]') && t.value) setTimeout(() => { try { t.select(); } catch (x) {} }, 0);
+});
 function invJumpNextBlank() {
   const field = state.invPhase === 'Count In' ? 'countIn' : 'countOut';
   const search = document.getElementById('inv-search'); if (search && search.value) { search.value = ''; filterInvItems(''); }
@@ -19562,7 +19626,7 @@ async function selectInvPhase(btn, phase) {
     invDraftClear(stand, phase); // this phase is genuinely done (possibly from another device) — no reason to keep a local draft around for it
     document.getElementById('inv-active-warning').innerHTML = '';
     const submittedCount = Object.keys(prior.counts||{}).length;
-    const totalCount = (state.invItems||[]).length;
+    const totalCount = (state.invItems||[]).filter(function(it){ return !it.isAddon; }).length; // add-ons are optional
     const isPartial = totalCount > 0 && submittedCount < totalCount;
     // Real fix for the dead-end this used to be: this screen only ever
     // said "Already completed" with no way to see what was actually
@@ -19606,6 +19670,18 @@ async function selectInvPhase(btn, phase) {
   if (phase === 'Transfer') {
     await loadLedgerTransferTotals();
   }
+  // Count Out shows what this stand counted at Count In, next to each box —
+  // the quickest way to spot cases-vs-cans mix-ups while typing.
+  state._invCinMap = null;
+  if (phase === 'Count Out') {
+    const cinRows = await sb('inventory_entries?stand=eq.' + encodeURIComponent(stand) + '&phase=eq.' + encodeURIComponent('Count In') + '&entry_date=eq.' + stadiumDay() + '&order=created_at.desc&limit=1&select=counts').catch(() => ({_err:true}));
+    if (Array.isArray(cinRows) && cinRows[0]) {
+      let c = cinRows[0].counts; if (typeof c === 'string') { try { c = JSON.parse(c); } catch (e) { c = {}; } }
+      const m = {}; Object.values(c || {}).forEach(it => { if (it && it.itemName && it.countIn !== undefined && it.countIn !== '') m[ydItemKey(it.itemName)] = it.countIn; });
+      state._invCinMap = m;
+    }
+  }
+  if (state.invPhase !== phase) return; // switched phase while loading
   renderInvItems();
 }
 
@@ -20112,7 +20188,10 @@ function resetStandWorkStatus(mode) {
     ['checks-status-closing','Closing not completed'],
     ['inv-status-countin','Not completed'],
     ['inv-status-transfer','Not completed'],
-    ['inv-status-countout','Not completed']
+    ['inv-status-countout','Not completed'],
+    ['checks-status-countin','Count In not done'],
+    ['checks-status-transfer','None logged — fine if nothing moved'],
+    ['checks-status-countout','Count Out not done']
   ];
   pairs.forEach(function(p) {
     const el = document.getElementById(p[0]);
@@ -20135,6 +20214,25 @@ function applyStandWorkStatus(s) {
   setStandWorkStatus('inv-status-countin', s.countIn, s.countInActive, 'Not completed');
   setStandWorkStatus('inv-status-transfer', s.transfer, s.transferActive, 'Not completed');
   setStandWorkStatus('inv-status-countout', s.countOut, s.countOutActive, 'Not completed');
+  setStandWorkStatus('checks-status-countin', s.countIn, s.countInActive, 'Count In not done');
+  setStandWorkStatus('checks-status-countout', s.countOut, s.countOutActive, 'Count Out not done');
+  { const tr=document.getElementById('checks-status-transfer'); if(tr){ if(s.transfer){ setStandWorkStatus('checks-status-transfer', s.transfer, null, ''); } else { tr.textContent='None logged — fine if nothing moved'; tr.style.color='var(--text-2)'; } } }
+  checksTimelineMark(s);
+}
+// Marks finished tasks green, the whole step done, and the next thing to do.
+function checksTimelineMark(s) {
+  const done = {opening:!!s.opening, countin:!!s.countIn, during:!!s.during, countout:!!s.countOut, closing:!!s.closing};
+  const order = ['opening','countin','during','countout','closing'];
+  const next = order.find(k => !done[k]);
+  document.querySelectorAll('#screen-submenu-checks .chk-task').forEach(b => { const k = b.dataset.task; b.classList.toggle('ok', !!done[k]); b.classList.toggle('next', k === next); });
+  const stepOf = {opening:['opening','countin'], during:['during'], closing:['countout','closing']};
+  document.querySelectorAll('#screen-submenu-checks .chk-step').forEach(st => { const ks = stepOf[st.dataset.step] || []; st.classList.toggle('done', ks.every(k => done[k])); st.classList.toggle('now', !!next && ks.includes(next)); });
+  const n = order.filter(k => done[k]).length, el = document.getElementById('chk-progress');
+  if (el) { el.innerHTML = n === order.length ? '🎉 All 5 done for today — great job!' : '<b>' + n + ' of 5 done</b> · Next: ' + ({opening:'Opening Checklist',countin:'Count In',during:'During-Event Check',countout:'Count Out',closing:'Closing Checklist'})[next]; el.style.borderColor = n === order.length ? '#16A34A' : '#F59E0B'; }
+}
+function checksOpenInv(phase) {
+  state.standTaskReturnScreen = 'screen-submenu-checks';
+  invOpenPhase(getChecksTargetStand(), phase);
 }
 
 async function loadStandWorkStatus(stand) {
