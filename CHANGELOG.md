@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-08-fix-50
+- **"🛒 Order for my stand" is now visible to everyone** on the Requests menu (it was only shown when the site was opened with `?test=1`, so it was invisible in the installed app). `?test=1` now only switches on TEST mode (orders marked [TEST], no notifications).
+- **⭐ Most ordered here** at the top of the Warehouse list: items this stand ordered before (×3 weight) plus what stands of the same type order — Beer Portables, Game Day, BarS, Beverage MKTs, Draft Houses, Nacho, Pizza, main stands, subcontractors (last 120 days of stock requests, recalculated automatically). Each shows "ordered here 2×" or "popular at beer portables".
+- New group **🧊 Ice · CO2 · draft & souvenir cups** — loyalty/souvenir/Churchill cups, buckets, draft beer cups and CO2 tanks were among the most-ordered items (loyalty cups #1 at main stands) but had been hidden as "supplies". Gloves, soap, napkins, plain plastic cups, BIB, deposits stay with the Supervisor.
+
 ## 2026-10-08-fix-49
 - **Stop "type 0 everywhere" counts** (10/3: 51% of Count In and 58% of Count Out lines were 0 once every line was required — 204 + 225 of them on lines where stock was expected):
   - Removed the "0 / none" quick button added in fix-48.

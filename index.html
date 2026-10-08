@@ -2193,7 +2193,7 @@
 
     <button class="sub-menu-btn" id="req-hub-order-btn" style="display:none;border-left:4px solid #16A34A" onclick="requestHubGoOrder()">
       <span class="smb-icon">🛒</span>
-      <div><div class="smb-label">Order for my stand <span style="background:#F59E0B;color:#fff;border-radius:10px;padding:2px 7px;font-size:10px;margin-left:4px">NEW · TEST</span></div><div class="smb-sub">Drinks &amp; snacks → Warehouse · Food → Kitchen · one Send</div></div>
+      <div><div class="smb-label">Order for my stand <span id="req-hub-order-tag" style="background:#16A34A;color:#fff;border-radius:10px;padding:2px 7px;font-size:10px;margin-left:4px">NEW</span></div><div class="smb-sub">Drinks &amp; snacks → Warehouse · Food → Kitchen · one Send</div></div>
     </button>
 
     <button class="sub-menu-btn smb-red" onclick="requestHubGoStock()">
@@ -2759,10 +2759,10 @@
 
     <div class="ord-sec ord-sec-wh">
       <div class="ord-sec-h"><span>📦 Warehouse</span><span class="ord-sec-unit">cases</span></div>
-      <div class="ord-sec-sub">Drinks · popcorn · candy · snacks</div>
+      <div class="ord-sec-sub">Drinks · popcorn · candy · snacks · ice · CO2 · draft &amp; souvenir cups</div>
       <input class="form-input" type="text" id="order-search" placeholder="🔍 Search drinks & snacks…" oninput="orderRenderWh()" style="margin:8px 0">
       <div id="order-wh-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
-      <div class="ord-hint">Gloves, soap, napkins, cups or anything else? Ask your Supervisor.</div>
+      <div class="ord-hint">Gloves, soap, napkins, plastic cups or anything else? Ask your Supervisor.</div>
     </div>
 
     <div class="ord-sec ord-sec-food">
@@ -4583,7 +4583,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-08-fix-49';
+const BUILD_TAG = '2026-10-08-fix-50';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9652,16 +9652,58 @@ const ORDER_SUPPLY_RE=/\b(BIB|CO2|DEPOSIT|GLOVES?|SOAP|JANITORIAL|LINER|TOWELS?|
 const ORDER_SODA_RE=/\b(WATER|DASANI|AQUAFINA|SODA|COKE|PEPSI|SPRITE|DR PEPPER|MOUNTAIN DEW|MTN DEW|STARRY|GATORADE|POWERADE|BOTTLED?)\b/;
 const ORDER_SNACK_RE=/\b(CANDY|SKITTLES|M&M|SOUR PATCH|MIKE|SWEDISH|SWEEDISH|GUMMY|BEARS|POPCORN|CHIPS?|PEANUTS?|KETTLE|SNACK|LEMONADE 12OZ FROZEN)\b/;
 const ORDER_DRINK_RE=/\b(BEER|CAN|CANS|KEG|SELTZER|WINE|COORS|MILLER|DOS|EQUIS|HALO|PAPAGO|TOPO|SPIKED|HEINEKEN|HEINENKEN|MICHELOB|MODELO|CORONA|BLUE MOON|TRULY|WHITE CLAW|MIXER|TONIC|GINGER|CRAFT|DOMESTIC|IMPORT|LIGHT|IPA|LAGER|SHANDY)\b/;
+// Sold cups/buckets, CO2 tanks and ice are drink needs the warehouse brings
+// (loyalty cups were the #1 main-stand order, CO2 #2) — not "supplies".
+const ORDER_NEEDS_RE=/\bICE\b|\bCO2\b|\b20 ?# ?CO2|CUP LOYALTY|SOUVENIR|WHIRLEY|\bBUCKET\b|CHURCHILL?\b|CUP.*\bDRAFT\b/;
 function orderWhGroup(item){
   const n=String(item.itemName||'').toUpperCase();
-  if(ORDER_SUPPLY_RE.test(n)||ORDER_FOOD_RE.test(n))return '';
-  if(/\bICE\b/.test(n))return 'ice';
+  if(ORDER_FOOD_RE.test(n)||/\bBIB\b|DEPOSIT|EMPLOYEE/.test(n))return '';
+  if(ORDER_NEEDS_RE.test(n))return 'needs';
+  if(ORDER_SUPPLY_RE.test(n))return '';
   if(ORDER_SNACK_RE.test(n))return 'snack';
   if(ORDER_SODA_RE.test(n))return 'soda';
   if(ORDER_DRINK_RE.test(n))return 'beer';
   return '';
 }
-const ORDER_WH_GROUPS=[['beer','🍺 Beer · seltzer · wine'],['soda','🥤 Soda · water · sports drinks'],['snack','🍿 Popcorn · candy · snacks'],['ice','🧊 Ice']];
+const ORDER_WH_GROUPS=[['fav','⭐ Most ordered here'],['beer','🍺 Beer · seltzer · wine'],['soda','🥤 Soda · water · sports drinks'],['snack','🍿 Popcorn · candy · snacks'],['needs','🧊 Ice · CO2 · draft & souvenir cups']];
+// Stand "type" — stands of the same kind order the same things (10/3 history:
+// beer portables → Devils Halo/Topo/Coors; main stands → loyalty cups, CO2).
+function orderStandType(stand){
+  const s=String(stand||'');
+  if(/beer portable/i.test(s))return 'beerport';
+  if(/game day/i.test(s))return 'gameday';
+  if(/bar ?s/i.test(s))return 'bars';
+  if(/fan fuel bev|bevmkt|beverage mkt/i.test(s))return 'bevmkt';
+  if(/draft house/i.test(s))return 'drafthouse';
+  if(/nacho/i.test(s))return 'nacho';
+  if(/pitchfork/i.test(s))return 'pizza';
+  if(isSubcontractorStand(s))return 'sc';
+  if(/favorites|burgers?|tenders|cheeseburger/i.test(s))return 'main';
+  return 'other';
+}
+// Past stock orders (last 120 days), loaded once per session.
+async function orderLoadHistory(){
+  if(state._orderHist&&Date.now()-state._orderHist.at<600000)return state._orderHist;
+  const since=new Date(Date.now()-120*86400000).toISOString();
+  const rows=await sb('stock_requests?created_at=gte.'+encodeURIComponent(since)+'&select=stand,items_json&order=created_at.desc&limit=3000').catch(()=>({_err:true}));
+  const byStand={},byType={};
+  (Array.isArray(rows)?rows:[]).forEach(r=>{
+    let j=r.items_json;if(typeof j==='string'){try{j=JSON.parse(j);}catch(e){j=null;}}
+    const items=j&&Array.isArray(j.items)?j.items:[];
+    const st=canonicalStandName2026(r.stand),ty=orderStandType(r.stand);
+    items.forEach(it=>{const k=ydItemKey(it.itemName||'');if(!k)return;
+      (byStand[st]=byStand[st]||{})[k]=(byStand[st][k]||0)+1;
+      (byType[ty]=byType[ty]||{})[k]=(byType[ty][k]||0)+1;});
+  });
+  return (state._orderHist={at:Date.now(),byStand,byType});
+}
+// Top of the list: what THIS stand orders most, then what stands like it order.
+function orderPickFavorites(stand,items,hist){
+  const own=(hist&&hist.byStand[canonicalStandName2026(stand)])||{},typ=(hist&&hist.byType[orderStandType(stand)])||{};
+  return items.map((it,i)=>{const k=ydItemKey(it.itemName);return {i,own:own[k]||0,typ:typ[k]||0,score:(own[k]||0)*3+(typ[k]||0)};})
+    .filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,8);
+}
+
 function requestHubGoOrder(){ requestHubMarkReturn(); goOrder(); }
 function orderBack(){
   if(state.standTaskReturnScreen==='screen-submenu-requests'){state.standTaskReturnScreen='';showScreen('screen-submenu-requests');return;}
@@ -9707,11 +9749,13 @@ async function orderLoadStand(stand){
   const el=document.getElementById('order-wh-list');
   if(!stand){el.innerHTML='';orderSummary();return;}
   el.innerHTML='<div class="loading"><div class="spinner"></div>Loading drinks &amp; snacks…</div>';
-  const res=await api('getStandSheet',{stand}).catch(()=>({ok:false}));
+  const [res,hist]=await Promise.all([api('getStandSheet',{stand}).catch(()=>({ok:false})),orderLoadHistory().catch(()=>null)]);
   if(stand!==state.orderStand)return; // stand changed while loading
   const seen=new Set();
   state.orderWhItems=((res.ok&&res.items)||[]).map(it=>({...it,_grp:orderWhGroup(it)})).filter(it=>{
     if(!it._grp)return false;const k=String(it.itemName||'').trim().toUpperCase();if(seen.has(k))return false;seen.add(k);return true;});
+  state.orderFavs=orderPickFavorites(stand,state.orderWhItems,hist);
+  state.orderFavs.forEach(f=>{const it=state.orderWhItems[f.i];it._home=it._grp;it._grp='fav';it._hint=f.own?('ordered here '+f.own+'×'):('popular at '+({beerport:'beer portables',gameday:'Game Day stands',bars:'BarS stands',bevmkt:'Beverage MKTs',drafthouse:'Draft Houses',nacho:'Nacho stands',pizza:'Pizza stands',sc:'subcontractor stands',main:'main stands'}[orderStandType(stand)]||'similar stands'));});
   orderRenderWh();orderSummary();
 }
 function orderStepBtns(kind,key,qty){
@@ -9726,10 +9770,11 @@ function orderRenderWh(){
   const q=(document.getElementById('order-search').value||'').toLowerCase().trim();
   let html='';
   ORDER_WH_GROUPS.forEach(([g,label])=>{
-    const rows=items.map((it,i)=>({it,i})).filter(x=>x.it._grp===g&&(!q||String(x.it.itemName).toLowerCase().includes(q)));
+    let rows=items.map((it,i)=>({it,i})).filter(x=>x.it._grp===g&&(!q||String(x.it.itemName).toLowerCase().includes(q)));
+    if(g==='fav'){const ord=(state.orderFavs||[]).map(f=>f.i);rows.sort((a,b)=>ord.indexOf(a.i)-ord.indexOf(b.i));}
     if(!rows.length)return;
     html+='<div class="ord-grp">'+label+'</div>'+rows.map(({it,i})=>{const v=Number(state.orderWh[i]||0);
-      return '<div class="ord-row'+(v?' on':'')+'" id="ordr-wh-'+i+'"><div class="ord-name">'+escapeHtml(it.itemName)+(it.pack||it.unit?'<small>'+escapeHtml([it.pack,it.unit].filter(Boolean).join(' · '))+'</small>':'')+'</div>'+orderStepBtns('wh',i,v)+'</div>';}).join('');
+      return '<div class="ord-row'+(v?' on':'')+'" id="ordr-wh-'+i+'"><div class="ord-name">'+escapeHtml(it.itemName)+(it.pack||it.unit||it._hint?'<small>'+escapeHtml([it._hint?'⭐ '+it._hint:'',it.pack,it.unit].filter(Boolean).join(' · '))+'</small>':'')+'</div>'+orderStepBtns('wh',i,v)+'</div>';}).join('');
   });
   el.innerHTML=html||'<div class="notice info" style="font-size:12px">Nothing matches your search.</div>';
 }
@@ -11182,7 +11227,7 @@ function prepareRequestHub(){
     const sub=exBtn.querySelector('.smb-sub');
     if(sub)sub.textContent=leadership?'Stock · Food · IT across all stands':(state.user&&state.user.role==='supervisor'?'Stock · Food · IT · pick any stand or all':'Stock · Food · IT · see what is coming');
   }
-  { const ob=document.getElementById('req-hub-order-btn'); if(ob)ob.style.display=orderTestMode()?'':'none'; }
+  { const ob=document.getElementById('req-hub-order-btn'); if(ob)ob.style.display=''; const tg=document.getElementById('req-hub-order-tag'); if(tg)tg.textContent=orderTestMode()?'TEST MODE':'NEW'; }
   const who=getRequesterIdentity();
   const stand=getOperationalStand(who)||state.activeStand||who.homeStand||'';
   const sub=document.getElementById('request-hub-context');
