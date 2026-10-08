@@ -1625,6 +1625,28 @@
 .wh-fix-save[disabled]{opacity:.45;cursor:not-allowed}
 .wh-fix-link{display:block;width:100%;margin-top:10px;background:none;border:0;color:#DC2626;font-weight:700;font-size:14px;padding:8px;cursor:pointer;text-decoration:underline}
 .wh-changed-note{font-size:12px;color:#B45309;background:rgba(245,158,11,.10);border-radius:8px;padding:6px 8px;margin-top:6px}
+  /* One order screen (Warehouse + Food) */
+  .ord-test{background:#FEF3C7;color:#92400E;border:2px dashed #F59E0B;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:800;margin-bottom:10px}
+  .ord-howto{font-size:13px;color:var(--text-2);margin-bottom:12px;line-height:1.4}
+  .ord-sec{border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:12px;background:var(--bg-elevated)}
+  .ord-sec-wh{border-left:5px solid #DC2626}
+  .ord-sec-food{border-left:5px solid #F97316}
+  .ord-sec-h{display:flex;justify-content:space-between;align-items:baseline;font-size:17px;font-weight:900}
+  .ord-sec-unit{font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em}
+  .ord-sec-sub{font-size:12px;color:var(--text-2);margin-top:2px}
+  .ord-grp{font-size:11px;font-weight:800;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 4px}
+  .ord-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border)}
+  .ord-row:last-child{border-bottom:0}
+  .ord-row.on{background:rgba(22,163,74,.08);border-radius:8px}
+  .ord-name{flex:1;min-width:0;font-weight:650;font-size:14px;line-height:1.25}
+  .ord-name small{display:block;font-weight:500;font-size:11px;color:var(--text-2)}
+  .ord-qty{width:34px;text-align:center;font-weight:900;font-size:17px}
+  .ord-hint{font-size:11px;color:var(--text-3);margin-top:8px}
+  .ord-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--bg-elevated,#1a1d24);border-top:1px solid var(--border,#2a2f3a);padding:10px 16px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(0,0,0,0.25)}
+  .ord-summary{font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:7px}
+  .ord-done{border-radius:12px;padding:12px;margin-bottom:9px;font-size:14px;font-weight:700}
+  .ord-done.ok{background:rgba(22,163,74,.1);border:1px solid #16A34A}
+  .ord-done.bad{background:rgba(220,38,38,.08);border:1px solid #DC2626}
 </style>
 </head>
 <body>
@@ -2104,6 +2126,11 @@
     </button>
 
     <div class="request-primary-note">Most game-day problems should use one of these:</div>
+
+    <button class="sub-menu-btn" id="req-hub-order-btn" style="display:none;border-left:4px solid #16A34A" onclick="requestHubGoOrder()">
+      <span class="smb-icon">🛒</span>
+      <div><div class="smb-label">Order for my stand <span style="background:#F59E0B;color:#fff;border-radius:10px;padding:2px 7px;font-size:10px;margin-left:4px">NEW · TEST</span></div><div class="smb-sub">Drinks &amp; snacks → Warehouse · Food → Kitchen · one Send</div></div>
+    </button>
 
     <button class="sub-menu-btn smb-red" onclick="requestHubGoStock()">
       <span class="smb-icon">📦</span>
@@ -2649,6 +2676,56 @@
       </div>
     </div>
     <button class="btn btn-primary" onclick="submitStock()" style="margin:0">Send to warehouse →</button>
+  </div>
+</div>
+
+<!-- ============ ONE ORDER (Warehouse + Food together) ============ -->
+<div class="screen" id="screen-order">
+  <div class="page-header">
+    <div class="back-btn" role="button" tabindex="0" aria-label="Back" onclick="orderBack()">←</div>
+    <div><div class="page-title">🛒 Order for my stand</div><div class="page-sub" id="order-sub">—</div></div>
+  </div>
+  <div class="content">
+    <div id="order-test-banner" class="ord-test" style="display:none">🧪 TEST MODE — orders are marked [TEST] and nobody gets a notification</div>
+    <div id="order-stand-picker" style="display:none;margin-bottom:10px">
+      <label class="form-label" style="margin-top:0">Which stand?</label>
+      <select class="form-input" id="order-stand-select" onchange="orderStandChanged()"></select>
+    </div>
+    <div class="ord-howto">Tap <b>+</b> on what you need. One <b>Send</b> → drinks &amp; snacks go to the <b>Warehouse</b>, food goes to the <b>Kitchen</b>, at the same time.</div>
+
+    <div class="ord-sec ord-sec-wh">
+      <div class="ord-sec-h"><span>📦 Warehouse</span><span class="ord-sec-unit">cases</span></div>
+      <div class="ord-sec-sub">Drinks · popcorn · candy · snacks</div>
+      <input class="form-input" type="text" id="order-search" placeholder="🔍 Search drinks & snacks…" oninput="orderRenderWh()" style="margin:8px 0">
+      <div id="order-wh-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+      <div class="ord-hint">Gloves, soap, napkins, cups or anything else? Ask your Supervisor.</div>
+    </div>
+
+    <div class="ord-sec ord-sec-food">
+      <div class="ord-sec-h"><span>🍔 Food</span><span class="ord-sec-unit">how many</span></div>
+      <div class="ord-sec-sub">From the kitchen · a runner brings it</div>
+      <div id="order-food-list" style="margin-top:8px"></div>
+    </div>
+
+    <label class="form-label">Note (optional)</label>
+    <input class="form-input" type="text" id="order-note" placeholder="e.g. we're out of Coors Light">
+    <div style="height:150px"></div>
+  </div>
+  <div class="ord-bar">
+    <div class="chip-row" id="order-urgency" style="margin:0 0 7px;flex-wrap:nowrap">
+      <button class="chip success selected" onclick="orderPickUrgency(this,'Normal')">🟢 Normal</button>
+      <button class="chip urgent" onclick="orderPickUrgency(this,'URGENT')">🔴 URGENT</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;overflow-x:auto">
+      <span style="font-size:11px;font-weight:700;color:var(--text-2);white-space:nowrap">⏱ Need within</span>
+      <div class="chip-row" id="order-eta" style="margin:0;flex-wrap:nowrap">
+        <button class="chip" onclick="orderPickEta(this,15)">15m</button>
+        <button class="chip" onclick="orderPickEta(this,20)">20m</button>
+        <button class="chip selected" onclick="orderPickEta(this,30)">30m</button>
+      </div>
+    </div>
+    <div id="order-summary" class="ord-summary">Nothing picked yet</div>
+    <button class="btn btn-primary" id="order-send-btn" onclick="submitUnifiedOrder()" style="margin:0" disabled>Send order →</button>
   </div>
 </div>
 
@@ -4427,7 +4504,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-08-fix-45';
+const BUILD_TAG = '2026-10-08-fix-46';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9400,6 +9477,214 @@ async function submitStock() {
   });
 }
 
+// ============ ONE ORDER — Warehouse + Food from one screen ============
+// 10/3 review: stands sent food requests for beer/ice/candy and stock requests
+// for burgers, so this one screen sorts it for them. Warehouse part = only the
+// stand's drinks/popcorn/candy/snacks (gloves, soap, napkins etc. go through a
+// Supervisor). Food part = a fixed kitchen list. One Send creates a stock
+// request AND a food request together, each routed like the old screens.
+// Opened from the Requests menu while ?test=1 is on (kept for the tab session).
+(function(){try{const q=new URLSearchParams(location.search);if(q.get('test')==='1')sessionStorage.setItem('so_order_test','1');else if(q.get('test')==='0')sessionStorage.removeItem('so_order_test');}catch(e){}})();
+function orderTestMode(){try{return sessionStorage.getItem('so_order_test')==='1';}catch(e){return /[?&]test=1(&|$)/.test(location.search);}}
+const ORDER_FOOD=[
+  {key:'tenders',name:'Chicken Tenders',icon:'🍗'},
+  {key:'fries',name:'Fries',icon:'🍟'},
+  {key:'burgers',name:'Burgers',icon:'🍔'},
+  {key:'burgerbuns',name:'Burger Buns',icon:'🍞'},
+  {key:'cheese',name:'Cheese for burgers',icon:'🧀'},
+  {key:'hotdogs',name:'Hot Dogs',icon:'🌭',sub:'all hot dogs'},
+  {key:'brats',name:'Brats',icon:'🌭'},
+  {key:'dogbuns',name:'Hot Dog Buns',icon:'🥖'},
+  {key:'pretzels',name:'Pretzels',icon:'🥨'},
+  {key:'vegan',name:'Vegan burgers',icon:'🌱'}
+];
+// Stand-sheet names that are food from the kitchen — never shown in the Warehouse part.
+const ORDER_FOOD_RE=/\b(CHICKEN|TENDERS?|FRIES|FRY|BURGERS?|PATTY|BEYOND|IMPOSSIBLE|BUNS?|BRIOCHE|CHEESE|HOT ?DOGS?|DOG|BRATS?|BRATWURST|SAUSAGE|PRETZELS?|BEEF|NACHO|TORTILLA)\b/;
+// Supplies / back-of-house — a Supervisor handles these, not this screen.
+const ORDER_SUPPLY_RE=/\b(BIB|CO2|DEPOSIT|GLOVES?|SOAP|JANITORIAL|LINER|TOWELS?|WIPES?|NAPKINS?|LIDS?|STRAWS?|FORK|SPOON|KNIFE|TRAY|WRAP|PAPER|DISPENSER|CONDIMENT|KETCHUP|MUSTARD|RELISH|MAYO|MAYONAISE|SYRUP|SHORTENING|OIL|PORTION|EMPLOYEE|CUPS?|BUCKET|SUPPLIES|BOX|CLAMSHELL)\b|^\s*BAG\s*-/;
+const ORDER_SODA_RE=/\b(WATER|DASANI|AQUAFINA|SODA|COKE|PEPSI|SPRITE|DR PEPPER|MOUNTAIN DEW|MTN DEW|STARRY|GATORADE|POWERADE|BOTTLED?)\b/;
+const ORDER_SNACK_RE=/\b(CANDY|SKITTLES|M&M|SOUR PATCH|MIKE|SWEDISH|SWEEDISH|GUMMY|BEARS|POPCORN|CHIPS?|PEANUTS?|KETTLE|SNACK|LEMONADE 12OZ FROZEN)\b/;
+const ORDER_DRINK_RE=/\b(BEER|CAN|CANS|KEG|SELTZER|WINE|COORS|MILLER|DOS|EQUIS|HALO|PAPAGO|TOPO|SPIKED|HEINEKEN|HEINENKEN|MICHELOB|MODELO|CORONA|BLUE MOON|TRULY|WHITE CLAW|MIXER|TONIC|GINGER|CRAFT|DOMESTIC|IMPORT|LIGHT|IPA|LAGER|SHANDY)\b/;
+function orderWhGroup(item){
+  const n=String(item.itemName||'').toUpperCase();
+  if(ORDER_SUPPLY_RE.test(n)||ORDER_FOOD_RE.test(n))return '';
+  if(/\bICE\b/.test(n))return 'ice';
+  if(ORDER_SNACK_RE.test(n))return 'snack';
+  if(ORDER_SODA_RE.test(n))return 'soda';
+  if(ORDER_DRINK_RE.test(n))return 'beer';
+  return '';
+}
+const ORDER_WH_GROUPS=[['beer','🍺 Beer · seltzer · wine'],['soda','🥤 Soda · water · sports drinks'],['snack','🍿 Popcorn · candy · snacks'],['ice','🧊 Ice']];
+function requestHubGoOrder(){ requestHubMarkReturn(); goOrder(); }
+function orderBack(){
+  if(state.standTaskReturnScreen==='screen-submenu-requests'){state.standTaskReturnScreen='';showScreen('screen-submenu-requests');return;}
+  if(state.user){showScreen('screen-submenu-requests');return;}
+  goRoleHome();
+}
+async function goOrder(){
+  await syncMyStandFromSchedule(true).catch(()=>{});
+  const who=getRequesterIdentity();
+  state.orderWh={};state.orderFood={};state.orderEta=30;state.orderUrgency='Normal';
+  state.orderStand=getOperationalStand(who)||who.homeStand||'';
+  document.getElementById('order-search').value='';
+  document.getElementById('order-note').value='';
+  document.getElementById('order-test-banner').style.display=orderTestMode()?'':'none';
+  document.querySelectorAll('#order-eta .chip').forEach(c=>c.classList.toggle('selected',c.textContent.trim()==='30m'));
+  document.querySelectorAll('#order-urgency .chip').forEach((c,i)=>c.classList.toggle('selected',i===0));
+  showScreen('screen-order');
+  orderRenderFood();
+  const picker=document.getElementById('order-stand-picker');
+  const needsPicker=isSupervisorSession()||['support_manager','manager','admin'].includes(who.tier||'')||!who.homeStand||isLimitedAreaLead();
+  if(needsPicker){
+    picker.style.display='block';
+    await populateStandPicker('order-stand-select',state.orderStand||'');
+    if(!state.orderStand){
+      document.getElementById('order-sub').textContent='Pick a stand';
+      document.getElementById('order-wh-list').innerHTML='<div class="notice info" style="font-size:12px">Pick a stand above to see its drinks &amp; snacks.</div>';
+      orderSummary();return;
+    }
+  }else picker.style.display='none';
+  await orderLoadStand(state.orderStand);
+}
+async function orderStandChanged(){
+  state.orderStand=document.getElementById('order-stand-select').value;
+  if(isSupervisorSession()&&state.orderStand)setSupervisorActiveStand(state.orderStand,{silent:true});
+  if(isManagerOpsSession()&&state.orderStand)mgrOpsSyncRequestStand(state.orderStand);
+  await orderLoadStand(state.orderStand);
+}
+async function orderLoadStand(stand){
+  document.getElementById('order-sub').textContent=(stand||'Pick a stand')+(orderTestMode()?' · TEST':'');
+  state.orderWh={};state.orderWhItems=[];
+  state._orderWhUuid=genUUID();state._orderFoodUuid=genUUID();
+  const el=document.getElementById('order-wh-list');
+  if(!stand){el.innerHTML='';orderSummary();return;}
+  el.innerHTML='<div class="loading"><div class="spinner"></div>Loading drinks &amp; snacks…</div>';
+  const res=await api('getStandSheet',{stand}).catch(()=>({ok:false}));
+  if(stand!==state.orderStand)return; // stand changed while loading
+  const seen=new Set();
+  state.orderWhItems=((res.ok&&res.items)||[]).map(it=>({...it,_grp:orderWhGroup(it)})).filter(it=>{
+    if(!it._grp)return false;const k=String(it.itemName||'').trim().toUpperCase();if(seen.has(k))return false;seen.add(k);return true;});
+  orderRenderWh();orderSummary();
+}
+function orderStepBtns(kind,key,qty){
+  return '<button type="button" class="stock-step-btn" aria-label="One fewer" onclick="orderStep(\''+kind+'\',\''+key+'\',-1)">−</button>'+
+    '<div class="ord-qty" id="ordq-'+kind+'-'+key+'">'+(qty||0)+'</div>'+
+    '<button type="button" class="stock-step-btn" aria-label="One more" onclick="orderStep(\''+kind+'\',\''+key+'\',1)">+</button>';
+}
+function orderRenderWh(){
+  const el=document.getElementById('order-wh-list');if(!el)return;
+  const items=state.orderWhItems||[];
+  if(!items.length){el.innerHTML='<div class="notice info" style="font-size:12px">No drinks or snacks on this stand\'s sheet. Ask your Supervisor.</div>';return;}
+  const q=(document.getElementById('order-search').value||'').toLowerCase().trim();
+  let html='';
+  ORDER_WH_GROUPS.forEach(([g,label])=>{
+    const rows=items.map((it,i)=>({it,i})).filter(x=>x.it._grp===g&&(!q||String(x.it.itemName).toLowerCase().includes(q)));
+    if(!rows.length)return;
+    html+='<div class="ord-grp">'+label+'</div>'+rows.map(({it,i})=>{const v=Number(state.orderWh[i]||0);
+      return '<div class="ord-row'+(v?' on':'')+'" id="ordr-wh-'+i+'"><div class="ord-name">'+escapeHtml(it.itemName)+(it.pack||it.unit?'<small>'+escapeHtml([it.pack,it.unit].filter(Boolean).join(' · '))+'</small>':'')+'</div>'+orderStepBtns('wh',i,v)+'</div>';}).join('');
+  });
+  el.innerHTML=html||'<div class="notice info" style="font-size:12px">Nothing matches your search.</div>';
+}
+function orderRenderFood(){
+  const el=document.getElementById('order-food-list');if(!el)return;
+  el.innerHTML=ORDER_FOOD.map(f=>{const v=Number((state.orderFood||{})[f.key]||0);
+    return '<div class="ord-row'+(v?' on':'')+'" id="ordr-food-'+f.key+'"><div class="ord-name">'+f.icon+' '+escapeHtml(f.name)+(f.sub?'<small>'+escapeHtml(f.sub)+'</small>':'')+'</div>'+orderStepBtns('food',f.key,v)+'</div>';}).join('');
+}
+function orderStep(kind,key,d){
+  const bag=kind==='wh'?state.orderWh:state.orderFood;
+  const v=Math.max(0,Math.min(99,Number(bag[key]||0)+d));
+  if(v)bag[key]=v;else delete bag[key];
+  const q=document.getElementById('ordq-'+kind+'-'+key);if(q)q.textContent=v;
+  const r=document.getElementById('ordr-'+kind+'-'+key);if(r)r.classList.toggle('on',!!v);
+  orderSummary();
+}
+function orderPickUrgency(btn,v){state.orderUrgency=v;document.querySelectorAll('#order-urgency .chip').forEach(c=>c.classList.remove('selected'));btn.classList.add('selected');}
+function orderPickEta(btn,m){state.orderEta=m;document.querySelectorAll('#order-eta .chip').forEach(c=>c.classList.remove('selected'));btn.classList.add('selected');}
+function orderSummary(){
+  const w=Object.values(state.orderWh||{}).reduce((a,b)=>a+Number(b||0),0);
+  const f=Object.values(state.orderFood||{}).reduce((a,b)=>a+Number(b||0),0);
+  const parts=[];if(w)parts.push('📦 Warehouse: '+w+' case'+(w===1?'':'s'));if(f)parts.push('🍔 Food: '+f);
+  const s=document.getElementById('order-summary');if(s)s.textContent=parts.length?parts.join('  ·  '):'Nothing picked yet';
+  const b=document.getElementById('order-send-btn');
+  if(b){b.disabled=!(w||f);b.textContent=(w&&f)?'Send to Warehouse + Kitchen →':w?'Send to Warehouse →':f?'Send to Kitchen →':'Send order →';}
+}
+async function submitUnifiedOrder(){
+  const btn=document.getElementById('order-send-btn');
+  const test=orderTestMode();
+  await syncMyStandFromSchedule(true).catch(()=>{});
+  if(state.user&&!isSupervisorSession()&&!isLimitedAreaLead()&&state.user.stand)state.orderStand=state.user.stand;
+  const stand=state.orderStand;if(!stand)return toast('Pick a stand first','error');
+  const wh=[];(state.orderWhItems||[]).forEach((it,i)=>{const v=Number(state.orderWh[i]||0);if(v>0)wh.push({itemName:it.itemName,unit:it.unit||'',pack:it.pack||'',qty:v,cases:v});});
+  const food=ORDER_FOOD.filter(f=>Number(state.orderFood[f.key]||0)>0).map(f=>({itemName:f.name,qty:Number(state.orderFood[f.key]),unit:'each',pack:'',track_inventory:false}));
+  if(!wh.length&&!food.length)return toast('Tap + on at least one item','error');
+  let sendWh=wh.length>0,sendFood=food.length>0;
+  const [gW,gF]=await Promise.all([sendWh?openRequestGuard('stock',stand):null,sendFood?openRequestGuard('food',stand):null]);
+  if((!sendWh||gW)&&(!sendFood||gF))return toast(gW||gF,'error',9000);
+  if(gW||gF){
+    const other=gW?'Food':'Warehouse';
+    const ok=await confirmAction((gW||gF)+'\n\nSend just the '+other+' part now?',{title:'🔒 '+(gW?'Warehouse':'Food')+' part has to wait',confirmLabel:'Send '+other+' only',cancelLabel:'Cancel'});
+    if(!ok)return;if(gW)sendWh=false;if(gF)sendFood=false;
+  }
+  const who=getRequesterIdentity();
+  const requestedBy=TIER_LABELS[who.tier]?who.name+' ('+TIER_LABELS[who.tier]+')':who.name;
+  const etaMins=Number(state.orderEta||30),deadline=new Date(Date.now()+etaMins*60000).toISOString();
+  const typed=document.getElementById('order-note').value.trim();
+  const note=(test?'[TEST] ':'')+typed;
+  const out={wh:null,food:null};
+  await withLock(btn,'Sending…',async()=>{
+    const jobs=[];
+    if(sendWh)jobs.push((async()=>{
+      const itemsText=wh.map(x=>x.qty+' case'+(x.qty!==1?'s':'')+' × '+x.itemName+(x.pack?' ('+x.pack+')':'')).join('; ');
+      const coverage=await resolveWarehouseAssigneesForStand(stand).catch(()=>({people:[]}));
+      const ids=(coverage.people||[]).map(p=>String(p.employee_id||'')).filter(Boolean);
+      const names=(coverage.people||[]).map(p=>p.name||p.employee_id).filter(Boolean);
+      const meta={eta_minutes:etaMins,eta_deadline:deadline,assigned_to_ids:ids,assigned_to_names:names,source:'one_order'};if(test)meta.test=true;
+      const res=await api('submitStock',{clientUuid:state._orderWhUuid||(state._orderWhUuid=genUUID()),stand,requestedBy,empId:who.empId||'',itemsText,itemsJson:{items:wh,other:'',meta},urgency:state.orderUrgency||'Normal',eta_minutes:etaMins,eta_deadline:deadline,notes:note}).catch(e=>({ok:false,error:String(e&&e.message||e)}));
+      out.wh={ok:!!res.ok,queued:!!res.queued,error:res.error,names,count:wh.reduce((a,b)=>a+b.qty,0)};
+      if(res.ok&&!test){
+        if(ids.length)ids.forEach(id=>sendPushTo(id,'📥 New request for your stand',stand+' · due in '+etaMins+'m — '+itemsText.slice(0,55)));
+        else pushOnDuty(['warehouse_employee','warehouse_supervisor','warehouse_manager'],'📥 New stock request · '+stand,'due in '+etaMins+'m — '+itemsText.slice(0,70));
+      }
+    })());
+    if(sendFood)jobs.push((async()=>{
+      const suggested=test?null:await kitchenSuggestedRunner(stand).catch(()=>null);
+      const rid=(suggested&&suggested.employee_id&&!String(suggested.employee_id).startsWith('preview-'))?suggested.employee_id:null;
+      const rname=rid?suggested.name:null;
+      const row={client_uuid:state._orderFoodUuid||(state._orderFoodUuid=genUUID()),stand,requested_by:who.name,requested_by_id:who.empId||'',items:food.map(x=>x.qty+' × '+x.itemName).join(', '),items_json:{items:food,source:'one_order',test:test||undefined},note,urgency:state.orderUrgency||'Normal',eta_minutes:etaMins,eta_deadline:deadline,status:'open',assigned_runner_id:rid,assigned_runner_name:rname};
+      state._lastKitchenCreateError=null;
+      const made=await kitchenCreate(row).catch(()=>null);
+      const e=state._lastKitchenCreateError||{};
+      out.food={ok:!!made,queued:!!(made&&made._queued),error:made?'':((e.status?'HTTP '+e.status+' ':'')+(e.msg||'')).trim(),runner:rname,count:food.reduce((a,b)=>a+b.qty,0)};
+      if(made&&!test){
+        if(rid)sendPushTo(rid,'🍔 New order — your area · '+stand,row.items.slice(0,90)+' · tap My Jobs');
+        else{pushOnDuty(['food_manager','kitchen_coordinator'],'🍽️ Food order needs a runner · '+stand,row.items.slice(0,90));pushOnDuty(['food_runner','kitchen_runner'],'🍽️ New food order · '+stand,row.items.slice(0,75));}
+      }
+    })());
+    await Promise.all(jobs);
+  });
+  if(!out.wh&&!out.food)return;
+  const okAll=(!out.wh||out.wh.ok)&&(!out.food||out.food.ok);
+  // Only the part that went through is cleared, so a failed part can be resent as-is.
+  if(out.wh&&out.wh.ok){state.orderWh={};state._orderWhUuid=genUUID();}
+  if(out.food&&out.food.ok){state.orderFood={};state._orderFoodUuid=genUUID();}
+  const line=(icon,dept,r,extra)=>!r?'':r.ok
+    ?'<div class="ord-done ok">✅ '+icon+' <b>'+dept+'</b> got it'+(r.queued?' (queued — sends when WiFi returns)':'')+'<div style="font-size:12px;font-weight:600;color:var(--text-2);margin-top:3px">'+extra+'</div></div>'
+    :'<div class="ord-done bad">❌ '+icon+' <b>'+dept+'</b> did not go through — tap Send again<div style="font-size:12px;font-weight:600;color:var(--text-2);margin-top:3px">'+escapeHtml(r.error||'Network')+'</div></div>';
+  const html='<div style="font-size:19px;font-weight:900;margin-bottom:10px">'+(okAll?'🚀 Order sent':'⚠️ Part of the order did not send')+'</div>'+
+    (test?'<div class="ord-test">🧪 TEST order — marked [TEST], no notifications sent</div>':'')+
+    line('📦','Warehouse',out.wh,out.wh?(out.wh.count+' case'+(out.wh.count===1?'':'s')+(out.wh.names&&out.wh.names.length?' → '+escapeHtml(out.wh.names.join(', ')):' → all warehouse on duty')):'')+
+    line('🍔','Kitchen',out.food,out.food?(out.food.count+' item'+(out.food.count===1?'':'s')+(out.food.runner?' → '+escapeHtml(out.food.runner):' → food runners')):'')+
+    '<div style="font-size:12px;color:var(--text-2)">Need within '+etaMins+' min · '+escapeHtml(stand)+'</div>';
+  if(okAll){
+    document.getElementById('order-note').value='';
+    state.standTaskReturnScreen='';
+    if(isSupportManagerSession()){state.supportOpsScope=stand;state.supportRequestStand=stand;showScreen('screen-bedcheck');restoreMgrSidebarState();supportOpsTab('stock',true);}
+    else if(state.user){state.standRequestsStand=stand;showScreen('screen-stand-requests');}
+    else goRoleHome();
+  }else{orderRenderWh();orderRenderFood();orderSummary();}
+  whSheet(html);
+}
+
 // ============ REFUND ASSISTANCE — REQUESTER → SUPERVISOR ============
 function refundIsSupervisor(){return !!(state.user&&state.user.role==='supervisor');}
 function goRefund() {
@@ -10746,6 +11031,7 @@ function prepareRequestHub(){
     const sub=exBtn.querySelector('.smb-sub');
     if(sub)sub.textContent=leadership?'Stock · Food · IT across all stands':(state.user&&state.user.role==='supervisor'?'Stock · Food · IT · pick any stand or all':'Stock · Food · IT · see what is coming');
   }
+  { const ob=document.getElementById('req-hub-order-btn'); if(ob)ob.style.display=orderTestMode()?'':'none'; }
   const who=getRequesterIdentity();
   const stand=getOperationalStand(who)||state.activeStand||who.homeStand||'';
   const sub=document.getElementById('request-hub-context');
@@ -25513,6 +25799,7 @@ const BACK_MAP = {
   'screen-wastage': 'screen-submenu-checks',
   'screen-checklist': 'screen-submenu-checks',
   'screen-stock': 'screen-submenu-requests',
+  'screen-order': 'screen-submenu-requests',
   'screen-it-report': 'screen-submenu-requests',
   'screen-maintenance': 'screen-submenu-requests',
   'screen-refund': 'screen-submenu-requests',

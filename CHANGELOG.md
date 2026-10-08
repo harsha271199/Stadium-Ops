@@ -4,6 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-08-fix-46
+- **New 🛒 "Order for my stand" — one screen, one Send, two departments** (only visible with `?test=1` for now):
+  - **📦 Warehouse part**: just the stand's drinks, popcorn, candy, snacks and ice from its own sheet, grouped as Beer · seltzer · wine / Soda · water · sports drinks / Popcorn · candy · snacks / Ice, with + / − in cases. Supplies (gloves, soap, napkins, cups, lids, CO2, BIB, janitorial…) and kitchen food are left out; the screen says to ask a Supervisor for supplies.
+  - **🍔 Food part**: fixed list only: Chicken Tenders, Fries, Burgers, Burger Buns, Cheese for burgers, Hot Dogs, Brats, Hot Dog Buns, Pretzels, Vegan burgers.
+  - Send creates the stock request (routed to the stand's warehouse person, same as Request Stock) and the food request (auto-assigned runner, same as Request Food) at the same time. The one-open-request limit is checked per department; if one is blocked you can send the other part alone. A part that fails stays on screen to resend.
+  - Result sheet shows each department got it, and who it went to.
+- **Test access**: open the site with `?test=1` (kept for that browser tab; `?test=0` turns it off). Orders from the new screen are then marked `[TEST]` in the note and `test:true` in items_json, nobody is notified, and food is left unassigned. The old Request Stock / Request Food screens are unchanged.
+
 ## 2026-10-08-fix-45
 - **Warehouse — every warehouse role can now change or decline an order** (not just the Warehouse Manager/Supervisor):
   - **✏️ Short / change**: big − / + per item, an **Out** button for anything gone, one-tap reasons (Out of stock · Short — sending what we have · Too much · Swapped for a similar item · Stand asked to change it) and an optional message. Save is disabled until a number changes and a reason is picked.
