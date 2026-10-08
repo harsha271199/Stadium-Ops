@@ -4,6 +4,18 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-08-fix-49
+- **Stop "type 0 everywhere" counts** (10/3: 51% of Count In and 58% of Count Out lines were 0 once every line was required — 204 + 225 of them on lines where stock was expected):
+  - Removed the "0 / none" quick button added in fix-48.
+  - Each line knows what to expect: **Exp Start** at Count In; **Count In + deliveries** at Count Out (shown under the box: "Count In was 12 + 6 delivered").
+  - Typing 0 on a line with stock expected turns the row **orange**: "Expected about 13 — is it really 0? Go look."
+  - On Submit, every such line opens in a **"Check these zeros"** sheet: type the real number or tap **Really 0** per line; Save stays locked until each is done. Confirmed zeros are saved with the line (`zeroConfirmed`, `expected`) and noted on the entry.
+  - If 60%+ of lines are 0 (8+ lines), a final "Mostly zeros" confirm; the note records "22 of 28 lines were 0".
+  - Zeros on lines with nothing expected (items the stand doesn't carry) are still just typed — no extra steps.
+- **Manager Inventory Tracker** shows "⚠ N zeros to check · mostly 0s" per stand; the counts view highlights those lines.
+- **Admin Control** is now a home of 5 tiles — Game day · People & logins · Who covers what · Warehouse crew · Uploads — each opening only its sections, with "← All admin tools". Nothing removed: every section and permission is still there. Yellow Dog PDF upload now comes before the CSV (marked "older way"); Roll forward marked "multi-day events only". The "Food Delivery Access" card (only a link into Access Center) is retired; Access Center's Food Runner/Manager filter does the same, and links into it open the People group.
+- **Manager Tools**: restored **🔨 Maintenance** (open facility issues) — it was only on the old hidden Manage grid, so managers could not reach it. "Inventory" renamed "Inventory reports".
+
 ## 2026-10-08-fix-48
 - **Checks is now the shift in 3 steps** (all stands, all roles that open Checks): **1 Opening** (Opening Checklist + Count In) → **2 During the game** (During-Event Check; Transfers and Log Wastage marked "only if needed") → **3 Closing** (Count Out + Closing Checklist). Top line says "2 of 5 done · Next: Count Out"; finished tasks turn green, the current step and next task are outlined. Count In / Transfers / Count Out open straight on that phase, and Back returns to Checks. Home tile reads "Opening · Count In · During · Count Out · Closing".
 - **Counting on a phone**: one compact row per item (number, name, pack/Exp start on the left; a big box with the **unit under it — BOTTLE / CASE / EACH** — on the right), a **0 / none** button that fills 0 and jumps to the next empty box, **Enter / Next on the keyboard moves to the next item**, and tapping a filled box selects it so typing replaces it.

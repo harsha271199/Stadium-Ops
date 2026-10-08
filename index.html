@@ -1683,6 +1683,22 @@
   .inv-cin b{color:var(--text)}
   .inv-waste{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text-2)}
   .inv-num-sm{width:64px!important;font-size:15px!important;padding:6px 4px!important}
+  .inv-zero-note{font-size:12px;font-weight:800;color:#B45309}
+  .inv-zero-note:not(:empty){margin-top:6px}
+  .inv-zr{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border)}
+  .inv-zr.acked{opacity:.7}
+  .inv-zr-ok{border:1px solid #D97706;color:#B45309;background:transparent;border-radius:10px;padding:9px 8px;font-weight:800;font-size:12px;font-family:inherit;white-space:nowrap;cursor:pointer}
+  .inv-zr.acked .inv-zr-ok{background:#FEF3C7}
+  /* Admin Control hub */
+  .adm-hub-grid{display:grid;grid-template-columns:1fr;gap:9px;margin:10px 0}
+  @media(min-width:700px){.adm-hub-grid{grid-template-columns:1fr 1fr}}
+  .adm-tile{display:grid;grid-template-columns:40px 1fr;grid-template-rows:auto auto;column-gap:10px;text-align:left;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px;cursor:pointer;font-family:inherit;color:var(--text);box-shadow:var(--shadow);min-height:70px}
+  .adm-ic{grid-row:1/3;font-size:26px;align-self:center}
+  .adm-t{font-weight:900;font-size:16px}
+  .adm-s{font-size:12px;color:var(--text-2)}
+  #adm-group-bar{align-items:center;gap:10px;margin:10px 0 4px}
+  #adm-group-title{font-weight:900;font-size:17px}
+  #mgr-admin .adm-hide{display:none!important}
 </style>
 </head>
 <body>
@@ -3020,7 +3036,7 @@
       <div id="mgr-simple-extra-tools" style="display:none">
         <button class="big-action" id="mgr-tools-toggle" style="border-left:4px solid var(--asu-gold);width:100%" onclick="toggleManagerToolsMenu()">
           <span class="icon">🧰</span>
-          <span class="text"><div>Manager Tools</div><div class="sub" id="mgr-tools-toggle-sub">Inventory · Feedback · Break Sheets · downloads</div></span>
+          <span class="text"><div>Manager Tools</div><div class="sub" id="mgr-tools-toggle-sub">Reports · Break sheets · Transfers · Refunds · Maintenance</div></span>
           <span id="mgr-tools-chevron" style="margin-left:auto;font-size:18px;color:var(--text-3);transition:transform .2s">▾</span>
         </button>
         <div id="mgr-simple-extra-tools-list" class="mgr-tools-grid" style="display:none"></div>
@@ -3321,9 +3337,23 @@
 
     <!-- Admin tab — Access Center syncs to Supabase on the deployed site -->
     <div id="mgr-admin" style="display:none">
-      <div class="notice info" style="font-size:12px">⚙️ Game-day admin — content, access, uploads and game setup. Admin-only.</div>
+      <div data-adm="notice" class="notice info" style="font-size:12px">⚙️ Game-day admin — content, access, uploads and game setup. Admin-only.</div>
+      <div id="adm-hub">
+        <div class="adm-hub-grid">
+          <button class="adm-tile" onclick="admShow('game')"><span class="adm-ic">🏟️</span><span class="adm-t">Game day</span><span class="adm-s">Game info staff see · start a new game</span></button>
+          <button class="adm-tile" onclick="admShow('people')"><span class="adm-ic">👥</span><span class="adm-t">People &amp; logins</span><span class="adm-s">Access Center · stand self-login · NPO groups</span></button>
+          <button class="adm-tile" onclick="admShow('coverage')"><span class="adm-ic">🗺️</span><span class="adm-t">Who covers what</span><span class="adm-s">Coverage plan · chat routing · multi-stand leads</span></button>
+          <button class="adm-tile" onclick="admShow('warehouse')"><span class="adm-ic">🏭</span><span class="adm-t">Warehouse crew</span><span class="adm-s">Roster upload · walk-in &amp; check-in</span></button>
+          <button class="adm-tile" onclick="admShow('uploads')"><span class="adm-ic">📤</span><span class="adm-t">Uploads</span><span class="adm-s">Schedule · Yellow Dog stand sheets</span></button>
+        </div>
+      </div>
+      <div id="adm-group-bar" style="display:none">
+        <button class="btn btn-ghost" onclick="admHub()" style="width:auto;margin:0;padding:8px 12px">← All admin tools</button>
+        <div id="adm-group-title"></div>
+      </div>
 
-      <div class="v11-admin-section" id="admin-access-center">
+
+      <div data-adm="people" class="v11-admin-section" id="admin-access-center">
         <div class="v11-admin-title">🔐 Access Center</div>
         <div class="v11-admin-sub">See and manage app logins here. You should not need to open Supabase manually. Admin access itself is protected and cannot be granted from this screen.</div>
         <div class="admin-access-stats" id="admin-access-stats"></div>
@@ -3364,7 +3394,7 @@
         <div class="admin-access-note">Game-day <b>stand-group assignments</b> are separate below in Game-Day Coverage Plan. This Access Center controls who can log in as Manager, Support, Warehouse, Food or IT.</div>
       </div>
 
-      <div class="v11-admin-section">
+      <div data-adm="game" class="v11-admin-section">
         <div class="v11-admin-title">🏟️ Game Day Information</div>
         <div class="v11-admin-sub">Set the information staff see for each game. Saved production settings sync to Supabase so the same date loads on every device.</div>
         <div class="v11-2col">
@@ -3410,7 +3440,7 @@
         <div id="gdc-status" style="font-size:10px;color:var(--text-2);margin-top:6px"></div>
       </div>
 
-      <div class="v11-admin-section" id="admin-game-coverage">
+      <div data-adm="coverage" class="v11-admin-section" id="admin-game-coverage">
         <div class="v11-admin-title">🗺️ Game-Day Coverage Plan</div>
         <div class="v11-admin-sub">Digital version of the Support-Football plan. Map stable stadium areas to real stands once, then assign people to those areas for each game.</div>
         <div class="v11-2col"><div><label class="form-label" style="margin-top:0">Game date</label><input class="form-input" type="date" id="cov-date" onchange="coverageAdminReload()" style="margin:0"></div><div><label class="form-label" style="margin-top:0">Venue</label><select class="form-input" id="cov-venue" onchange="coverageAdminReload()" style="margin:0"></select></div></div>
@@ -3426,7 +3456,7 @@
         <details style="margin-top:9px"><summary style="cursor:pointer;font-size:10px;font-weight:850;padding:7px 0">⚙️ Area → stand mapping</summary><div class="coverage-box" style="margin-top:5px"><div class="coverage-box-sub">Map real stands into the stable area names once. Then game assignments can change without selecting 15 stands every week.</div><label class="form-label" style="margin-top:0">Area</label><select class="form-input" id="cov-area-select" onchange="coverageAdminRenderAreaStands()"></select><input class="form-input" id="cov-area-search" placeholder="🔍 Search stands…" oninput="coverageAdminRenderAreaStands()" style="margin-bottom:6px"><div class="coverage-stand-list" id="cov-area-stands"></div><button class="btn btn-ghost" onclick="coverageUseObviousMatches()" style="margin-top:6px">✨ Suggest obvious stand-name matches</button><button class="btn btn-primary" onclick="coverageAdminSaveArea()" style="margin-top:5px">Save area mapping</button></div></details>
       </div>
 
-      <div class="v11-admin-section" id="admin-chat-routing">
+      <div data-adm="coverage" class="v11-admin-section" id="admin-chat-routing">
         <div class="v11-admin-title">💬 Chat — who answers each stand</div>
         <div class="v11-admin-sub">By default the app works it out from the schedule: the stand's Stand Lead (or the lead scheduled at its area, e.g. West Portables), the Supervisor scheduled there or at its area, and all Managers. Pin a person here and only they get that stand's messages for that level. Tap a stand to change it.</div>
         <div class="v11-2col"><div><label class="form-label" style="margin-top:0">Game date</label><input class="form-input" type="date" id="cr-date" onchange="chatRouteLoad()" style="margin:0"></div><div><label class="form-label" style="margin-top:0">Find a stand</label><input class="form-input" id="cr-search" placeholder="🔍 Name, number, DFA…" oninput="chatRouteRender()" style="margin:0"></div></div>
@@ -3442,7 +3472,7 @@
         </div>
       </div>
 
-      <div class="v11-admin-section">
+      <div data-adm="coverage" class="v11-admin-section">
         <div class="v11-admin-title">🧭 Stand Lead / Supervisor → Multi-Stand Coverage</div>
         <div class="v11-admin-sub">Give a Stand Lead or a Supervisor coverage of selected stands on this game date. They get Stand Lead tools with a picker of only the stands checked here — nothing else.</div>
         <label class="form-label" style="margin-top:0">Game date</label>
@@ -3462,20 +3492,20 @@
         <div id="sla-status" style="font-size:10px;color:var(--text-2);margin-top:6px"></div>
       </div>
 
-      <div class="v11-admin-section">
+      <div data-adm="retired" class="v11-admin-section">
         <div class="v11-admin-title">🍽️ Food Delivery Access</div>
         <div class="v11-admin-sub">Food Manager and Food Runner logins are now managed in <b>Access Center</b> above. No separate demo login slots are needed.</div>
         <button class="btn btn-ghost" onclick="adminAccessJump('food_runner')" style="margin-top:6px">Open Food access →</button>
       </div>
 
-      <div class="card" style="margin-top:12px;padding:14px">
+      <div data-adm="people" class="card" style="margin-top:12px;padding:14px">
         <div style="font-weight:700;font-size:14px;margin-bottom:4px">🎚️ Stand self-login / elevated access</div>
         <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Turn ON when regular staff at this portable/non-main stand may self-run it. A scheduled bartender/student gets temporary stand tools there, and an approved regular NPO member assigned to a portable/non-main stand may self-login with the group PIN + exact roster name. The approved NPO Lead can manage group attendance at every stand assigned to that NPO. This toggle only controls regular-member self-login at portable/non-main stands. Actual Stand Leads, Supervisors and NPO Leads keep their assigned operational access regardless of this toggle.</div>
         <input class="form-input" type="text" id="sa-search" placeholder="🔍 Search stands…" oninput="saRenderStands()" style="margin-bottom:8px">
         <div id="sa-stands-list" style="max-height:340px;overflow-y:auto"><div class="loading"><div class="spinner"></div>Loading…</div></div>
       </div>
 
-      <div class="card" style="margin-top:12px;padding:14px">
+      <div data-adm="uploads" class="card" style="margin-top:12px;padding:14px">
         <div style="font-weight:700;font-size:14px;margin-bottom:4px">📅 Upload schedule (ReadyOn CSV)</div>
         <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">
           ReadyOn mapping: <b>Area = stand</b>. Site is the stadium and Location can stay "ASU Athletics".
@@ -3488,7 +3518,7 @@
         <div id="up-sched-status" style="font-size:12px;margin-top:8px"></div>
       </div>
 
-      <div class="card" style="margin-top:12px;padding:14px">
+      <div data-adm="warehouse" class="card" style="margin-top:12px;padding:14px">
         <div style="font-weight:700;font-size:14px;margin-bottom:4px">👥 Upload warehouse roster (My Team)</div>
         <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Same roster export Warehouse Manager/Supervisor's "My Team" check-in list reads from. Uploading again for the same date replaces it.</div>
         <input type="file" id="adm-roster-file" accept=".csv,text/csv" class="form-input" style="padding:10px">
@@ -3496,23 +3526,14 @@
         <div id="adm-roster-upload-status" style="font-size:12px;margin-top:8px"></div>
       </div>
 
-      <div class="card" id="adm-wh-crew-card" style="display:none;margin-top:12px;padding:14px">
+      <div data-adm="warehouse" class="card" id="adm-wh-crew-card" style="display:none;margin-top:12px;padding:14px">
         <div style="font-weight:700;font-size:14px;margin-bottom:4px">🏭 Warehouse walk-in &amp; check-in</div>
         <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Add a walk-in or a new hire to today's warehouse crew, and check people in or out. They sign in with ID <b>60000</b> + their last name.</div>
         <button class="btn btn-primary" id="adm-wh-crew-btn" onclick="admWhCrewToggle()">Open warehouse crew</button>
         <div id="adm-wh-crew" style="margin-top:10px"></div>
       </div>
 
-      <div class="card" style="margin-top:12px;padding:14px">
-        <div style="font-weight:700;font-size:14px;margin-bottom:4px">📦 Upload inventory (Yellow Dog CSV)</div>
-        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Columns needed: Stand, Item Name, Unit, Pack, Exp Start. Extra columns are OK.</div>
-        <input type="file" id="up-inv-file" accept=".csv,text/csv" class="form-input" style="padding:10px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:8px 0"><input type="checkbox" id="up-inv-replace" checked style="width:16px;height:16px"> Replace existing inventory sheet</label>
-        <button class="btn btn-primary" id="up-inv-btn" onclick="adminUploadInventory()">⬆️ Upload inventory</button>
-        <div id="up-inv-status" style="font-size:12px;margin-top:8px"></div>
-      </div>
-
-      <div class="card" style="margin-top:12px;padding:14px;border-left:4px solid #10B981">
+      <div data-adm="uploads" class="card" style="margin-top:12px;padding:14px;border-left:4px solid #10B981">
         <div style="font-weight:700;font-size:14px;margin-bottom:4px">📄 Upload Yellow Dog stand sheet PDF</div>
         <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">The "Stand Sheet Pre-Event (All Items)" PDF from Yellow Dog. Each stand's item list is replaced with the PDF's items in the exact same order, names, units, packs and On-Hand / Exp Start — so counting screens, View counts, downloads, print and Yellow Dog copy-paste all follow it. Do it <b>before Count In</b> starts.</div>
         <input type="file" id="up-ydpdf-file" accept="application/pdf,.pdf" class="form-input" style="padding:10px">
@@ -3520,8 +3541,17 @@
         <div id="up-ydpdf-status" style="font-size:12px;margin-top:8px"></div>
       </div>
 
-      <div class="card" style="margin-top:12px;padding:14px">
-        <div style="font-weight:700;font-size:14px;margin-bottom:4px">🔄 Roll Count Out → next Exp Start</div>
+      <div data-adm="uploads" class="card" style="margin-top:12px;padding:14px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">📦 Upload inventory (Yellow Dog CSV) <span style="font-size:10px;font-weight:800;background:#F3F4F6;color:#4B5563;border-radius:6px;padding:2px 6px">older way — use the PDF above when you can</span></div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Columns needed: Stand, Item Name, Unit, Pack, Exp Start. Extra columns are OK.</div>
+        <input type="file" id="up-inv-file" accept=".csv,text/csv" class="form-input" style="padding:10px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:8px 0"><input type="checkbox" id="up-inv-replace" checked style="width:16px;height:16px"> Replace existing inventory sheet</label>
+        <button class="btn btn-primary" id="up-inv-btn" onclick="adminUploadInventory()">⬆️ Upload inventory</button>
+        <div id="up-inv-status" style="font-size:12px;margin-top:8px"></div>
+      </div>
+
+      <div data-adm="uploads" class="card" style="margin-top:12px;padding:14px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">🔄 Roll Count Out → next Exp Start <span style="font-size:10px;font-weight:800;background:#F3F4F6;color:#4B5563;border-radius:6px;padding:2px 6px">multi-day events only</span></div>
         <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">
           For a multi-day event using the same inventory: this takes each stand's most recent
           <b>Count Out</b> and sets it as the <b>Exp Start / On-Hand</b> for the next count — so tonight's
@@ -3538,7 +3568,7 @@
         <div id="roll-status" style="font-size:12px;margin-top:8px"></div>
       </div>
 
-      <div class="card" style="margin-top:12px;padding:14px">
+      <div data-adm="people" class="card" style="margin-top:12px;padding:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleAdminSection('npo')">
           <div>
             <div style="font-weight:700;font-size:14px">🤝 NPO groups</div>
@@ -3567,7 +3597,7 @@
            display:none rather than removed, since adminLoadDrivers() runs
            unconditionally whenever the Admin tab opens and still targets
            these ids; removing the elements outright would throw. -->
-      <div class="card" style="margin-top:12px;padding:14px;display:none">
+      <div data-adm="retired" class="card" style="margin-top:12px;padding:14px;display:none">
         <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleAdminSection('drv')">
           <div>
             <div style="font-weight:700;font-size:14px"><svg width="16" height="15" style="vertical-align:-2px"><use href="#gc-icon"/></svg> Golf cart drivers</div>
@@ -3581,7 +3611,7 @@
         </div>
       </div>
 
-      <div class="card" style="margin-top:12px;padding:14px;border:1px solid rgba(220,38,38,0.35)">
+      <div data-adm="game" class="card" style="margin-top:12px;padding:14px;border:1px solid rgba(220,38,38,0.35)">
         <div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#DC2626">🎬 Start new game (reset live data)</div>
         <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Clears attendance, stock requests and IT tickets so games don't mix. <b>Download the Time sheet, Stock and IT reports first.</b> Checklists, inventory counts and cart records are kept (they're date-filtered).</div>
         <button class="btn btn-ghost" id="newgame-btn" onclick="adminNewGame()" style="width:100%;border-color:#DC2626;color:#DC2626">🎬 Clear for new game</button>
@@ -3715,7 +3745,7 @@
       <button class="chip" onclick="selectInvPhase(this,'Transfer')">🚚 Transfer (During)<div id="inv-status-transfer" style="font-size:9px;font-weight:400"></div></button>
       <button class="chip" onclick="selectInvPhase(this,'Count Out')">🔴 Count Out (Closing)<div id="inv-status-countout" style="font-size:9px;font-weight:400"></div></button>
     </div>
-    <div class="notice info" style="font-size:12px" id="inv-info">💡 Count <b>every line</b> — Chargeables, Non-Chargeables <b>and</b> Supplies. Type <b>0</b> if you have none. Items show Exp Start from warehouse.</div>
+    <div class="notice info" style="font-size:12px" id="inv-info">💡 Count <b>every line</b> — Chargeables, Non-Chargeables <b>and</b> Supplies. Type <b>0</b> only if it is really not there — a 0 where stock was expected turns <b style="color:#B45309">orange</b> and must be checked.</div>
     <div id="inv-progress" class="card" style="display:none;position:sticky;top:0;z-index:5;padding:10px 12px;margin:8px 0;border:2px solid #F59E0B"></div>
     <input type="text" class="form-input" id="inv-search" placeholder="🔍 Search items…" style="margin-bottom:10px" oninput="filterInvItems(this.value)">
     <div id="inv-missing-item-hint" style="display:none;margin-bottom:10px"></div>
@@ -4553,7 +4583,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-08-fix-48';
+const BUILD_TAG = '2026-10-08-fix-49';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10935,18 +10965,20 @@ const SUPERVISOR_STYLE_EXTRA_ACCESS={
   // tiles was pure duplication that made the screen busier for no reason.
   support_manager:[],
   manager:[
-    {key:'inv',icon:'📋',title:'Inventory',sub:'Count sheets · print & download report',action:"mgrV10OpenTool('inv')"},
-    {key:'reports',icon:'⭐',title:'Feedback & Records',sub:'Worker feedback · download PDF/CSV · checklists',action:"mgrV10OpenTool('reports')"},
-    {key:'times',icon:'🕐',title:'Break Time Sheets',sub:'Break log · tip distribution CSV',action:"mgrV10OpenTool('times')"},
-    {key:'transfers',icon:'🔁',title:'Transfer Management',sub:'Plan and review stock transfers',action:"mgrV10OpenTool('transfers')"},
-    {key:'refunds',icon:'💵',title:'Refunds',sub:'Review refund assistance activity',action:"mgrV10OpenTool('refunds')"}
-  ],
-  admin:[
-    {key:'inv',icon:'📋',title:'Inventory',sub:'Count sheets · print & download report',action:"mgrV10OpenTool('inv')"},
+    {key:'inv',icon:'📋',title:'Inventory reports',sub:'Any game date · print · Yellow Dog copy-paste · ledger',action:"mgrV10OpenTool('inv')"},
     {key:'reports',icon:'⭐',title:'Feedback & Records',sub:'Worker feedback · download PDF/CSV · checklists',action:"mgrV10OpenTool('reports')"},
     {key:'times',icon:'🕐',title:'Break Time Sheets',sub:'Break log · tip distribution CSV',action:"mgrV10OpenTool('times')"},
     {key:'transfers',icon:'🔁',title:'Transfer Management',sub:'Plan and review stock transfers',action:"mgrV10OpenTool('transfers')"},
     {key:'refunds',icon:'💵',title:'Refunds',sub:'Review refund assistance activity',action:"mgrV10OpenTool('refunds')"},
+    {key:'maint',icon:'🔨',title:'Maintenance',sub:'Open facility issues from stands',action:"mgrV10OpenTool('maint')"}
+  ],
+  admin:[
+    {key:'inv',icon:'📋',title:'Inventory reports',sub:'Any game date · print · Yellow Dog copy-paste · ledger',action:"mgrV10OpenTool('inv')"},
+    {key:'reports',icon:'⭐',title:'Feedback & Records',sub:'Worker feedback · download PDF/CSV · checklists',action:"mgrV10OpenTool('reports')"},
+    {key:'times',icon:'🕐',title:'Break Time Sheets',sub:'Break log · tip distribution CSV',action:"mgrV10OpenTool('times')"},
+    {key:'transfers',icon:'🔁',title:'Transfer Management',sub:'Plan and review stock transfers',action:"mgrV10OpenTool('transfers')"},
+    {key:'refunds',icon:'💵',title:'Refunds',sub:'Review refund assistance activity',action:"mgrV10OpenTool('refunds')"},
+    {key:'maint',icon:'🔨',title:'Maintenance',sub:'Open facility issues from stands',action:"mgrV10OpenTool('maint')"},
     {key:'admin',icon:'⚙️',title:'Admin Control',sub:'Access · game info · coverage · setup',action:"mgrV10OpenTool('admin')"}
   ]
 };
@@ -11907,6 +11939,22 @@ function mgrSimpleToolBack(){
   window.scrollTo(0,0);
 }
 
+// Admin Control: a hub of 5 groups instead of one long page. Every section is
+// still here (nothing removed) — only one group is shown at a time.
+const ADM_GROUP_TITLE={game:'🏟️ Game day',people:'👥 People & logins',coverage:'🗺️ Who covers what',warehouse:'🏭 Warehouse crew',uploads:'📤 Uploads'};
+function admShow(g){
+  document.querySelectorAll('#mgr-admin [data-adm]').forEach(el=>el.classList.toggle('adm-hide', el.dataset.adm!==g));
+  const hub=document.getElementById('adm-hub'); if(hub)hub.style.display='none';
+  const bar=document.getElementById('adm-group-bar'); if(bar)bar.style.display='flex';
+  const t=document.getElementById('adm-group-title'); if(t)t.textContent=ADM_GROUP_TITLE[g]||'';
+  state._admGroup=g; window.scrollTo(0,0);
+}
+function admHub(){
+  document.querySelectorAll('#mgr-admin [data-adm]').forEach(el=>el.classList.toggle('adm-hide', el.dataset.adm!=='notice'));
+  const hub=document.getElementById('adm-hub'); if(hub)hub.style.display='';
+  const bar=document.getElementById('adm-group-bar'); if(bar)bar.style.display='none';
+  state._admGroup=''; window.scrollTo(0,0);
+}
 function mgrV10OpenTool(tab){
   if((state.staffAccount&&state.staffAccount.role)==='support_manager')return;
   const screen=document.getElementById('screen-bedcheck');
@@ -11933,6 +11981,7 @@ function mgrV10OpenTool(tab){
     const gd=document.getElementById('gdc-date');if(gd&&!gd.value)gd.value=localISODate();
     const sd=document.getElementById('sla-date');if(sd&&!sd.value)sd.value=localISODate();
     adminPopulateGameContentVenues().then(adminLoadGameContent);adminLoadAreaLeadPeople();coverageAdminInit();chatRouteInit();
+    admHub();
   }
   window.scrollTo(0,0);
 }
@@ -17128,6 +17177,7 @@ async function adminAccessSave(){
   adminAccessClose();await adminAccessLoad();
 }
 function adminAccessJump(role){
+  if(typeof admShow==='function'&&state._admGroup!=='people')admShow('people');
   const sec=document.getElementById('admin-access-center');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});
   const f=document.getElementById('admin-access-role-filter');if(f){f.value=role||'';adminAccessRender();}
 }
@@ -19418,12 +19468,13 @@ function renderInvItems() {
       const field = phase === 'Count In' ? 'countIn' : 'countOut';
       const cin = phase === 'Count Out' && state._invCinMap ? state._invCinMap[ydItemKey(item.itemName)] : undefined;
       html += '<div class="inv-row-main">' + head +
-        '<div class="inv-row-in">' + box(field, true) + '<div class="inv-unit">' + escapeHtml(unitWord) + '</div></div>' +
-        '<button type="button" class="inv-zero" tabindex="-1" onclick="invSetZero(' + i + ',\'' + field + '\')" aria-label="None — type 0">0<span>none</span></button></div>';
+        '<div class="inv-row-in">' + box(field, true) + '<div class="inv-unit">' + escapeHtml(unitWord) + '</div></div></div>' +
+        '<div class="inv-zero-note"></div>';
       // Waste only matters for chargeables (Yellow Dog: non-chargeables & supplies are Count Out only).
       if (phase === 'Count Out') {
         const sub = [];
-        if (cin !== undefined) sub.push('<span class="inv-cin">Count In was <b>' + escapeHtml(cin) + '</b> ' + escapeHtml(unitWord.toLowerCase()) + '</span>');
+        const expOut = state._invExpOutMap ? state._invExpOutMap[ydItemKey(item.itemName)] : undefined;
+        if (cin !== undefined) sub.push('<span class="inv-cin">Count In was <b>' + escapeHtml(cin) + '</b>' + (expOut > (parseFloat(cin) || 0) ? ' + <b>' + (Math.round((expOut - (parseFloat(cin) || 0)) * 100) / 100) + '</b> delivered' : '') + ' ' + escapeHtml(unitWord.toLowerCase()) + '</span>');
         if (cat === 'CHARGEABLES' || cat.startsWith('ADD-ONS')) sub.push('<label class="inv-waste">Waste ' + box('waste', false) + '</label>');
         if (sub.length) html += '<div class="inv-row-sub">' + sub.join('') + '</div>';
       }
@@ -19463,7 +19514,10 @@ function invUpdateProgress() {
     const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + i + '"][data-field="' + field + '"]'); if (!inp) return;
     const k = invSectionOf(it), v = inp.value.trim(), ok = v !== '' && !isNaN(Number(v)) && Number(v) >= 0;
     sec[k] = sec[k] || {t:0, d:0}; sec[k].t++; total++; if (ok) { sec[k].d++; done++; }
-    const card = inp.closest('.inv-item-card'); if (card) card.style.borderLeft = ok ? '4px solid #16A34A' : '';
+    const card = inp.closest('.inv-item-card');
+    const zeroWarn = ok && Number(v) === 0 && invExpectedFor(i) > 0;
+    if (card) { card.style.borderLeft = zeroWarn ? '4px solid #F59E0B' : ok ? '4px solid #16A34A' : ''; card.classList.toggle('inv-zero-warn', zeroWarn);
+      const zn = card.querySelector('.inv-zero-note'); if (zn) zn.textContent = zeroWarn ? '⚠️ Expected about ' + invExpectedFor(i) + ' — is it really 0? Go look.' : ''; }
   });
   if (!total) { box.style.display = 'none'; return; }
   box.style.display = '';
@@ -19476,12 +19530,6 @@ function invUpdateProgress() {
       return '<span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;background:' + (l ? '#FEF3C7;color:#92400E' : '#DCFCE7;color:#166534') + '">' + lbl[k] + ' ' + (l ? l + ' left' : '✓') + '</span>'; }).join('') + '</div>';
   document.querySelectorAll('#inv-items-list .inv-sec-left').forEach(function(el) { const x = sec[el.dataset.sec]; el.textContent = x ? '· ' + x.d + '/' + x.t : ''; });
   if (btn) btn.textContent = left ? 'Submit ' + phase + ' (' + left + ' left) →' : 'Submit ' + phase + ' ✓';
-}
-function invSetZero(i, field) {
-  const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + i + '"][data-field="' + field + '"]'); if (!inp) return;
-  inp.value = '0'; inp.style.outline = '';
-  inp.dispatchEvent(new Event('input', {bubbles:true}));
-  invFocusNext(inp, true);
 }
 // Next count box in the list (skips rows hidden by search). blankOnly: next empty one.
 function invFocusNext(fromInp, blankOnly) {
@@ -19505,6 +19553,60 @@ document.addEventListener('focusin', function(e) {
   const t = e.target;
   if (t && t.matches && t.matches('#inv-items-list input[data-inv-idx]') && t.value) setTimeout(() => { try { t.select(); } catch (x) {} }, 0);
 });
+// ---- Real numbers, not "just type 0" ----
+// 10/3: once every line was required, 51% of Count In and 58% of Count Out
+// lines were 0 — including 204 + 225 lines where the sheet said stock was
+// there. A 0 is fine for an item the stand doesn't carry; a 0 where stock was
+// expected has to be fixed or confirmed line by line.
+function invExpectedFor(i) {
+  const it = (state.invItems || [])[i]; if (!it) return 0;
+  const n = v => { const x = parseFloat(v); return isNaN(x) ? 0 : x; };
+  if (state.invPhase === 'Count In') return n(it.expStart);
+  if (state.invPhase === 'Count Out') return state._invExpOutMap ? n(state._invExpOutMap[ydItemKey(it.itemName)]) : 0;
+  return 0;
+}
+async function invLoadExpectedOut(stand) {
+  state._invCinMap = null; state._invExpOutMap = null;
+  const day = stadiumDay();
+  const [cinRows, ledger] = await Promise.all([
+    sb('inventory_entries?stand=eq.' + encodeURIComponent(stand) + '&phase=eq.' + encodeURIComponent('Count In') + '&entry_date=eq.' + day + '&order=created_at.desc&limit=1&select=counts').catch(() => ({_err:true})),
+    sb('stock_ledger?stand=eq.' + encodeURIComponent(stand) + '&game_date=eq.' + day + '&direction=eq.in&select=item_name,qty').catch(() => ({_err:true}))
+  ]);
+  const cin = {}, exp = {};
+  if (Array.isArray(cinRows) && cinRows[0]) {
+    let c = cinRows[0].counts; if (typeof c === 'string') { try { c = JSON.parse(c); } catch (e) { c = {}; } }
+    Object.values(c || {}).forEach(it => { if (it && it.itemName && it.countIn !== undefined && it.countIn !== '') { const k = ydItemKey(it.itemName); cin[k] = it.countIn; exp[k] = (parseFloat(it.countIn) || 0); } });
+    state._invCinMap = cin;
+  }
+  if (Array.isArray(ledger)) ledger.forEach(l => { const k = ydItemKey(l.item_name); exp[k] = (exp[k] || 0) + (parseFloat(l.qty) || 0); });
+  state._invExpOutMap = exp;
+}
+// Review sheet: every 0 where stock was expected must be changed or confirmed.
+function invZeroReview(list, phase) {
+  return new Promise(resolve => {
+    const old = document.getElementById('inv-zero-overlay'); if (old) old.remove();
+    const ov = document.createElement('div'); ov.id = 'inv-zero-overlay'; ov.className = 'contact-popup-overlay';
+    ov.innerHTML = '<div class="contact-popup" style="max-width:480px;max-height:88vh;overflow:auto;text-align:left">' +
+      '<div style="font-size:18px;font-weight:900">🔎 Check these ' + list.length + ' zero' + (list.length === 1 ? '' : 's') + '</div>' +
+      '<div style="font-size:13px;color:var(--text-2);margin:4px 0 10px">' + (phase === 'Count In' ? 'The warehouse sent stock for these, but you typed 0.' : 'You started with stock (or got a delivery) but typed 0 now.') + ' Go look, then type the real number — or tap <b>Really 0</b> if it is truly gone.</div>' +
+      list.map((z, k) => '<div class="inv-zr" data-k="' + k + '"><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:13px">' + escapeHtml(z.name) + '</div><div style="font-size:11px;color:#B45309;font-weight:700">Expected about ' + escapeHtml(String(z.expected)) + ' ' + escapeHtml(String(z.unit || '').toLowerCase()) + '</div></div>' +
+        '<input type="number" min="0" step="any" inputmode="decimal" class="form-input" value="0" style="width:70px;margin:0;text-align:center;font-weight:800;font-size:17px" oninput="invZrSync(this)">' +
+        '<button type="button" class="inv-zr-ok" onclick="invZrAck(this)">Really 0</button></div>').join('') +
+      '<button class="btn btn-primary" id="inv-zr-save" style="margin-top:12px;min-height:50px" disabled>Save count</button>' +
+      '<button class="btn btn-ghost" id="inv-zr-cancel" style="margin-top:6px">← Back to the list</button></div>';
+    document.body.appendChild(ov);
+    const save = ov.querySelector('#inv-zr-save');
+    const check = () => { const rows = [...ov.querySelectorAll('.inv-zr')]; const left = rows.filter(r => !(r.classList.contains('acked') || (parseFloat(r.querySelector('input').value) > 0))).length; save.disabled = left > 0; save.textContent = left ? left + ' still to check' : 'Save count'; };
+    ov._check = check; check();
+    ov.querySelector('#inv-zr-cancel').onclick = () => { ov.remove(); resolve(null); };
+    save.onclick = () => {
+      const res = list.map((z, k) => { const r = ov.querySelector('.inv-zr[data-k="' + k + '"]'); const v = r.querySelector('input').value.trim(); return { ...z, value: v === '' ? '0' : v, acked: r.classList.contains('acked') && !(parseFloat(v) > 0) }; });
+      ov.remove(); resolve(res);
+    };
+  });
+}
+function invZrAck(btn) { const r = btn.closest('.inv-zr'); const on = !r.classList.contains('acked'); r.classList.toggle('acked', on); if (on) r.querySelector('input').value = '0'; btn.textContent = on ? '✓ Really 0' : 'Really 0'; const ov = document.getElementById('inv-zero-overlay'); if (ov && ov._check) ov._check(); }
+function invZrSync(inp) { const r = inp.closest('.inv-zr'); if (parseFloat(inp.value) > 0) { r.classList.remove('acked'); const b = r.querySelector('.inv-zr-ok'); if (b) b.textContent = 'Really 0'; } const ov = document.getElementById('inv-zero-overlay'); if (ov && ov._check) ov._check(); }
 function invJumpNextBlank() {
   const field = state.invPhase === 'Count In' ? 'countIn' : 'countOut';
   const search = document.getElementById('inv-search'); if (search && search.value) { search.value = ''; filterInvItems(''); }
@@ -19670,17 +19772,10 @@ async function selectInvPhase(btn, phase) {
   if (phase === 'Transfer') {
     await loadLedgerTransferTotals();
   }
-  // Count Out shows what this stand counted at Count In, next to each box —
-  // the quickest way to spot cases-vs-cans mix-ups while typing.
-  state._invCinMap = null;
-  if (phase === 'Count Out') {
-    const cinRows = await sb('inventory_entries?stand=eq.' + encodeURIComponent(stand) + '&phase=eq.' + encodeURIComponent('Count In') + '&entry_date=eq.' + stadiumDay() + '&order=created_at.desc&limit=1&select=counts').catch(() => ({_err:true}));
-    if (Array.isArray(cinRows) && cinRows[0]) {
-      let c = cinRows[0].counts; if (typeof c === 'string') { try { c = JSON.parse(c); } catch (e) { c = {}; } }
-      const m = {}; Object.values(c || {}).forEach(it => { if (it && it.itemName && it.countIn !== undefined && it.countIn !== '') m[ydItemKey(it.itemName)] = it.countIn; });
-      state._invCinMap = m;
-    }
-  }
+  // Count Out shows what this stand counted at Count In (+ deliveries) next to
+  // each box, so a 0 or a cases-vs-cans mix-up is visible while typing.
+  state._invCinMap = null; state._invExpOutMap = null;
+  if (phase === 'Count Out') await invLoadExpectedOut(stand);
   if (state.invPhase !== phase) return; // switched phase while loading
   renderInvItems();
 }
@@ -19968,6 +20063,38 @@ async function submitInventory() {
     }
   }
 
+  // Zeros where stock was expected: fix or confirm each one.
+  let zeroNote = '';
+  if (state.invPhase === 'Count In' || state.invPhase === 'Count Out') {
+    const reqField = state.invPhase === 'Count In' ? 'countIn' : 'countOut';
+    const zl = [], req = [];
+    (state.invItems || []).forEach(function(it, i) {
+      if (it.isAddon) return;
+      const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + i + '"][data-field="' + reqField + '"]'); if (!inp) return;
+      req.push(inp);
+      const ex = invExpectedFor(i);
+      if (Number(inp.value) === 0 && ex > 0) zl.push({ i: i, name: it.itemName, unit: it.unit, expected: Math.round(ex * 100) / 100, inp: inp });
+    });
+    if (zl.length) {
+      const rv = await invZeroReview(zl, state.invPhase);
+      if (!rv) { zl[0].inp.scrollIntoView({behavior:'smooth', block:'center'}); return; }
+      const acked = [];
+      rv.forEach(function(r) {
+        r.inp.value = r.value; r.inp.dispatchEvent(new Event('input', {bubbles:true}));
+        const e = entries.find(function(x) { return x.itemName === r.name; }); if (e) { e[reqField] = r.value; if (r.acked) { e.zeroConfirmed = true; e.expected = r.expected; } }
+        if (r.acked) acked.push(r.name);
+      });
+      if (acked.length) zeroNote = '[⚠ ' + acked.length + ' item' + (acked.length === 1 ? '' : 's') + ' confirmed 0 although stock was expected: ' + acked.slice(0, 8).join(', ') + (acked.length > 8 ? '…' : '') + '] ';
+    }
+    // Mostly zeros is the "tapped 0 everywhere to get past the screen" pattern.
+    const zeros = req.filter(function(x) { return Number(x.value) === 0; }).length;
+    if (req.length >= 8 && zeros / req.length >= 0.6) {
+      const ok = await confirmAction('You typed 0 for ' + zeros + ' of ' + req.length + ' lines.\n\nOnly type 0 for things that are really not at your stand. Your manager sees how many zeros each stand sends.', { title: '⚠️ Mostly zeros', confirmLabel: 'Yes, I counted every line', cancelLabel: 'Go back and count' });
+      if (!ok) return;
+      zeroNote += '[' + zeros + ' of ' + req.length + ' lines were 0] ';
+    }
+  }
+
   // 10/3: 165 rows ended higher than the stand started with — mostly cases at
   // Count In vs single cans at Count Out. Ask before saving, never block.
   if (state.invPhase === 'Count Out' && !state._invSkipOutCheck) {
@@ -20028,7 +20155,7 @@ async function submitInventory() {
       empId: getFieldOpsActor().empId,
       phase: state.invPhase,
       counts: counts,
-      notes: manualNote + document.getElementById('inv-notes').value,
+      notes: zeroNote + manualNote + document.getElementById('inv-notes').value,
       updateEntryId: state._invEditingEntryId || undefined
     });
     if (res.ok) {
@@ -20491,9 +20618,19 @@ async function loadInvTracker() {
   const recOf = {}; if (Array.isArray(receipts)) receipts.forEach(r => { if (r.status === 'received') recOf[r.stand] = r; });
   state._invtReceiptsOk = Array.isArray(receipts);
   const latest = (st, ph) => inv.find(r => r.stand === st && r.phase === ph) || null;
-  state._invtRows = stands.map(st => ({stand:st, countIn:latest(st,'Count In'), countOut:latest(st,'Count Out'), leads:leads[st] || [], kit:kitOf[canonicalStandName2026(st)] || '', receipt:recOf[st] || null, isSC:isSubcontractorStand(st)}));
+  state._invtRows = stands.map(st => { const r = {stand:st, countIn:latest(st,'Count In'), countOut:latest(st,'Count Out'), leads:leads[st] || [], kit:kitOf[canonicalStandName2026(st)] || '', receipt:recOf[st] || null, isSC:isSubcontractorStand(st)}; r.zeroFlags = invtZeroFlags(r); return r; });
   state._invtOverrides = Array.isArray(ovr) ? ovr : [];
   renderInvTracker();
+}
+// Zeros worth a look: lines confirmed 0 although stock was expected, and
+// Count Out 0 on a line that had stock at Count In.
+function invtZeroFlags(r) {
+  const parse = c => { if (typeof c === 'string') { try { return JSON.parse(c); } catch (e) { return {}; } } return c || {}; };
+  const cin = {}; let n = 0, lines = 0, zeros = 0;
+  if (r.countIn) Object.values(parse(r.countIn.counts)).forEach(it => { if (!it || !it.itemName) return; cin[ydItemKey(it.itemName)] = parseFloat(it.countIn) || 0; if (it.zeroConfirmed) n++; });
+  if (r.countOut) Object.values(parse(r.countOut.counts)).forEach(it => { if (!it || !it.itemName) return; lines++; const o = parseFloat(it.countOut); if (o === 0) zeros++;
+    if (it.zeroConfirmed || (o === 0 && cin[ydItemKey(it.itemName)] > 0)) n++; });
+  return { n, mostlyZero: lines >= 8 && zeros / lines >= 0.6 };
 }
 function renderInvTracker() {
   const rows = state._invtRows || [], f = state._invtFilter || 'nobox';
@@ -20532,6 +20669,7 @@ function renderInvTracker() {
            : '<button class="btn btn-primary" style="width:auto;padding:8px 12px;margin:0;font-size:13px" onclick="invtReceiveOpen(' + i + ')">📦 Receive box</button>') + '</div>' +
       '<div style="font-size:12px;color:var(--text-2);margin:4px 0 6px">Runs it: ' + leadTxt + '<span style="font-size:11px">' + ago + '</span></div>' +
       chip('Count In', r.countIn, i) + chip('Count Out', r.countOut, i) + boxChip +
+      ((r.zeroFlags && (r.zeroFlags.n || r.zeroFlags.mostlyZero)) ? '<span role="button" tabindex="0" onclick="invtViewCounts(' + i + ',\'\')" style="display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800;margin:0 6px 4px 0;background:#FEF3C7;color:#92400E;cursor:pointer">⚠ ' + (r.zeroFlags.n ? r.zeroFlags.n + ' zero' + (r.zeroFlags.n === 1 ? '' : 's') + ' to check' : '') + (r.zeroFlags.mostlyZero ? (r.zeroFlags.n ? ' · ' : '') + 'mostly 0s' : '') + ' ›</span>' : '') +
       ((r.countIn || r.countOut) ? '<button class="btn btn-ghost" style="width:auto;padding:4px 10px;margin:0 0 4px;font-size:11px;font-weight:800" onclick="invtViewCounts(' + i + ')">👁 View counts</button>' : '') +
       (miss.length ? '<div style="font-size:12px;font-weight:700;color:#B45309;margin-top:4px">Missing: ' + miss.map(escapeHtml).join(', ') + '</div>' : '') +
       (!rec ? '<div style="font-size:11px;color:var(--text-3);margin-top:4px">Box: ' + invtBoxItems(r).map(escapeHtml).join(', ') + '</div>' : '') +
@@ -20578,14 +20716,19 @@ async function invtViewCounts(i, phase) {
   const only = phase === 'Count In' ? 'in' : phase === 'Count Out' ? 'out' : '';
   const secName = {CHARGEABLES:'💲 Chargeables','NON-CHARGEABLES':'🧾 Non-Chargeables',SUPPLIES:'📦 Supplies','ADD-ONS (OPTIONAL)':'➕ Add-ons'};
   const cols = only === 'in' ? 3 : only === 'out' ? 4 : 7;
-  let lastSec = null, blanks = 0;
+  let lastSec = null, blanks = 0, zeroRows = 0;
   const body = order.map((n, k) => {
     const x = items[n];
     let head = '';
     if (x.sec !== lastSec && !x.extra) { head = '<tr><td colspan="' + cols + '" style="padding:8px 4px 3px;font-size:11px;font-weight:900;letter-spacing:.5px;color:var(--text-2)">' + secName[x.sec] + '</td></tr>'; lastSec = x.sec; }
     const used = (x.cin != null && x.cout != null) ? Math.round((x.cin + x.tin - x.tout - x.waste - x.cout) * 100) / 100 : null;
+    const sheetIt = sheetItems.find(s => ydItemKey(s.itemName) === ydItemKey(n));
+    const zIn = x.cin === 0 && sheetIt && (parseFloat(sheetIt.expStart) || 0) > 0;
+    const zOut = x.cout === 0 && ((x.cin || 0) + x.tin) > 0;
+    const zFlag = (only === 'in' && zIn) || (only === 'out' && zOut) || (!only && (zIn || zOut));
+    if (zFlag) zeroRows++;
     if (!x.sec.startsWith('ADD-ONS') && ((only === 'in' && x.cin == null) || (only === 'out' && x.cout == null))) blanks++;
-    const name = '<td style="padding:5px 4px;border-bottom:1px solid var(--border);color:var(--text-3);font-size:10px;text-align:right">' + (x.extra ? '+' : k + 1) + '</td><td style="padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px">' + escapeHtml(n) + (x.unit ? ' <span style="opacity:.6">' + escapeHtml(x.unit) + '</span>' : '') + '</td>';
+    const name = '<td style="padding:5px 4px;border-bottom:1px solid var(--border);color:var(--text-3);font-size:10px;text-align:right">' + (x.extra ? '+' : k + 1) + '</td><td style="padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px' + (zFlag ? ';background:#FEF3C7;color:#92400E;font-weight:700' : '') + '">' + (zFlag ? '⚠ ' : '') + escapeHtml(n) + (x.unit ? ' <span style="opacity:.6">' + escapeHtml(x.unit) + '</span>' : '') + '</td>';
     if (only === 'in') return head + '<tr>' + name + '<td style="' + td + ';font-weight:800">' + cell(x.cin) + '</td></tr>';
     if (only === 'out') return head + '<tr>' + name + '<td style="' + td + ';font-weight:800">' + cell(x.cout) + '</td><td style="' + td + '">' + (x.waste || '') + '</td></tr>';
     return head + '<tr>' + name + '<td style="' + td + '">' + cell(x.cin) + '</td><td style="' + td + '">' + (x.tin || x.tout ? (x.tin ? '+' + x.tin : '') + (x.tout ? ' −' + x.tout : '') : '') + '</td><td style="' + td + '">' + (x.waste || '') + '</td><td style="' + td + '">' + cell(x.cout) + '</td><td style="' + td + ';font-weight:800;color:' + (used != null && used < 0 ? '#DC2626' : 'inherit') + '">' + (used == null ? '' : used) + '</td></tr>';
@@ -20595,6 +20738,7 @@ async function invtViewCounts(i, phase) {
   whSheet('<div style="font-weight:850;font-size:17px">👁 ' + escapeHtml(r.stand) + (only ? ' · ' + escapeHtml(phase) : '') + '</div>' +
     '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Count In: ' + t(lastCin) + '<br>Count Out: ' + t(lastCout) + '<br><span style="color:var(--text-3)">Same order as the Yellow Dog stand sheet' + (sheetItems.length ? ' (' + sheetItems.length + ' lines)' : '') + '.</span></div>' + tabs +
     (only && blanks ? '<div class="notice warning" style="font-size:12px;margin-bottom:6px">⚠️ ' + blanks + ' line' + (blanks === 1 ? '' : 's') + ' not counted (red —)</div>' : '') +
+    (zeroRows ? '<div class="notice warning" style="font-size:12px;margin-bottom:6px">⚠ ' + zeroRows + ' line' + (zeroRows === 1 ? '' : 's') + ' typed as 0 although stock was expected (highlighted) — worth a look.</div>' : '') +
     (order.length ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="font-size:10px;color:var(--text-2);text-align:right"><th style="padding:4px">#</th><th style="text-align:left;padding:4px">Item</th>' + th + '</tr></thead><tbody>' + body + '</tbody></table></div>' +
       (only ? '' : '<div style="font-size:10px;color:var(--text-3);margin-top:6px">Used = In + transfers in − transfers out − waste − Out. A red (negative) Used means a count is likely wrong.</div>') +
       (order.some(n => items[n].extra) ? '<div style="font-size:10px;color:var(--text-3);margin-top:4px">+ = counted but not on the stand sheet.</div>' : '') : '<div style="font-size:12px;color:var(--text-3)">No counts entered yet.</div>'));
