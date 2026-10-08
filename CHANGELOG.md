@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-08-fix-45
+- **Warehouse — every warehouse role can now change or decline an order** (not just the Warehouse Manager/Supervisor):
+  - **✏️ Short / change**: big − / + per item, an **Out** button for anything gone, one-tap reasons (Out of stock · Short — sending what we have · Too much · Swapped for a similar item · Stand asked to change it) and an optional message. Save is disabled until a number changes and a reason is picked.
+  - **✖ Can't fill**: full-width reasons (Out of stock · Already delivered / duplicate · Not a warehouse item — ask Food · Wrong stand · Stand cancelled it) + optional message.
+  - Buttons are on the order screen a runner sees before "On my way", on their job card once they're on the way, and on the full request list.
+  - The stand lead / requester gets a push and sees exactly what changed and who changed it ("Topo Chico 4→2, Coors Light 1→none — Short — sending what we have — Vasquez, Dean"); the warehouse job card shows it too. Every change is kept in the request's edit history (who, when, reason, before → after).
+  - Declined orders show the reason once on the stand's screen (it used to repeat three times).
+- **Food form**: if the request is really a Warehouse item (ice, cups, beer, water, soda, candy, chips, peanuts, popcorn, gloves, CO2…), it asks "Send to Warehouse instead?" before sending. Tested on every 10/3 food request: catches all 7 that were cancelled as warehouse items, no false alarms on real food ("cheese cups" stays Food).
+- **Count Out check**: before saving Count Out, items that are clearly higher than Count In + deliveries are listed ("Buckets: started 2, counted 128 now — did someone count cases at Count In and singles now?"). "Fix counts" highlights them; "They're right — save" saves anyway. Never blocks.
+
 ## 2026-10-07-fix-44 (warehouse screens still exactly as fix-34)
 - Premium → Check-ins → ⬇️ CSV now includes **Employee ID** (kept exactly — no lost leading zeros in Excel), plus **Checked In** and **Checked Out** times (Phoenix time). The 🖨️ PDF also shows an Emp ID column.
 

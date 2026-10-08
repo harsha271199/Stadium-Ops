@@ -1591,6 +1591,40 @@
     table.responsive-table td::before { content: attr(data-label); font-weight: 600; color: var(--text-2); text-align: left; flex-shrink: 0; }
   }
 
+
+/* Warehouse: Short / change + Can't fill (thumb-sized, glanceable) */
+.wh-fix-row{display:flex;gap:8px;margin-top:8px}
+.wh-fix-btn{flex:1;min-height:44px;border-radius:12px;border:1.5px solid var(--border-strong);background:var(--bg-card);color:var(--text);font-weight:700;font-size:14px;cursor:pointer}
+.wh-fix-btn.no{color:#DC2626;border-color:rgba(220,38,38,.55)}
+.wh-fix-btn:active{transform:scale(.98)}
+.wh-fix-head{margin-bottom:10px}
+.wh-fix-title{font-weight:850;font-size:19px}
+.wh-fix-title.no{color:#DC2626}
+.wh-fix-sub{font-size:12.5px;color:var(--text-2);margin-top:2px}
+.wh-fix-item{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)}
+.wh-fix-item.changed .wh-fix-q{color:#B45309}
+.wh-fix-item.out .wh-fix-name b{text-decoration:line-through;opacity:.55}
+.wh-fix-name{display:flex;flex-direction:column;min-width:0;font-size:14px;line-height:1.25}
+.wh-fix-name span{font-size:11.5px;color:var(--text-2)}
+.wh-fix-name .wh-fix-was{color:var(--text-3)}
+.wh-fix-ctrl{display:flex;align-items:center;border:1.5px solid var(--border-strong);border-radius:12px;overflow:hidden}
+.wh-fix-ctrl button{width:44px;height:44px;border:0;background:var(--bg-elevated);color:var(--text);font-size:22px;font-weight:800;cursor:pointer}
+.wh-fix-q{min-width:40px;text-align:center;font-size:18px;font-weight:850;font-variant-numeric:tabular-nums}
+.wh-fix-out{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px solid var(--border-strong);background:var(--bg-card);color:var(--text-2);font-weight:700;cursor:pointer}
+.wh-fix-out.on{background:#DC2626;border-color:#DC2626;color:#fff}
+.wh-fix-label{font-weight:800;font-size:13px;margin:14px 0 6px}
+.wh-fix-label span{font-weight:500;color:var(--text-3);font-size:12px;margin-left:4px}
+.wh-chips{display:flex;flex-wrap:wrap;gap:6px}
+.wh-chip{min-height:38px;padding:0 12px;border-radius:999px;border:1.5px solid var(--border-strong);background:var(--bg-card);color:var(--text);font-size:13px;font-weight:600;cursor:pointer}
+.wh-chip.on{background:var(--text);color:var(--bg-card);border-color:var(--text)}
+.wh-reasons{display:flex;flex-direction:column;gap:6px}
+.wh-reason{min-height:48px;text-align:left;padding:0 14px;border-radius:12px;border:1.5px solid var(--border-strong);background:var(--bg-card);color:var(--text);font-size:15px;font-weight:700;cursor:pointer}
+.wh-reason.on{border-color:#DC2626;background:rgba(220,38,38,.08);color:#DC2626}
+.wh-fix-save{font-size:16px;padding:15px}
+.wh-fix-save.no{background:#DC2626;border-color:#DC2626}
+.wh-fix-save[disabled]{opacity:.45;cursor:not-allowed}
+.wh-fix-link{display:block;width:100%;margin-top:10px;background:none;border:0;color:#DC2626;font-weight:700;font-size:14px;padding:8px;cursor:pointer;text-decoration:underline}
+.wh-changed-note{font-size:12px;color:#B45309;background:rgba(245,158,11,.10);border-radius:8px;padding:6px 8px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -4393,7 +4427,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-07-fix-44';
+const BUILD_TAG = '2026-10-08-fix-45';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6911,7 +6945,7 @@ function mapStock(r){
     etaEscalatedAt:r.eta_escalated_at || meta.eta_escalated_at || null,
     assignedToIds:Array.isArray(meta.assigned_to_ids) ? meta.assigned_to_ids.map(String) : [],
     assignedToNames:Array.isArray(meta.assigned_to_names) ? meta.assigned_to_names : [],
-    deniedReason:meta.denied_reason||'', deniedBy:meta.denied_by||'', editedBy:meta.edited_by||''
+    deniedReason:meta.denied_reason||'', deniedBy:meta.denied_by||'', editedBy:meta.edited_by||'', editNote:meta.edit_note||''
   };
 }
 // "45m", "2h 10m" — a 5,000-minute number is unreadable at a glance.
@@ -9601,7 +9635,7 @@ async function loadMyRequests() {
     else if (r.status === 'On the way') statusLine = `<div style="font-size:13px;color:var(--info);font-weight:600;margin-top:8px">🚚 ${escapeHtml(r.claimedBy) || 'Warehouse'} is on the way!</div>`;
     else if (r.status === 'Fulfilled') statusLine = `<div style="font-size:13px;color:var(--success);font-weight:600;margin-top:8px">✅ Delivered${r.claimedBy ? ' by '+escapeHtml(r.claimedBy) : ''}</div>`;
     else if (r.status === 'Denied') statusLine = `<div style="font-size:13px;color:#DC2626;font-weight:700;margin-top:8px">❌ Denied by warehouse${r.deniedBy ? ' ('+escapeHtml(r.deniedBy)+')' : ''}${r.deniedReason ? ' — '+escapeHtml(r.deniedReason) : ''}</div>`;
-    if (r.editedBy && r.status !== 'Denied') statusLine += `<div style="font-size:11px;color:var(--text-2);margin-top:3px">✏️ Changed by warehouse (${escapeHtml(r.editedBy)})</div>`;
+    if (r.editedBy && r.status !== 'Denied') statusLine += `<div class="wh-changed-note">✏️ Warehouse changed this order (${escapeHtml(r.editedBy)})${r.editNote ? ': ' + escapeHtml(r.editNote) : ''}</div>`;
 
     return `<div class="req-card ${cardClass}">
       <div class="req-header">
@@ -9609,8 +9643,8 @@ async function loadMyRequests() {
         <span class="status-pill ${pillClass}">${r.status === 'Pending' ? escapeHtml(r.urgency) : escapeHtml(r.status)}</span>
       </div>
       ${r.quantity ? `<div class="req-qty">"${escapeHtml(r.quantity)}"</div>` : ''}
-      ${r.notes ? `<div class="req-qty">Notes: ${escapeHtml(r.notes)}</div>` : ''}
-      ${r.warehouseMessage ? `<div class="req-wh-msg">💬 Warehouse: ${escapeHtml(r.warehouseMessage)}</div>` : ''}
+      ${r.notes && !(r.status === 'Denied' && r.deniedReason) ? `<div class="req-qty">Notes: ${escapeHtml(r.notes)}</div>` : ''}
+      ${r.warehouseMessage && r.warehouseMessage !== r.notes ? `<div class="req-wh-msg">💬 Warehouse: ${escapeHtml(r.warehouseMessage)}</div>` : ''}
       ${stockEtaHtml(r)}
       ${statusLine}
     </div>`;
@@ -15589,10 +15623,31 @@ function kitchenDuplicateOverlap(items){
 
 function kitchenRequestBack(){if(state.standTaskReturnScreen==='screen-submenu-requests'){state.standTaskReturnScreen='';showScreen('screen-submenu-requests');return;}if(state.standTaskReturnScreen==='screen-bedcheck'||isManagerOpsSession()){state.standTaskReturnScreen='';showScreen('screen-bedcheck');restoreMgrSidebarState();if(isSupportManagerSession())supportOpsTab('food',true);return;}if(state.user){showScreen('screen-submenu-requests');return;}if(state.staffAccount&&state.staffAccount.group==='manager'){showScreen('screen-bedcheck');restoreMgrSidebarState();return;}showScreen('screen-home');}
 
+// Words that mean a Warehouse item. "cheese cups" stays Food.
+function foodLooksLikeWarehouse(text){
+  const t=' '+String(text||'').toLowerCase().replace(/[^a-z0-9&' ]+/g,' ')+' ';
+  const rules=[['ice',/\bice\b/],['cups',/(?<!cheese )\bcups?\b/],['lids',/\blids?\b/],['straws',/\bstraws?\b/],['napkins',/\bnapkins?\b/],['gloves',/\bgloves?\b/],
+    ['beer',/\bbeers?\b/],['Coors',/\bcoors\b/],['Miller',/\bmiller\b/],['Dos Equis',/\bdos equis\b|\bxx\b/],['Topo Chico',/\btopo\b/],['Devils Halo',/\bdevils? halo\b|\bhuss\b/],['Simply Spiked',/\bsimply\b/],['wine',/\bwines?\b/],['seltzer',/\bseltzers?\b/],
+    ['water',/\bwaters?\b|\baquafina\b|\bdasani\b|\bsmart ?water\b|\blife ?water\b/],['Gatorade/Powerade',/\bgatorade\b|\bpowerade\b/],['soda',/\bsodas?\b|\bcoke\b|\bpepsi\b|\bsprite\b|\bdr ?pepper\b|\bstarry\b|\bmountain dew\b/],
+    ['candy',/\bcandy\b|\bskittles\b|\bsour patch\b|\bmike ?(n|and|&) ?ike\b|\bswedish\b|\bm&m/],['chips',/\bchips?\b(?! ?(and|&) ?salsa)/],['peanuts',/\bpeanuts?\b/],['popcorn',/\bpopcorn\b/],['CO2',/\bco2\b/]];
+  const hits=[];rules.forEach(([n,re])=>{if(re.test(t))hits.push(n);});return hits;
+}
 async function submitKitchenRequest(){
   await syncMyStandFromSchedule(true).catch(()=>{});if(state.user&&!isSupervisorSession()&&!isLimitedAreaLead()&&state.user.stand)state.kitchenTargetStand=state.user.stand;
   const who=getRequesterIdentity();const stand=state.kitchenTargetStand||getOperationalStand(who);const items=_kitchenDraft.filter(x=>x.itemName&&Number(x.qty)>0);if(!stand)return toast('Choose a stand','error');if(!items.length||String(items[0].itemName||'').trim().length<3)return toast('Type the food and how many in the box','error');
   { const gMsg=await openRequestGuard('food',stand); if(gMsg) return toast(gMsg,'error',8000); }
+  // 10/3: 7 of 28 food requests were really warehouse items (ice, candy,
+  // popcorn, beer) and got cancelled. Catch that before it's sent.
+  { const hits=foodLooksLikeWarehouse(items.map(x=>x.itemName).join(' , '));
+    if(hits.length){
+      const toWh=await confirmAction('"'+hits.join('", "')+'" comes from the Warehouse, not the kitchen. Send this to the Warehouse instead?',{title:'📦 This looks like a Warehouse item',confirmLabel:'📦 Send to Warehouse',cancelLabel:'Keep as Food'});
+      if(toWh){ const txt=items.map(x=>(x.free_text?'':x.qty+' × ')+x.itemName).join(', '); const target=stand; await goStock();
+        try{ if(target&&target!==state.stockTargetStand){ const sel=document.getElementById('stock-stand-select'); if(sel){ sel.value=target; if(sel.value===target&&typeof stockStandChanged==='function') await stockStandChanged(); } } }catch(e){}
+        const o=document.getElementById('stock-other'); const w=document.getElementById('stock-free-text-wrap');
+        if(o&&w&&w.style.display!=='none'){ o.value=txt; toast('📦 Moved to a Warehouse request — pick the items or send as typed','success',6000); }
+        else toast('📦 Find these items in the list: '+txt.slice(0,80),'success',7000);
+        return; }
+    } }
   // Real 10-minute hold, enforced here (not just shown as a notice) —
   // requires an override reason if fewer than 10 minutes have passed
   // since this stand's last food order.
@@ -19333,6 +19388,31 @@ async function invContinuePartialEntry(stand, phase, entryId){
   toast('Filled-in items are shown — add the rest and submit');
 }
 
+// Items whose Count Out is clearly more than Count In + everything delivered today.
+async function invCountOutSuspicious(stand, entries) {
+  const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+  const day = stadiumDay();
+  const [rows, ledger] = await Promise.all([
+    sb('inventory_entries?entry_date=eq.' + day + '&stand=eq.' + encodeURIComponent(stand) + '&phase=in.(%22Count%20In%22,Transfer)&select=phase,counts,created_at&order=created_at.asc').catch(() => ({ _err: true })),
+    sb('stock_ledger?stand=eq.' + encodeURIComponent(stand) + '&game_date=eq.' + day + '&direction=eq.in&select=item_name,qty').catch(() => ({ _err: true }))
+  ]);
+  if (!Array.isArray(rows)) return [];
+  const parse = c => { if (typeof c === 'string') { try { return JSON.parse(c); } catch (e) { return {}; } } return c || {}; };
+  const cin = {}, tin = {};
+  const lastIn = rows.filter(r => r.phase === 'Count In').pop();
+  if (!lastIn) return [];
+  Object.values(parse(lastIn.counts)).forEach(it => { if (it && it.itemName) cin[ydItemKey(it.itemName)] = num(it.countIn); });
+  rows.filter(r => r.phase === 'Transfer').forEach(r => Object.values(parse(r.counts)).forEach(it => { if (it && it.itemName) tin[ydItemKey(it.itemName)] = (tin[ydItemKey(it.itemName)] || 0) + num(it.transferIn); }));
+  const led = {}; (Array.isArray(ledger) ? ledger : []).forEach(l => { const k = ydItemKey(l.item_name); led[k] = (led[k] || 0) + num(l.qty); });
+  const out = [];
+  entries.forEach(e => {
+    if (e.countOut === undefined || e.countOut === '') return;
+    const k = ydItemKey(e.itemName); if (!(k in cin)) return;
+    const start = cin[k], add = Math.max(tin[k] || 0, led[k] || 0), have = start + add, o = num(e.countOut);
+    if (o - have >= Math.max(2, have * 0.25)) out.push({ name: e.itemName, cin: start, tin: add, out: o });
+  });
+  return out.sort((a, b) => (b.out - b.cin - b.tin) - (a.out - a.cin - a.tin));
+}
 async function submitInventory() {
   const stand = getInventoryTargetStand();
   if (!stand) return toast('Pick a stand first', 'error');
@@ -19389,6 +19469,24 @@ async function submitInventory() {
       missing.forEach(function(m) { m.inp.style.outline = '3px solid #DC2626'; });
       try { missing[0].inp.scrollIntoView({behavior:'smooth', block:'center'}); missing[0].inp.focus(); } catch (e) {}
       return toast(missing.length + ' item' + (missing.length === 1 ? '' : 's') + ' still blank or not a valid number — type the real count for every item (type 0 only if there are none). First one: ' + missing[0].it.itemName, 'error', 9000);
+    }
+  }
+
+  // 10/3: 165 rows ended higher than the stand started with — mostly cases at
+  // Count In vs single cans at Count Out. Ask before saving, never block.
+  if (state.invPhase === 'Count Out' && !state._invSkipOutCheck) {
+    const flagged = await invCountOutSuspicious(stand, entries);
+    if (flagged.length) {
+      const lines = flagged.slice(0, 6).map(f => '• ' + f.name + ': started ' + f.cin + (f.tin ? ' + ' + f.tin + ' delivered' : '') + ', counted ' + f.out + ' now').join('\n');
+      const ok = await confirmAction(flagged.length + ' item' + (flagged.length === 1 ? ' is' : 's are') + ' higher than this stand started with plus deliveries:\n\n' + lines + (flagged.length > 6 ? '\n…and ' + (flagged.length - 6) + ' more' : '') +
+        '\n\nDid someone count cases at Count In and single cans/bottles now (or the other way)? Count the same way as Count In.',
+        { title: '⚠️ Check these counts', confirmLabel: 'They\'re right — save', cancelLabel: 'Fix counts' });
+      if (!ok) {
+        flagged.forEach(f => { const i = (state.invItems || []).findIndex(it => it.itemName === f.name); const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + i + '"][data-field="countOut"]'); if (inp) inp.style.outline = '3px solid #F59E0B'; });
+        const first = flagged[0] && (state.invItems || []).findIndex(it => it.itemName === flagged[0].name);
+        const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + first + '"][data-field="countOut"]'); if (inp) { try { inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); inp.focus(); } catch (e) {} }
+        return;
+      }
     }
   }
 
@@ -22753,7 +22851,7 @@ async function loadWhToDeliver() {
     const tag=s.transferMine?'<span style="display:inline-block;font-size:10px;font-weight:800;color:#fff;background:var(--asu-maroon);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px">ASSIGNED TO YOU</span>':'';
     return `<div class="delivery-card${s.urgent?' urgent':''}${s.mine?' mine':''}" onclick="whStartDeliveryForStand('${escapeAttr(s.stand)}',${s.transferId || 'null'})">
       <span style="font-size:28px">📦</span>
-      <div style="flex:1;min-width:0">${urgentBadge}<div style="font-weight:750;font-size:14px">${escapeHtml(s.stand)}${tag}</div><div class="delivery-status">${sub}</div>${bringRow}${etaRow}</div>
+      <div style="flex:1;min-width:0">${urgentBadge}<div style="font-weight:750;font-size:14px">${escapeHtml(s.stand)}${tag}</div><div class="delivery-status">${sub}</div>${bringRow}${etaRow}${s.requests.filter(r=>r.editNote).map(r=>'<div class="wh-changed-note">✏️ '+escapeHtml(r.editNote)+'</div>').join('')}${mine?s.requests.filter(r=>r.status==='On the way'&&r.claimedBy===myName).map(whFixActionsHtml).join(''):''}</div>
       <span style="font-size:22px;color:var(--text-2)">›</span>
     </div>`;
   }).join('');
@@ -22827,7 +22925,7 @@ async function whStartDeliveryForStand(stand, transferId) {
     const urgent=eligiblePending.some(r=>r.urgency==='URGENT');
     whSheet('<div style="font-weight:850;font-size:18px">📦 '+escapeHtml(stand)+'</div>'+
       '<div style="font-size:12px;color:var(--text-2);margin:3px 0 10px">'+(urgent?'<b style="color:#DC2626">🔴 URGENT</b> · ':'')+eligiblePending.length+' request'+(eligiblePending.length===1?'':'s')+' · check the full order, then tap On my way</div>'+
-      eligiblePending.map(r=>'<div class="card" style="padding:10px 12px;margin-bottom:8px"><div style="font-size:11px;color:var(--text-2);margin-bottom:4px">'+escapeHtml(r.requestedBy||'')+' · '+timeAgo(r.timestamp)+(r.urgency?' · '+escapeHtml(r.urgency):'')+'</div><div style="font-size:14px">'+stockItemsHtml(r)+'</div>'+stockEtaHtml(r)+'</div>').join('')+
+      eligiblePending.map(r=>'<div class="card" style="padding:10px 12px;margin-bottom:8px"><div style="font-size:11px;color:var(--text-2);margin-bottom:4px">'+escapeHtml(r.requestedBy||'')+' · '+timeAgo(r.timestamp)+(r.urgency?' · '+escapeHtml(r.urgency):'')+'</div><div style="font-size:14px">'+stockItemsHtml(r)+'</div>'+stockEtaHtml(r)+whFixActionsHtml(r)+'</div>').join('')+
       '<button class="btn btn-primary" style="font-size:16px;padding:16px" onclick="whSheetClose();whClaimAndDeliver(\''+escapeAttr(stand)+'\')">🚚 On my way</button>');
     return;
   }
@@ -24602,10 +24700,11 @@ function renderWarehouse() {
     const live = r.status === 'Pending' || r.status === 'On the way';
     const reassignBtn = leaderView && live
       ? `<button class="btn ${overdueReq ? 'btn-primary' : 'btn-ghost'}" style="margin:8px 0 0;padding:10px" onclick="whReassignOpen('${r.id}')">👤 ${overdueReq ? 'Overdue — give to someone else' : 'Reassign'}</button>` +
-        `<div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-ghost" style="margin:0;padding:10px;flex:1" onclick="whEditOpen('${r.id}')">✏️ Edit</button><button class="btn btn-ghost" style="margin:0;padding:10px;flex:1;color:#DC2626;border-color:#DC2626" onclick="whDenyOpen('${r.id}')">❌ Deny</button></div>`
+''
       : (r.status === 'Denied' ? `<div class="req-qty" style="color:#DC2626;font-weight:700">❌ Denied${r.deniedBy ? ' by ' + escapeHtml(r.deniedBy) : ''}${r.deniedReason ? ' — ' + escapeHtml(r.deniedReason) : ''}</div>` : '');
     if (r.status === 'Pending') actions = `<div class="req-actions"><button class="btn-claim" onclick="claimReq('${r.id}')">🚚 On my way</button><button class="btn-fulfill" onclick="openTransferStand('${standJs}','list',null)">📦 View items</button></div>`;
     else if (r.status === 'On the way') actions = `<div class="req-actions"><button class="btn-fulfill" onclick="openTransferStand('${standJs}','list',null)">📦 Deliver items</button></div>`;
+    actions += whFixActionsHtml(r);
     return `<div class="req-card ${cardClass}">
       <div class="req-header"><div><div class="req-stand">${escapeHtml(r.stand)}</div><div class="req-time">${timeAgo(r.timestamp)} · ${escapeHtml(r.requestedBy)}</div></div><span class="status-pill ${pillClass}">${pillText}</span></div>
       <div class="req-items">${stockItemsHtml(r)}</div>
@@ -24613,6 +24712,7 @@ function renderWarehouse() {
       ${r.notes ? `<div class="req-qty">Notes: ${escapeHtml(r.notes)}</div>` : ''}
       ${r.claimedBy ? `<div class="req-qty">🚚 By ${escapeHtml(r.claimedBy)}</div>` : ''}
       ${stockEtaHtml(r)}
+      ${r.editNote ? `<div class="wh-changed-note">✏️ ${escapeHtml(r.editedBy)}: ${escapeHtml(r.editNote)}</div>` : ''}
       ${r.assignedToNames&&r.assignedToNames.length?`<div class="req-qty">👥 Teamed route: ${escapeHtml(r.assignedToNames.join(', '))}</div>`:''}
       ${r.warehouseMessage ? `<div class="req-wh-msg">💬 ${escapeHtml(r.warehouseMessage)}</div>` : ''}
       ${actions}
@@ -24861,6 +24961,112 @@ async function whEditSave(id) {
   if (row.requested_by_id) sendPushTo(row.requested_by_id, '✏️ Your stock request was changed', row.stand + ' — ' + itemsText.slice(0, 80));
   toast('✅ Request updated', 'success');
   loadWarehouse();
+}
+
+// ── Runner-friendly "Short / change" and "Can't fill" (every warehouse role) ──
+// Built for someone standing at the shelf with a phone: big −/+ per item, an
+// "Out" chip for anything gone, one-tap reasons, and the stand is told exactly
+// what changed and by whom. Every change is kept in items_json.meta.edit_history.
+function canFixStockRequest() {
+  return canDenyStockRequest() || !!(state.staffAccount && ['warehouse_employee', 'warehouse_manager', 'warehouse_supervisor'].includes(state.staffAccount.role)) || !!state.whName;
+}
+const WH_SHORT_REASONS = ['Out of stock', 'Short — sending what we have', 'Too much — sending less', 'Swapped for a similar item', 'Stand asked to change it'];
+const WH_CANTFILL_REASONS = ['Out of stock', 'Already delivered / duplicate', 'Not a warehouse item — ask Food', 'Wrong stand', 'Stand cancelled it'];
+let _whFix = null;
+function whFixActionsHtml(r) {
+  if (!canFixStockRequest() || !r || !['Pending', 'On the way'].includes(r.status)) return '';
+  const id = escapeAttr(String(r.id));
+  return '<div class="wh-fix-row"><button class="wh-fix-btn" onclick="event.stopPropagation();whFixOpen(\'' + id + '\')">✏️ Short / change</button>' +
+    '<button class="wh-fix-btn no" onclick="event.stopPropagation();whCantFillOpen(\'' + id + '\')">✖ Can\'t fill</button></div>';
+}
+async function whFixOpen(id) {
+  if (!canFixStockRequest()) return toast('Only warehouse staff can change an order', 'error');
+  const row = await whLoadRawRequest(id); if (!row) return;
+  if (!['open', 'claimed'].includes(row.status)) { refreshAfterStockChange(); return toast('This order is already closed', 'error'); }
+  const j = row._j || {};
+  const items = (Array.isArray(j.items) ? j.items : []).map(it => Object.assign({}, it, { _was: Number(it.qty) || 0, _now: Number(it.qty) || 0 }));
+  _whFix = { id: String(id), row, items, reason: '', other: j.other || '' };
+  whFixRender();
+}
+function whFixRender() {
+  const f = _whFix; if (!f) return;
+  const changed = f.items.some(it => it._now !== it._was);
+  const rows = f.items.map((it, i) => {
+    const out = it._now === 0;
+    return '<div class="wh-fix-item' + (out ? ' out' : '') + (it._now !== it._was ? ' changed' : '') + '">' +
+      '<div class="wh-fix-name"><b>' + escapeHtml(it.itemName) + '</b>' + (it.pack ? '<span>' + escapeHtml(it.pack) + '</span>' : '') +
+        '<span class="wh-fix-was">Asked ' + it._was + (it._now !== it._was ? ' → <b>' + (out ? 'none' : it._now) + '</b>' : '') + '</span></div>' +
+      '<div class="wh-fix-ctrl"><button aria-label="Less" onclick="whFixStep(' + i + ',-1)">−</button><div class="wh-fix-q">' + it._now + '</div><button aria-label="More" onclick="whFixStep(' + i + ',1)">+</button></div>' +
+      '<button class="wh-fix-out' + (out ? ' on' : '') + '" onclick="whFixOut(' + i + ')">' + (out ? 'Out ✓' : 'Out') + '</button></div>';
+  }).join('');
+  whSheet('<div class="wh-fix-head"><div class="wh-fix-title">✏️ Change order</div><div class="wh-fix-sub">' + escapeHtml(f.row.stand) + ' · asked by ' + escapeHtml(f.row.requested_by || 'stand') + ' · ' + timeAgo(f.row.created_at) + '</div></div>' +
+    (rows || '<div class="wh-fix-sub">This order has no listed items — use the note below.</div>') +
+    '<div class="wh-fix-label">Why? <span>' + (changed ? 'pick one' : 'change a number first') + '</span></div>' +
+    '<div class="wh-chips">' + WH_SHORT_REASONS.map(x => '<button class="wh-chip' + (f.reason === x ? ' on' : '') + '" onclick="_whFix.reason=' + escapeAttr(JSON.stringify(x)) + ';whFixRender()">' + escapeHtml(x) + '</button>').join('') + '</div>' +
+    '<input class="form-input" id="wh-fix-msg" placeholder="Message to the stand (optional) — e.g. Miller Lite instead" style="margin:6px 0 10px">' +
+    '<button class="btn btn-primary wh-fix-save" ' + (changed && f.reason ? '' : 'disabled') + ' onclick="whFixSave()">Save — tell the stand</button>' +
+    '<button class="wh-fix-link" onclick="whCantFillOpen(_whFix.id)">Can\'t fill any of it?</button>');
+}
+function whFixStep(i, d) { const it = _whFix && _whFix.items[i]; if (!it) return; it._now = Math.max(0, it._now + d); whFixRender(); }
+function whFixOut(i) { const it = _whFix && _whFix.items[i]; if (!it) return; it._now = it._now === 0 ? it._was : 0; if (it._now === 0 && !_whFix.reason) _whFix.reason = 'Out of stock'; whFixRender(); }
+async function whFixSave() {
+  const f = _whFix; if (!f || !canFixStockRequest()) return;
+  const msg = String((document.getElementById('wh-fix-msg') || { value: '' }).value || '').trim();
+  const changes = f.items.filter(it => it._now !== it._was).map(it => ({ item: it.itemName, from: it._was, to: it._now }));
+  if (!changes.length) return toast('Change a number first', 'error');
+  if (!f.reason) return toast('Pick why it changed', 'error');
+  const keep = f.items.filter(it => it._now > 0).map(it => { const c = Object.assign({}, it, { qty: it._now, cases: it._now }); delete c._was; delete c._now; return c; });
+  if (!keep.length && !f.other) return whCantFillOpen(f.id, f.reason);
+  const row = await whLoadRawRequest(f.id); if (!row) return;
+  if (!['open', 'claimed'].includes(row.status)) { whSheetClose(); refreshAfterStockChange(); return toast('This order is already closed', 'error'); }
+  const me = (state.staffAccount && state.staffAccount.name) || state.whName || 'Warehouse';
+  const summary = changes.map(c => c.item + ' ' + c.from + '→' + (c.to || 'none')).join(', ') + ' (' + f.reason + ')' + (msg ? ' — ' + msg : '');
+  const lines = keep.map(it => it.qty + ' case' + (it.qty !== 1 ? 's' : '') + ' × ' + it.itemName + (it.pack ? ' (' + it.pack + ')' : ''));
+  let itemsText = lines.join('; '); if (f.other) itemsText += (itemsText ? '; ' : '') + 'Other: ' + f.other;
+  const j = row._j || {}, meta = j.meta || {};
+  const hist = (Array.isArray(meta.edit_history) ? meta.edit_history : []).concat([{ by: me, at: new Date().toISOString(), reason: f.reason, note: msg, changes }]);
+  const patch = { items: itemsText, items_json: Object.assign({}, j, { items: keep, meta: Object.assign({}, meta, { edited_by: me, edited_at: new Date().toISOString(), edit_note: summary, edit_history: hist }) }) };
+  const r = await sb('stock_requests?id=eq.' + encodeURIComponent(f.id) + '&status=in.(open,claimed)', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) }).catch(() => ({ _err: true }));
+  if (r._err || !Array.isArray(r) || !r.length) return toast('Could not save — it may have just been delivered', 'error');
+  whSheetClose(); _whFix = null;
+  if (row.requested_by_id) sendPushTo(row.requested_by_id, '✏️ Warehouse changed your order', row.stand + ' — ' + summary.slice(0, 110));
+  notifyStandLeadsAndSupervisors(row.stand, '✏️ Order changed · ' + row.stand, summary.slice(0, 140) + ' · ' + me, [row.requested_by_id]);
+  toast('✅ Saved — the stand was told', 'success');
+  refreshAfterStockChange();
+}
+let _whCantFill = null;
+async function whCantFillOpen(id, preset) {
+  if (!canFixStockRequest()) return toast('Only warehouse staff can decline an order', 'error');
+  const row = await whLoadRawRequest(id); if (!row) return;
+  if (!['open', 'claimed'].includes(row.status)) { whSheetClose(); refreshAfterStockChange(); return toast('This order is already closed', 'error'); }
+  _whCantFill = { id: String(id), row, reason: preset && WH_CANTFILL_REASONS.includes(preset) ? preset : '' };
+  whCantFillRender();
+}
+function whCantFillRender() {
+  const c = _whCantFill; if (!c) return;
+  whSheet('<div class="wh-fix-head"><div class="wh-fix-title no">✖ Can\'t fill this order</div><div class="wh-fix-sub">' + escapeHtml(c.row.stand) + ' · ' + escapeHtml(String(c.row.items || '').slice(0, 120)) + '</div></div>' +
+    '<div class="wh-fix-label">Why? <span>the stand sees this</span></div>' +
+    '<div class="wh-reasons">' + WH_CANTFILL_REASONS.map(x => '<button class="wh-reason' + (c.reason === x ? ' on' : '') + '" onclick="_whCantFill.reason=' + escapeAttr(JSON.stringify(x)) + ';whCantFillRender()">' + escapeHtml(x) + '</button>').join('') + '</div>' +
+    '<input class="form-input" id="wh-cant-msg" placeholder="Message to the stand (optional)" style="margin:6px 0 10px">' +
+    '<button class="btn btn-primary wh-fix-save no" ' + (c.reason ? '' : 'disabled') + ' onclick="whCantFillSave()">Decline — tell the stand</button>');
+}
+async function whCantFillSave() {
+  const c = _whCantFill; if (!c || !canFixStockRequest()) return;
+  if (!c.reason) return toast('Pick why', 'error');
+  const msg = String((document.getElementById('wh-cant-msg') || { value: '' }).value || '').trim();
+  const reason = c.reason + (msg ? ' — ' + msg : '');
+  const row = await whLoadRawRequest(c.id); if (!row) return;
+  if (!['open', 'claimed'].includes(row.status)) { whSheetClose(); refreshAfterStockChange(); return toast('This order is already closed', 'error'); }
+  const me = (state.staffAccount && state.staffAccount.name) || state.whName || 'Warehouse';
+  const j = row._j || { items: [], other: '' };
+  const patch = { status: 'denied', note: 'Declined: ' + reason, items_json: Object.assign({}, j, { meta: Object.assign({}, j.meta || {}, { denied_reason: reason, denied_by: me, denied_at: new Date().toISOString() }) }) };
+  const r = await sb('stock_requests?id=eq.' + encodeURIComponent(c.id) + '&status=in.(open,claimed)', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) }).catch(() => ({ _err: true }));
+  if (r._err || !Array.isArray(r) || !r.length) return toast('Could not decline — it may have just been delivered', 'error');
+  whSheetClose(); _whCantFill = null;
+  if (row.requested_by_id) sendPushTo(row.requested_by_id, '✖ Warehouse can\'t fill your order', row.stand + ' — ' + reason);
+  notifyStandLeadsAndSupervisors(row.stand, '✖ Order declined · ' + row.stand, reason + ' (' + me + ')', [row.requested_by_id]);
+  toast('Declined — the stand was told why', 'success');
+  refreshAfterStockChange();
 }
 
 // ── Reassign a stand request (Warehouse Manager / Supervisor) ──
