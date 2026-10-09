@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-09-fix-54
+- "Order for my stand": removed the Note box — just tap + and Send.
+
 ## 2026-10-09-fix-53
 - **Force Restock is locked to the right people.** QR scan, the in-app scanner and "Add Stock Myself" now work only for Warehouse staff, Managers (Support Manager / Manager / Admin), Supervisors (any stand), and real Stand Leads / NPO Leads (their own stand). Regular workers, NPO members, staff who only have portable "lead access for all", and subcontractor stand logins are told "Force Restock is for Warehouse, Stand Leads, Supervisors and Managers — ask your Stand Lead". "Add Stock Myself" is hidden for them.
 - A signed-in person who is not allowed is no longer sent to the sign-in screen (people were signing in again there and ending up on another stand, e.g. 401P BarS). A Stand Lead scanning another stand's QR is told it is not their stand.

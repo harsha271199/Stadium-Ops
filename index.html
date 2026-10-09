@@ -2771,8 +2771,6 @@
       <div id="order-food-list" style="margin-top:8px"></div>
     </div>
 
-    <label class="form-label">Note (optional)</label>
-    <input class="form-input" type="text" id="order-note" placeholder="e.g. we're out of Coors Light">
     <div style="height:150px"></div>
   </div>
   <div class="ord-bar">
@@ -4583,7 +4581,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-09-fix-53';
+const BUILD_TAG = '2026-10-09-fix-54';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9742,7 +9740,6 @@ async function goOrder(){
   state.orderWh={};state.orderFood={};state.orderEta=30;state.orderUrgency='Normal';
   state.orderStand=getOperationalStand(who)||who.homeStand||'';
   document.getElementById('order-search').value='';
-  document.getElementById('order-note').value='';
   document.getElementById('order-test-banner').style.display=orderTestMode()?'':'none';
   document.querySelectorAll('#order-eta .chip').forEach(c=>c.classList.toggle('selected',c.textContent.trim()==='30m'));
   document.querySelectorAll('#order-urgency .chip').forEach((c,i)=>c.classList.toggle('selected',i===0));
@@ -9847,7 +9844,7 @@ async function submitUnifiedOrder(){
   const who=getRequesterIdentity();
   const requestedBy=TIER_LABELS[who.tier]?who.name+' ('+TIER_LABELS[who.tier]+')':who.name;
   const etaMins=Number(state.orderEta||30),deadline=new Date(Date.now()+etaMins*60000).toISOString();
-  const typed=document.getElementById('order-note').value.trim();
+  const typed='';
   const note=(test?'[TEST] ':'')+typed;
   const out={wh:null,food:null};
   await withLock(btn,'Sending…',async()=>{
@@ -9895,7 +9892,6 @@ async function submitUnifiedOrder(){
     line('🍔','Kitchen',out.food,out.food?(out.food.count+' item'+(out.food.count===1?'':'s')+(out.food.runner?' → '+escapeHtml(out.food.runner):' → food runners')):'')+
     '<div style="font-size:12px;color:var(--text-2)">Need within '+etaMins+' min · '+escapeHtml(stand)+'</div>';
   if(okAll){
-    document.getElementById('order-note').value='';
     state.standTaskReturnScreen='';
     if(isSupportManagerSession()){state.supportOpsScope=stand;state.supportRequestStand=stand;showScreen('screen-bedcheck');restoreMgrSidebarState();supportOpsTab('stock',true);}
     else if(state.user){state.standRequestsStand=stand;showScreen('screen-stand-requests');}
