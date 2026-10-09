@@ -4583,7 +4583,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-08-fix-51';
+const BUILD_TAG = '2026-10-09-fix-52';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -16609,15 +16609,39 @@ async function renderKitchenRuns(rows){
     </div>`;
   }).join('');
 }
+// Only changes the order if it is still in the state the runner's screen
+// showed: still theirs and still open. A stale screen (the Food Manager moved
+// the order, or it was already delivered/declined) must not take it back.
+async function kitchenPatchIf(id,filter,patch){
+  if(String(id).startsWith('preview-')||_kitchenPreview)return kitchenPatch(id,patch);
+  const payload={...patch,updated_at:new Date().toISOString()};
+  const r=await sb('kitchen_requests?id=eq.'+encodeURIComponent(id)+filter,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)}).catch(()=>({_err:true,status:0}));
+  if(r&&r._queued)return kitchenPatch(id,patch); // offline: queue as before
+  if(r&&r._err)return null;
+  const x=Array.isArray(r)?r[0]:null;
+  if(!x)return {_stale:true};
+  const rows=state._kitchenRowsCache||[];const i=rows.findIndex(y=>String(y.id)===String(id));if(i>=0)rows[i]=x;else rows.unshift(x);state._kitchenRowsCache=rows;
+  return x;
+}
+async function kitchenStaleNotice(id){
+  const rows=await sb('kitchen_requests?id=eq.'+encodeURIComponent(id)+'&select=status,assigned_runner_name').catch(()=>({_err:true}));
+  const x=Array.isArray(rows)&&rows[0];
+  const msg=!x?'This order is gone':x.status==='delivered'?'Already delivered':x.status==='cancelled'?'This order was cancelled':x.assigned_runner_name?'The Food Manager moved this order to '+x.assigned_runner_name+' — no need to bring it':'This order is no longer yours';
+  toast('↔ '+msg,'error',7000);loadKitchenConsole();
+}
 async function kitchenRunnerPickup(id){
-  const r=await kitchenPatch(id,{status:'on_the_way',picked_up_at:new Date().toISOString()});
+  const me=encodeURIComponent(String((state.staffAccount&&state.staffAccount.empId)||''));
+  const r=await kitchenPatchIf(id,'&assigned_runner_id=eq.'+me+'&status=in.(open,preparing,ready)',{status:'on_the_way',picked_up_at:new Date().toISOString()});
+  if(r&&r._stale)return kitchenStaleNotice(id);
   if(!r)return toast('Could not update pickup — try again','error');
   if(r.requested_by_id)sendPushTo(r.requested_by_id,'🏃 Food delivery is on the way',(state.staffAccount?state.staffAccount.name:'Runner')+' is bringing food to '+r.stand);
   toast(r._queued?'📤 Pickup queued — keep the app open until Online':'🏃 On the way');
   loadKitchenConsole();
 }
 async function kitchenRunnerDeliver(id){
-  const r=await kitchenPatch(id,{status:'delivered',delivered_at:new Date().toISOString(),delivery_method:'runner_confirmed'});
+  const me=encodeURIComponent(String((state.staffAccount&&state.staffAccount.empId)||''));
+  const r=await kitchenPatchIf(id,'&assigned_runner_id=eq.'+me+'&status=not.in.(delivered,cancelled)',{status:'delivered',delivered_at:new Date().toISOString(),delivery_method:'runner_confirmed'});
+  if(r&&r._stale)return kitchenStaleNotice(id);
   if(!r)return toast('Could not finish delivery','error');
   if(r._queued)toast('📤 Delivery queued — keep the app open until Online');
 if(!_kitchenPreview){const items=r.items_json&&Array.isArray(r.items_json.items)?r.items_json.items:[];for(let i=0;i<items.length;i++){const x=items[i];if(!x.track_inventory)continue;await logMovement({stand:r.stand,item:x.itemName,qty:Number(x.qty||0),type:'kitchen_in',direction:'in',refTable:'kitchen_requests',refId:String(r.id),note:'Food delivery by '+(state.staffAccount?state.staffAccount.name:'Runner')});}}if(r.requested_by_id)sendPushTo(r.requested_by_id,'✅ Food delivery arrived',r.stand+' · '+kitchenItemsText(r).replace(/<[^>]+>/g,''));if(!r._queued)toast('✅ Delivered');loadKitchenConsole();}
@@ -23703,6 +23727,15 @@ async function whClaimAndDeliver(stand, transferId) {
         notifyStandLeadsAndSupervisors(stand,'🚚 Stock on the way · '+stand,who+' is bringing it',[res.requesterId]);
       }
     }
+    // Lost the race (someone else tapped On my way first): don't open a second
+    // delivery for the same stand — say who has it and go back to the list.
+    if(!claimedAny&&!alreadyMine){
+      const ids=eligiblePending.map(r=>encodeURIComponent(r.id)).join(',');
+      const now=await sb('stock_requests?id=in.('+ids+')&select=claimed_by,status').catch(()=>({_err:true}));
+      const by=Array.isArray(now)&&now.map(x=>x.claimed_by).find(Boolean);
+      toast('🚚 '+(by?by+' already took this':'Someone else already took this')+' — it\'s on the way','error',7000);
+      await loadWhToDeliver();return;
+    }
     const requestTransferId=await whGetOrCreateRequestTransfer(stand);
     if(!requestTransferId)return toast('Could not start this request delivery — try again','error');
     if(claimedAny)toast('🚚 On the way — the stand was notified');
@@ -24948,6 +24981,33 @@ async function tsQuickMarkDelivered() {
 
 const WH_SKIP_VERIFY_DATES = ['2026-10-02', '2026-10-03'];
 function whSkipVerifyToday() { return WH_SKIP_VERIFY_DATES.includes(stadiumDay()); }
+async function tsSyncLinkedRequests() {
+  const ids = [...new Set(_tsItems.map(it => it.source_request_id).filter(Boolean))];
+  if (!ids.length) return;
+  const cur = await sb('stock_requests?id=in.(' + ids.map(encodeURIComponent).join(',') + ')&select=id,status,items_json').catch(() => ({ _err: true }));
+  if (!Array.isArray(cur)) return; // offline: deliver what the screen shows
+  const changed = [], dropped = [];
+  for (const it of _tsItems.slice()) {
+    if (!it.source_request_id || it.delivered) continue;
+    const rq = cur.find(r => String(r.id) === String(it.source_request_id));
+    let j = rq && rq.items_json; if (typeof j === 'string') { try { j = JSON.parse(j); } catch (e) { j = null; } }
+    const now = rq && rq.status !== 'denied' && j && Array.isArray(j.items) ? j.items.find(x => ydItemKey(x.itemName) === ydItemKey(it.item_name)) : null;
+    if (!now && rq && j && Array.isArray(j.items)) {
+      dropped.push(it.item_name);
+      _tsItems.splice(_tsItems.indexOf(it), 1);
+      if (it.id) sb('transfer_items?id=eq.' + encodeURIComponent(it.id), { method: 'DELETE', headers: { Prefer: 'return=minimal' } }).catch(() => {});
+      continue;
+    }
+    const q = now ? Number(now.qty || now.cases || 0) : null;
+    if (q != null && q !== Number(it.qty_requested || 0)) {
+      changed.push(it.item_name + ' ' + it.qty_requested + '→' + q);
+      const typed = Number(it.qty_delivered || 0) > 0 && Number(it.qty_delivered) !== Number(it.qty_requested || 0);
+      it.qty_requested = q; if (!typed) it.qty_delivered = q;
+      if (it.id) sb('transfer_items?id=eq.' + encodeURIComponent(it.id), { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ qty_requested: q, qty_delivered: it.qty_delivered || 0 }) }).catch(() => {});
+    }
+  }
+  if (changed.length || dropped.length) toast('✏️ The order was changed while you were on the way — saved as: ' + changed.concat(dropped.map(n => n + ' removed')).join(', ').slice(0, 140), 'success', 8000);
+}
 async function tsCompleteDelivery(opts) {
   opts = opts || {};
   await withLock(document.getElementById('ts-deliver-btn'), 'Saving…', async () => {
@@ -24955,6 +25015,11 @@ async function tsCompleteDelivery(opts) {
     // e-signature — a delivery is final when the worker taps Delivered,
     // exactly like a routine stand request. Inventory is still logged.
     const isManagerPlanned = !whSkipVerifyToday() && !!(_tsTransfer.initiated_by && _tsTransfer.initiated_by.trim());
+    // A lead may have changed or declined the stand's order after this worker
+    // tapped On my way (the screen can be minutes old). Use the order as it is
+    // NOW: changed amounts win unless the worker typed a number themselves;
+    // removed items and declined orders drop out instead of being logged.
+    await tsSyncLinkedRequests();
 
     // Mark all items delivered. Routine/ad-hoc deliveries are final here,
     // so they write the physical ledger now. Manager-planned transfers do
@@ -25516,7 +25581,8 @@ async function foodMarkDelivered(id, standHint) {
   if (!canDeclineFood()) return toast('Not authorized', 'error');
   if (!(await confirmAction('Mark this Food order for ' + (standHint || 'the stand') + ' as delivered?', { title: 'Mark delivered', confirmLabel: '✅ Delivered' }))) return;
   const me = (state.staffAccount && state.staffAccount.name) || 'Manager';
-  const r = await kitchenPatch(id, { status: 'delivered', delivered_at: new Date().toISOString(), delivery_method: foodIsManagerSession() ? 'food_manager_marked' : 'manager_marked', updated_at: new Date().toISOString() });
+  const r = await kitchenPatchIf(id, '&status=not.in.(delivered,cancelled)', { status: 'delivered', delivered_at: new Date().toISOString(), delivery_method: foodIsManagerSession() ? 'food_manager_marked' : 'manager_marked' });
+  if (r && r._stale) return kitchenStaleNotice(id);
   if (!r) return toast('Could not update — try again', 'error');
   if (r.requested_by_id) sendPushTo(String(r.requested_by_id), '✅ Food delivered', (r.stand || standHint || '') + ' — marked delivered by ' + me);
   toast('✅ Marked delivered', 'success');
@@ -25772,6 +25838,7 @@ async function whFixSave() {
   if (!keep.length && !f.other) return whCantFillOpen(f.id, f.reason);
   const row = await whLoadRawRequest(f.id); if (!row) return;
   if (!['open', 'claimed'].includes(row.status)) { whSheetClose(); refreshAfterStockChange(); return toast('This order is already closed', 'error'); }
+  if (row.status === 'claimed' && row.claimed_by && state.staffAccount && state.staffAccount.role === 'warehouse_employee' && row.claimed_by !== ((state.staffAccount && state.staffAccount.name) || state.whName)) { whSheetClose(); return toast('🚚 ' + row.claimed_by + ' is already bringing this — ask a Warehouse lead to change it', 'error', 7000); }
   const me = (state.staffAccount && state.staffAccount.name) || state.whName || 'Warehouse';
   const summary = changes.map(c => c.item + ' ' + c.from + '→' + (c.to || 'none')).join(', ') + ' (' + f.reason + ')' + (msg ? ' — ' + msg : '');
   const lines = keep.map(it => it.qty + ' case' + (it.qty !== 1 ? 's' : '') + ' × ' + it.itemName + (it.pack ? ' (' + it.pack + ')' : ''));
@@ -25810,6 +25877,7 @@ async function whCantFillSave() {
   const reason = c.reason + (msg ? ' — ' + msg : '');
   const row = await whLoadRawRequest(c.id); if (!row) return;
   if (!['open', 'claimed'].includes(row.status)) { whSheetClose(); refreshAfterStockChange(); return toast('This order is already closed', 'error'); }
+  if (row.status === 'claimed' && row.claimed_by && state.staffAccount && state.staffAccount.role === 'warehouse_employee' && row.claimed_by !== ((state.staffAccount && state.staffAccount.name) || state.whName)) { whSheetClose(); return toast('🚚 ' + row.claimed_by + ' is already bringing this — ask a Warehouse lead to change it', 'error', 7000); }
   const me = (state.staffAccount && state.staffAccount.name) || state.whName || 'Warehouse';
   const j = row._j || { items: [], other: '' };
   const patch = { status: 'denied', note: 'Declined: ' + reason, items_json: Object.assign({}, j, { meta: Object.assign({}, j.meta || {}, { denied_reason: reason, denied_by: me, denied_at: new Date().toISOString() }) }) };

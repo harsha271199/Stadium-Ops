@@ -4,6 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-09-fix-52
+Game-day trial run of Food (Food Manager + 2 runners) and Warehouse (2 workers + Warehouse Manager) with a shared test database, trying to break it. Bugs found and fixed:
+- **Food — stale runner screen**: after the Food Manager moved an order to another runner, the first runner could still tap "On my way" and take it back. "On my way" / "Delivered" now only work if the order is still theirs and still open; otherwise: "The Food Manager moved this order to Jay — no need to bring it".
+- **Food — double delivery**: "Delivered" and the manager's "Mark delivered" now do nothing on an order that is already delivered or cancelled.
+- **Warehouse — On my way race**: when two workers tapped On my way at the same moment, the one who lost still got a delivery screen and a second delivery was started. Now: "Larry already took this — it's on the way", back to the job list.
+- **Warehouse — order changed while on the way**: if a lead changed the order (e.g. 5 → 2 cases) after the worker left, the delivery still logged 5. At Delivered the app now re-reads the order: changed amounts are used (unless the worker typed a number), removed items and declined orders drop out, and the worker sees what changed.
+- **Warehouse — declining someone else's run**: a warehouse employee could Can't-fill / change an order another worker was already carrying. Now blocked ("Larry is already bringing this — ask a Warehouse lead"); leads still can.
+
 ## 2026-10-08-fix-51
 - **Coke → Pepsi: Coke products are hidden in the app, kept in downloads.** Any sheet item named COKE or SPRITE (Bottled 20oz Coke / Diet Coke / Coke Zero / Sprite, and the BIB Coke / Diet Coke / Coke Zero / Sprite boxes) no longer shows on Count In / Count Out / Transfers, Request Stock, Order for my stand, Force Restock, warehouse screens or item search.
   - Downloads (inventory CSV, printable view, **Yellow Dog copy-paste**) keep those rows in their exact sheet position with **0** for Count In and Count Out, so copy-paste rows still line up.
