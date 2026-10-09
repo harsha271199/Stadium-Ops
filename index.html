@@ -482,6 +482,54 @@
   .wh-tool .tile-sub{display:none}
   .wh-tool.tile-red{border-color:#DC2626;background:#FEF2F2}
   .wh-big-card.tile-red{background:linear-gradient(135deg,#8C1D40,#B4234F)}
+  /* Food Delivery (fix-57): one tab bar, area card, clean order cards */
+  .fd-tabs{display:flex;overflow-x:auto}
+  .fd-tabs .tab-item{white-space:nowrap}
+  .fd-k{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-2);margin:2px 2px 6px}
+  .fd-area{background:var(--card);border:1px solid var(--border);border-left:5px solid #16A34A;border-radius:12px;padding:10px 12px;margin-bottom:10px}
+  .fd-area.none{border-left-color:#F59E0B}
+  .fd-area-k{font-size:10px;font-weight:900;letter-spacing:1px;color:var(--text-2)}
+  .fd-area-v{font-size:16px;font-weight:900;margin-top:2px}.fd-area-v small{font-size:12px;font-weight:700;color:var(--text-2)}
+  .fd-area-s{font-size:12px;color:var(--text-2);margin-top:3px}
+  .fm-card{background:var(--card);border:1px solid var(--border);border-left:5px solid #16A34A;border-radius:14px;padding:12px 14px;margin-bottom:10px}
+  .fm-card.bad{border-left-color:#DC2626}.fm-card.warn{border-left-color:#F59E0B}.fm-card.go{border-left-color:#2563EB}
+  .fm-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .fm-stand{font-size:17px;font-weight:900;line-height:1.2}
+  .fm-eta{font-size:12px;font-weight:800;white-space:nowrap;color:var(--text-2)}.fm-eta.bad{color:#DC2626}
+  .fm-items{font-size:15px;margin-top:5px;line-height:1.35}
+  .fm-note{font-size:12px;background:var(--bg);border-radius:8px;padding:6px 8px;margin-top:6px}
+  .fm-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;font-size:13px}
+  .fm-who{font-weight:800;color:#15803D}.fm-who.bad{color:#DC2626}
+  .fm-step{font-size:12px;color:var(--text-2);text-align:right}.fm-step.warn{color:#B45309;font-weight:800}
+  .fm-act{display:flex;gap:8px;margin-top:8px;align-items:stretch}
+  .fm-pick{margin:0!important;font-size:15px!important;min-height:46px;flex:1}
+  .fm-me{flex:0 0 auto;border:2px solid #16A34A;color:#15803D;background:transparent;border-radius:10px;font-weight:800;font-size:14px;padding:0 14px}
+  .fm-big{margin-top:9px!important;min-height:50px;font-size:16px}
+  .fm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:11px;color:var(--text-3)}
+  .fm-foot a{font-size:13px;font-weight:800;color:var(--asu-maroon);text-decoration:none;padding:4px 0 4px 10px}
+  .fm-more{display:none;border-top:1px dashed var(--border);margin-top:8px;padding-top:8px}.fm-more.open{display:block}
+  .fm-more-k{font-size:10px;font-weight:900;letter-spacing:1px;color:var(--text-2);margin-bottom:4px}
+  .fm-more-btns{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+  .fm-more-btns button{min-height:42px;border-radius:10px;border:1.5px solid var(--border);background:transparent;font-weight:800;font-size:13px;color:var(--text)}
+  .fm-more-btns .ok{color:#15803D;border-color:#16A34A}.fm-more-btns .wh{color:#7C3AED;border-color:#7C3AED}.fm-more-btns .no{color:#DC2626;border-color:#DC2626}
+  .fr-card{background:var(--card);border:1px solid var(--border);border-left:5px solid #16A34A;border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+  .fr-card.none{border-left-color:#9CA3AF}
+  .fr-top{display:flex;justify-content:space-between;align-items:center;gap:8px}.fr-name{font-weight:900;font-size:15px}
+  .fr-load{font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;background:#DCFCE7;color:#15803D;white-space:nowrap}.fr-load.busy{background:#DBEAFE;color:#1D4ED8}
+  .fr-area{font-size:12px;color:var(--text-2);margin-top:3px}.fr-card.none .fr-area{color:#B45309}
+  .fr-foot{display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-top:5px}.fr-foot b{color:var(--asu-maroon)}
+  .q3-bar{border-radius:14px;padding:12px 14px;margin-bottom:10px;border:2px solid #DC2626;background:#FEF2F2;color:#7F1D1D}
+  .q3-bar.open{border-color:var(--border);background:var(--card);color:var(--text)}
+  .q3-bar .q3-t{font-size:16px;font-weight:900}.q3-bar .q3-s{font-size:12px;margin-top:3px;line-height:1.4}
+  .q3-bar button{margin-top:9px;width:100%;min-height:46px;border-radius:10px;font-weight:900;font-size:14px;border:none;background:#DC2626;color:#fff}
+  .q3-bar.on button{background:transparent;border:2px solid #DC2626;color:#B91C1C}
+  .q3-lock{border:3px solid #DC2626;background:#FEF2F2;color:#7F1D1D;border-radius:14px;padding:14px;margin:8px 0 10px;text-align:center}
+  .q3-lock .q3-big{font-size:22px;font-weight:900;line-height:1.2}
+  .q3-lock .q3-s{font-size:13px;margin-top:6px;line-height:1.45}
+  .q3-note{font-size:12px;font-weight:800;color:#B91C1C;background:#FEF2F2;border-radius:10px;padding:8px 10px;margin:6px 0}
+  .ord-locked{opacity:.45;pointer-events:none}
+  .ord-it-top{margin:0 0 10px}
+  [data-theme="dark"] .q3-bar,[data-theme="dark"] .q3-lock,[data-theme="dark"] .q3-note{background:#3B0A0A;color:#FECACA}
   .food-cov{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;color:var(--text-2);margin:0 2px 10px}
   .food-cov button{border:1px solid var(--border);background:var(--bg-card);border-radius:999px;padding:5px 11px;font-size:11.5px;font-weight:800;color:var(--text);cursor:pointer;font-family:inherit}
   .wh-emp-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 4px}
@@ -2186,6 +2234,7 @@
     <div><div class="page-title">📦 Requests</div><div class="page-sub" id="request-hub-context">Fast game-day help</div></div>
   </div>
   <div class="content">
+    <div id="hub-q3"></div>
     <button class="sub-menu-btn" id="req-hub-existing-btn" style="display:none;border-left:4px solid #7C3AED" onclick="openLeadershipRequests()">
       <span class="smb-icon">📣</span>
       <div><div class="smb-label">All Requests · today <span id="stand-requests-badge" style="display:none;background:var(--aramark-red);color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;margin-left:6px"></span></div><div class="smb-sub">Stock · Food · IT across all stands</div></div>
@@ -2753,12 +2802,24 @@
   </div>
   <div class="content">
     <div id="order-test-banner" class="ord-test" style="display:none">🧪 TEST MODE — orders are marked [TEST] and nobody gets a notification</div>
+    <div id="order-q3"></div>
     <div id="order-stand-picker" style="display:none;margin-bottom:10px">
       <label class="form-label" style="margin-top:0">Which stand?</label>
       <select class="form-input" id="order-stand-select" onchange="orderStandChanged()"></select>
     </div>
     <div class="ord-howto">Tap <b>+</b> on what you need. One <b>Send</b> → drinks &amp; snacks go to the <b>Warehouse</b>, food goes to the <b>Kitchen</b>, at the same time.</div>
 
+    <div class="ord-sec ord-sec-it ord-it-top" style="border-left:5px solid #2563EB">
+      <div class="ord-sec-h"><span>🔧 Something broken?</span></div>
+      <div class="ord-sec-sub">Tap it — IT gets a ticket for this stand right away (separate from your order)</div>
+      <div class="ord-it-chips">
+        <button type="button" onclick="orderOpenIT('POS Handheld')">📱 POS Handheld</button>
+        <button type="button" onclick="orderOpenIT('POS Menu')">📋 POS Menu</button>
+        <button type="button" onclick="orderOpenIT('POS Tablet')">💳 POS Tablet</button>
+        <button type="button" onclick="orderOpenIT('TV / Menu Board')">📺 TV / Menu Board</button>
+        <button type="button" onclick="orderOpenIT('Other')">❓ Other</button>
+      </div>
+    </div>
     <div class="ord-sec ord-sec-wh">
       <div class="ord-sec-h"><span>📦 Warehouse</span><span class="ord-sec-unit">cases</span></div>
       <div class="ord-sec-sub">Drinks · popcorn · candy · snacks · ice · CO2 · draft &amp; souvenir cups</div>
@@ -2773,17 +2834,6 @@
       <div id="order-food-list" style="margin-top:8px"></div>
     </div>
 
-    <div class="ord-sec ord-sec-it" style="border-left:5px solid #2563EB">
-      <div class="ord-sec-h"><span>🔧 Something broken?</span></div>
-      <div class="ord-sec-sub">Tap it — IT gets a ticket for this stand (separate from your order)</div>
-      <div class="ord-it-chips">
-        <button type="button" onclick="orderOpenIT('POS Handheld')">📱 POS Handheld</button>
-        <button type="button" onclick="orderOpenIT('POS Menu')">📋 POS Menu</button>
-        <button type="button" onclick="orderOpenIT('POS Tablet')">💳 POS Tablet</button>
-        <button type="button" onclick="orderOpenIT('TV / Menu Board')">📺 TV / Menu Board</button>
-        <button type="button" onclick="orderOpenIT('Other')">❓ Other</button>
-      </div>
-    </div>
 
 
     <div style="height:150px"></div>
@@ -2986,6 +3036,7 @@
         </div>
       </div>
       <div id="mgr-push-switch" style="display:none;margin-bottom:10px"></div>
+      <div id="mgr-q3-bar"></div>
       <div class="stand-card">
         <div class="full-name" id="mgr-simple-name">—</div>
         <div class="role-badge supervisor" id="mgr-simple-role">MANAGER</div>
@@ -3836,6 +3887,7 @@
   </div>
   <div class="content">
     <div id="kitchen-req-preview-notice" class="notice warning" style="display:none;font-size:11px">Preview mode: Food Delivery tables are not available, so Food requests on this preview device are stored locally only.</div>
+    <div id="kitchen-q3"></div>
     <div id="kitchen-existing-requests" style="margin-bottom:8px"></div>
     <div id="kitchen-hold-override-wrap" style="display:none"></div>
     <div id="kitchen-req-stand-picker" style="display:none">
@@ -3882,36 +3934,16 @@
     </div>
   </div>
   <div class="content">
-    <div class="food-profile-card" id="food-profile-card">
-      <div class="food-profile-head">
-        <div class="food-profile-avatar" id="food-profile-avatar">🍽️</div>
-        <div class="food-profile-main">
-          <div class="food-profile-name" id="food-profile-name">Food Delivery</div>
-          <div class="food-profile-meta"><span class="food-role-badge" id="food-profile-role">FOOD TEAM</span><span id="food-profile-scope">Game-day delivery</span></div>
-        </div>
-        <div class="food-live-dot">Live</div>
-      </div>
-      <div class="food-profile-stats" id="food-profile-stats">
-        <div class="food-profile-stat"><div class="n" id="food-prof-active">0</div><div class="l">Active</div></div>
-        <div class="food-profile-stat"><div class="n" id="food-prof-unclaimed">0</div><div class="l">Need Runner</div></div>
-        <div class="food-profile-stat"><div class="n" id="food-prof-ready">0</div><div class="l">Ready</div></div>
-        <div class="food-profile-stat"><div class="n" id="food-prof-onway">0</div><div class="l">On Way</div></div>
-        <div class="food-profile-stat"><div class="n" id="food-prof-due">0</div><div class="l">Due ≤10m</div></div>
-      </div>
-      <div class="food-profile-actions">
-        <button class="food-profile-action primary" id="food-profile-runner-areas" onclick="foodManagerOpenRunnerAreas()">👥 Runner Areas</button>
-        <button class="food-profile-action" onclick="requestPushPermission()">🔔 Alerts <span id="food-profile-alert-state">Check</span></button>
-        <button class="food-profile-action" onclick="loadKitchenConsole()">↻ Refresh</button>
-      </div>
-    </div>
     <div id="kitchen-preview-notice" class="notice warning" style="display:none;font-size:11px">Preview mode: Kitchen tables/accounts are not live yet. This screen uses local demo data on this device until the included migration is intentionally applied.</div>
-    <div id="kitchen-coverage-bar" class="first-game-help" style="display:none;margin-bottom:9px"></div>
     <div id="food-alert-status" style="margin-bottom:9px"></div>
+    <div id="food-q3-bar"></div>
+    <div id="kitchen-coverage-bar" style="display:none"></div>
     <div id="food-mgr-strip" style="display:none;margin-bottom:12px"></div>
-    <div class="tab-bar" id="kitchen-tabs">
-      <div class="tab-item active" id="kitchen-tab-queue" onclick="kitchenTab(this,'queue')">📥 Available Jobs <span class="badge-count" id="kitchen-queue-count">0</span></div>
+    <div class="tab-bar fd-tabs" id="kitchen-tabs">
       <div class="tab-item" id="kitchen-tab-runs" onclick="kitchenTab(this,'runs')">🚚 My Jobs <span class="badge-count" id="kitchen-run-count">0</span></div>
-      <div class="tab-item" id="kitchen-tab-assign" onclick="kitchenTab(this,'assign')">👥 Runner Areas</div>
+      <div class="tab-item active" id="kitchen-tab-queue" onclick="kitchenTab(this,'queue')"><span class="fd-tab-label">📥 Available</span> <span class="badge-count" id="kitchen-queue-count">0</span></div>
+      <div class="tab-item" id="kitchen-tab-assign" onclick="kitchenTab(this,'assign')">🏃 Runners</div>
+      <div class="tab-item" id="kitchen-tab-chat" onclick="foodOpenChat()">💬 Chat <span class="chat-unread-pill" style="display:none">0</span></div>
     </div>
     <div id="kitchen-queue"><div class="loading"><div class="spinner"></div>Loading…</div></div>
     <div id="kitchen-runs" style="display:none"></div>
@@ -4596,7 +4628,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-09-fix-56';
+const BUILD_TAG = '2026-10-09-fix-57';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4637,7 +4669,7 @@ function showScreen(id) {
   window.scrollTo(0, 0);
   clearInterval(state.refreshInterval);
   updateFloatingContactVisibility();
-  if (id === 'screen-submenu-requests') prepareRequestHub();
+  if (id === 'screen-submenu-requests') { prepareRequestHub(); q3State().then(st => { const el = document.getElementById('hub-q3'); if (el) el.innerHTML = q3NoticeHtml(st); }).catch(()=>{}); }
   if (id === 'screen-warehouse') { loadWarehouse(); state.refreshInterval = setInterval(loadWarehouse, 10000); }
   if (id === 'screen-kitchen') { loadKitchenConsole(); state.refreshInterval = setInterval(loadKitchenConsole, 10000); }
   if (id === 'screen-my-kitchen') { loadMyKitchenRequests(); state.refreshInterval = setInterval(loadMyKitchenRequests, 12000); }
@@ -9557,6 +9589,11 @@ async function submitStock() {
   });
   const other = canTypeFreeRequests() ? document.getElementById('stock-other').value.trim() : '';
   if (jsonItems.length === 0 && !other) return toast('Enter a quantity for at least one item (or use Other)', 'error');
+  { const st = await q3State(true).catch(()=>null);
+    if (st && st.locked && !q3CanOrder()) {
+      const alc = jsonItems.filter(x => q3IsAlcohol(x.itemName)).map(x => x.itemName);
+      if (alc.length) return toast('🔒 3rd quarter — alcohol can\'t be ordered now. Take off: ' + alc.slice(0,3).join(', ') + (alc.length > 3 ? '…' : '') + ' — or ask your Supervisor.', 'error', 10000);
+    } }
   { const gStand=state.stockTargetStand||getRequesterIdentity().homeStand; const gMsg=await openRequestGuard('stock',gStand); if(gMsg) return toast(gMsg,'error',8000); }
   const duplicateHits=stockDuplicateOverlap(jsonItems);
   if(duplicateHits.length){
@@ -9741,9 +9778,9 @@ async function orderLoadHistory(){
 // requests (picked AND typed by hand). They sit with the stand's own
 // most-ordered items in one "⭐ Most needed" list at the top.
 const ORDER_STARTERS={
-  main:[/\bICE\b/,/CUP LOYALTY/,/DASANI|SMART WATER|AQUAFINA/,/POPCORN - BAG/,/\b20 ?# ?CO2\b|\bCO2 35/,/GATORADE/,/HUSS|HALO IPA/,/CHIP .*KETTLE/],
-  nacho:[/\bICE\b/,/POPCORN - BAG/,/CUP LOYALTY/,/DASANI|SMART WATER/,/\b20 ?# ?CO2\b|\bCO2 35/,/CHIP .*KETTLE/],
-  pizza:[/\bICE\b/,/POPCORN - BAG/,/CUP LOYALTY/,/DASANI|SMART WATER/,/\b20 ?# ?CO2\b|\bCO2 35/,/CHIP .*KETTLE/],
+  main:[/\bICE\b/,/CUP LOYALTY/,/DASANI|SMART WATER|AQUAFINA/,/POPCORN - BAG/,/SOUVENIR/,/\b20 ?# ?CO2\b|\bCO2 35/,/GATORADE/,/HUSS|HALO IPA/,/CHIP .*KETTLE/],
+  nacho:[/\bICE\b/,/POPCORN - BAG/,/SOUVENIR/,/CUP LOYALTY/,/DASANI|SMART WATER/,/\b20 ?# ?CO2\b|\bCO2 35/,/CHIP .*KETTLE/],
+  pizza:[/\bICE\b/,/POPCORN - BAG/,/SOUVENIR/,/CUP LOYALTY/,/DASANI|SMART WATER/,/\b20 ?# ?CO2\b|\bCO2 35/,/CHIP .*KETTLE/],
   beerport:[/TOPO CHICO/,/COORS LIGHT/,/DEVILS HALO LAGER/,/MILLER LITE/,/DOS EQUIS/,/SMART WATER|LIFE WATER/,/\bICE\b/,/SUN DEVIL LAGER/,/SAUV BLANC|PINOT GRIGIO/],
   bevmkt:[/DEVILS HALO LAGER/,/SIMPLY SPIKED/,/TOPO CHICO/,/SMART WATER/,/CHIP .*KETTLE/,/\bICE\b/],
   gameday:[/TOPO CHICO/,/SIMPLY SPIKED/,/DOS EQUIS/,/LIFE WATER|SMART WATER/,/\bICE\b/],
@@ -9762,6 +9799,9 @@ const ORDER_BEER_TYPES=['main','nacho','pizza','beerport','bevmkt','gameday','ba
 const ORDER_FOOD_TYPES=['main','nacho','pizza'];
 const ORDER_EXTRAS=[
   {name:'ICE - BAG',unit:'BAG',word:'bag',grp:'needs',test:/\bICE\b/,types:null},
+  {name:'WATER - BOTTLED 20OZ (Dasani / Aquafina)',unit:'BOTTLE',word:'case',grp:'soda',test:/DASANI|SMART WATER|AQUAFINA|LIFE WATER/,types:null},
+  {name:'POPCORN - BAG ASU 85OZ',unit:'EACH',word:'case',grp:'snack',test:/POPCORN/,types:ORDER_FOOD_TYPES},
+  {name:'CUP SOUVENIR SODA 32OZ',unit:'EACH',word:'case',grp:'needs',test:/SOUVENIR/,types:ORDER_FOOD_TYPES},
   {name:'BEER - CAN 19.2OZ HUSS DEVIL\'S HALO IPA',unit:'CAN',word:'case',grp:'beer',test:/HUSS|HALO IPA/,types:ORDER_BEER_TYPES},
   {name:'SUN DEVIL LAGER - CAN',unit:'CAN',word:'case',grp:'beer',test:/SUN DEVIL LAGER/,types:['beerport','gameday','bevmkt']},
   {name:'MARGARITA CAN - MANGO (Clubtails)',unit:'CAN',word:'case',grp:'beer',test:/MARGARITA.*MANGO|MANGO.*MARGARITA/,types:ORDER_BEER_TYPES},
@@ -9824,6 +9864,8 @@ async function goOrder(){
   document.querySelectorAll('#order-urgency .chip').forEach((c,i)=>c.classList.toggle('selected',i===0));
   showScreen('screen-order');
   { const f=document.querySelector('#screen-order .ord-sec-food'); if(f)f.style.display=(state.user&&state.user.isSubcontractor)?'none':''; }
+  state.orderQ3Blocked=false;document.getElementById('order-q3').innerHTML='';
+  await orderApplyQ3();
   orderRenderFood();
   const picker=document.getElementById('order-stand-picker');
   const needsPicker=isSupervisorSession()||['support_manager','manager','admin'].includes(who.tier||'')||!who.homeStand||isLimitedAreaLead();
@@ -9863,6 +9905,18 @@ async function orderLoadStand(stand){
   state.orderFavs.forEach(f=>{const it=state.orderWhItems[f.i];it._home=it._grp;it._grp='fav';it._hint=f.why;});
   orderRenderWh();orderSummary();
 }
+// 3rd quarter: food & alcohol closed for people who can't order any more.
+async function orderApplyQ3(force){
+  const st=await q3State(!!force).catch(()=>null);
+  state.orderQ3Blocked=!!(st&&st.locked&&!q3CanOrder());
+  const el=document.getElementById('order-q3');if(el)el.innerHTML=q3NoticeHtml(st);
+  if(state.orderQ3Blocked){
+    // Drop anything already picked that can't be ordered now.
+    state.orderFood={};
+    (state.orderWhItems||[]).forEach((it,i)=>{if(q3IsAlcohol(it.itemName))delete state.orderWh[i];});
+  }
+  return st;
+}
 function orderStepBtns(kind,key,qty){
   return '<button type="button" class="stock-step-btn" aria-label="One fewer" onclick="orderStep(\''+kind+'\',\''+key+'\',-1)">−</button>'+
     '<div class="ord-qty" id="ordq-'+kind+'-'+key+'">'+(qty||0)+'</div>'+
@@ -9873,9 +9927,11 @@ function orderRenderWh(){
   const items=state.orderWhItems||[];
   if(!items.length){el.innerHTML='<div class="notice info" style="font-size:12px">No drinks or snacks on this stand\'s sheet. Ask your Supervisor.</div>';return;}
   const q=(document.getElementById('order-search').value||'').toLowerCase().trim();
+  const q3=!!state.orderQ3Blocked;
   let html='';
   ORDER_WH_GROUPS.forEach(([g,label])=>{
-    let rows=items.map((it,i)=>({it,i})).filter(x=>x.it._grp===g&&(!q||String(x.it.itemName).toLowerCase().includes(q)));
+    if(q3&&g==='beer'){html+='<div class="ord-grp">'+label+'</div><div class="q3-note">🔒 Closed for the 3rd quarter — ask your Supervisor if you still need it.</div>';return;}
+    let rows=items.map((it,i)=>({it,i})).filter(x=>x.it._grp===g&&(!q||String(x.it.itemName).toLowerCase().includes(q))&&!(q3&&q3IsAlcohol(x.it.itemName)));
     if(g==='fav'){const ord=(state.orderFavs||[]).map(f=>f.i);rows.sort((a,b)=>ord.indexOf(a.i)-ord.indexOf(b.i));}
     if(!rows.length)return;
     html+='<div class="ord-grp">'+label+'</div>'+rows.map(({it,i})=>{const v=Number(state.orderWh[i]||0);
@@ -9885,6 +9941,7 @@ function orderRenderWh(){
 }
 function orderRenderFood(){
   const el=document.getElementById('order-food-list');if(!el)return;
+  if(state.orderQ3Blocked){el.innerHTML='<div class="q3-note" style="font-size:14px;padding:12px">🔒 Food is closed for the 3rd quarter.<br><span style="font-weight:600">Still need food? Ask your Supervisor — they can order it for your stand.</span></div>';return;}
   el.innerHTML=ORDER_FOOD.map(f=>{const v=Number((state.orderFood||{})[f.key]||0);
     return '<div class="ord-row'+(v?' on':'')+'" id="ordr-food-'+f.key+'"><div class="ord-name">'+f.icon+' '+escapeHtml(f.name)+(f.sub?'<small>'+escapeHtml(f.sub)+'</small>':'')+'</div>'+orderStepBtns('food',f.key,v)+'</div>';}).join('');
 }
@@ -9914,6 +9971,19 @@ async function submitUnifiedOrder(){
   const stand=state.orderStand;if(!stand)return toast('Pick a stand first','error');
   const wh=[];(state.orderWhItems||[]).forEach((it,i)=>{const v=Number(state.orderWh[i]||0);if(v>0)wh.push({itemName:it.itemName,unit:it.unit||'',pack:it.pack||'',qty:v,cases:v,word:it._word||''});});
   const food=ORDER_FOOD.filter(f=>Number(state.orderFood[f.key]||0)>0).map(f=>({itemName:f.name,qty:Number(state.orderFood[f.key]),unit:'each',pack:'',track_inventory:false}));
+  { // 3rd quarter can start while the screen is open — check again at Send.
+    const st=await q3State(true).catch(()=>null);
+    if(st&&st.locked&&!q3CanOrder()){
+      const nAlc=wh.filter(x=>q3IsAlcohol(x.itemName)).length,nFood=food.length;
+      if(nAlc||nFood){
+        for(let i=wh.length-1;i>=0;i--)if(q3IsAlcohol(wh[i].itemName))wh.splice(i,1);
+        food.length=0;
+        await orderApplyQ3();orderRenderWh();orderRenderFood();orderSummary();
+        if(!wh.length)return toast('🔒 3rd quarter — food & alcohol ordering is closed. Ask your Supervisor.','error',9000);
+        if(!await confirmAction('Food and alcohol are closed for the 3rd quarter, so they were taken off.\n\nSend the rest ('+wh.length+' item'+(wh.length===1?'':'s')+') to the Warehouse?',{title:'🔒 3rd quarter',confirmLabel:'Send the rest',cancelLabel:'Cancel'}))return;
+      }
+    }
+  }
   if(!wh.length&&!food.length)return toast('Tap + on at least one item','error');
   let sendWh=wh.length>0,sendFood=food.length>0;
   const [gW,gF]=await Promise.all([sendWh?openRequestGuard('stock',stand):null,sendFood?openRequestGuard('food',stand):null]);
@@ -9955,7 +10025,7 @@ async function submitUnifiedOrder(){
       out.food={ok:!!made,queued:!!(made&&made._queued),error:made?'':((e.status?'HTTP '+e.status+' ':'')+(e.msg||'')).trim(),runner:rname,count:food.reduce((a,b)=>a+b.qty,0)};
       if(made&&!test){
         if(rid)sendPushTo(rid,'🍔 New order — your area · '+stand,row.items.slice(0,90)+' · tap My Jobs');
-        else{pushOnDuty(['food_manager','kitchen_coordinator'],'🍽️ Food order needs a runner · '+stand,row.items.slice(0,90));pushOnDuty(['food_runner','kitchen_runner'],'🍽️ New food order · '+stand,row.items.slice(0,75));}
+        else{pushOnDuty(['food_manager','kitchen_coordinator'],'🍽️ Food order needs a runner · '+stand,row.items.slice(0,90));foodPushUncovered('🍽️ New food order · '+stand,row.items.slice(0,75));}
       }
     })());
     await Promise.all(jobs);
@@ -11278,6 +11348,7 @@ async function setupMgrSimpleHome(){
   }
   await mgrSimpleRefreshRequestBadge();
   renderPushSwitch();
+  q3RenderBar('mgr-q3-bar');
   await loadManagerGameDayInfo();
 }
 
@@ -15440,7 +15511,7 @@ function renderContactBar() {
 function updateFloatingContactVisibility(){
   const btn=document.getElementById('float-contact-btn'); if(!btn)return;
   const loggedIn=!!(state.user||state.staffAccount);
-  const blocked=['screen-login','screen-npo-login','screen-npo-stand-picker','screen-chat','screen-pin','screen-golfcart'].includes(state.currentScreen)||(state.currentScreen==='screen-bedcheck'&&!chatLevel());
+  const blocked=['screen-login','screen-npo-login','screen-npo-stand-picker','screen-chat','screen-pin','screen-golfcart','screen-kitchen'].includes(state.currentScreen)||(state.currentScreen==='screen-bedcheck'&&!chatLevel());
   const chat=!!chatLevel();
   const ic=document.getElementById('fc-icon'),lb=document.getElementById('fc-label');
   if(ic)ic.textContent=chat?'💬':'📞';
@@ -16163,6 +16234,7 @@ async function goKitchenRequest(targetStand){
   const picker=document.getElementById('kitchen-req-stand-picker');
   if(!stand||!who.homeStand||isLimitedAreaLead()){picker.style.display='';await populateStandPicker('kitchen-req-stand',stand);const ks=document.getElementById('kitchen-req-stand');if(ks&&stand)ks.value=stand;}else picker.style.display='none';
   await loadKitchenStandItems(stand); showScreen('screen-kitchen-request');
+  q3State(true).then(st=>{const el=document.getElementById('kitchen-q3');if(el)el.innerHTML=q3NoticeHtml(st);}).catch(()=>{});
 }
 async function kitchenReqStandChanged(){const s=document.getElementById('kitchen-req-stand').value;state.kitchenTargetStand=s;if(isManagerOpsSession()&&s)mgrOpsSyncRequestStand(s);await loadKitchenStandItems(s);}
 async function loadKitchenStandItems(stand){document.getElementById('kitchen-req-sub').textContent=stand||'Pick a stand';_kitchenStandItems=[];loadExistingKitchenRequestsForStand(stand);if(stand){const res=await api('getStandSheet',{stand}).catch(()=>({ok:false}));if(res.ok&&res.items)_kitchenStandItems=res.items;}const common=['Burgers','Cheeseburgers','Chicken Tenders','Hot Dogs','Watermelon','Fruit Cups','Brats','Fries','Pretzels','Pizza'];const names=[...new Set([...common,..._kitchenStandItems.map(x=>x.itemName)])];document.getElementById('kitchen-food-options').innerHTML=names.map(x=>'<option value="'+escapeAttr(x)+'">').join('');}
@@ -16239,6 +16311,7 @@ function foodLooksLikeWarehouse(text){
 async function submitKitchenRequest(){
   await syncMyStandFromSchedule(true).catch(()=>{});if(state.user&&!isSupervisorSession()&&!isLimitedAreaLead()&&state.user.stand)state.kitchenTargetStand=state.user.stand;
   const who=getRequesterIdentity();const stand=state.kitchenTargetStand||getOperationalStand(who);const items=_kitchenDraft.filter(x=>x.itemName&&Number(x.qty)>0);if(!stand)return toast('Choose a stand','error');if(!items.length||String(items[0].itemName||'').trim().length<3)return toast('Type the food and how many in the box','error');
+  { const st=await q3State(true).catch(()=>null); if(st&&st.locked&&!q3CanOrder()) return toast('🔒 3rd quarter — food ordering is closed. Ask your Supervisor.','error',9000); }
   { const gMsg=await openRequestGuard('food',stand); if(gMsg) return toast(gMsg,'error',8000); }
   // 10/3: 7 of 28 food requests were really warehouse items (ice, candy,
   // popcorn, beer) and got cancelled. Catch that before it's sent.
@@ -16311,7 +16384,7 @@ async function submitKitchenRequest(){
     }else{
       // No runner covers this stand's area — falls into the normal
       // self-serve Available Jobs queue, same as before.
-      pushOnDuty(['food_runner','kitchen_runner'],'🍽️ New food order · '+stand,row.items.slice(0,75));
+      foodPushUncovered('🍽️ New food order · '+stand,row.items.slice(0,75));
     }
   }
   toast(made._queued?'📤 Food request queued — will send when WiFi returns':('🍔 Food request sent'+(autoAssignName?' · assigned to '+autoAssignName:'')));
@@ -16328,6 +16401,14 @@ async function goMyKitchenRequests(){showScreen('screen-my-kitchen');await loadM
 async function loadMyKitchenRequests(){const who=getRequesterIdentity();const stand=getOperationalStand(who)||who.homeStand||state.kitchenTargetStand||'';const rows=await kitchenFetchRequests();document.getElementById('kitchen-req-preview-notice').style.display='none';const mine=rows.filter(r=>stand?r.stand===stand:(r.requested_by_id===who.empId)).filter(r=>!['delivered','cancelled'].includes(r.status));const el=document.getElementById('my-kitchen-list');if(!mine.length){el.innerHTML='<div class="empty"><div class="empty-icon">🍔</div><p>No open Food requests.</p></div>';return;}el.innerHTML=mine.map(kitchenRequestCard).join('');}
 function kitchenRequestCard(r){const who=r.assigned_runner_name?' · '+escapeHtml(r.assigned_runner_name):'';return `<div class="req-card ${r.status==='delivered'?'done':r.urgency==='URGENT'?'urgent':''}"><div class="req-header"><div><div class="req-stand">${escapeHtml(r.stand)}</div><div class="req-time">${timeAgo(r.created_at)}</div></div><span class="status-pill ${r.status==='delivered'?'fulfilled':r.status==='on_the_way'?'claimed':'pending'}">${kitchenStatusLabel(r.status)}</span></div><div class="req-items">${kitchenItemsText(r)}</div><div class="req-qty">${kitchenEtaText(r)}${who}</div>${r.note?'<div class="req-wh-msg">💬 '+escapeHtml(r.note)+'</div>':''}</div>`;}
 
+// Order from a stand no runner covers: runners who HAVE an area only see
+// their own stands, so only runners with no area yet are told (the Food
+// Manager is told separately and can hand it to anyone).
+async function foodPushUncovered(title,body){
+  const [ids,asg]=await Promise.all([onDutyIds(['food_runner','kitchen_runner']).catch(()=>[]),kitchenFetchAssignments().catch(()=>[])]);
+  const covered=new Set((asg||[]).filter(a=>a.is_active!==false&&Array.isArray(a.stands)&&a.stands.length).map(a=>String(a.employee_id)));
+  (ids||[]).filter(id=>!covered.has(String(id))).forEach(id=>sendPushTo(id,title,body));
+}
 function foodSessionIsRunner(){const role=state.staffAccount&&state.staffAccount.role||'';return ['food_runner','kitchen_runner'].includes(role);}
 async function loadFoodCoverageForSession(){
   if(!foodSessionIsRunner()||!state.staffAccount){state.foodCoverageStands=[];state.foodCoverageAreas=[];renderFoodCoverageBar();return;}
@@ -16337,24 +16418,21 @@ async function loadFoodCoverageForSession(){
   state.foodCoverageAreas=[];
   // Show the runner's group(s) by name — West Concourse, Upper East… — same groups as the warehouse.
   { const lbl=whGroupLabelForStands(state.foodCoverageStands); if(lbl) state.foodCoverageAreas=lbl.split(' + '); }
-  if(state.foodShowAll==null)state.foodShowAll=false;
   renderFoodCoverageBar();
 }
+// A runner with an area sees ONLY that area (same as the warehouse): orders
+// from those stands come straight to My Jobs, and Available lists only those
+// stands. A runner with no area yet sees every stand until the Food Manager
+// gives them one.
 function renderFoodCoverageBar(){
   const el=document.getElementById('kitchen-coverage-bar');if(!el)return;
-  const role=state.staffAccount&&state.staffAccount.role||'';
-  const runner=['food_runner','kitchen_runner'].includes(role);
-  const coord=['food_manager','kitchen_coordinator'].includes(role);
-  if(coord){el.style.display='none';el.innerHTML='';return;}
-  if(!runner){el.style.display='none';return;}
-  el.style.display='block';el.className='';el.style.marginBottom='0';
+  if(!foodSessionIsRunner()){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='block';
   const areas=state.foodCoverageAreas||[],stands=state.foodCoverageStands||[];
-  const scope=stands.length?(areas.join(' · ')||'My stands'):'No game-day area assigned';
-  const mode=stands.length?(state.foodShowAll?'All stadium':'My coverage'):'All stadium';
-  el.innerHTML='<div class="food-cov"><span>📍 '+(stands.length?(state.foodShowAll?'Showing all stadium':escapeHtml(scope)+' · '+stands.length+' stands'):'All stadium')+'</span>'+
-    (stands.length?'<button onclick="foodToggleAll()">'+(state.foodShowAll?'My stands':'Show all')+'</button>':'')+'</div>';
+  el.innerHTML=stands.length
+    ?'<div class="fd-area"><div class="fd-area-k">📍 YOUR AREA</div><div class="fd-area-v">'+escapeHtml(areas.join(' · ')||'My stands')+' <small>· '+stands.length+' stand'+(stands.length===1?'':'s')+'</small></div><div class="fd-area-s">Orders from these stands come straight to <b>My Jobs</b>.</div></div>'
+    :'<div class="fd-area none"><div class="fd-area-k">📍 NO AREA YET</div><div class="fd-area-s">You see every stand for now. Ask the Food Manager to give you an area.</div></div>';
 }
-function foodToggleAll(){state.foodShowAll=!state.foodShowAll;renderFoodCoverageBar();loadKitchenConsole();}
 
 function updateFoodProfileAlertState(){
   const el=document.getElementById('food-profile-alert-state');if(!el)return;
@@ -16373,7 +16451,7 @@ function updateFoodProfile(rows){
   if(runner){
     const cov=state.foodCoverageStands||[];
     let available=active.filter(r=>!r.assigned_runner_id);
-    if(cov.length&&!state.foodShowAll)available=available.filter(r=>cov.includes(canonicalStandName2026(r.stand)));
+    if(cov.length)available=available.filter(r=>cov.includes(canonicalStandName2026(r.stand)));
     const mine=active.filter(r=>String(r.assigned_runner_id)===my);
     shownActive=mine;unclaimed=available;ready=mine.filter(r=>r.status==='ready');onway=mine.filter(r=>r.status==='on_the_way');
   }
@@ -16388,34 +16466,30 @@ function renderKitchenForRole(){
   const coord=['food_manager','kitchen_coordinator'].includes(role);
   const label=document.getElementById('kitchen-user-label');
   if(label)label.textContent=(state.staffAccount&&state.staffAccount.name||'Food Delivery')+' · '+(runner?'Food Runner':coord?'Food Manager':'Food Monitor');
-  const profileName=document.getElementById('food-profile-name');if(profileName)profileName.textContent=(state.staffAccount&&state.staffAccount.name)||'Food Delivery';
-  const profileRole=document.getElementById('food-profile-role');if(profileRole)profileRole.textContent=runner?'FOOD RUNNER':coord?'FOOD MANAGER':'FOOD MONITOR';
-  const profileScope=document.getElementById('food-profile-scope');if(profileScope)profileScope.textContent=runner?'Assigned deliveries · pickup → delivered':coord?'All-stadium coordination · prepare → ready → delivered':'All-stadium food delivery monitor';
-  const avatar=document.getElementById('food-profile-avatar');if(avatar)avatar.textContent=runner?'🏃':'🍽️';
-  const areas=document.getElementById('food-profile-runner-areas');if(areas)areas.style.display=coord?'':'none';
-  // Food Manager: one "Right now" strip + the order list. The profile card,
-  // one-tab bar and explainer banners repeated what the header already says.
-  const card=document.getElementById('food-profile-card');if(card)card.style.display=(coord||runner)?'none':'';
-  const head=card&&card.querySelector('.food-profile-head');if(head)head.style.display='none';
-  const acts=card&&card.querySelector('.food-profile-actions');if(acts)acts.style.display='none';
-  const strip=document.getElementById('food-mgr-strip');if(strip)strip.style.display='none';
-  const tabs=document.getElementById('kitchen-tabs');if(tabs)tabs.style.display='';
   const exit=document.getElementById('kitchen-exit-btn');if(exit)exit.textContent=_kitchenMonitorReturn==='screen-bedcheck'?'← Back':'Sign out';
-  updateFoodProfileAlertState();
-
-  const q=document.getElementById('kitchen-tab-queue');
-  const runs=document.getElementById('kitchen-tab-runs');
-  const assign=document.getElementById('kitchen-tab-assign');
-  if(q){q.style.display='';if(q.childNodes&&q.childNodes.length)q.childNodes[0].nodeValue=(runner?'📥 Available Jobs ':coord?'🍽️ Orders ':'🍽️ Food Dashboard ');}
+  // One tab bar for everyone. Runner: My Jobs · Available · Chat.
+  // Food Manager: Orders · Runners · Chat. Manager watching: Orders only.
+  const q=document.getElementById('kitchen-tab-queue'),runs=document.getElementById('kitchen-tab-runs'),assign=document.getElementById('kitchen-tab-assign'),chat=document.getElementById('kitchen-tab-chat');
+  const ql=q&&q.querySelector('.fd-tab-label');if(ql)ql.textContent=runner?'📥 Available':'🍽️ Orders';
   if(runs)runs.style.display=runner?'':'none';
-  if(assign){assign.style.display=coord?'':'none';assign.textContent='👥 Assign Runners';}
+  if(assign)assign.style.display=coord?'':'none';
+  if(chat)chat.style.display=(runner||coord)?'':'none';
   renderFoodAlertStatus();
-  // Runners start on My Jobs: orders from their stands land there by themselves.
-  loadFoodCoverageForSession().finally(()=>runner?kitchenTab(runs,'runs'):kitchenTab(q,'queue'));
+  foodRenderQ3Bar();
+  // Runners start on My Jobs: orders from their area land there by themselves.
+  loadFoodCoverageForSession().finally(()=>runner?kitchenTab(runs,'runs'):kitchenTab(q,state.kitchenTab==='assign'&&coord?'assign':'queue'));
 }
 function foodManagerOpenRunnerAreas(){kitchenTab(document.getElementById('kitchen-tab-assign'),'assign');}
+function foodOpenChat(){goChat();}
 
-function kitchenTab(el,tab){document.querySelectorAll('#kitchen-tabs .tab-item').forEach(x=>x.classList.remove('active'));if(el)el.classList.add('active');{const role=state.staffAccount&&state.staffAccount.role||'';const sp=document.getElementById('food-mgr-strip');if(sp)sp.style.display=(['food_manager','kitchen_coordinator'].includes(role)&&tab==='queue')?'':'none';}['queue','runs','assign'].forEach(x=>{const e=document.getElementById('kitchen-'+x);if(e)e.style.display=x===tab?'':'none';});state.kitchenTab=tab;loadKitchenConsole();}
+function kitchenTab(el,tab){
+  if(!el)el=document.getElementById('kitchen-tab-'+tab);
+  document.querySelectorAll('#kitchen-tabs .tab-item').forEach(x=>x.classList.remove('active'));if(el)el.classList.add('active');
+  const coord=foodIsManagerSession();
+  const sp=document.getElementById('food-mgr-strip');if(sp)sp.style.display=(coord&&tab==='queue')?'':'none';
+  ['queue','runs','assign'].forEach(x=>{const e=document.getElementById('kitchen-'+x);if(e)e.style.display=x===tab?'':'none';});
+  state.kitchenTab=tab;loadKitchenConsole();
+}
 function kitchenExit(){if(_kitchenMonitorReturn==='screen-bedcheck'){_kitchenMonitorReturn='';showScreen('screen-bedcheck');restoreMgrSidebarState();return;}staffLogout();}
 function openKitchenConsoleMonitor(){_kitchenMonitorReturn='screen-bedcheck';renderKitchenForRole();showScreen('screen-kitchen');}
 
@@ -16457,13 +16531,14 @@ function foodManagerDueSoonAlert(rows){
 async function loadKitchenConsole(){
   if(foodSessionIsRunner()&&state.foodCoverageStands===undefined)await loadFoodCoverageForSession();
   // Only this game's orders — an order left open after an old game must not sit on the list forever.
+  foodRenderQ3Bar();
   const rows=kitchenThisGame(await kitchenFetchRequests());foodManagerNewRequestAlert(rows);foodManagerDueSoonAlert(rows);renderFoodAlertStatus();updateFoodProfile(rows);
   if(foodSessionIsRunner()){
     const my=state.staffAccount&&state.staffAccount.empId||'';
     const active=(rows||[]).filter(r=>!['delivered','cancelled'].includes(r.status));
     let available=active.filter(r=>!r.assigned_runner_id);
     const cov=state.foodCoverageStands||[];
-    if(cov.length&&!state.foodShowAll)available=available.filter(r=>cov.includes(canonicalStandName2026(r.stand)));
+    if(cov.length)available=available.filter(r=>cov.includes(canonicalStandName2026(r.stand)));
     const mine=active.filter(r=>String(r.assigned_runner_id)===String(my));
     const qc=document.getElementById('kitchen-queue-count');if(qc)qc.textContent=available.length;
     const mc=document.getElementById('kitchen-run-count');if(mc)mc.textContent=mine.length;
@@ -16498,11 +16573,10 @@ async function renderKitchenQueue(rows){
     // My Jobs = jobs assigned to/claimed by this runner.
     active=active.filter(r=>!r.assigned_runner_id);
     const cov=state.foodCoverageStands||[];
-    if(cov.length&&!state.foodShowAll)active=active.filter(r=>cov.includes(canonicalStandName2026(r.stand)));
-    else if(cov.length&&state.foodShowAll)active.sort((a,b)=>(cov.includes(canonicalStandName2026(b.stand))?1:0)-(cov.includes(canonicalStandName2026(a.stand))?1:0));
+    if(cov.length)active=active.filter(r=>cov.includes(canonicalStandName2026(r.stand)));
     const count=document.getElementById('kitchen-queue-count');if(count)count.textContent=active.length;
     if(!active.length){
-      el.innerHTML='<div class="empty"><div class="empty-icon">✅</div><p>No unclaimed food deliveries right now.<br><span style="font-size:12px">Jobs you claimed are under My Jobs.</span></p></div>';
+      el.innerHTML='<div class="empty"><div class="empty-icon">✅</div><p>'+(cov.length?'Nothing waiting in your area.':'No unclaimed food deliveries right now.')+'<br><span style="font-size:12px">Jobs that are yours are under My Jobs.</span></p></div>';
       return;
     }
     el.innerHTML=active.map(r=>`<div class="food-runner-card">
@@ -16533,29 +16607,37 @@ async function renderKitchenQueue(rows){
   if(strip)strip.innerHTML='<div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-2);margin-bottom:6px">RIGHT NOW'+(f!=='all'?' · <a href="#" onclick="foodSetFilter(\'all\');return false" style="color:var(--asu-maroon)">show all</a>':'')+'</div>'+
     '<div class="wh-stat-row food-stat-row">'+chip('need',counts.need,'No runner','urgent')+chip('wait',counts.wait,'Waiting','warn')+chip('way',counts.way,'On the way','info')+chip('late',counts.late,'Late','urgent')+chip('done',counts.done,'Delivered','ok')+'</div>';
   const runners=await kitchenGetRunners();
+  // One card layout: stand + time left, what they need, who has it. The
+  // runner picker shows only when nobody has it; every other action sits
+  // behind "More" so the list stays easy to scan on a phone.
+  const me=state.staffAccount||{};
   const card=r=>{
     const opts=runners.map(x=>`<option value="${escapeAttr(x.employee_id)}" ${String(x.employee_id)===String(r.assigned_runner_id)?'selected':''}>${escapeHtml(x.name)}</option>`).join('');
-    const rowId='kf-assign-'+r.id, lt=late(r), st=stuck(r), m=waitMins(r);
-    let who,step;
-    if(!r.assigned_runner_id){who='<span style="font-weight:800;color:#DC2626">No runner covers this stand</span>';step='';}
-    else{
-      who=`<span style="font-weight:800;color:var(--success)">🏃 ${escapeHtml(r.assigned_runner_name||'Runner')}</span>`;
-      step=r.status==='on_the_way'?'🏃 On the way':(st?'<span style="color:#B45309;font-weight:800">⚠️ Not on the way after '+fmtMins(m)+'</span>':'⏳ Sent to runner '+(m<1?'just now':fmtMins(m)+' ago'));
-    }
-    return `<div class="food-runner-card" style="${lt||!r.assigned_runner_id?'border-left-color:#DC2626':st?'border-left-color:#F59E0B':''}">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div class="stand">${escapeHtml(r.stand)}</div><div style="font-size:12px;font-weight:800;white-space:nowrap;color:${lt?'#DC2626':'var(--text-2)'}">${kitchenEtaText(r)}</div></div>
-      <div class="items">${kitchenItemsText(r)}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:12px">${who}<span style="color:var(--text-2);text-align:right">${step}</span></div>
-      ${r.note?'<div class="req-wh-msg">💬 '+escapeHtml(r.note)+'</div>':''}
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><a href="#" onclick="document.getElementById('${rowId}').classList.toggle('open');return false" style="font-size:12px;font-weight:800;color:var(--asu-maroon)">${r.assigned_runner_id?'↔ Change runner':'👉 Pick a runner'}</a><span style="font-size:11px;color:var(--text-3)">by ${escapeHtml(r.requested_by||'stand')}</span></div>
-      <div class="prem-move-row${r.assigned_runner_id?'':' open'}" id="${rowId}"><select class="form-input" onchange="kitchenAssignRunner('${r.id}',this.value,this.options[this.selectedIndex].text)" style="margin:6px 0 0;font-size:13px"><option value="">— No runner —</option>${opts}</select></div>
-      ${coord?(()=>{const me=state.staffAccount||{},mine=String(r.assigned_runner_id||'')===String(me.empId||'');
-        const self=mine?(r.status==='on_the_way'?`<button class="btn btn-primary" style="width:auto;padding:8px 14px;margin:0;font-size:13px" onclick="kitchenRunnerDeliver('${r.id}')">✅ Delivered</button>`:`<button class="btn btn-primary" style="width:auto;padding:8px 14px;margin:0;font-size:13px" onclick="kitchenRunnerPickup('${r.id}')">🏃 On my way</button>`)
-          :`<button class="btn btn-ghost" style="width:auto;padding:6px 12px;margin:0;font-size:12px;color:var(--success);border-color:var(--success)" onclick="kitchenAssignRunner('${r.id}','${escapeAttr(String(me.empId||''))}','${escapeAttr(String(me.name||'Food Manager'))}')">🙋 I'll deliver it</button>`;
-        return `<div style="margin-top:8px;display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap">${self}`+
-          `<button class="btn btn-ghost" style="width:auto;padding:6px 12px;margin:0;font-size:12px;color:#00A651;border-color:#00A651" onclick="foodMarkDelivered('${r.id}','${escapeAttr(r.stand||'')}')">✅ Mark delivered</button>`+
-          `<button class="btn btn-ghost" style="width:auto;padding:6px 12px;margin:0;font-size:12px;color:#7C3AED;border-color:#7C3AED" onclick="requestMoveFoodToStock('${r.id}')">↪ Move to Warehouse</button>`+
-          `<button class="btn btn-ghost" style="width:auto;padding:6px 12px;margin:0;font-size:12px;color:#DC2626;border-color:#DC2626" onclick="kitchenDeclineOpen('${r.id}')">✖ Decline</button></div>`;})():''}
+    const pick=`<select class="form-input fm-pick" onchange="kitchenAssignRunner('${r.id}',this.value,this.options[this.selectedIndex].text)"><option value="">${r.assigned_runner_id?'— Take it off the runner —':'👉 Pick a runner'}</option>${opts}</select>`;
+    const lt=late(r),st=stuck(r),m=waitMins(r),mine=String(r.assigned_runner_id||'')===String(me.empId||'');
+    const cls=!r.assigned_runner_id||lt?'bad':st?'warn':r.status==='on_the_way'?'go':'';
+    const who=!r.assigned_runner_id?'<span class="fm-who bad">No runner covers this stand</span>'
+      :`<span class="fm-who">🏃 ${escapeHtml(r.assigned_runner_name||'Runner')}</span><span class="fm-step${st?' warn':''}">${r.status==='on_the_way'?'On the way':st?'⚠️ Not moving · '+fmtMins(m):'Sent '+(m<1?'just now':fmtMins(m)+' ago')}</span>`;
+    let main='';
+    if(!r.assigned_runner_id)main=`<div class="fm-act">${pick}${coord?`<button class="fm-me" onclick="kitchenAssignRunner('${r.id}','${escapeAttr(String(me.empId||''))}','${escapeAttr(String(me.name||'Food Manager'))}')">🙋 Me</button>`:''}</div>`;
+    else if(mine)main=r.status==='on_the_way'?`<button class="btn btn-primary fm-big" onclick="kitchenRunnerDeliver('${r.id}')">✅ Delivered</button>`:`<button class="btn btn-primary fm-big" onclick="kitchenRunnerPickup('${r.id}')">🏃 On my way</button>`;
+    const moreId='fm-more-'+r.id;
+    const more=r.assigned_runner_id||coord?`<div class="fm-more" id="${moreId}">
+        ${r.assigned_runner_id?'<div class="fm-more-k">CHANGE RUNNER</div>'+pick:''}
+        ${coord?`<div class="fm-more-btns">
+          ${r.assigned_runner_id&&!mine?`<button onclick="kitchenAssignRunner('${r.id}','${escapeAttr(String(me.empId||''))}','${escapeAttr(String(me.name||'Food Manager'))}')">🙋 I'll deliver it</button>`:''}
+          <button class="ok" onclick="foodMarkDelivered('${r.id}','${escapeAttr(r.stand||'')}')">✅ Mark delivered</button>
+          <button class="wh" onclick="requestMoveFoodToStock('${r.id}')">↪ Move to Warehouse</button>
+          <button class="no" onclick="kitchenDeclineOpen('${r.id}')">✖ Decline</button></div>`:''}
+      </div>`:'';
+    return `<div class="fm-card ${cls}">
+      <div class="fm-top"><div class="fm-stand">${escapeHtml(r.stand)}</div><div class="fm-eta${lt?' bad':''}">${kitchenEtaText(r)}</div></div>
+      <div class="fm-items">${kitchenItemsText(r)}</div>
+      ${r.note?'<div class="fm-note">💬 '+escapeHtml(r.note)+'</div>':''}
+      <div class="fm-row">${who}</div>
+      ${main}
+      <div class="fm-foot"><span>by ${escapeHtml(r.requested_by||'stand')} · ${new Date(r.created_at||now).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span>${more?`<a href="#" onclick="document.getElementById('${moreId}').classList.toggle('open');return false">More ▾</a>`:''}</div>
+      ${more}
     </div>`;
   };
   const doneRow=r=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);font-size:12px"><div><b>${escapeHtml(r.stand)}</b><div style="color:var(--text-2)">${kitchenItemsText(r)}</div></div><div style="text-align:right;white-space:nowrap;color:var(--text-2)">✅ ${escapeHtml(r.assigned_runner_name||'')}<br>${new Date(r.delivered_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</div></div>`;
@@ -16748,10 +16830,10 @@ async function renderKitchenAssignments(){
   _foodMgrCovAllStands=[...names].sort((x,y)=>x.localeCompare(y,undefined,{numeric:true}));
   // Like warehouse coverage: give each runner their stands once; every order
   // from those stands then goes straight to that runner.
-  el.innerHTML='<div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--text-2);margin-bottom:6px">WHO COVERS WHICH STANDS</div>'+
+  el.innerHTML='<div class="fd-k">RUNNERS · AREA · WHAT THEY HAVE NOW</div>'+
     '<div id="fm-cov-current" style="margin-bottom:14px"></div>'+
     '<div class="card" id="fm-cov-editor" style="padding:12px">'+
-    '<label class="form-label" style="margin-top:0">Runner</label><select class="form-input" id="fm-cov-person" onchange="foodManagerCoveragePersonChanged()"><option value="">— Pick a runner —</option>'+_foodMgrCovPeople.map(r=>'<option value="'+escapeAttr(r.employee_id)+'">'+escapeHtml(r.name)+'</option>').join('')+'</select>'+
+    '<div class="fd-k" style="margin:0 0 4px">GIVE A RUNNER AN AREA</div><label class="form-label" style="margin-top:0">Runner</label><select class="form-input" id="fm-cov-person" onchange="foodManagerCoveragePersonChanged()"><option value="">— Pick a runner —</option>'+_foodMgrCovPeople.map(r=>'<option value="'+escapeAttr(r.employee_id)+'">'+escapeHtml(r.name)+'</option>').join('')+'</select>'+
     '<div id="fm-cov-body" style="display:none">'+
     '<label class="form-label">Groups (tap one or more)</label><div class="coverage-area-chips" id="fm-cov-areas" style="margin-top:4px"></div>'+
     '<label class="form-label">Stands <span id="fm-cov-count" style="font-weight:700"></span></label>'+
@@ -16836,10 +16918,16 @@ async function foodManagerCoverageCurrent(){
     const extra=canon.filter(x=>!used.has(x));
     return names.concat(extra.length?[extra.length>6?extra.length+' stands':extra.join(', ')]:[]).join(' · ');
   };
+  // Live board: each runner's area and what they are carrying right now.
+  const live=kitchenThisGame(state._kitchenRowsCache||[]).filter(r=>!['delivered','cancelled'].includes(r.status));
+  const doneToday=kitchenThisGame(state._kitchenRowsCache||[]).filter(r=>r.status==='delivered');
   el.innerHTML=people.length?people.map(p=>{
     const r=rows.find(x=>String(x.employee_id)===String(p.employee_id));
     const txt=r&&r.is_active!==false?summary(r):'';
-    return '<div class="food-runner-card" onclick="foodManagerCoverageEdit(\''+escapeAttr(p.employee_id)+'\')" style="cursor:pointer;padding:10px 12px;margin-bottom:7px;'+(txt?'':'border-left-color:#9CA3AF')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div style="font-weight:800;font-size:14px">🏃 '+escapeHtml(p.name||p.employee_id)+'</div><div style="font-size:12px;margin-top:2px;color:'+(txt?'var(--text-2)':'#B45309')+'">'+escapeHtml(txt||'No stands yet — tap to assign')+'</div></div><span style="font-size:12px;font-weight:800;color:var(--asu-maroon)">Edit ›</span></div></div>';
+    const jobs=live.filter(x=>String(x.assigned_runner_id)===String(p.employee_id)),way=jobs.filter(x=>x.status==='on_the_way').length;
+    const done=doneToday.filter(x=>String(x.assigned_runner_id)===String(p.employee_id)).length;
+    const load=jobs.length?'<span class="fr-load busy">'+jobs.length+' job'+(jobs.length===1?'':'s')+(way?' · '+way+' on the way':'')+'</span>':'<span class="fr-load">Free</span>';
+    return '<div class="fr-card'+(txt?'':' none')+'" onclick="foodManagerCoverageEdit(\''+escapeAttr(p.employee_id)+'\')"><div class="fr-top"><div class="fr-name">🏃 '+escapeHtml(chatNice(p.name||p.employee_id))+'</div>'+load+'</div><div class="fr-area">'+escapeHtml(txt||'No area yet — tap to give one')+'</div><div class="fr-foot"><span>✅ '+done+' delivered today</span><b>Change area ›</b></div></div>';
   }).join(''):'<div style="padding:8px;font-size:12px;color:var(--text-3)">No Food Runner accounts yet.</div>';
 }
 
@@ -17763,6 +17851,97 @@ async function togglePushLive() {
   _pushLive = { v: !turnOff, tester: turnOff ? me : '', at: Date.now() };
   toast(turnOff ? '🔕 Notifications OFF — testing mode' : '🔔 Notifications ON — live', turnOff ? 'error' : 'success');
   renderPushSwitch();
+}
+
+// ---- 3rd quarter: food & alcohol ordering closes ----
+// Football: once the 3rd quarter starts it is near closing, and extra food or
+// beer ordered now goes to waste. From then on workers cannot order food or
+// alcohol; Supervisors, Stand Leads (and NPO Leads) and Managers still can.
+// It closes by itself about Q3_AFTER_KICKOFF_MIN after kickoff (Game info →
+// kickoff time), or a Manager / Food Manager taps the switch. A Manager can
+// reopen it. Stored in app_settings.q3_lock as {day, mode:'on'|'off', by, at};
+// a row for another day is ignored, so every game starts open.
+const Q3_AFTER_KICKOFF_MIN = 110;
+let _q3 = { at:0, v:null };
+function q3ParseKickoff(day, txt) {
+  const m = String(txt || '').match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i); if (!m) return null;
+  let h = parseInt(m[1], 10); const mi = m[2] || '00';
+  if (/pm/i.test(m[3]) && h !== 12) h += 12; if (/am/i.test(m[3]) && h === 12) h = 0;
+  const d = new Date(day + 'T' + String(h).padStart(2,'0') + ':' + mi + ':00-07:00'); // Arizona = MST all year
+  return isNaN(d) ? null : d;
+}
+async function q3State(force) {
+  if (!force && _q3.v && Date.now() - _q3.at < 30000) return _q3.v;
+  const day = stadiumDay();
+  const [set, gc] = await Promise.all([
+    sb('app_settings?key=eq.q3_lock&select=value').catch(()=>({_err:true})),
+    sb('game_day_content?event_date=eq.' + day + '&select=start_time,venue_key').catch(()=>({_err:true}))
+  ]);
+  if (!Array.isArray(set) && _q3.v) return _q3.v; // Wi-Fi blip: keep what we knew
+  let man = null;
+  try { const r = Array.isArray(set) && set[0]; if (r) { const j = JSON.parse(r.value); if (j && j.day === day && (j.mode === 'on' || j.mode === 'off')) man = j; } } catch(e) {}
+  const games = Array.isArray(gc) ? gc.sort((a,b) => (a.venue_key === 'all' ? 1 : 0) - (b.venue_key === 'all' ? 1 : 0)) : [];
+  const kickoff = games.map(g => q3ParseKickoff(day, g.start_time)).find(Boolean) || null;
+  const autoAt = kickoff ? new Date(kickoff.getTime() + Q3_AFTER_KICKOFF_MIN * 60000) : null;
+  let locked = false, why = '';
+  if (man) { locked = man.mode === 'on'; why = locked ? 'manual' : 'reopened'; }
+  else if (autoAt && Date.now() >= autoAt.getTime()) { locked = true; why = 'auto'; }
+  const v = { locked, why, by:(man && man.by) || '', at:(man && man.at) || '', kickoff, autoAt };
+  _q3 = { at:Date.now(), v };
+  return v;
+}
+// Who may still order food & alcohol after the 3rd quarter starts.
+function q3CanOrder() {
+  const a = state.staffAccount, u = state.user;
+  if (!u) return !!(a && (a.group === 'manager' || ['manager','support_manager','admin'].includes(a.role)));
+  if (isSupervisorSession()) return true;
+  if (u.isNpo) return !!u.npoIsLead;
+  return u.role === 'lead' && !u.leadAccessGranted;
+}
+function q3CanSwitch() {
+  const a = state.staffAccount; if (!a || state.user) return false;
+  return ['manager','support_manager','admin','food_manager','kitchen_coordinator'].includes(a.role);
+}
+function q3IsAlcohol(name) {
+  const n = String(name || '').toUpperCase();
+  if (/\bN\/A\b|NON[- ]?ALC/.test(n)) return false;
+  return orderWhGroup({itemName:n}) === 'beer' || /\b(BEER|SELTZER|WINE|MARGARITA|SPIKED|CLUBTAILS|COCKTAIL|IPA|LAGER|HARD CIDER|VODKA|TEQUILA|WHISKEY|RUM)\b/.test(n);
+}
+const q3Time = d => d ? d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', timeZone:'America/Phoenix'}) : '';
+// Status + switch, shown to Managers (home) and the Food team (Food screen).
+async function q3RenderBar(id, force) {
+  const el = document.getElementById(id); if (!el) return;
+  const can = q3CanSwitch(), foodStaff = chatIsFoodSession();
+  if (!can && !foodStaff) { el.innerHTML = ''; return; }
+  const st = await q3State(!!force);
+  if (!st.locked && !can) { el.innerHTML = ''; return; }
+  const when = st.why === 'auto' ? 'Closed automatically at ' + q3Time(st.autoAt) + ' (about 3rd quarter).' : st.why === 'manual' ? 'Closed by ' + escapeHtml(chatNice(st.by || 'a manager')) + (st.at ? ' at ' + q3Time(new Date(st.at)) : '') + '.' : '';
+  el.innerHTML = st.locked
+    ? '<div class="q3-bar on"><div class="q3-t">🔒 3rd QUARTER — food &amp; alcohol ordering CLOSED</div><div class="q3-s">Workers can\'t order food or alcohol now. Supervisors, Stand Leads and Managers still can. ' + when + '</div>' + (can ? '<button onclick="q3Toggle()">Reopen ordering</button>' : '') + '</div>'
+    : '<div class="q3-bar open"><div class="q3-t">🏈 Food &amp; alcohol ordering: OPEN</div><div class="q3-s">' + (st.why === 'reopened' ? 'Reopened by ' + escapeHtml(chatNice(st.by || 'a manager')) + '. ' : '') + (st.autoAt && st.why !== 'reopened' ? 'Closes by itself at about ' + q3Time(st.autoAt) + ' (3rd quarter, kickoff ' + q3Time(st.kickoff) + ').' : 'Tap below when the 3rd quarter starts.') + '</div><button onclick="q3Toggle()">🏈 3rd quarter started — close food &amp; alcohol</button></div>';
+}
+function foodRenderQ3Bar() { q3RenderBar('food-q3-bar'); }
+async function q3Toggle() {
+  if (!q3CanSwitch()) return toast('Only Managers and the Food Manager can change this', 'error');
+  const st = await q3State(true), close = !st.locked;
+  const ok = await confirmAction(close
+    ? 'Close food & alcohol ordering for the 3rd quarter?\n\nWorkers will see a big notice and can\'t order food or alcohol. Supervisors, Stand Leads and Managers can still order. Ice, water, cups and IT still work.'
+    : 'Reopen food & alcohol ordering for everyone?', {title: close ? '🏈 3rd quarter' : 'Reopen ordering', confirmLabel: close ? 'Close ordering' : 'Reopen', danger: close});
+  if (!ok) return;
+  const me = state.staffAccount || {};
+  const value = JSON.stringify({day:stadiumDay(), mode: close ? 'on' : 'off', by: me.name || '', at: new Date().toISOString()});
+  const r = await sb('app_settings?on_conflict=key', {method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'}, body:JSON.stringify({key:'q3_lock', value, updated_by:String(me.empId || ''), updated_at:new Date().toISOString()})}).catch(()=>({_err:true}));
+  if (r && r._err) return toast('Could not change it — try again', 'error');
+  _q3 = { at:0, v:null };
+  toast(close ? '🔒 Food & alcohol ordering closed for the 3rd quarter' : '✅ Ordering reopened', close ? 'error' : 'success');
+  q3RenderBar('mgr-q3-bar', true); q3RenderBar('food-q3-bar', true);
+}
+// Big notice on the order screens for people who can't order any more, a
+// small reminder for those who still can.
+function q3NoticeHtml(st) {
+  if (!st || !st.locked) return '';
+  if (q3CanOrder()) return '<div class="q3-note">🏈 3rd quarter — only order food or alcohol you really need. Extra goes to waste after the game.</div>';
+  return '<div class="q3-lock"><div class="q3-big">🔒 3rd QUARTER<br>No more food or alcohol orders</div><div class="q3-s">The game is near closing — extra food and drinks go to waste.<br><b>Still need something? Ask your Supervisor</b> — they can order it for your stand.<br><span style="font-size:12px">Ice, water, cups and IT still work below.</span></div></div>';
 }
 
 let _pushSubscription = null;
@@ -21014,12 +21193,17 @@ async function invtRemindAll() {
 const CHAT_LEVELS = ['crew','lead','sup','mgr'];
 // Warehouse Managers + Warehouse Supervisors share one group conversation.
 const WH_GROUP = 'Warehouse Leaders';
-function chatIsGroup(stand) { return stand === WH_GROUP; }
+// Food runners + Food Manager share one group conversation. Supervisors and
+// Managers can open it too; a runner can send to the Supervisor of a stand.
+const FOOD_GROUP = 'Food Team';
+function chatIsGroup(stand) { return stand === WH_GROUP || stand === FOOD_GROUP; }
+function chatIsFoodSession() { const r = state.staffAccount && state.staffAccount.role || ''; return ['food_runner','kitchen_runner','food_manager','kitchen_coordinator'].includes(r); }
 function chatNice(n) { n = String(n||'').split(' (')[0]; return n.includes(',') ? (n.split(',')[1].trim().split(' ')[0] + ' ' + n.split(',')[0].trim()) : n; }
 function chatFirst(n) { return chatNice(n).split(' ')[0]; }
-const CHAT_LEVEL_LABEL = {crew:'Stand crew', lead:'Stand Lead', sup:'Supervisor', mgr:'Manager'};
+const CHAT_LEVEL_LABEL = {crew:'Stand crew', lead:'Stand Lead', sup:'Supervisor', mgr:'Manager', food:'Food Team'};
 function chatLevel() {
   if (state.staffAccount && ['warehouse_manager','warehouse_supervisor'].includes(state.staffAccount.role)) return 'whl';
+  if (chatIsFoodSession()) return 'food';
   if (isManagerOpsSession()) return 'mgr';
   if (isSupervisorSession()) return 'sup';
   const u = state.user; if (!u) return null;
@@ -21033,7 +21217,8 @@ function chatMe() {
   const who = getRequesterIdentity(), u = state.user, lvl = chatLevel();
   let role = lvl === 'whl' ? (state.staffAccount.role === 'warehouse_manager' ? 'Warehouse Manager' : 'Warehouse Supervisor') + (state._myWhGroupLabel ? ' · ' + state._myWhGroupLabel : '') : (CHAT_LEVEL_LABEL[lvl] || '');
   if (u && u.isNpo) role = u.npoIsLead ? 'NPO Lead' : 'NPO';
-  return {id:String(who.empId||''), name:who.name||'', role, level:lvl};
+  if (lvl === 'food') role = foodIsManagerSession() ? 'Food Manager' : 'Food Runner';
+  return {id:String(who.empId||''), name:(lvl === 'food' && state.staffAccount && state.staffAccount.name) || who.name || '', role, level:lvl};
 }
 function chatReadKey(stand) { return 'chat_read_' + chatMe().id + '_' + stadiumDay() + '_' + stand; }
 function chatGetRead(stand) { try { return Number(localStorage.getItem(chatReadKey(stand)) || 0); } catch(e) { return 0; } }
@@ -21131,6 +21316,7 @@ async function chatSyncIndex() {
   const ix = state._chatIdx;
   let q = 'stand_chat?event_date=eq.' + day + '&id=gt.' + ix.maxId + '&select=id,stand,side,sender_id,sender_name,sender_role,sender_level,to_level,body,created_at&order=id.asc&limit=500';
   if (lvl === 'whl') q += '&stand=eq.' + encodeURIComponent(WH_GROUP);
+  else if (lvl === 'food') q += '&stand=eq.' + encodeURIComponent(FOOD_GROUP);
   else q += '&stand=neq.' + encodeURIComponent(WH_GROUP);
   if (lvl === 'crew' || lvl === 'lead') {
     if (!state._chatMyStands || state._chatMyStandsDay !== day) { state._chatMyStands = await chatMyStands(); state._chatMyStandsDay = day; }
@@ -21146,7 +21332,16 @@ async function chatSyncIndex() {
 // without a level: anything from the other side), at a stand I look after.
 function chatIsForMe(r) {
   const me = chatMe(); if (!me.level || String(r.sender_id) === me.id) return false;
-  if (me.level === 'whl' || chatIsGroup(r.stand)) return me.level === 'whl' && chatIsGroup(r.stand);
+  if (r.stand === WH_GROUP || me.level === 'whl') return me.level === 'whl' && r.stand === WH_GROUP;
+  if (r.stand === FOOD_GROUP || me.level === 'food') {
+    if (r.stand !== FOOD_GROUP) return false;
+    if (me.level === 'food') return true;
+    // A Supervisor is alerted only for runner messages sent to the Supervisor
+    // about one of their stands.
+    if (me.level !== 'sup' || r.to_level !== 'sup') return false;
+    const tag = chatParseStandTag(r.body), mine = state._chatMyStands;
+    return !(tag && mine && mine.size && !mine.has(canonicalStandName2026(tag.stand)));
+  }
   if (r.to_level) {
     if (r.to_level !== me.level) return false;
   } else if (r.side === chatSide()) return false;
@@ -21211,6 +21406,7 @@ async function goChat(stand) {
   updateFloatingContactVisibility();
   chatShowTab('chat');
   if (lvl === 'whl') return chatOpenThread(WH_GROUP);
+  if (lvl === 'food') return chatOpenThread(FOOD_GROUP);
   if (stand) return chatOpenThread(stand);
   if (lvl === 'crew' || lvl === 'lead') {
     state._chatMyStands = await chatMyStands(); state._chatMyStandsDay = stadiumDay();
@@ -21267,6 +21463,7 @@ function chatRenderInbox() {
   const unread = scope.filter(st => chatUnreadFor(st) > 0).sort((a,b) => (last[b]?last[b].id:0) - (last[a]?last[a].id:0));
   const rest = scope.filter(st => !chatUnreadFor(st) && last[st]).sort((a,b) => last[b].id - last[a].id);
   const quiet = [...mine].filter(st => !last[st]).sort((a,b) => standSort(a,b));
+  if ((lvl === 'sup' || lvl === 'mgr') && !last[FOOD_GROUP]) quiet.unshift(FOOD_GROUP);
   let html = '';
   if (unread.length) html += '<div class="section-title">🔴 New for you</div>' + unread.map(row).join('');
   if (rest.length) html += '<div class="section-title">Today\'s conversations</div>' + rest.map(row).join('');
@@ -21308,6 +21505,7 @@ function chatEscalate(id) {
 }
 const CHAT_QUICK = {
   whl: ['On my way', '✅ Done', 'Got it 👍', 'Need a golf cart', 'Short on staff', 'Call me on the radio'],
+  food: ['🏃 On my way', '✅ Delivered', 'Got it 👍', '⏳ Running late', '🍳 Kitchen not ready', '📵 Stand not answering', '🆘 Too many orders — need help'],
   crew: [],
   lead: [],
   sup: ['On my way', '✅ Done', 'Got it 👍', 'Sending help now', 'Put in a Stock Request', 'Call me on the radio'],
@@ -21332,7 +21530,22 @@ function chatDefaultTo(th) {
 }
 function chatRenderTo() {
   const th = state._chatThread, el = document.getElementById('chat-to'); if (!th || !el) return;
-  if (th.people && th.people.group) { el.innerHTML = ''; const nt = document.getElementById('chat-to-note'); if (nt) nt.textContent = ''; return; }
+  if (th.people && th.people.group) {
+    const nt = document.getElementById('chat-to-note');
+    // Food Team: a runner sends to the whole Food Team, or to the Supervisor of a stand.
+    if (th.stand === FOOD_GROUP && chatLevel() === 'food') {
+      if (th.to !== 'sup') th.to = 'food';
+      el.innerHTML = '<span style="font-size:11px;font-weight:800;color:var(--text-2);margin-right:2px">SEND TO</span>' +
+        '<button class="chip' + (th.to === 'food' ? ' selected' : '') + '" onclick="chatSetTo(\'food\')">🍽️ Food Team</button>' +
+        '<button class="chip' + (th.to === 'sup' ? ' selected' : '') + '" onclick="chatSetTo(\'sup\')">🧭 Supervisor of a stand</button>';
+      const sw = document.getElementById('chat-stand-wrap'), si = document.getElementById('chat-stand');
+      if (sw) sw.style.display = '';
+      if (si) si.placeholder = th.to === 'sup' ? '📍 Which stand? (required — its Supervisor gets it)' : '📍 Which stand? (optional)';
+      if (nt) nt.textContent = th.to === 'sup' ? '🔔 That stand\'s Supervisor and the Food Manager get an alert' : '🔔 Food Manager and runners signed in today get an alert';
+      return;
+    }
+    el.innerHTML = ''; if (nt) nt.textContent = th.stand === FOOD_GROUP ? '🔔 Food Manager and runners signed in today get an alert' : ''; return;
+  }
   if (!th.people) { el.innerHTML = '<span style="font-size:11px;color:var(--text-3)">Loading who is on…</span>'; return; }
   const opts = chatToOptions(th.people);
   if (!th.to || !opts.includes(th.to)) th.to = chatDefaultTo(th);
@@ -21362,21 +21575,24 @@ async function chatOpenThread(stand) {
   if (sw) sw.style.display = chatIsGroup(stand) ? '' : 'none';
   if (whoEl) whoEl.style.display = chatIsGroup(stand) ? 'none' : '';
   if (chatIsGroup(stand)) {
-    document.getElementById('chat-title').textContent = '🏭 Warehouse Leaders';
-    document.getElementById('chat-sub').textContent = 'Warehouse Managers & Supervisors';
-    const si = document.getElementById('chat-stand'); if (si) si.value = '';
+    const food = stand === FOOD_GROUP;
+    document.getElementById('chat-title').textContent = food ? '🍽️ Food Team' : '🏭 Warehouse Leaders';
+    document.getElementById('chat-sub').textContent = food ? 'Food Manager · runners · Supervisors' : 'Warehouse Managers & Supervisors';
+    const si = document.getElementById('chat-stand'); if (si) { si.value = ''; si.placeholder = food ? '📍 Which stand? (optional)' : '📍 Which stand? (required)'; }
+    if (food && chatLevel() !== 'food' && sw) sw.style.display = 'none';
     allVenueStands().then(all => { const dl = document.getElementById('chat-stand-list'); if (dl) dl.innerHTML = all.map(x => '<option value="' + escapeAttr(x.name) + '">').join(''); });
-    chatGroupPeople().then(p => { if (state._chatThread !== th) return; th.people = p; chatRenderTo(); });
+    chatGroupPeople(stand).then(p => { if (state._chatThread !== th) return; th.people = p; chatRenderTo(); chatRenderWho(); });
   }
   else chatPeopleFor(stand).then(p => { if (state._chatThread !== th) return; th.people = p; if (!th._toTouched) th.to = null; chatRenderTo(); chatRenderWho(); }).catch(()=>{});
   await chatLoadThread(true);
   if (state._chatThreadTimer) clearInterval(state._chatThreadTimer);
   state._chatThreadTimer = setInterval(() => { if (document.hidden) return; chatLoadThread(false); const t = state._chatThread; if (t && t.rows.some(r => /^🙋 REQUEST/.test(r.body||'') && String(r.sender_id) === chatMe().id)) chatRenderThread(); }, 5000);
 }
-async function chatGroupPeople() {
+async function chatGroupPeople(stand) {
+  const roles = stand === FOOD_GROUP ? 'food_manager,kitchen_coordinator,food_runner,kitchen_runner' : 'warehouse_manager,warehouse_supervisor';
   const [all, duty] = await Promise.all([
-    sb('staff_accounts?is_active=eq.true&role=in.(warehouse_manager,warehouse_supervisor)&select=employee_id,name,role&order=role.desc,name.asc').catch(()=>({_err:true})),
-    sb('on_duty?day=eq.' + stadiumDay() + '&role=in.(warehouse_manager,warehouse_supervisor)&select=employee_id').catch(()=>({_err:true}))
+    sb('staff_accounts?is_active=eq.true&role=in.(' + roles + ')&select=employee_id,name,role&order=role.desc,name.asc').catch(()=>({_err:true})),
+    sb('on_duty?day=eq.' + stadiumDay() + '&role=in.(' + roles + ')&select=employee_id').catch(()=>({_err:true}))
   ]);
   const on = new Set(Array.isArray(duty) ? duty.map(d => String(d.employee_id)) : []);
   const people = (Array.isArray(all) ? all : []).map(a => ({id:String(a.employee_id), name:a.name, role:a.role, on:on.has(String(a.employee_id))}));
@@ -21384,7 +21600,12 @@ async function chatGroupPeople() {
 }
 function chatRenderWho() {
   const th = state._chatThread, el = document.getElementById('chat-who'); if (!th || !el || !th.people) return;
-  if (th.people.group) { el.innerHTML = '<div style="font-weight:800;margin-bottom:2px">🏭 Group — Warehouse Managers & Supervisors</div>' + th.people.group.map(x => '<span style="display:inline-block;margin:2px 8px 0 0">' + (x.on ? '🟢' : '⚪') + ' ' + escapeHtml(chatNice(x.name)) + ' <small style="color:var(--text-3)">' + (x.role === 'warehouse_manager' ? 'Mgr' : 'Sup') + '</small></span>').join('') + '<div style="font-size:10px;color:var(--text-3);margin-top:3px">🟢 signed in today — gets the alert</div>'; return; }
+  if (th.people.group) {
+    const food = th.stand === FOOD_GROUP;
+    const tag = r => food ? (/manager|coordinator/.test(r) ? 'Food Mgr' : 'Runner') : (r === 'warehouse_manager' ? 'Mgr' : 'Sup');
+    const list = food ? th.people.group.filter(x => x.on || /manager|coordinator/.test(x.role)) : th.people.group;
+    el.innerHTML = '<div style="font-weight:800;margin-bottom:2px">' + (food ? '🍽️ Food Team — Food Manager & runners' : '🏭 Group — Warehouse Managers & Supervisors') + '</div>' + list.map(x => '<span style="display:inline-block;margin:2px 8px 0 0">' + (x.on ? '🟢' : '⚪') + ' ' + escapeHtml(chatNice(x.name)) + ' <small style="color:var(--text-3)">' + tag(x.role) + '</small></span>').join('') + '<div style="font-size:10px;color:var(--text-3);margin-top:3px">🟢 signed in today — gets the alert' + (food ? ' · Supervisors: pick “Supervisor of a stand”' : '') + '</div>'; return;
+  }
   const p = th.people, names = l => p[l].length ? p[l].map(x => escapeHtml(chatNice(x.name))).slice(0, 3).join(', ') + (p[l].length > 3 ? ' +' + (p[l].length - 3) : '') : '<span style="color:var(--text-3)">none on today</span>';
   const pin = l => p.pinned && p.pinned[l] ? ' <span style="font-size:10px;color:var(--asu-maroon);font-weight:800">📌 set by Admin</span>' : '';
   el.innerHTML = (p.crew.length ? '<div>👥 Crew: ' + names('crew') + '</div>' : '') + '<div>⭐ Stand Lead: ' + names('lead') + pin('lead') + (!p.pinned.lead && p.areas.length && p.lead.length ? ' <span style="color:var(--text-3)">(' + escapeHtml(p.areas.join(', ')) + ')</span>' : '') + '</div><div>🧭 Supervisor: ' + names('sup') + pin('sup') + '</div><div>👔 Manager: ' + (p.mgr.length ? names('mgr') + pin('mgr') : '<span style="color:var(--text-3)">none assigned</span>') + '</div>';
@@ -21412,7 +21633,7 @@ const CHAT_REQ_STYLE = {
   'Comp / price':       {icon:'🏷️', color:'#7C3AED', bg:'#EDE9FE'},
   'SOS':                {icon:'🆘', color:'#DC2626', bg:'#FEE2E2'}
 };
-const CHAT_ROLE_COLOR = {crew:'#0EA5E9', lead:'#D97706', sup:'#7C3AED', mgr:'#8C1D40', whl:'#0F766E'};
+const CHAT_ROLE_COLOR = {crew:'#0EA5E9', lead:'#D97706', sup:'#7C3AED', mgr:'#8C1D40', whl:'#0F766E', food:'#EA580C'};
 function chatInitials(n) { const p = chatNice(n).split(' ').filter(Boolean); return ((p[0]||'?')[0] + (p[1] ? p[1][0] : '')).toUpperCase(); }
 function chatParseReq(body) {
   let b = String(body || ''), escalated = false;
@@ -21447,7 +21668,7 @@ function chatRenderThread() {
     const mine = String(r.sender_id) === me.id;
     const grouped = prev && String(prev.sender_id) === String(r.sender_id) && r.created_at && prev.created_at && (new Date(r.created_at) - new Date(prev.created_at) < 180000);
     prev = r;
-    const lvl = r.sender_level || (chatIsGroup(r.stand) ? 'whl' : (r.side === 'stand' ? 'lead' : 'sup'));
+    const lvl = r.sender_level || (r.stand === FOOD_GROUP ? 'food' : chatIsGroup(r.stand) ? 'whl' : (r.side === 'stand' ? 'lead' : 'sup'));
     const col = CHAT_ROLE_COLOR[lvl] || '#6B7280';
     const to = r.to_level && !mine ? '' : (r.to_level ? 'to ' + CHAT_LEVEL_LABEL[r.to_level] + ' · ' : '');
     const req = chatParseReq(r.body);
@@ -21485,27 +21706,31 @@ async function chatSend(quick) {
   const input = document.getElementById('chat-input');
   let body = String(quick || input.value || '').trim().slice(0, 1000);
   if (!body) return;
-  if (chatIsGroup(th.stand)) {
+  const foodGroup = th.stand === FOOD_GROUP, foodTo = foodGroup ? (chatLevel() === 'food' && th.to === 'sup' ? 'sup' : 'food') : null;
+  if (chatIsGroup(th.stand) && !(foodGroup && chatLevel() !== 'food')) {
     const si = document.getElementById('chat-stand'), raw = String(si && si.value || '').trim();
-    if (!raw) { if (si) si.focus(); return toast('Pick the stand first — which stand is this about?', 'error'); }
+    const need = !foodGroup || foodTo === 'sup';
+    if (!raw && need) { if (si) si.focus(); return toast(foodGroup ? 'Which stand? Its Supervisor gets the message' : 'Pick the stand first — which stand is this about?', 'error'); }
+    if (raw) {
     const all = await allVenueStands(), low = raw.toLowerCase();
     const hit = all.find(x => x.name.toLowerCase() === low) || all.find(x => x.name.toLowerCase().startsWith(low)) || all.find(x => x.name.toLowerCase().includes(low));
     if (!hit) { if (si) si.focus(); return toast('Stand not found — pick it from the list', 'error'); }
     if (si) si.value = hit.name;
     body = ('📍 ' + hit.name + ' — ' + body).slice(0, 1000);
+    }
   }
   // Who's on duty can change minutes before a message to Managers — always check fresh.
   if (!chatIsGroup(th.stand) && (th.to === 'mgr' || !th.people || !(th.people.mgr && th.people.mgr.length))) { chatDirReset(); th.people = await chatPeopleFor(th.stand).catch(()=>th.people); chatRenderWho(); }
-  if (!th.people) th.people = chatIsGroup(th.stand) ? await chatGroupPeople() : await chatPeopleFor(th.stand).catch(()=>null);
-  let to = chatIsGroup(th.stand) ? null : (th.to || chatDefaultTo(th)), note = '';
+  if (!th.people) th.people = chatIsGroup(th.stand) ? await chatGroupPeople(th.stand) : await chatPeopleFor(th.stand).catch(()=>null);
+  let to = foodGroup ? foodTo : chatIsGroup(th.stand) ? null : (th.to || chatDefaultTo(th)), note = '';
   // Nobody on today at that level → the next level up gets it.
   const p = th.people;
-  if (p && to && to !== 'mgr' && !(p[to] && p[to].length)) {
+  if (!foodGroup && p && to && to !== 'mgr' && !(p[to] && p[to].length)) {
     const up = CHAT_LEVELS.slice(CHAT_LEVELS.indexOf(to) + 1).find(l => l !== me.level && (l === 'mgr' || (p[l] && p[l].length)));
     if (up) { note = 'No ' + CHAT_LEVEL_LABEL[to] + ' on today — sent to ' + CHAT_LEVEL_LABEL[up]; to = up; }
   }
-  if (p && to === 'mgr' && !(p.mgr && p.mgr.length)) note = 'No manager has signed in today — saved in chat for when they open the app';
-  const row = {event_date:stadiumDay(), stand:th.stand, sender_id:me.id, sender_name:me.name, sender_role:me.role, side:chatSide(), sender_level:me.level === 'whl' ? null : me.level, to_level:to, body, client_id:genUUID()};
+  if (!foodGroup && p && to === 'mgr' && !(p.mgr && p.mgr.length)) note = 'No manager has signed in today — saved in chat for when they open the app';
+  const row = {event_date:stadiumDay(), stand:th.stand, sender_id:me.id, sender_name:me.name, sender_role:me.role, side:chatSide(), sender_level:(me.level === 'whl' || me.level === 'food') ? null : me.level, to_level:to === 'food' ? null : to, body, client_id:genUUID()};
   if (!quick) { input.value = ''; input.style.height = 'auto'; }
   th.pending.push({...row, _pending:true});
   chatRenderThread();
@@ -21525,6 +21750,20 @@ async function chatSend(quick) {
 // Only the addressed level is alerted. The stand name leads the title so a
 // lead over several portables knows at a glance which one is asking.
 async function chatNotify(stand, to, me, body) {
+  if (stand === FOOD_GROUP) {
+    const tag = chatParseStandTag(body), txt = tag ? tag.text : body, short = txt.length > 130 ? txt.slice(0, 127) + '…' : txt;
+    const ids = new Set();
+    const g = await chatGroupPeople(FOOD_GROUP).catch(()=>({group:[]}));
+    if (to === 'sup') {
+      // The stand's Supervisor(s) + the Food Manager.
+      const p = tag ? await chatPeopleFor(tag.stand).catch(()=>null) : null;
+      ((p && p.sup) || []).forEach(x => ids.add(String(x.id)));
+      g.group.filter(x => x.on && /manager|coordinator/.test(x.role)).forEach(x => ids.add(x.id));
+    } else g.group.filter(x => x.on).forEach(x => ids.add(x.id));
+    ids.delete(me.id); ids.delete('');
+    ids.forEach(id => sendPushTo(id, '🍽️ Food Team' + (tag ? ' · ' + tag.stand : ''), chatNice(me.name) + ' (' + me.role + '): ' + short));
+    return;
+  }
   if (chatIsGroup(stand)) { const g = await chatGroupPeople(), tag = chatParseStandTag(body), txt = tag ? tag.text : body; g.group.filter(x => x.on && x.id !== me.id).forEach(x => sendPushTo(x.id, '🏭 Warehouse · ' + (tag ? tag.stand : 'Leaders'), chatNice(me.name) + ': ' + (txt.length > 130 ? txt.slice(0, 127) + '…' : txt))); return; }
   const p = await chatPeopleFor(stand).catch(()=>null);
   const ids = new Set(((p && p[to]) || []).map(x => x.id));
