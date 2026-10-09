@@ -1699,6 +1699,8 @@
   #adm-group-bar{align-items:center;gap:10px;margin:10px 0 4px}
   #adm-group-title{font-weight:900;font-size:17px}
   #mgr-admin .adm-hide{display:none!important}
+  .ord-it-chips{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
+  .ord-it-chips button{border:1px solid var(--border);background:var(--bg-card);border-radius:10px;padding:11px 8px;font-weight:800;font-size:13px;font-family:inherit;color:var(--text);cursor:pointer;text-align:left}
 </style>
 </head>
 <body>
@@ -2770,6 +2772,19 @@
       <div class="ord-sec-sub">From the kitchen · a runner brings it</div>
       <div id="order-food-list" style="margin-top:8px"></div>
     </div>
+
+    <div class="ord-sec ord-sec-it" style="border-left:5px solid #2563EB">
+      <div class="ord-sec-h"><span>🔧 Something broken?</span></div>
+      <div class="ord-sec-sub">Tap it — IT gets a ticket for this stand (separate from your order)</div>
+      <div class="ord-it-chips">
+        <button type="button" onclick="orderOpenIT('POS Handheld')">📱 POS Handheld</button>
+        <button type="button" onclick="orderOpenIT('POS Menu')">📋 POS Menu</button>
+        <button type="button" onclick="orderOpenIT('POS Tablet')">💳 POS Tablet</button>
+        <button type="button" onclick="orderOpenIT('TV / Menu Board')">📺 TV / Menu Board</button>
+        <button type="button" onclick="orderOpenIT('Other')">❓ Other</button>
+      </div>
+    </div>
+
 
     <div style="height:150px"></div>
   </div>
@@ -4581,7 +4596,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-09-fix-54';
+const BUILD_TAG = '2026-10-09-fix-55';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9689,7 +9704,7 @@ function orderWhGroup(item){
   if(ORDER_DRINK_RE.test(n))return 'beer';
   return '';
 }
-const ORDER_WH_GROUPS=[['fav','⭐ Most ordered here'],['beer','🍺 Beer · seltzer · wine'],['soda','🥤 Soda · water · sports drinks'],['snack','🍿 Popcorn · candy · snacks'],['needs','🧊 Ice · CO2 · draft & souvenir cups']];
+const ORDER_WH_GROUPS=[['fav','⭐ Most needed'],['beer','🍺 Beer · seltzer · wine'],['soda','🥤 Soda · water · sports drinks'],['snack','🍿 Popcorn · candy · snacks'],['needs','🧊 Ice · CO2 · draft & souvenir cups']];
 // Stand "type" — stands of the same kind order the same things (10/3 history:
 // beer portables → Devils Halo/Topo/Coors; main stands → loyalty cups, CO2).
 function orderStandType(stand){
@@ -9722,10 +9737,47 @@ async function orderLoadHistory(){
   return (state._orderHist={at:Date.now(),byStand,byType});
 }
 // Top of the list: what THIS stand orders most, then what stands like it order.
+// Fixed "usually needed" starters per stand type, from the last 120 days of
+// requests (picked AND typed by hand). They sit with the stand's own
+// most-ordered items in one "⭐ Most needed" list at the top.
+const ORDER_STARTERS={
+  main:[/\bICE\b/,/CUP LOYALTY/,/DASANI|SMART WATER|AQUAFINA/,/POPCORN - BAG/,/\b20 ?# ?CO2\b|\bCO2 35/,/GATORADE|POWERADE/,/CHIP .*KETTLE/],
+  nacho:[/\bICE\b/,/POPCORN - BAG/,/CUP LOYALTY/,/DASANI|SMART WATER/,/\b20 ?# ?CO2\b|\bCO2 35/,/CHIP .*KETTLE/],
+  pizza:[/\bICE\b/,/POPCORN - BAG/,/CUP LOYALTY/,/DASANI|SMART WATER/,/\b20 ?# ?CO2\b|\bCO2 35/,/CHIP .*KETTLE/],
+  beerport:[/TOPO CHICO/,/COORS LIGHT/,/DEVILS HALO LAGER/,/MILLER LITE/,/DOS EQUIS/,/SMART WATER|LIFE WATER/,/\bICE\b/,/SAUV BLANC|PINOT GRIGIO/],
+  bevmkt:[/DEVILS HALO LAGER/,/SIMPLY SPIKED/,/TOPO CHICO/,/SMART WATER/,/CHIP .*KETTLE/,/\bICE\b/],
+  gameday:[/TOPO CHICO/,/SIMPLY SPIKED/,/DOS EQUIS/,/LIFE WATER|SMART WATER/,/\bICE\b/],
+  bars:[/COORS LIGHT/,/MILLER LITE/,/TOPO CHICO/,/SMART WATER/,/\bICE\b/],
+  drafthouse:[/\bICE\b/,/CUP - CLR PLASTIC DRAFT|PLAS CLR/,/CHURCHIL/,/\bCO2\b/,/PEANUTS/],
+  sc:[/\bICE\b/,/SMART WATER|DASANI|AQUAFINA/,/GATORADE|POWERADE/],
+  other:[/\bICE\b/,/SMART WATER|DASANI|AQUAFINA/]
+};
+// Most needed = what THIS stand ordered before, then the type's starters,
+// then what stands like it order — up to 10, no repeats.
 function orderPickFavorites(stand,items,hist){
   const own=(hist&&hist.byStand[canonicalStandName2026(stand)])||{},typ=(hist&&hist.byType[orderStandType(stand)])||{};
-  return items.map((it,i)=>{const k=ydItemKey(it.itemName);return {i,own:own[k]||0,typ:typ[k]||0,score:(own[k]||0)*3+(typ[k]||0)};})
-    .filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,8);
+  const out=[],used=new Set(),add=(i,why)=>{if(i<0||used.has(i)||out.length>=10)return;used.add(i);out.push({i,why});};
+  const name=i=>String(items[i].itemName||'').toUpperCase();
+  items.map((it,i)=>({i,n:own[ydItemKey(it.itemName)]||0})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n).slice(0,5).forEach(x=>add(x.i,'ordered here '+x.n+'×'));
+  (ORDER_STARTERS[orderStandType(stand)]||ORDER_STARTERS.other).forEach(re=>{const i=items.findIndex((it,k)=>!used.has(k)&&re.test(name(k)));add(i,'usually needed');});
+  items.map((it,i)=>({i,n:typ[ydItemKey(it.itemName)]||0})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n).forEach(x=>add(x.i,'popular at '+({beerport:'beer portables',gameday:'Game Day stands',bars:'BarS stands',bevmkt:'Beverage MKTs',drafthouse:'Draft Houses',nacho:'Nacho stands',pizza:'Pizza stands',sc:'subcontractor stands',main:'main stands'}[orderStandType(stand)]||'similar stands')));
+  return out;
+}
+// IT from the order screen: opens the IT report already on this stand and
+// the tapped problem — one more tap to send.
+async function orderOpenIT(cat){
+  const stand=state.orderStand;
+  requestHubMarkReturn();
+  showScreen('screen-it-report');
+  await goITReportSetup();
+  if(stand){
+    state.itTargetStand=stand;
+    const sel=document.getElementById('it-stand-select');if(sel&&[...sel.options].some(o=>o.value===stand))sel.value=stand;
+    const sub=document.getElementById('it-rep-sub');if(sub)sub.textContent=stand;
+  }
+  const btn=[...document.querySelectorAll('#it-cat-row .chip')].find(b=>(b.getAttribute('onclick')||'').indexOf("'"+cat+"'")>=0);
+  if(btn)selectITCat(btn,cat);
+  if(typeof checkITCategoryHold==='function')checkITCategoryHold();
 }
 
 function requestHubGoOrder(){ requestHubMarkReturn(); goOrder(); }
@@ -9777,8 +9829,11 @@ async function orderLoadStand(stand){
   const seen=new Set();
   state.orderWhItems=((res.ok&&res.items)||[]).map(it=>({...it,_grp:orderWhGroup(it)})).filter(it=>{
     if(!it._grp)return false;const k=String(it.itemName||'').trim().toUpperCase();if(seen.has(k))return false;seen.add(k);return true;});
+  // Ice was the #1 thing typed by hand ("3 bags of ice") but is on few
+  // sheets — every stand can order it.
+  if(!state.orderWhItems.some(it=>/\bICE\b/i.test(it.itemName)))state.orderWhItems.push({itemName:'ICE - BAG',unit:'BAG',pack:'',_grp:'needs',_virtual:true});
   state.orderFavs=orderPickFavorites(stand,state.orderWhItems,hist);
-  state.orderFavs.forEach(f=>{const it=state.orderWhItems[f.i];it._home=it._grp;it._grp='fav';it._hint=f.own?('ordered here '+f.own+'×'):('popular at '+({beerport:'beer portables',gameday:'Game Day stands',bars:'BarS stands',bevmkt:'Beverage MKTs',drafthouse:'Draft Houses',nacho:'Nacho stands',pizza:'Pizza stands',sc:'subcontractor stands',main:'main stands'}[orderStandType(stand)]||'similar stands'));});
+  state.orderFavs.forEach(f=>{const it=state.orderWhItems[f.i];it._home=it._grp;it._grp='fav';it._hint=f.why;});
   orderRenderWh();orderSummary();
 }
 function orderStepBtns(kind,key,qty){
@@ -9850,7 +9905,7 @@ async function submitUnifiedOrder(){
   await withLock(btn,'Sending…',async()=>{
     const jobs=[];
     if(sendWh)jobs.push((async()=>{
-      const itemsText=wh.map(x=>x.qty+' case'+(x.qty!==1?'s':'')+' × '+x.itemName+(x.pack?' ('+x.pack+')':'')).join('; ');
+      const itemsText=wh.map(x=>{const w=/\bICE\b/i.test(x.itemName)&&/BAG/i.test(x.unit||x.itemName)?'bag':'case';return x.qty+' '+w+(x.qty!==1?'s':'')+' × '+x.itemName+(x.pack?' ('+x.pack+')':'');}).join('; ');
       const coverage=await resolveWarehouseAssigneesForStand(stand).catch(()=>({people:[]}));
       const ids=(coverage.people||[]).map(p=>String(p.employee_id||'')).filter(Boolean);
       const names=(coverage.people||[]).map(p=>p.name||p.employee_id).filter(Boolean);

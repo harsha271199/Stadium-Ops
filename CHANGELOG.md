@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-09-fix-55
+- "Order for my stand" top list is now **⭐ Most needed**: what this stand ordered before, plus fixed "usually needed" starters for its type (from 120 days of requests, including typed ones), plus what similar stands order — up to 10. Main stands: Ice, loyalty cups, water, popcorn, CO2, Gatorade/Powerade, chips. Beer portables: Topo Chico, Coors Light, Devils Halo, Miller Lite, Dos Equis, water, Ice, wine. Draft Houses: Ice, draft cups, Churchill cups, CO2, peanuts. Etc.
+- **Ice for every stand** — the #1 thing typed by hand ("3 bags of ice") is now a line on every order screen, sent as bags.
+- **🔧 Something broken?** on the same screen: POS Handheld / POS Menu / POS Tablet / TV / Other opens the IT report already set to this stand and problem.
+
 ## 2026-10-09-fix-54
 - "Order for my stand": removed the Note box — just tap + and Send.
 
