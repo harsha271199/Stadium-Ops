@@ -4,12 +4,18 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-09-fix-58
+- 3rd-quarter lock is **manual only** (no automatic close from kickoff time). Admin / Manager / Food Manager taps "🏈 3rd quarter started — close food & alcohol" on their home screen.
+- On tap: phone alert to workers, Stand Leads and Supervisors on duty; open apps show a banner within a minute and Order for my stand updates by itself.
+- Rewritten notice in Order for my stand: "🔒 3rd QUARTER — Food & alcohol ordering is closed. The game is close to the end. Food and alcohol ordered now would go to waste. Need food or alcohol? Ask your Supervisor or Stand Lead — they can still order for your stand. You can still order ice, water, cups and snacks, and report IT problems below."
+- Supervisors, Stand Leads, NPO Leads and Managers keep ordering as normal (small reminder only).
+
 ## 2026-10-09-fix-57
 - **Food Manager screen rebuilt**: one tab bar (🍽️ Orders · 🏃 Runners · 💬 Chat), the 3rd-quarter switch on top, then Right Now counts. Each order is one clean card: stand + time left, items, who has it. The runner picker (+ "🙋 Me") shows only when nobody has it; Change runner / Mark delivered / Move to Warehouse / Decline sit behind **More ▾**.
 - **Runners tab** is a live board: each runner's area, jobs now (and how many on the way), delivered today. Tap to change their area.
 - **Runners see only their area** (like the warehouse): "📍 YOUR AREA" card, Available lists only their stands, "Show all" removed. A runner with no area sees every stand and is told to ask the Food Manager. Orders from a stand no runner covers alert only the Food Manager and runners without an area.
 - **💬 Food Team chat**: Food Manager + runners in one group. A runner can send to the Food Team or to "Supervisor of a stand" (pick the stand → that stand's Supervisor + Food Manager get the alert). Supervisors and Managers see Food Team in their chat inbox. Uses the existing chat table (no database change).
-- **3rd quarter — food & alcohol ordering closes**: closes by itself about 110 min after kickoff (Admin → Game info kickoff time), or a Manager / Food Manager taps "🏈 3rd quarter started". After that workers see a big notice ("No more food or alcohol orders — ask your Supervisor") on Order for my stand and Requests; food and beer/seltzer/wine lines are hidden and stripped at Send; Request Stock refuses alcohol. Supervisors, Stand Leads, NPO Leads and Managers can still order (with a reminder). Ice, water, cups and IT still work. A Manager can reopen. Every game day starts open.
+- **3rd quarter — food & alcohol ordering closes** when an Admin / Manager / Food Manager taps "🏈 3rd quarter started" (manual only — no automatic close). Workers, Stand Leads and Supervisors on duty get a phone alert; open apps show a banner within a minute. After that workers see a big notice ("No more food or alcohol orders — ask your Supervisor") on Order for my stand and Requests; food and beer/seltzer/wine lines are hidden and stripped at Send; Request Stock refuses alcohol. Supervisors, Stand Leads, NPO Leads and Managers can still order (with a reminder). Ice, water, cups and IT still work. A Manager can reopen. Every game day starts open.
 - Order for my stand: **🔧 Something broken?** IT buttons moved to the top; **Popcorn** and **Souvenir cups** added for main / Nacho / Pizza stands, **Water** for every stand (only when not already on the sheet).
 - Floating chat bubble hidden on the Food screen (it has its own Chat tab).
 - Data: DFA Market added as a Desert Financial Arena stand (needs its inventory sheet uploaded before Count In/Out).

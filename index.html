@@ -4628,7 +4628,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-09-fix-57';
+const BUILD_TAG = '2026-10-09-fix-58';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -17857,36 +17857,20 @@ async function togglePushLive() {
 // Football: once the 3rd quarter starts it is near closing, and extra food or
 // beer ordered now goes to waste. From then on workers cannot order food or
 // alcohol; Supervisors, Stand Leads (and NPO Leads) and Managers still can.
-// It closes by itself about Q3_AFTER_KICKOFF_MIN after kickoff (Game info →
-// kickoff time), or a Manager / Food Manager taps the switch. A Manager can
-// reopen it. Stored in app_settings.q3_lock as {day, mode:'on'|'off', by, at};
+// Manual only: an Admin / Manager / Food Manager taps the switch when the 3rd
+// quarter starts (and can reopen). Workers get a phone alert and, if the app
+// is open, a banner. Stored in app_settings.q3_lock as {day, mode, by, at};
 // a row for another day is ignored, so every game starts open.
-const Q3_AFTER_KICKOFF_MIN = 110;
 let _q3 = { at:0, v:null };
-function q3ParseKickoff(day, txt) {
-  const m = String(txt || '').match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i); if (!m) return null;
-  let h = parseInt(m[1], 10); const mi = m[2] || '00';
-  if (/pm/i.test(m[3]) && h !== 12) h += 12; if (/am/i.test(m[3]) && h === 12) h = 0;
-  const d = new Date(day + 'T' + String(h).padStart(2,'0') + ':' + mi + ':00-07:00'); // Arizona = MST all year
-  return isNaN(d) ? null : d;
-}
 async function q3State(force) {
   if (!force && _q3.v && Date.now() - _q3.at < 30000) return _q3.v;
   const day = stadiumDay();
-  const [set, gc] = await Promise.all([
-    sb('app_settings?key=eq.q3_lock&select=value').catch(()=>({_err:true})),
-    sb('game_day_content?event_date=eq.' + day + '&select=start_time,venue_key').catch(()=>({_err:true}))
-  ]);
+  const set = await sb('app_settings?key=eq.q3_lock&select=value').catch(()=>({_err:true}));
   if (!Array.isArray(set) && _q3.v) return _q3.v; // Wi-Fi blip: keep what we knew
   let man = null;
   try { const r = Array.isArray(set) && set[0]; if (r) { const j = JSON.parse(r.value); if (j && j.day === day && (j.mode === 'on' || j.mode === 'off')) man = j; } } catch(e) {}
-  const games = Array.isArray(gc) ? gc.sort((a,b) => (a.venue_key === 'all' ? 1 : 0) - (b.venue_key === 'all' ? 1 : 0)) : [];
-  const kickoff = games.map(g => q3ParseKickoff(day, g.start_time)).find(Boolean) || null;
-  const autoAt = kickoff ? new Date(kickoff.getTime() + Q3_AFTER_KICKOFF_MIN * 60000) : null;
-  let locked = false, why = '';
-  if (man) { locked = man.mode === 'on'; why = locked ? 'manual' : 'reopened'; }
-  else if (autoAt && Date.now() >= autoAt.getTime()) { locked = true; why = 'auto'; }
-  const v = { locked, why, by:(man && man.by) || '', at:(man && man.at) || '', kickoff, autoAt };
+  const locked = !!(man && man.mode === 'on'), why = man ? (locked ? 'manual' : 'reopened') : '';
+  const v = { locked, why, by:(man && man.by) || '', at:(man && man.at) || '' };
   _q3 = { at:Date.now(), v };
   return v;
 }
@@ -17915,10 +17899,10 @@ async function q3RenderBar(id, force) {
   if (!can && !foodStaff) { el.innerHTML = ''; return; }
   const st = await q3State(!!force);
   if (!st.locked && !can) { el.innerHTML = ''; return; }
-  const when = st.why === 'auto' ? 'Closed automatically at ' + q3Time(st.autoAt) + ' (about 3rd quarter).' : st.why === 'manual' ? 'Closed by ' + escapeHtml(chatNice(st.by || 'a manager')) + (st.at ? ' at ' + q3Time(new Date(st.at)) : '') + '.' : '';
+  const when = st.why === 'manual' ? 'Closed by ' + escapeHtml(chatNice(st.by || 'a manager')) + (st.at ? ' at ' + q3Time(new Date(st.at)) : '') + '.' : '';
   el.innerHTML = st.locked
     ? '<div class="q3-bar on"><div class="q3-t">🔒 3rd QUARTER — food &amp; alcohol ordering CLOSED</div><div class="q3-s">Workers can\'t order food or alcohol now. Supervisors, Stand Leads and Managers still can. ' + when + '</div>' + (can ? '<button onclick="q3Toggle()">Reopen ordering</button>' : '') + '</div>'
-    : '<div class="q3-bar open"><div class="q3-t">🏈 Food &amp; alcohol ordering: OPEN</div><div class="q3-s">' + (st.why === 'reopened' ? 'Reopened by ' + escapeHtml(chatNice(st.by || 'a manager')) + '. ' : '') + (st.autoAt && st.why !== 'reopened' ? 'Closes by itself at about ' + q3Time(st.autoAt) + ' (3rd quarter, kickoff ' + q3Time(st.kickoff) + ').' : 'Tap below when the 3rd quarter starts.') + '</div><button onclick="q3Toggle()">🏈 3rd quarter started — close food &amp; alcohol</button></div>';
+    : '<div class="q3-bar open"><div class="q3-t">🏈 Food &amp; alcohol ordering: OPEN</div><div class="q3-s">' + (st.why === 'reopened' ? 'Reopened by ' + escapeHtml(chatNice(st.by || 'a manager')) + '. ' : '') + 'Tap below when the 3rd quarter starts. Workers get an alert and can no longer order food or alcohol.' + '</div><button onclick="q3Toggle()">🏈 3rd quarter started — close food &amp; alcohol</button></div>';
 }
 function foodRenderQ3Bar() { q3RenderBar('food-q3-bar'); }
 async function q3Toggle() {
@@ -17933,16 +17917,40 @@ async function q3Toggle() {
   const r = await sb('app_settings?on_conflict=key', {method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'}, body:JSON.stringify({key:'q3_lock', value, updated_by:String(me.empId || ''), updated_at:new Date().toISOString()})}).catch(()=>({_err:true}));
   if (r && r._err) return toast('Could not change it — try again', 'error');
   _q3 = { at:0, v:null };
-  toast(close ? '🔒 Food & alcohol ordering closed for the 3rd quarter' : '✅ Ordering reopened', close ? 'error' : 'success');
+  // Phone alert to everyone working a stand (Supervisors and Stand Leads read it too — it tells them they still can).
+  const roles = ['worker','lead','supervisor'];
+  const n = close
+    ? await pushOnDuty(roles, Q3_TITLE, 'No more food or alcohol orders from workers. Need some? Ask your Supervisor or Stand Lead — they can still order for your stand.', me.empId).catch(()=>0)
+    : await pushOnDuty(roles, '✅ Food & alcohol ordering is open again', 'You can order food and alcohol in Order for my stand.', me.empId).catch(()=>0);
+  toast((close ? '🔒 Food & alcohol ordering closed for the 3rd quarter' : '✅ Ordering reopened') + (n ? ' · alert sent to ' + n + ' people' : ''), close ? 'error' : 'success');
   q3RenderBar('mgr-q3-bar', true); q3RenderBar('food-q3-bar', true);
 }
 // Big notice on the order screens for people who can't order any more, a
 // small reminder for those who still can.
+const Q3_TITLE = '🔒 3rd quarter — food & alcohol ordering is closed';
 function q3NoticeHtml(st) {
   if (!st || !st.locked) return '';
-  if (q3CanOrder()) return '<div class="q3-note">🏈 3rd quarter — only order food or alcohol you really need. Extra goes to waste after the game.</div>';
-  return '<div class="q3-lock"><div class="q3-big">🔒 3rd QUARTER<br>No more food or alcohol orders</div><div class="q3-s">The game is near closing — extra food and drinks go to waste.<br><b>Still need something? Ask your Supervisor</b> — they can order it for your stand.<br><span style="font-size:12px">Ice, water, cups and IT still work below.</span></div></div>';
+  if (q3CanOrder()) return '<div class="q3-note">🏈 3rd quarter has started. Workers can no longer order food or alcohol — you still can. Order only what your stand really needs; extra goes to waste after the game.</div>';
+  return '<div class="q3-lock"><div class="q3-big">🔒 3rd QUARTER<br>Food &amp; alcohol ordering is closed</div>' +
+    '<div class="q3-s">The game is close to the end. Food and alcohol ordered now would go to waste.<br><br>' +
+    '<b>Need food or alcohol? Ask your Supervisor or Stand Lead</b> — they can still order for your stand.<br><br>' +
+    '<span style="font-size:12px">You can still order ice, water, cups and snacks, and report IT problems below.</span></div></div>';
 }
+// Open app: notice the switch within a minute, show a banner once and
+// refresh the order screen if it is open.
+async function q3Watch() {
+  if (document.hidden || !state.user) return;
+  const st = await q3State().catch(()=>null); if (!st) return;
+  const key = 'q3_seen_' + stadiumDay(), was = (()=>{ try { return localStorage.getItem(key) || ''; } catch(e) { return ''; } })(), now = st.locked ? 'on' : 'off';
+  if (was === now) return;
+  try { localStorage.setItem(key, now); } catch(e) {}
+  if (!was && !st.locked) return;
+  if (st.locked) showNotificationBanner(Q3_TITLE, q3CanOrder() ? 'Workers can no longer order food or alcohol — you still can.' : 'Need food or alcohol? Ask your Supervisor or Stand Lead — they can still order for your stand.', 'warn');
+  else showNotificationBanner('✅ Food & alcohol ordering is open again', 'You can order food and alcohol in Order for my stand.', 'info');
+  if (state.currentScreen === 'screen-order') { await orderApplyQ3(); orderRenderWh(); orderRenderFood(); orderSummary(); }
+  if (state.currentScreen === 'screen-submenu-requests') { const el = document.getElementById('hub-q3'); if (el) el.innerHTML = q3NoticeHtml(st); }
+}
+setInterval(q3Watch, 60000);
 
 let _pushSubscription = null;
 
