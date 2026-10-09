@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-09-fix-53
+- **Force Restock is locked to the right people.** QR scan, the in-app scanner and "Add Stock Myself" now work only for Warehouse staff, Managers (Support Manager / Manager / Admin), Supervisors (any stand), and real Stand Leads / NPO Leads (their own stand). Regular workers, NPO members, staff who only have portable "lead access for all", and subcontractor stand logins are told "Force Restock is for Warehouse, Stand Leads, Supervisors and Managers — ask your Stand Lead". "Add Stock Myself" is hidden for them.
+- A signed-in person who is not allowed is no longer sent to the sign-in screen (people were signing in again there and ending up on another stand, e.g. 401P BarS). A Stand Lead scanning another stand's QR is told it is not their stand.
+- Found while checking: NPO group "Infinity Booster" is set up with "408 Cold Beer Cheeseburgers SC" and "401P BarS Sausage", and 401P is still an active stand with "lead access for all" ON — data to clean up in Admin.
+
 ## 2026-10-09-fix-52
 Game-day trial run of Food (Food Manager + 2 runners) and Warehouse (2 workers + Warehouse Manager) with a shared test database, trying to break it. Bugs found and fixed:
 - **Food — stale runner screen**: after the Food Manager moved an order to another runner, the first runner could still tap "On my way" and take it back. "On my way" / "Delivered" now only work if the order is still theirs and still open; otherwise: "The Food Manager moved this order to Jay — no need to bring it".

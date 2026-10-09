@@ -4583,7 +4583,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-09-fix-52';
+const BUILD_TAG = '2026-10-09-fix-53';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9155,14 +9155,12 @@ function qrFieldStandAllowed(stand,user){
   user=user||state.user;
   if(!user)return false;
   stand=normalizeQrStand(stand);if(!stand)return false;
+  if(!canForceStockUser(user))return false;
   if(user.role==='supervisor')return true;
   if(isLimitedAreaLead()){
     return (user.supervisorStands||[]).map(canonicalStandName2026).includes(stand);
   }
-  if(user.role==='lead'||user.leadAccessGranted||user.isNpo){
-    return canonicalStandName2026(user.stand)===stand;
-  }
-  return false;
+  return canonicalStandName2026(user.stand)===stand;
 }
 async function openQrForceRestock(stand){
   stand=await resolveQrStandLive(stand);
@@ -9189,6 +9187,18 @@ async function openQrForceRestock(stand){
     return true;
   }
 
+  // Signed in but not allowed: say why and stay in the app — never bounce a
+  // signed-in person to the login screen (that is how people ended up
+  // signing in as another stand).
+  if(state.user||state.staffAccount){
+    clearPendingQrStand();
+    const own=state.user&&state.user.stand?canonicalStandName2026(state.user.stand):'';
+    const msg=!canForceStock()?'⚡ Force Restock is for Warehouse, Stand Leads, Supervisors and Managers — ask your Stand Lead'
+      :'⚡ This QR is for '+stand+'. You can Force Restock your own stand'+(own?' ('+own+')':'')+' — ask a Supervisor for other stands';
+    toast(msg,'error',8000);
+    goRoleHome();
+    return false;
+  }
   rememberPendingQrStand(stand);
   showScreen('screen-login');
   const hint=document.getElementById('login-msg');
@@ -11243,6 +11253,7 @@ function prepareRequestHub(){
     const sub=exBtn.querySelector('.smb-sub');
     if(sub)sub.textContent=leadership?'Stock · Food · IT across all stands':(state.user&&state.user.role==='supervisor'?'Stock · Food · IT · pick any stand or all':'Stock · Food · IT · see what is coming');
   }
+  { const ab=document.getElementById('addstock-btn'); if(ab)ab.style.display=canForceStock()?'':'none'; }
   { const ob=document.getElementById('req-hub-order-btn'); if(ob)ob.style.display=''; const tg=document.getElementById('req-hub-order-tag'); if(tg)tg.textContent=orderTestMode()?'TEST MODE':'NEW'; }
   const who=getRequesterIdentity();
   const stand=getOperationalStand(who)||state.activeStand||who.homeStand||'';
@@ -24175,8 +24186,19 @@ async function tsBack() {
 // logic, just triggered directly by the stand's own lead/supervisor
 // instead of requiring a physical QR sticker or an existing warehouse
 // transfer to tap into.
+// Force Restock is only for: Warehouse staff, Managers (Support Manager /
+// Manager / Admin), Supervisors, real Stand Leads and NPO Leads (their own
+// stand). NOT regular workers, NPO members, staff who only got portable
+// "lead access for all", or subcontractor stand logins.
+function canForceStockUser(u){
+  if(!u||u.isSubcontractor)return false;
+  if(u.role==='supervisor'||isLimitedAreaLead())return true;
+  if(u.isNpo)return !!u.npoIsLead;
+  return u.role==='lead'&&(!u.leadAccessGranted||!!u.tempLeadAccess);
+}
 function canForceStock(){
-  if(state.user)return ['lead','supervisor'].includes(state.user.role)||!!state.user.leadAccessGranted||isLimitedAreaLead();
+  if(state.user)return canForceStockUser(state.user);
+  if(state.staffAccount&&state.staffAccount.group==='warehouse')return true;
   return !!(state.staffAccount&&state.staffAccount.group==='manager'&&['support_manager','manager','admin'].includes(state.staffAccount.role));
 }
 function goAddStockMyself(targetStand) {
