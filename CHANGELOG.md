@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-09-fix-56
+- One-tap lines for things stands kept typing by hand (shown only for the stand types that asked; if the stand's sheet already has the item, that real line is used instead):
+  - Ice (bags) — every stand
+  - Huss Devil's Halo IPA, Margarita can Mango, Margarita can Lime — main, Nacho, Pizza, beer portables, Beverage MKTs, Game Day, BarS
+  - Sun Devil Lager — beer portables, Game Day, Beverage MKTs
+  - Gatorade (assorted) — main, Nacho, Pizza, BarS, Beverage MKTs, subcontractors (when not already on the sheet)
+  - Cooler cups 24oz — main, Nacho, Pizza
+  - 🧰 Stand needs: Thermometer, Sanitizer (dish / red buckets) — main, Nacho, Pizza
+- Sent wording follows the unit: "1 bag × Ice", "2 cases × Margarita…", "1 × Thermometer".
+
 ## 2026-10-09-fix-55
 - "Order for my stand" top list is now **⭐ Most needed**: what this stand ordered before, plus fixed "usually needed" starters for its type (from 120 days of requests, including typed ones), plus what similar stands order — up to 10. Main stands: Ice, loyalty cups, water, popcorn, CO2, Gatorade/Powerade, chips. Beer portables: Topo Chico, Coors Light, Devils Halo, Miller Lite, Dos Equis, water, Ice, wine. Draft Houses: Ice, draft cups, Churchill cups, CO2, peanuts. Etc.
 - **Ice for every stand** — the #1 thing typed by hand ("3 bags of ice") is now a line on every order screen, sent as bags.

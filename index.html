@@ -4596,7 +4596,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-09-fix-55';
+const BUILD_TAG = '2026-10-09-fix-56';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9704,7 +9704,7 @@ function orderWhGroup(item){
   if(ORDER_DRINK_RE.test(n))return 'beer';
   return '';
 }
-const ORDER_WH_GROUPS=[['fav','⭐ Most needed'],['beer','🍺 Beer · seltzer · wine'],['soda','🥤 Soda · water · sports drinks'],['snack','🍿 Popcorn · candy · snacks'],['needs','🧊 Ice · CO2 · draft & souvenir cups']];
+const ORDER_WH_GROUPS=[['fav','⭐ Most needed'],['beer','🍺 Beer · seltzer · wine'],['soda','🥤 Soda · water · sports drinks'],['snack','🍿 Popcorn · candy · snacks'],['needs','🧊 Ice · CO2 · cups'],['stand','🧰 Stand needs']];
 // Stand "type" — stands of the same kind order the same things (10/3 history:
 // beer portables → Devils Halo/Topo/Coors; main stands → loyalty cups, CO2).
 function orderStandType(stand){
@@ -9741,10 +9741,10 @@ async function orderLoadHistory(){
 // requests (picked AND typed by hand). They sit with the stand's own
 // most-ordered items in one "⭐ Most needed" list at the top.
 const ORDER_STARTERS={
-  main:[/\bICE\b/,/CUP LOYALTY/,/DASANI|SMART WATER|AQUAFINA/,/POPCORN - BAG/,/\b20 ?# ?CO2\b|\bCO2 35/,/GATORADE|POWERADE/,/CHIP .*KETTLE/],
+  main:[/\bICE\b/,/CUP LOYALTY/,/DASANI|SMART WATER|AQUAFINA/,/POPCORN - BAG/,/\b20 ?# ?CO2\b|\bCO2 35/,/GATORADE/,/HUSS|HALO IPA/,/CHIP .*KETTLE/],
   nacho:[/\bICE\b/,/POPCORN - BAG/,/CUP LOYALTY/,/DASANI|SMART WATER/,/\b20 ?# ?CO2\b|\bCO2 35/,/CHIP .*KETTLE/],
   pizza:[/\bICE\b/,/POPCORN - BAG/,/CUP LOYALTY/,/DASANI|SMART WATER/,/\b20 ?# ?CO2\b|\bCO2 35/,/CHIP .*KETTLE/],
-  beerport:[/TOPO CHICO/,/COORS LIGHT/,/DEVILS HALO LAGER/,/MILLER LITE/,/DOS EQUIS/,/SMART WATER|LIFE WATER/,/\bICE\b/,/SAUV BLANC|PINOT GRIGIO/],
+  beerport:[/TOPO CHICO/,/COORS LIGHT/,/DEVILS HALO LAGER/,/MILLER LITE/,/DOS EQUIS/,/SMART WATER|LIFE WATER/,/\bICE\b/,/SUN DEVIL LAGER/,/SAUV BLANC|PINOT GRIGIO/],
   bevmkt:[/DEVILS HALO LAGER/,/SIMPLY SPIKED/,/TOPO CHICO/,/SMART WATER/,/CHIP .*KETTLE/,/\bICE\b/],
   gameday:[/TOPO CHICO/,/SIMPLY SPIKED/,/DOS EQUIS/,/LIFE WATER|SMART WATER/,/\bICE\b/],
   bars:[/COORS LIGHT/,/MILLER LITE/,/TOPO CHICO/,/SMART WATER/,/\bICE\b/],
@@ -9754,6 +9754,33 @@ const ORDER_STARTERS={
 };
 // Most needed = what THIS stand ordered before, then the type's starters,
 // then what stands like it order — up to 10, no repeats.
+// Things stands kept TYPING by hand (120 days of requests) that are not on
+// most sheets. Each becomes a one-tap line for the stand types that asked for
+// them. If the stand's sheet already has it (even a hidden "supplies" line),
+// that real line is shown instead — never a duplicate.
+const ORDER_BEER_TYPES=['main','nacho','pizza','beerport','bevmkt','gameday','bars'];
+const ORDER_FOOD_TYPES=['main','nacho','pizza'];
+const ORDER_EXTRAS=[
+  {name:'ICE - BAG',unit:'BAG',word:'bag',grp:'needs',test:/\bICE\b/,types:null},
+  {name:'BEER - CAN 19.2OZ HUSS DEVIL\'S HALO IPA',unit:'CAN',word:'case',grp:'beer',test:/HUSS|HALO IPA/,types:ORDER_BEER_TYPES},
+  {name:'SUN DEVIL LAGER - CAN',unit:'CAN',word:'case',grp:'beer',test:/SUN DEVIL LAGER/,types:['beerport','gameday','bevmkt']},
+  {name:'MARGARITA CAN - MANGO (Clubtails)',unit:'CAN',word:'case',grp:'beer',test:/MARGARITA.*MANGO|MANGO.*MARGARITA/,types:ORDER_BEER_TYPES},
+  {name:'MARGARITA CAN - LIME (Clubtails)',unit:'CAN',word:'case',grp:'beer',test:/\bLIME\b.*MARGARITA|MARGARITA.*\bLIME\b/,types:ORDER_BEER_TYPES},
+  {name:'BOTTLED 20OZ GATORADE (assorted)',unit:'BOTTLE',word:'case',grp:'soda',test:/GATORADE/,types:['main','nacho','pizza','bars','bevmkt','sc']},
+  {name:'COOLER CUPS 24OZ',unit:'CUP',word:'case',grp:'needs',test:/COOLER CUP|CUPS? ?-? ?24 ?OZ|CUP 24OZ PLASTIC/,types:ORDER_FOOD_TYPES},
+  {name:'THERMOMETER (food temp)',unit:'EACH',word:'each',grp:'stand',test:/THERMOMETER/,types:ORDER_FOOD_TYPES},
+  {name:'SANITIZER (dish / red buckets)',unit:'EACH',word:'each',grp:'stand',test:/SANITIZER/,types:ORDER_FOOD_TYPES}
+];
+function orderAddExtras(stand,sheetItems){
+  const ty=orderStandType(stand);
+  ORDER_EXTRAS.forEach(x=>{
+    if(x.types&&!x.types.includes(ty))return;
+    if(state.orderWhItems.some(it=>x.test.test(String(it.itemName||'').toUpperCase())))return; // already listed
+    const hidden=(sheetItems||[]).find(it=>x.test.test(String(it.itemName||'').toUpperCase())&&!isRetiredItem(it.itemName));
+    if(hidden)state.orderWhItems.push({...hidden,_grp:x.grp,_word:x.word});
+    else state.orderWhItems.push({itemName:x.name,unit:x.unit,pack:'',_grp:x.grp,_virtual:true,_word:x.word});
+  });
+}
 function orderPickFavorites(stand,items,hist){
   const own=(hist&&hist.byStand[canonicalStandName2026(stand)])||{},typ=(hist&&hist.byType[orderStandType(stand)])||{};
   const out=[],used=new Set(),add=(i,why)=>{if(i<0||used.has(i)||out.length>=10)return;used.add(i);out.push({i,why});};
@@ -9831,7 +9858,7 @@ async function orderLoadStand(stand){
     if(!it._grp)return false;const k=String(it.itemName||'').trim().toUpperCase();if(seen.has(k))return false;seen.add(k);return true;});
   // Ice was the #1 thing typed by hand ("3 bags of ice") but is on few
   // sheets — every stand can order it.
-  if(!state.orderWhItems.some(it=>/\bICE\b/i.test(it.itemName)))state.orderWhItems.push({itemName:'ICE - BAG',unit:'BAG',pack:'',_grp:'needs',_virtual:true});
+  orderAddExtras(stand,(res.ok&&res.items)||[]);
   state.orderFavs=orderPickFavorites(stand,state.orderWhItems,hist);
   state.orderFavs.forEach(f=>{const it=state.orderWhItems[f.i];it._home=it._grp;it._grp='fav';it._hint=f.why;});
   orderRenderWh();orderSummary();
@@ -9885,7 +9912,7 @@ async function submitUnifiedOrder(){
   await syncMyStandFromSchedule(true).catch(()=>{});
   if(state.user&&!isSupervisorSession()&&!isLimitedAreaLead()&&state.user.stand)state.orderStand=state.user.stand;
   const stand=state.orderStand;if(!stand)return toast('Pick a stand first','error');
-  const wh=[];(state.orderWhItems||[]).forEach((it,i)=>{const v=Number(state.orderWh[i]||0);if(v>0)wh.push({itemName:it.itemName,unit:it.unit||'',pack:it.pack||'',qty:v,cases:v});});
+  const wh=[];(state.orderWhItems||[]).forEach((it,i)=>{const v=Number(state.orderWh[i]||0);if(v>0)wh.push({itemName:it.itemName,unit:it.unit||'',pack:it.pack||'',qty:v,cases:v,word:it._word||''});});
   const food=ORDER_FOOD.filter(f=>Number(state.orderFood[f.key]||0)>0).map(f=>({itemName:f.name,qty:Number(state.orderFood[f.key]),unit:'each',pack:'',track_inventory:false}));
   if(!wh.length&&!food.length)return toast('Tap + on at least one item','error');
   let sendWh=wh.length>0,sendFood=food.length>0;
@@ -9905,7 +9932,7 @@ async function submitUnifiedOrder(){
   await withLock(btn,'Sending…',async()=>{
     const jobs=[];
     if(sendWh)jobs.push((async()=>{
-      const itemsText=wh.map(x=>{const w=/\bICE\b/i.test(x.itemName)&&/BAG/i.test(x.unit||x.itemName)?'bag':'case';return x.qty+' '+w+(x.qty!==1?'s':'')+' × '+x.itemName+(x.pack?' ('+x.pack+')':'');}).join('; ');
+      const itemsText=wh.map(x=>{const w=x.word||(/\bICE\b/i.test(x.itemName)&&/BAG/i.test(x.unit||x.itemName)?'bag':'case');return x.qty+' '+(w==='each'?'×':w+(x.qty!==1?'s':'')+' ×')+' '+x.itemName+(x.pack?' ('+x.pack+')':'');}).join('; ');
       const coverage=await resolveWarehouseAssigneesForStand(stand).catch(()=>({people:[]}));
       const ids=(coverage.people||[]).map(p=>String(p.employee_id||'')).filter(Boolean);
       const names=(coverage.people||[]).map(p=>p.name||p.employee_id).filter(Boolean);
