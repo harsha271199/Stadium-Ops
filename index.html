@@ -4691,7 +4691,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-74';
+const BUILD_TAG = '2026-10-10-fix-75';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5002,6 +5002,24 @@ function stadiumDay() {
 }
 // Start of the current game day for "today only" lists (6 AM roll-over; on the
 // very first game day it starts at midnight so early-morning requests show).
+// A sign-in saved on this phone belongs to ONE game day. A session left over
+// from an earlier game (e.g. a 210 phone still signed in from 9/5) must never
+// come back on a QR scan or app open: it showed the old game and old stand.
+function savedUserIsStale(u){
+  if(!u)return true;
+  const day=stadiumDay();
+  if(u.loginDay)return u.loginDay!==day;
+  return !!(u.shiftDate&&u.shiftDate<day);
+}
+function readFreshSavedUser(){
+  let u=null;
+  try{u=JSON.parse(localStorage.getItem('stadium_user')||'null');}catch(e){}
+  if(u&&savedUserIsStale(u)){
+    try{localStorage.removeItem('stadium_user');}catch(e){}
+    return null;
+  }
+  return u;
+}
 function stadiumDayStartISO() {
   const d = stadiumDay();
   return d + (d === FIRST_GAME_DAY ? 'T00:00:00-07:00' : 'T06:00:00-07:00');
@@ -7446,6 +7464,7 @@ async function doLogin() {
       const nm=(prompt('Signed in to '+res.user.stand+'.\n\nYour first name? (so the manager knows who did the counts)')||'').trim().replace(/[<>]/g,'').slice(0,30);
       res.user.name=nm?'Subcontractor, '+nm:'Subcontractor crew';
     }
+    if(res.user)res.user.loginDay=stadiumDay();
     state.user=res.user;
     localStorage.setItem('stadium_user',JSON.stringify(res.user));
     state.attendance=localStorage.getItem('stadium_attend_'+empId)||'not_started';
@@ -7840,7 +7859,8 @@ async function finishNpoLogin(g, memberName, stand, member) {
       // Same UI rule as a scheduled bartender/student who receives temporary
       // stand-level access: regular NPO members do not get crew-management.
       leadAccessGranted: !member.is_lead,
-      eventName: ctx.event_name || '', site: ctx.site || '', shiftDate: ctx.event_date || today
+      eventName: ctx.event_name || '', site: ctx.site || '', shiftDate: ctx.event_date || today,
+      loginDay: stadiumDay()
     };
     localStorage.setItem('stadium_user', JSON.stringify(state.user));
     state.attendance = localStorage.getItem('stadium_attend_' + state.user.empId) || 'not_started';
@@ -26941,10 +26961,8 @@ async function init() {
     // Restore field identity too, so an already signed-in Supervisor/Lead
     // can scan from the phone camera and go straight to Force Restock.
     if(!state.user){
-      const savedFieldRaw=localStorage.getItem('stadium_user');
-      if(savedFieldRaw){
-        try{state.user=JSON.parse(savedFieldRaw);}catch(e){}
-      }
+      const savedField=readFreshSavedUser();
+      if(savedField)state.user=savedField;
     }
     // Persist first so a not-yet-logged-in user can still resume after sign-in,
     // then consume the QR URL so refresh behaves like a normal app refresh.
@@ -27018,9 +27036,9 @@ async function init() {
     if (state.staffAccount && state.staffAccount.group === 'premium') { renderPremiumForRole(); showScreen('screen-premium'); return; }
   }
 
-  const saved = localStorage.getItem('stadium_user');
+  const saved = readFreshSavedUser();
   if (saved) {
-    state.user = JSON.parse(saved);
+    state.user = saved;
     // Re-verify against TODAY's actual schedule before trusting the cached
     // session — this is the actual fix for "shows the previous game's
     // stand until you manually log out." The cached object was correct

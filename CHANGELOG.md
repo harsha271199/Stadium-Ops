@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-75
+- Fixed: scanning a stand QR (e.g. at 210) on a phone that still had an old saved sign-in (9/5 Morgan State) brought that old session back with the old game, date and stand. Saved sign-ins now carry the game day they were made on; one from an earlier game day is dropped and the person signs in fresh. Applies to QR scans and normal app opens, NPO sessions included.
+- 205P Bar S Sausage sheet now matches the 10/10 BarS Sausage sheet exactly (34 lines; the second pork line renamed back to "PORK - PULLED SMOKED"). All Beer Portable sheets confirmed present and matching the 10/10 file.
+
 ## 2026-10-10-fix-74
 - Global Medical Brigades moved to **205P Bar S Sausage** (was the mistaken 206P BarS Sausage). Their 2 check-ins today moved to 205P.
 - Removed the 206P BarS Sausage stand added in fix-73 (stand row, 25 copied sheet lines, coverage entries); no counts or orders were on it.
