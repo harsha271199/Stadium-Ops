@@ -624,6 +624,7 @@
   .sub-menu-btn.req-hub-main .smb-icon{font-size:34px;width:44px}
   .sub-menu-btn.req-hub-main .smb-label{font-size:18px;font-weight:900}
   .req-hub-tag{background:#16A34A;color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;margin-left:4px;font-weight:800;vertical-align:middle;white-space:nowrap}
+  .ord-sup-hint{margin-top:8px;padding:8px 10px;border-radius:8px;background:#FEF3C7;color:#78350F;font-size:12px;line-height:1.35}
   .ord-other{display:flex;gap:6px;align-items:center;margin-top:8px}
   .ord-other input{flex:1;margin:0}
   .ord-other .ord-other-q{width:58px;text-align:center}
@@ -2836,6 +2837,7 @@
       <div class="ord-sec-sub">Drinks · popcorn · candy · snacks · ice · CO2 · draft &amp; souvenir cups</div>
       <input class="form-input" type="text" id="order-search" placeholder="🔍 Search drinks & snacks…" oninput="orderRenderWh()" style="margin:8px 0">
       <div id="order-wh-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+      <div id="order-sup-hint" class="ord-sup-hint"></div>
       <div class="ord-other" id="order-wh-other-row"><input class="form-input" type="text" id="order-wh-other" maxlength="120" placeholder="✏️ Not on the list? Type it (e.g. sanitizer buckets)" oninput="orderSummary()"><input class="form-input ord-other-q" type="number" min="1" max="99" id="order-wh-other-q" value="1" inputmode="numeric" oninput="orderSummary()"></div>
     </div>
 
@@ -4675,7 +4677,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-65';
+const BUILD_TAG = '2026-10-10-fix-66';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9965,6 +9967,7 @@ const ORDER_EXTRAS=[
   {name:'MARGARITA CAN - LIME (Clubtails)',unit:'CAN',word:'case',grp:'beer',test:/\bLIME\b.*MARGARITA|MARGARITA.*\bLIME\b/,types:ORDER_BEER_TYPES},
   {name:'BOTTLED 20OZ GATORADE (assorted)',unit:'BOTTLE',word:'case',grp:'soda',test:/GATORADE/,types:['main','nacho','pizza','bars','bevmkt','sc']},
   {name:'COOLER CUPS 24OZ',unit:'CUP',word:'case',grp:'needs',test:/COOLER CUP|CUPS? ?-? ?24 ?OZ|CUP 24OZ PLASTIC/,types:ORDER_FOOD_TYPES},
+  {name:'NAPKINS (dispenser sleeve)',unit:'SLEEVE',word:'sleeve',grp:'stand',test:/NAPKIN/,types:null},
   {name:'THERMOMETER (food temp)',unit:'EACH',word:'each',grp:'stand',test:/THERMOMETER/,types:ORDER_FOOD_TYPES},
   {name:'SANITIZER (dish / red buckets)',unit:'EACH',word:'each',grp:'stand',test:/SANITIZER/,types:ORDER_FOOD_TYPES}
 ];
@@ -10018,7 +10021,10 @@ async function goOrder(){
   document.getElementById('order-search').value='';
   ['order-wh-other','order-food-other'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   ['order-wh-other-q','order-food-other-q'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='1';});
-  { const w=document.getElementById('order-wh-other-row'); if(w)w.style.display=orderCanType()?'':'none';
+  { const h=document.getElementById('order-sup-hint'); if(h)h.innerHTML=orderCanType()
+      ?'🧰 <b>Supplies</b> (napkins, gloves, towels, wipes, condiment bags) are in the 🧰 group above — <b>you order them for this stand</b>.'
+      :'🧤 <b>Need napkins, gloves, towels or other supplies?</b> Your <b>Supervisor</b> orders those for your stand — tell them in 💬 Chat.';
+    const w=document.getElementById('order-wh-other-row'); if(w)w.style.display=orderCanType()?'':'none';
     const nr=document.getElementById('order-note-row'); if(nr)nr.style.display=orderCanType()?'':'none';
     const ni=document.getElementById('order-note'); if(ni)ni.value=''; }
   document.getElementById('order-test-banner').style.display=orderTestMode()?'':'none';

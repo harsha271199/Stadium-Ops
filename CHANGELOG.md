@@ -4,6 +4,22 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-66
+- **Napkins for every stand**: Supervisors and Managers see NAPKINS in 🧰 Supplies at every stand, even when the stand's sheet doesn't list them.
+- **Clear supplies notes in My Stand Order**:
+  - Stand staff: "Need napkins, gloves, towels or other supplies? Your Supervisor orders those for your stand — tell them in Chat."
+  - Supervisors: "Supplies … you order them for this stand."
+- Data (10/10): warehouse plan loaded (24 people; old rows backed up in `gda_backup_1010_wh`).
+  - West Concourse is split into 204 / 207 / 210 + nearby portables.
+  - East Concourse is split into 226 / 229 / 232 + nearby portables.
+  - North is split into Northwest (215–218) and Northeast (219–221).
+  - Bentley and Derico cover Inferno + all of West.
+  - Dahlgren and Rathod are in the Warehouse; Alex Harvey is on Premium.
+  - Rahul Birhade moved to food runner (North 215–221).
+  - Simran Sharma added to the warehouse schedule.
+  - New warehouse logins: Campoy, Nguyen, Harvey, Seay.
+  - New on the schedule: 3 concession workers and 4 premium workers.
+
 ## 2026-10-10-fix-65
 - **My Stand Order**:
   - The 🧰 **Supplies** group (gloves, napkins, towels, condiment bags, wipes…) now shows only for Supervisors and Managers. Stand staff no longer see supply lines, even in ⭐ Most needed.
