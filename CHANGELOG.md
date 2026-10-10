@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-69
+- **Warehouse runners get chat**: every warehouse login (runners too, not only Managers/Supervisors) now has 💬 Chat → **🏭 Warehouse Team**. Before, warehouse runners had no chat, only 📞 contacts.
+- **Both runner teams can reach Supervisors and Managers**: in Warehouse Team and Food Team, SEND TO has three choices:
+  - the Team;
+  - 🧭 Supervisor of a stand: that stand's Supervisor plus the team leaders;
+  - 👔 Managers: Managers signed in today (Admin, Yadzia…) plus the team leaders.
+- **Managers and Supervisors see the team chats**: both team chats are in the chat inbox. Messages sent to Managers show as 🔴 New for Managers, and messages sent to the Supervisor show as new for that stand's Supervisor. A reply goes to the whole team.
+- Data (10/10): split orders for Warehouse is ON (one person per order, the whole area after 10 min). West full-timers also cover Upper West, and East full-timers also cover Upper East. SE and SW Gate are added to the Inferno warehouse pair (Bentley, Derico) and to food runner Mohammed. Gary Mason is the 438 Stand Lead. Food runners: 8 people across 5 areas.
+
 ## 2026-10-10-fix-68
 - **Stand sheets back to exactly the 10/10 Yellow Dog file**: the 80 duplicate lines removed in fix-67 are restored in their original positions. All 66 stands match the file row for row (2,771 lines). The 3 lines added to DFA Market were taken off, so it has its 17 lines again. Duplicates stay on the sheet so the Yellow Dog copy-paste row count is right.
 - **Yellow Dog copy follows the sheet row by row**: Chargeables and Non-Chargeables & Supplies now list every sheet line in order, including a name listed twice. For example, PORK - PULLED SMOKED is on both tabs. Before, same-name lines were merged, so a tab could come out a row short. A sheet line that is repeated as an add-on no longer drops out of the copy.

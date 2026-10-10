@@ -4691,7 +4691,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-68';
+const BUILD_TAG = '2026-10-10-fix-69';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -21629,12 +21629,14 @@ const WH_GROUP = 'Warehouse Leaders';
 // Managers can open it too; a runner can send to the Supervisor of a stand.
 const FOOD_GROUP = 'Food Team';
 function chatIsGroup(stand) { return stand === WH_GROUP || stand === FOOD_GROUP; }
+// Runners / team members of a group (Supervisors and Managers just read & reply).
+function chatIsGroupMember(stand) { const l = chatLevel(); return (stand === FOOD_GROUP && l === 'food') || (stand === WH_GROUP && l === 'whl'); }
 function chatIsFoodSession() { const r = state.staffAccount && state.staffAccount.role || ''; return ['food_runner','kitchen_runner','food_manager','kitchen_coordinator'].includes(r); }
 function chatNice(n) { n = String(n||'').split(' (')[0]; return n.includes(',') ? (n.split(',')[1].trim().split(' ')[0] + ' ' + n.split(',')[0].trim()) : n; }
 function chatFirst(n) { return chatNice(n).split(' ')[0]; }
 const CHAT_LEVEL_LABEL = {crew:'Stand crew', lead:'Stand Lead', sup:'Supervisor', mgr:'Manager', food:'Food Team'};
 function chatLevel() {
-  if (state.staffAccount && ['warehouse_manager','warehouse_supervisor'].includes(state.staffAccount.role)) return 'whl';
+  if (state.staffAccount && ['warehouse_manager','warehouse_supervisor','warehouse_employee'].includes(state.staffAccount.role)) return 'whl';
   if (chatIsFoodSession()) return 'food';
   if (isManagerOpsSession()) return 'mgr';
   if (isSupervisorSession()) return 'sup';
@@ -21647,7 +21649,7 @@ function chatLevel() {
 function chatSide() { const l = chatLevel(); return !l ? null : (l === 'crew' || l === 'lead') ? 'stand' : 'leader'; }
 function chatMe() {
   const who = getRequesterIdentity(), u = state.user, lvl = chatLevel();
-  let role = lvl === 'whl' ? (state.staffAccount.role === 'warehouse_manager' ? 'Warehouse Manager' : 'Warehouse Supervisor') + (state._myWhGroupLabel ? ' · ' + state._myWhGroupLabel : '') : (CHAT_LEVEL_LABEL[lvl] || '');
+  let role = lvl === 'whl' ? ({warehouse_manager:'Warehouse Manager',warehouse_supervisor:'Warehouse Supervisor'}[state.staffAccount.role] || 'Warehouse') + (state._myWhGroupLabel ? ' · ' + state._myWhGroupLabel : '') : (CHAT_LEVEL_LABEL[lvl] || '');
   if (u && u.isNpo) role = u.npoIsLead ? 'NPO Lead' : 'NPO';
   if (lvl === 'food') role = foodIsManagerSession() ? 'Food Manager' : 'Food Runner';
   return {id:String(who.empId||''), name:(lvl === 'food' && state.staffAccount && state.staffAccount.name) || who.name || '', role, level:lvl};
@@ -21749,7 +21751,6 @@ async function chatSyncIndex() {
   let q = 'stand_chat?event_date=eq.' + day + '&id=gt.' + ix.maxId + '&select=id,stand,side,sender_id,sender_name,sender_role,sender_level,to_level,body,created_at&order=id.asc&limit=500';
   if (lvl === 'whl') q += '&stand=eq.' + encodeURIComponent(WH_GROUP);
   else if (lvl === 'food') q += '&stand=eq.' + encodeURIComponent(FOOD_GROUP);
-  else q += '&stand=neq.' + encodeURIComponent(WH_GROUP);
   if (lvl === 'crew' || lvl === 'lead') {
     if (!state._chatMyStands || state._chatMyStandsDay !== day) { state._chatMyStands = await chatMyStands(); state._chatMyStandsDay = day; }
     const list = [...state._chatMyStands]; if (!list.length) return false;
@@ -21764,12 +21765,12 @@ async function chatSyncIndex() {
 // without a level: anything from the other side), at a stand I look after.
 function chatIsForMe(r) {
   const me = chatMe(); if (!me.level || String(r.sender_id) === me.id) return false;
-  if (r.stand === WH_GROUP || me.level === 'whl') return me.level === 'whl' && r.stand === WH_GROUP;
-  if (r.stand === FOOD_GROUP || me.level === 'food') {
-    if (r.stand !== FOOD_GROUP) return false;
-    if (me.level === 'food') return true;
-    // A Supervisor is alerted only for runner messages sent to the Supervisor
-    // about one of their stands.
+  if (me.level === 'whl') return r.stand === WH_GROUP;
+  if (me.level === 'food') return r.stand === FOOD_GROUP;
+  if (chatIsGroup(r.stand)) {
+    // Managers: team messages sent to the Managers. Supervisors: messages sent
+    // to the Supervisor about one of their stands.
+    if (me.level === 'mgr') return r.to_level === 'mgr';
     if (me.level !== 'sup' || r.to_level !== 'sup') return false;
     const tag = chatParseStandTag(r.body), mine = state._chatMyStands;
     return !(tag && mine && mine.size && !mine.has(canonicalStandName2026(tag.stand)));
@@ -21886,7 +21887,7 @@ function chatRenderInbox() {
     const l = last[st], u = chatUnreadFor(st);
     const t = l ? new Date(l.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
     const to = l && l.to_level ? ' → ' + CHAT_LEVEL_LABEL[l.to_level] : '';
-    return '<div class="card chat-inbox-row' + (u ? ' unread' : '') + '" onclick="chatOpenThread(this.dataset.s)" data-s="' + escapeAttr(st) + '"><div style="min-width:0"><div class="cname">' + escapeHtml(st) + (mine.has(st) && lvl !== 'lead' ? ' <span style="font-size:10px;color:var(--asu-maroon)">· MY STAND</span>' : '') + '</div>' +
+    return '<div class="card chat-inbox-row' + (u ? ' unread' : '') + '" onclick="chatOpenThread(this.dataset.s)" data-s="' + escapeAttr(st) + '"><div style="min-width:0"><div class="cname">' + escapeHtml(st === WH_GROUP ? '🏭 Warehouse Team' : st === FOOD_GROUP ? '🍽️ Food Team' : st) + (mine.has(st) && lvl !== 'lead' ? ' <span style="font-size:10px;color:var(--asu-maroon)">· MY STAND</span>' : '') + '</div>' +
       '<div class="cprev">' + (l ? escapeHtml(chatNice(l.sender_name) + to + ': ' + l.body) : 'No messages yet — tap to start') + '</div></div>' +
       '<div style="text-align:right;flex:0 0 auto"><div style="font-size:10px;color:var(--text-2)">' + t + '</div>' + (u ? '<span class="chat-unread-pill">' + u + '</span>' : '') + '</div></div>';
   };
@@ -21896,6 +21897,7 @@ function chatRenderInbox() {
   const rest = scope.filter(st => !chatUnreadFor(st) && last[st]).sort((a,b) => last[b].id - last[a].id);
   const quiet = [...mine].filter(st => !last[st]).sort((a,b) => standSort(a,b));
   if ((lvl === 'sup' || lvl === 'mgr') && !last[FOOD_GROUP]) quiet.unshift(FOOD_GROUP);
+  if ((lvl === 'sup' || lvl === 'mgr') && !last[WH_GROUP]) quiet.unshift(WH_GROUP);
   let html = '';
   if (unread.length) html += '<div class="section-title">🔴 New for you</div>' + unread.map(row).join('');
   if (rest.length) html += '<div class="section-title">Today\'s conversations</div>' + rest.map(row).join('');
@@ -21964,19 +21966,22 @@ function chatRenderTo() {
   const th = state._chatThread, el = document.getElementById('chat-to'); if (!th || !el) return;
   if (th.people && th.people.group) {
     const nt = document.getElementById('chat-to-note');
-    // Food Team: a runner sends to the whole Food Team, or to the Supervisor of a stand.
-    if (th.stand === FOOD_GROUP && chatLevel() === 'food') {
-      if (th.to !== 'sup') th.to = 'food';
+    // Food Team / Warehouse Team: a member sends to the whole team, to the
+    // Supervisor of a stand, or to the Managers on duty.
+    const food = th.stand === FOOD_GROUP, team = food ? '🍽️ Food Team' : '🏭 Warehouse Team';
+    if (chatIsGroupMember(th.stand)) {
+      if (th.to !== 'sup' && th.to !== 'mgr') th.to = 'team';
       el.innerHTML = '<span style="font-size:11px;font-weight:800;color:var(--text-2);margin-right:2px">SEND TO</span>' +
-        '<button class="chip' + (th.to === 'food' ? ' selected' : '') + '" onclick="chatSetTo(\'food\')">🍽️ Food Team</button>' +
-        '<button class="chip' + (th.to === 'sup' ? ' selected' : '') + '" onclick="chatSetTo(\'sup\')">🧭 Supervisor of a stand</button>';
+        '<button class="chip' + (th.to === 'team' ? ' selected' : '') + '" onclick="chatSetTo(\'team\')">' + team + '</button>' +
+        '<button class="chip' + (th.to === 'sup' ? ' selected' : '') + '" onclick="chatSetTo(\'sup\')">🧭 Supervisor of a stand</button>' +
+        '<button class="chip' + (th.to === 'mgr' ? ' selected' : '') + '" onclick="chatSetTo(\'mgr\')">👔 Managers</button>';
       const sw = document.getElementById('chat-stand-wrap'), si = document.getElementById('chat-stand');
       if (sw) sw.style.display = '';
       if (si) si.placeholder = th.to === 'sup' ? '📍 Which stand? (required — its Supervisor gets it)' : '📍 Which stand? (optional)';
-      if (nt) nt.textContent = th.to === 'sup' ? '🔔 That stand\'s Supervisor and the Food Manager get an alert' : '🔔 Food Manager and runners signed in today get an alert';
+      if (nt) nt.textContent = th.to === 'sup' ? '🔔 That stand\'s Supervisor and your team leaders get an alert' : th.to === 'mgr' ? '🔔 Managers signed in today get an alert (Yadzia, Admin…)' : '🔔 Everyone on the ' + team.slice(3) + ' signed in today gets an alert';
       return;
     }
-    el.innerHTML = ''; if (nt) nt.textContent = th.stand === FOOD_GROUP ? '🔔 Food Manager and runners signed in today get an alert' : ''; return;
+    el.innerHTML = ''; if (nt) nt.textContent = '🔔 Your reply goes to the whole ' + team.slice(3); return;
   }
   if (!th.people) { el.innerHTML = '<span style="font-size:11px;color:var(--text-3)">Loading who is on…</span>'; return; }
   const opts = chatToOptions(th.people);
@@ -22008,10 +22013,10 @@ async function chatOpenThread(stand) {
   if (whoEl) whoEl.style.display = chatIsGroup(stand) ? 'none' : '';
   if (chatIsGroup(stand)) {
     const food = stand === FOOD_GROUP;
-    document.getElementById('chat-title').textContent = food ? '🍽️ Food Team' : '🏭 Warehouse Leaders';
-    document.getElementById('chat-sub').textContent = food ? 'Food Manager · runners · Supervisors' : 'Warehouse Managers & Supervisors';
-    const si = document.getElementById('chat-stand'); if (si) { si.value = ''; si.placeholder = food ? '📍 Which stand? (optional)' : '📍 Which stand? (required)'; }
-    if (food && chatLevel() !== 'food' && sw) sw.style.display = 'none';
+    document.getElementById('chat-title').textContent = food ? '🍽️ Food Team' : '🏭 Warehouse Team';
+    document.getElementById('chat-sub').textContent = food ? 'Food Manager · runners · Supervisors · Managers' : 'Warehouse Managers, Supervisors & runners · Managers';
+    const si = document.getElementById('chat-stand'); if (si) { si.value = ''; si.placeholder = '📍 Which stand? (optional)'; }
+    if (!chatIsGroupMember(stand) && sw) sw.style.display = 'none';
     allVenueStands().then(all => { const dl = document.getElementById('chat-stand-list'); if (dl) dl.innerHTML = all.map(x => '<option value="' + escapeAttr(x.name) + '">').join(''); });
     chatGroupPeople(stand).then(p => { if (state._chatThread !== th) return; th.people = p; chatRenderTo(); chatRenderWho(); });
   }
@@ -22021,7 +22026,7 @@ async function chatOpenThread(stand) {
   state._chatThreadTimer = setInterval(() => { if (document.hidden) return; chatLoadThread(false); const t = state._chatThread; if (t && t.rows.some(r => /^🙋 REQUEST/.test(r.body||'') && String(r.sender_id) === chatMe().id)) chatRenderThread(); }, 5000);
 }
 async function chatGroupPeople(stand) {
-  const roles = stand === FOOD_GROUP ? 'food_manager,kitchen_coordinator,food_runner,kitchen_runner' : 'warehouse_manager,warehouse_supervisor';
+  const roles = stand === FOOD_GROUP ? 'food_manager,kitchen_coordinator,food_runner,kitchen_runner' : 'warehouse_manager,warehouse_supervisor,warehouse_employee';
   const [all, duty] = await Promise.all([
     sb('staff_accounts?is_active=eq.true&role=in.(' + roles + ')&select=employee_id,name,role&order=role.desc,name.asc').catch(()=>({_err:true})),
     sb('on_duty?day=eq.' + stadiumDay() + '&role=in.(' + roles + ')&select=employee_id').catch(()=>({_err:true}))
@@ -22034,9 +22039,9 @@ function chatRenderWho() {
   const th = state._chatThread, el = document.getElementById('chat-who'); if (!th || !el || !th.people) return;
   if (th.people.group) {
     const food = th.stand === FOOD_GROUP;
-    const tag = r => food ? (/manager|coordinator/.test(r) ? 'Food Mgr' : 'Runner') : (r === 'warehouse_manager' ? 'Mgr' : 'Sup');
-    const list = food ? th.people.group.filter(x => x.on || /manager|coordinator/.test(x.role)) : th.people.group;
-    el.innerHTML = '<div style="font-weight:800;margin-bottom:2px">' + (food ? '🍽️ Food Team — Food Manager & runners' : '🏭 Group — Warehouse Managers & Supervisors') + '</div>' + list.map(x => '<span style="display:inline-block;margin:2px 8px 0 0">' + (x.on ? '🟢' : '⚪') + ' ' + escapeHtml(chatNice(x.name)) + ' <small style="color:var(--text-3)">' + tag(x.role) + '</small></span>').join('') + '<div style="font-size:10px;color:var(--text-3);margin-top:3px">🟢 signed in today — gets the alert' + (food ? ' · Supervisors: pick “Supervisor of a stand”' : '') + '</div>'; return;
+    const tag = r => food ? (/manager|coordinator/.test(r) ? 'Food Mgr' : 'Runner') : (r === 'warehouse_manager' ? 'Mgr' : r === 'warehouse_supervisor' ? 'Sup' : 'Runner');
+    const list = th.people.group.filter(x => x.on || /manager|coordinator|supervisor/.test(x.role));
+    el.innerHTML = '<div style="font-weight:800;margin-bottom:2px">' + (food ? '🍽️ Food Team — Food Manager & runners' : '🏭 Warehouse Team — Managers, Supervisors & runners') + '</div>' + list.map(x => '<span style="display:inline-block;margin:2px 8px 0 0">' + (x.on ? '🟢' : '⚪') + ' ' + escapeHtml(chatNice(x.name)) + ' <small style="color:var(--text-3)">' + tag(x.role) + '</small></span>').join('') + '<div style="font-size:10px;color:var(--text-3);margin-top:3px">🟢 signed in today — gets the alert · use SEND TO for a stand\'s Supervisor or the Managers</div>'; return;
   }
   const p = th.people, names = l => p[l].length ? p[l].map(x => escapeHtml(chatNice(x.name))).slice(0, 3).join(', ') + (p[l].length > 3 ? ' +' + (p[l].length - 3) : '') : '<span style="color:var(--text-3)">none on today</span>';
   const pin = l => p.pinned && p.pinned[l] ? ' <span style="font-size:10px;color:var(--asu-maroon);font-weight:800">📌 set by Admin</span>' : '';
@@ -22138,11 +22143,12 @@ async function chatSend(quick) {
   const input = document.getElementById('chat-input');
   let body = String(quick || input.value || '').trim().slice(0, 1000);
   if (!body) return;
-  const foodGroup = th.stand === FOOD_GROUP, foodTo = foodGroup ? (chatLevel() === 'food' && th.to === 'sup' ? 'sup' : 'food') : null;
-  if (chatIsGroup(th.stand) && !(foodGroup && chatLevel() !== 'food')) {
+  const group = chatIsGroup(th.stand), member = group && chatIsGroupMember(th.stand);
+  const groupTo = member ? (th.to === 'sup' || th.to === 'mgr' ? th.to : 'team') : 'team';
+  if (member) {
     const si = document.getElementById('chat-stand'), raw = String(si && si.value || '').trim();
-    const need = !foodGroup || foodTo === 'sup';
-    if (!raw && need) { if (si) si.focus(); return toast(foodGroup ? 'Which stand? Its Supervisor gets the message' : 'Pick the stand first — which stand is this about?', 'error'); }
+    const need = groupTo === 'sup';
+    if (!raw && need) { if (si) si.focus(); return toast('Which stand? Its Supervisor gets the message', 'error'); }
     if (raw) {
     const all = await allVenueStands(), low = raw.toLowerCase();
     const hit = all.find(x => x.name.toLowerCase() === low) || all.find(x => x.name.toLowerCase().startsWith(low)) || all.find(x => x.name.toLowerCase().includes(low));
@@ -22154,15 +22160,15 @@ async function chatSend(quick) {
   // Who's on duty can change minutes before a message to Managers — always check fresh.
   if (!chatIsGroup(th.stand) && (th.to === 'mgr' || !th.people || !(th.people.mgr && th.people.mgr.length))) { chatDirReset(); th.people = await chatPeopleFor(th.stand).catch(()=>th.people); chatRenderWho(); }
   if (!th.people) th.people = chatIsGroup(th.stand) ? await chatGroupPeople(th.stand) : await chatPeopleFor(th.stand).catch(()=>null);
-  let to = foodGroup ? foodTo : chatIsGroup(th.stand) ? null : (th.to || chatDefaultTo(th)), note = '';
+  let to = group ? groupTo : (th.to || chatDefaultTo(th)), note = '';
   // Nobody on today at that level → the next level up gets it.
   const p = th.people;
-  if (!foodGroup && p && to && to !== 'mgr' && !(p[to] && p[to].length)) {
+  if (!group && p && to && to !== 'mgr' && !(p[to] && p[to].length)) {
     const up = CHAT_LEVELS.slice(CHAT_LEVELS.indexOf(to) + 1).find(l => l !== me.level && (l === 'mgr' || (p[l] && p[l].length)));
     if (up) { note = 'No ' + CHAT_LEVEL_LABEL[to] + ' on today — sent to ' + CHAT_LEVEL_LABEL[up]; to = up; }
   }
-  if (!foodGroup && p && to === 'mgr' && !(p.mgr && p.mgr.length)) note = 'No manager has signed in today — saved in chat for when they open the app';
-  const row = {event_date:stadiumDay(), stand:th.stand, sender_id:me.id, sender_name:me.name, sender_role:me.role, side:chatSide(), sender_level:(me.level === 'whl' || me.level === 'food') ? null : me.level, to_level:to === 'food' ? null : to, body, client_id:genUUID()};
+  if (!group && p && to === 'mgr' && !(p.mgr && p.mgr.length)) note = 'No manager has signed in today — saved in chat for when they open the app';
+  const row = {event_date:stadiumDay(), stand:th.stand, sender_id:me.id, sender_name:me.name, sender_role:me.role, side:chatSide(), sender_level:(me.level === 'whl' || me.level === 'food') ? null : me.level, to_level:(to === 'team' || to === 'food') ? null : to, body, client_id:genUUID()};
   if (!quick) { input.value = ''; input.style.height = 'auto'; }
   th.pending.push({...row, _pending:true});
   chatRenderThread();
@@ -22182,21 +22188,28 @@ async function chatSend(quick) {
 // Only the addressed level is alerted. The stand name leads the title so a
 // lead over several portables knows at a glance which one is asking.
 async function chatNotify(stand, to, me, body) {
-  if (stand === FOOD_GROUP) {
+  if (chatIsGroup(stand)) {
+    const food = stand === FOOD_GROUP, label = food ? '🍽️ Food Team' : '🏭 Warehouse Team';
     const tag = chatParseStandTag(body), txt = tag ? tag.text : body, short = txt.length > 130 ? txt.slice(0, 127) + '…' : txt;
+    const title = label + (to === 'mgr' ? ' → Managers' : to === 'sup' ? ' → Supervisor' : '') + (tag ? ' · ' + tag.stand : '');
+    const msg = chatNice(me.name) + ' (' + me.role + '): ' + short;
     const ids = new Set();
-    const g = await chatGroupPeople(FOOD_GROUP).catch(()=>({group:[]}));
-    if (to === 'sup') {
-      // The stand's Supervisor(s) + the Food Manager.
+    const g = await chatGroupPeople(stand).catch(()=>({group:[]}));
+    const leaders = g.group.filter(x => x.on && /manager|coordinator|supervisor/.test(x.role));
+    if (to === 'mgr') {
+      // Managers on duty (Admin, Yadzia…) + the team's own leaders.
+      (await managersOnDuty().catch(()=>[])).forEach(m => ids.add(String(m.employee_id)));
+      leaders.forEach(x => ids.add(x.id));
+    } else if (to === 'sup') {
+      // The stand's Supervisor(s) + the team's own leaders.
       const p = tag ? await chatPeopleFor(tag.stand).catch(()=>null) : null;
       ((p && p.sup) || []).forEach(x => ids.add(String(x.id)));
-      g.group.filter(x => x.on && /manager|coordinator/.test(x.role)).forEach(x => ids.add(x.id));
+      leaders.forEach(x => ids.add(x.id));
     } else g.group.filter(x => x.on).forEach(x => ids.add(x.id));
-    ids.delete(me.id); ids.delete('');
-    ids.forEach(id => sendPushTo(id, '🍽️ Food Team' + (tag ? ' · ' + tag.stand : ''), chatNice(me.name) + ' (' + me.role + '): ' + short));
+    ids.delete(String(me.id)); ids.delete('');
+    ids.forEach(id => sendPushTo(id, title, msg));
     return;
   }
-  if (chatIsGroup(stand)) { const g = await chatGroupPeople(), tag = chatParseStandTag(body), txt = tag ? tag.text : body; g.group.filter(x => x.on && x.id !== me.id).forEach(x => sendPushTo(x.id, '🏭 Warehouse · ' + (tag ? tag.stand : 'Leaders'), chatNice(me.name) + ': ' + (txt.length > 130 ? txt.slice(0, 127) + '…' : txt))); return; }
   const p = await chatPeopleFor(stand).catch(()=>null);
   const ids = new Set(((p && p[to]) || []).map(x => x.id));
   // Crew/leads who already wrote in this thread hear the reply too.
