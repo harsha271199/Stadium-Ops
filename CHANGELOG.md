@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-74
+- Global Medical Brigades moved to **205P Bar S Sausage** (was the mistaken 206P BarS Sausage). Their 2 check-ins today moved to 205P.
+- Removed the 206P BarS Sausage stand added in fix-73 (stand row, 25 copied sheet lines, coverage entries); no counts or orders were on it.
+- 401P BarS Sausage is now NPO (Infinity Booster), not Subcontractor, so it is no longer treated as an unstaffed subcontractor stand.
+- Stand descriptions updated to today's NPO groups (205P, 203P/211P/217P, 210/221P, 219, 225P, 231P/233P/408/401P, 232, 414, 204/226).
+
 ## 2026-10-10-fix-73
 - **206P BarS Sausage added** (Global Medical Brigades, 10/10). It is now in the stand list. Its inventory sheet is copied from 208P BarS Sausage (25 lines), because the 10/10 Yellow Dog file has no 206 Bar S.
 - Data:
