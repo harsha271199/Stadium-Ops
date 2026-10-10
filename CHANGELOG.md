@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-73
+- **206P BarS Sausage added** (Global Medical Brigades, 10/10). It is now in the stand list. Its inventory sheet is copied from 208P BarS Sausage (25 lines), because the 10/10 Yellow Dog file has no 206 Bar S.
+- Data:
+  - Global Medical Brigades moved from 208P to 206P, and their 2 check-ins moved with them.
+  - 206P is added to the West warehouse/supervisor areas and the West food runners.
+  - Inactive groups (Desert Oasis, Lofton, St Matthew's) no longer list old stands.
+
 ## 2026-10-10-fix-72
 - **IT requests blocked by old tickets**: the "already reported" check on Report IT Issue looked at every unresolved ticket ever, so tickets left open from 9/5, 10/3 and 10/8 blocked new ones. It now only looks at today. Data: 43 old open/claimed IT tickets closed, with "[Auto-closed 10/10: left open from a previous game]". Today's tickets were not touched.
 - **NPO members at main stands**: members can now sign in at any assigned stand where Admin's self-login switch is ON, main stands included. Before, Infinity members could not pick or check in at 408 Cold Beer Cheeseburgers. Stands with the switch OFF (210, 140, 142, 204, 226, 232) stay NPO-Lead-only, with a clearer message.
