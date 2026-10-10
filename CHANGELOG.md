@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-71
+- **No more "ASU vs Morgan State"**: the game-day banner and the Game Day Info screen used to start with hard-coded 9/5 Morgan State text, which stayed on any screen that hadn't loaded today's info. They now start as "Game Day" and fill in from Admin → Game Day Info ("ASU vs.Hawaii · Oct 10, 2026"). The built-in fallback game info, and the photo label, are updated to the Hawaii 10/10 game.
+- **NPO sign-in only uses today's schedule**: when looking up a stand's event, it used to pick any test schedule row for that stand, whatever its date. It now only uses today's rows.
+
 ## 2026-10-10-fix-70
 - **3rd-quarter switch: Admin and Yadzia only.** Other Managers, Support Managers and the Food Manager no longer see the "3rd quarter started — close food & alcohol" button or "Reopen ordering". When it's closed, food staff still see the 🔒 notice.
 

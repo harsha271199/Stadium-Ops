@@ -2026,14 +2026,14 @@
       <div id="gameday-banner-collapsed" style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="font-size:10px;font-weight:800;letter-spacing:1px;opacity:0.85">GAME DAY</div>
-          <div style="font-size:15px;font-weight:800;margin-top:2px" id="gameday-banner-title">ASU vs Morgan State</div>
+          <div style="font-size:15px;font-weight:800;margin-top:2px" id="gameday-banner-title">Game Day</div>
           <div style="font-size:11px;opacity:0.85;margin-top:1px" id="gameday-banner-sub">Sept 5, 2026 · Tap for meals, timing &amp; reminders</div>
         </div>
         <div style="font-size:20px;opacity:0.8">›</div>
       </div>
       <div id="gameday-banner-expanded" style="display:none">
         <div style="font-size:10px;font-weight:800;letter-spacing:1px;opacity:0.85">GAME DAY · TAP FOR FULL DETAILS</div>
-        <div style="font-size:16px;font-weight:800;margin-top:4px" id="gameday-expanded-title">ASU vs Morgan State</div>
+        <div style="font-size:16px;font-weight:800;margin-top:4px" id="gameday-expanded-title">Game Day</div>
         <div style="font-size:12px;opacity:0.9;margin-top:4px" id="gameday-expanded-date">Sept 5, 2026</div>
         <div id="gameday-expanded-summary" style="font-size:12px;line-height:1.7;margin-top:10px;opacity:0.95"></div>
         <div style="display:flex;gap:8px;margin-top:12px">
@@ -2155,7 +2155,7 @@
 <div class="screen" id="screen-gameday-info">
   <div class="page-header" style="background:linear-gradient(135deg,var(--asu-maroon),#5E1229)">
     <div class="back-btn" role="button" tabindex="0" aria-label="Back" onclick="goRoleHome()" style="color:#fff">←</div>
-    <div><div class="page-title" style="color:#fff" id="gd-title">🏈 ASU vs Morgan State</div><div class="page-sub" style="color:#E9C9D4" id="gd-sub">Sept 5, 2026</div></div>
+    <div><div class="page-title" style="color:#fff" id="gd-title">🏟️ Game Day</div><div class="page-sub" style="color:#E9C9D4" id="gd-sub"></div></div>
   </div>
   <div class="content">
 
@@ -4691,7 +4691,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-70';
+const BUILD_TAG = '2026-10-10-fix-71';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7814,8 +7814,9 @@ async function finishNpoLogin(g, memberName, stand, member) {
     // defaulted to showing regardless of what event was actually
     // happening, since the blank-value fallback assumes football.
     const today = localISODate();
-    const ctxRows = await sb('schedule?location=eq.'+encodeURIComponent(stand)+'&is_test=eq.true&order=event_date.desc.nullslast&select=event_name,site,event_date&limit=1').catch(()=>({_err:true}))
-      .then(r => (r._err || !r.length) ? sb('schedule?location=eq.'+encodeURIComponent(stand)+'&event_date=eq.'+today+'&select=event_name,site,event_date&limit=1').catch(()=>({_err:true})) : r);
+    // Today only — an old row for this stand (e.g. the 9/5 Morgan State game)
+    // must never become the NPO's event or shift date.
+    const ctxRows = await sb('schedule?location=eq.'+encodeURIComponent(stand)+'&event_date=eq.'+today+'&select=event_name,site,event_date&limit=1').catch(()=>({_err:true}));
     const ctx = (!ctxRows._err && Array.isArray(ctxRows) && ctxRows.length) ? ctxRows[0] : {};
     member = member || {id:g.id,is_lead:true};
     const standMetaRows=await sb('stands?stand_name=eq.'+encodeURIComponent(stand)+'&select=is_main_stand,lead_access_for_all&limit=1').catch(()=>({_err:true}));
@@ -8514,7 +8515,7 @@ function renderWorkerActions() {
 }
 
 // Current game label — set this per game (used to name/group photos)
-const GAME_LABEL = 'MorganState_Sept5';
+const GAME_LABEL = 'Hawaii_Oct10';
 
 // Single source of truth for game-day info shown on the home banner and the
 // Game Day Info screen. Update this each week — everything that displays game
@@ -8522,16 +8523,16 @@ const GAME_LABEL = 'MorganState_Sept5';
 // meals/kickoff/gatesOpen are left as 'TBD' rather than guessed — wrong logistics
 // info (a made-up meal time) is worse than an honest "check with your supervisor."
 const GAME_INFO = {
-  opponent: 'Morgan State',
-  dateLabel: 'Sep 5, 2026',
-  dateISO: '2026-09-05',    // used to auto-compute the 21+ alcohol purchase cutoff below
-  kickoff: '7:00 PM MST',
-  gatesOpen: '5:30 PM MST',
+  opponent: 'Hawaii',
+  dateLabel: 'Oct 10, 2026',
+  dateISO: '2026-10-10',    // used to auto-compute the 21+ alcohol purchase cutoff below
+  kickoff: '7:30 PM MST',
+  gatesOpen: '6:00 PM MST',
   estAttendance: '45000',
   meals: {
-    time: '2:30 PM MST',
-    location: 'Mountain America Stadium at 204 Stand',
-    menu: 'HotDog, Veggie Dog, Green Salad, Water Melon'
+    time: '2:00 PM – 4:00 PM MST',
+    location: '',
+    menu: 'Hot dog (pork & beef), vegan nuggets, salad with ranch / Italian, watermelon wedges'
   }
 };
 
