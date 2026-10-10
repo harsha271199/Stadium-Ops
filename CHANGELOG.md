@@ -4,6 +4,24 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-63
+- **One screen for stand orders**: the Requests menu now leads with one big **🛒 My Stand Order** button (renamed from "Order for my stand"). It covers Stock (Warehouse), Food (Kitchen) and IT in one place. The old single forms (Request Stock / Request Food Delivery / Report IT Issue) are now shown only to Supervisors (including limited-area supervisors) and Managers.
+- **Gaps filled in My Stand Order**:
+  - a **🧰 Supplies** group (gloves, napkins, lids, cleaning, condiments) that was hidden before;
+  - **✏️ "Not on the list? Type it"** boxes with a quantity, one for the Warehouse and one for Food. Typed lines go with that part of the order and follow the 3rd-quarter rule.
+- **Easier ordering**: only ⭐ Most needed starts open; tap a group to open it (search opens all), and each group shows its count. The Send bar lists what you picked.
+- **Easier counting**:
+  - Count In / Transfer / Count Out sit side by side;
+  - new **🙈 Only blank** button hides lines already counted (never the one you are typing in);
+  - shorter instructions.
+- 📞 and 💬 float above the Submit / Send bars instead of covering them.
+- **10/10 inventory**:
+  - Yellow Dog file loaded: 2,771 lines on 66 stands.
+  - 19 stands added to the stand list: 18 new from the file, plus 216P SunDeck Grill, which is visible again.
+  - Scheduled stands missing from the file were filled from the nearest stand of the same kind.
+  - The new stands were added to the 10/10 warehouse, supervisor and food-runner areas by section number.
+  - Backup: `stand_sheets_backup_1010`.
+
 ## 2026-10-09-fix-62
 - **Late games**: "today" in every screen is now the GAME day, which runs until 6 AM. Before, most screens switched to the next calendar date at 12 AM, so after midnight a Supervisor's team list, attendance, clock-outs and counts looked at tomorrow's (empty) schedule. Now a 10/10 game keeps working until 6 AM on 10/11 — Supervisors can still see and clock out their whole team. (calendarISODate() keeps the plain calendar date; localISODate() = stadiumDay().)
 

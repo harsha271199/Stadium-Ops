@@ -457,6 +457,12 @@
   .float-sos{position:fixed;bottom:calc(76px + env(safe-area-inset-bottom));right:14px;z-index:800;width:46px;height:46px;border-radius:50%;border:2px solid var(--aramark-red);background:var(--bg-card,#fff);color:var(--aramark-red);font-size:20px;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.18)}
   .float-sos.visible{display:flex}
   .float-sos.solo{bottom:calc(18px + env(safe-area-inset-bottom))}
+  /* Screens with a pinned Send / Submit bar: lift 📞 and 💬 above it so they never cover the button. */
+  body[data-bar="inv"] .float-sos,body[data-bar="inv"] .float-contact{transform:translateY(-76px)}
+  body[data-bar="ord"] .float-sos,body[data-bar="ord"] .float-contact{transform:translateY(-178px)}
+  #inv-phase-row{display:grid!important;grid-template-columns:repeat(3,1fr);gap:6px}
+  #inv-phase-row .chip{margin:0;padding:8px 4px;font-size:12px;line-height:1.2;text-align:center;white-space:normal}
+  .inv-blank-only .inv-row.inv-done:not(:focus-within){display:none!important}
   body.has-float-btn .screen.active .content{padding-bottom:88px}
   body.has-float-2 .screen.active .content{padding-bottom:140px}
   .float-contact .fc-badge{background:#fff;color:var(--aramark-red);border-radius:999px;min-width:20px;height:20px;padding:0 6px;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center}
@@ -614,6 +620,13 @@
   /* ── SUB-MENU SCREENS ── */
   .sub-menu-btn{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);width:100%;margin-bottom:10px}
   .sub-menu-btn:active{transform:scale(0.98)}
+  .sub-menu-btn.req-hub-main{border:2px solid #16A34A;background:linear-gradient(135deg,#F0FDF4,#fff);padding:20px 16px;margin-bottom:16px}
+  .sub-menu-btn.req-hub-main .smb-icon{font-size:34px;width:44px}
+  .sub-menu-btn.req-hub-main .smb-label{font-size:18px;font-weight:900}
+  .req-hub-tag{background:#16A34A;color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;margin-left:4px;font-weight:800;vertical-align:middle;white-space:nowrap}
+  .ord-other{display:flex;gap:6px;align-items:center;margin-top:8px}
+  .ord-other input{flex:1;margin:0}
+  .ord-other .ord-other-q{width:58px;text-align:center}
   .sub-menu-btn .smb-icon{font-size:26px;width:36px;text-align:center;flex-shrink:0}
   .sub-menu-btn .smb-label{font-size:15px;font-weight:700;color:var(--text)}
   .sub-menu-btn .smb-sub{font-size:12px;color:var(--text-2);margin-top:2px}
@@ -1698,6 +1711,9 @@
   .ord-name small{display:block;font-weight:500;font-size:11px;color:var(--text-2)}
   .ord-qty{width:34px;text-align:center;font-weight:900;font-size:17px}
   .ord-hint{font-size:11px;color:var(--text-3);margin-top:8px}
+  .ord-grp-btn{display:flex!important;justify-content:space-between;align-items:center;width:100%;border:none;background:none;cursor:pointer;font-family:inherit;text-align:left}
+  .ord-grp-btn small{font-weight:600;color:var(--text-3);letter-spacing:0;text-transform:none}
+  .ord-picked{font-size:11px;font-weight:600;color:var(--text-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ord-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--bg-elevated,#1a1d24);border-top:1px solid var(--border,#2a2f3a);padding:10px 16px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(0,0,0,0.25)}
   .ord-summary{font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:7px}
   .ord-done{border-radius:12px;padding:12px;margin-bottom:9px;font-size:14px;font-weight:700}
@@ -2249,25 +2265,26 @@
       <div><div class="smb-label">All Requests · today <span id="stand-requests-badge" style="display:none;background:var(--aramark-red);color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;margin-left:6px"></span></div><div class="smb-sub">Stock · Food · IT across all stands</div></div>
     </button>
 
-    <div class="request-primary-note">Most game-day problems should use one of these:</div>
-
-    <button class="sub-menu-btn" id="req-hub-order-btn" style="display:none;border-left:4px solid #16A34A" onclick="requestHubGoOrder()">
+    <button class="sub-menu-btn req-hub-main" id="req-hub-order-btn" style="display:none" onclick="requestHubGoOrder()">
       <span class="smb-icon">🛒</span>
-      <div><div class="smb-label">Order for my stand <span id="req-hub-order-tag" style="background:#16A34A;color:#fff;border-radius:10px;padding:2px 7px;font-size:10px;margin-left:4px">NEW</span></div><div class="smb-sub">Drinks &amp; snacks → Warehouse · Food → Kitchen · one Send</div></div>
+      <div><div class="smb-label">My Stand Order <span id="req-hub-order-tag" class="req-hub-tag">STOCK · FOOD · IT</span></div><div class="smb-sub">Drinks, snacks, ice, supplies → Warehouse · Food → Kitchen · something broken → IT. All in one screen.</div></div>
     </button>
 
-    <button class="sub-menu-btn smb-red" onclick="requestHubGoStock()">
-      <span class="smb-icon">📦</span>
-      <div><div class="smb-label">Request Stock</div><div class="smb-sub">Warehouse · quantity · urgency · ETA</div></div>
-    </button>
-    <button class="sub-menu-btn" style="border-left:4px solid #F97316" onclick="requestHubGoKitchen()">
-      <span class="smb-icon">🍔</span>
-      <div><div class="smb-label">Request Food Delivery</div><div class="smb-sub">Food item · quantity · runner</div></div>
-    </button>
-    <button class="sub-menu-btn" style="border-left:4px solid #2196F3" onclick="requestHubGoIT()">
-      <span class="smb-icon">🔧</span>
-      <div><div class="smb-label">Report IT Issue</div><div class="smb-sub">POS · tablet · TV · network</div></div>
-    </button>
+    <div id="req-hub-classic">
+      <div class="request-primary-note">Supervisor tools · the old single forms</div>
+      <button class="sub-menu-btn smb-red" onclick="requestHubGoStock()">
+        <span class="smb-icon">📦</span>
+        <div><div class="smb-label">Request Stock</div><div class="smb-sub">Warehouse · quantity · urgency · ETA</div></div>
+      </button>
+      <button class="sub-menu-btn" style="border-left:4px solid #F97316" onclick="requestHubGoKitchen()">
+        <span class="smb-icon">🍔</span>
+        <div><div class="smb-label">Request Food Delivery</div><div class="smb-sub">Food item · quantity · runner</div></div>
+      </button>
+      <button class="sub-menu-btn" style="border-left:4px solid #2196F3" onclick="requestHubGoIT()">
+        <span class="smb-icon">🔧</span>
+        <div><div class="smb-label">Report IT Issue</div><div class="smb-sub">POS · tablet · TV · network</div></div>
+      </button>
+    </div>
     <button class="sub-menu-btn smb-green" onclick="goRefund()">
       <span class="smb-icon">💵</span>
       <div><div class="smb-label">Refund Assistance</div><div class="smb-sub">Notify a Supervisor to come help</div></div>
@@ -2807,7 +2824,7 @@
 <div class="screen" id="screen-order">
   <div class="page-header">
     <div class="back-btn" role="button" tabindex="0" aria-label="Back" onclick="orderBack()">←</div>
-    <div><div class="page-title">🛒 Order for my stand</div><div class="page-sub" id="order-sub">—</div></div>
+    <div><div class="page-title">🛒 My Stand Order</div><div class="page-sub" id="order-sub">—</div></div>
   </div>
   <div class="content">
     <div id="order-test-banner" class="ord-test" style="display:none">🧪 TEST MODE — orders are marked [TEST] and nobody gets a notification</div>
@@ -2834,13 +2851,14 @@
       <div class="ord-sec-sub">Drinks · popcorn · candy · snacks · ice · CO2 · draft &amp; souvenir cups</div>
       <input class="form-input" type="text" id="order-search" placeholder="🔍 Search drinks & snacks…" oninput="orderRenderWh()" style="margin:8px 0">
       <div id="order-wh-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
-      <div class="ord-hint">Gloves, soap, napkins, plastic cups or anything else? Ask your Supervisor.</div>
+      <div class="ord-other"><input class="form-input" type="text" id="order-wh-other" maxlength="120" placeholder="✏️ Not on the list? Type it (e.g. sanitizer buckets)" oninput="orderSummary()"><input class="form-input ord-other-q" type="number" min="1" max="99" id="order-wh-other-q" value="1" inputmode="numeric" oninput="orderSummary()"></div>
     </div>
 
     <div class="ord-sec ord-sec-food">
       <div class="ord-sec-h"><span>🍔 Food</span><span class="ord-sec-unit">how many</span></div>
       <div class="ord-sec-sub">From the kitchen · a runner brings it</div>
       <div id="order-food-list" style="margin-top:8px"></div>
+      <div class="ord-other" id="order-food-other-row"><input class="form-input" type="text" id="order-food-other" maxlength="120" placeholder="✏️ Other food? Type it (e.g. nacho chips)" oninput="orderSummary()"><input class="form-input ord-other-q" type="number" min="1" max="99" id="order-food-other-q" value="1" inputmode="numeric" oninput="orderSummary()"></div>
     </div>
 
 
@@ -3836,11 +3854,11 @@
     <div id="inv-stand-picker" style="display:none"><select id="inv-stand-select" onchange="inventoryStandChanged()"></select></div>
     <label class="form-label" style="margin-top:0">Which phase? *</label>
     <div class="chip-row" id="inv-phase-row">
-      <button class="chip success" onclick="selectInvPhase(this,'Count In')">🟢 Count In (Opening)<div id="inv-status-countin" style="font-size:9px;font-weight:400"></div></button>
-      <button class="chip" onclick="selectInvPhase(this,'Transfer')">🚚 Transfer (During)<div id="inv-status-transfer" style="font-size:9px;font-weight:400"></div></button>
-      <button class="chip" onclick="selectInvPhase(this,'Count Out')">🔴 Count Out (Closing)<div id="inv-status-countout" style="font-size:9px;font-weight:400"></div></button>
+      <button class="chip success" onclick="selectInvPhase(this,'Count In')">🟢 Count In<br><small>opening</small><div id="inv-status-countin" style="font-size:9px;font-weight:400"></div></button>
+      <button class="chip" onclick="selectInvPhase(this,'Transfer')">🚚 Transfer<br><small>during</small><div id="inv-status-transfer" style="font-size:9px;font-weight:400"></div></button>
+      <button class="chip" onclick="selectInvPhase(this,'Count Out')">🔴 Count Out<br><small>closing</small><div id="inv-status-countout" style="font-size:9px;font-weight:400"></div></button>
     </div>
-    <div class="notice info" style="font-size:12px" id="inv-info">💡 Count <b>every line</b> — Chargeables, Non-Chargeables <b>and</b> Supplies. Type <b>0</b> only if it is really not there — a 0 where stock was expected turns <b style="color:#B45309">orange</b> and must be checked.</div>
+    <div class="notice info" style="font-size:12px" id="inv-info">💡 Count <b>every line</b> (Chargeables, Non-Chargeables <b>and</b> Supplies). Keyboard <b>Next</b> jumps to the next box. Type <b>0</b> only if it is really not there.</div>
     <div id="inv-progress" class="card" style="display:none;position:sticky;top:0;z-index:5;padding:10px 12px;margin:8px 0;border:2px solid #F59E0B"></div>
     <input type="text" class="form-input" id="inv-search" placeholder="🔍 Search items…" style="margin-bottom:10px" oninput="filterInvItems(this.value)">
     <div id="inv-missing-item-hint" style="display:none;margin-bottom:10px"></div>
@@ -4659,7 +4677,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-09-fix-62';
+const BUILD_TAG = '2026-10-10-fix-63';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4699,6 +4717,7 @@ function showScreen(id) {
   state.currentScreen = id;
   window.scrollTo(0, 0);
   clearInterval(state.refreshInterval);
+  try{document.body.dataset.bar=id==='screen-inventory'?'inv':id==='screen-order'?'ord':'';}catch(e){}
   updateFloatingContactVisibility();
   if (id === 'screen-submenu-requests') { prepareRequestHub(); q3State().then(st => { const el = document.getElementById('hub-q3'); if (el) el.innerHTML = q3NoticeHtml(st); }).catch(()=>{}); }
   if (id === 'screen-warehouse') { loadWarehouse(); state.refreshInterval = setInterval(loadWarehouse, 10000); }
@@ -9875,13 +9894,13 @@ function orderWhGroup(item){
   const n=String(item.itemName||'').toUpperCase();
   if(ORDER_FOOD_RE.test(n)||/\bBIB\b|DEPOSIT|EMPLOYEE/.test(n))return '';
   if(ORDER_NEEDS_RE.test(n))return 'needs';
-  if(ORDER_SUPPLY_RE.test(n))return '';
+  if(ORDER_SUPPLY_RE.test(n))return 'stand'; // gloves, napkins, lids, cleaning, condiments — the warehouse brings these too
   if(ORDER_SNACK_RE.test(n))return 'snack';
   if(ORDER_SODA_RE.test(n))return 'soda';
   if(ORDER_DRINK_RE.test(n))return 'beer';
   return '';
 }
-const ORDER_WH_GROUPS=[['fav','⭐ Most needed'],['beer','🍺 Beer · seltzer · wine'],['soda','🥤 Soda · water · sports drinks'],['snack','🍿 Popcorn · candy · snacks'],['needs','🧊 Ice · CO2 · cups'],['stand','🧰 Stand needs']];
+const ORDER_WH_GROUPS=[['fav','⭐ Most needed'],['beer','🍺 Beer · seltzer · wine'],['soda','🥤 Soda · water · sports drinks'],['snack','🍿 Popcorn · candy · snacks'],['needs','🧊 Ice · CO2 · cups'],['stand','🧰 Supplies · gloves · napkins · lids · cleaning']];
 // Stand "type" — stands of the same kind order the same things (10/3 history:
 // beer portables → Devils Halo/Topo/Coors; main stands → loyalty cups, CO2).
 function orderStandType(stand){
@@ -9996,9 +10015,11 @@ function orderBack(){
 async function goOrder(){
   await syncMyStandFromSchedule(true).catch(()=>{});
   const who=getRequesterIdentity();
-  state.orderWh={};state.orderFood={};state.orderEta=30;state.orderUrgency='Normal';
+  state.orderWh={};state.orderFood={};state.orderEta=30;state.orderUrgency='Normal';state.orderOpenGrp={};
   state.orderStand=getOperationalStand(who)||who.homeStand||'';
   document.getElementById('order-search').value='';
+  ['order-wh-other','order-food-other'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['order-wh-other-q','order-food-other-q'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='1';});
   document.getElementById('order-test-banner').style.display=orderTestMode()?'':'none';
   document.querySelectorAll('#order-eta .chip').forEach(c=>c.classList.toggle('selected',c.textContent.trim()==='30m'));
   document.querySelectorAll('#order-urgency .chip').forEach((c,i)=>c.classList.toggle('selected',i===0));
@@ -10074,13 +10095,26 @@ function orderRenderWh(){
     let rows=items.map((it,i)=>({it,i})).filter(x=>x.it._grp===g&&(!q||String(x.it.itemName).toLowerCase().includes(q))&&!(q3&&q3IsAlcohol(x.it.itemName)));
     if(g==='fav'){const ord=(state.orderFavs||[]).map(f=>f.i);rows.sort((a,b)=>ord.indexOf(a.i)-ord.indexOf(b.i));}
     if(!rows.length)return;
-    html+='<div class="ord-grp">'+label+'</div>'+rows.map(({it,i})=>{const v=Number(state.orderWh[i]||0);
+    // Only ⭐ Most needed starts open — tap a group to open it (search opens all).
+    const picked=rows.filter(x=>Number(state.orderWh[x.i]||0)>0).length;
+    const open=!!q||g==='fav'||!!(state.orderOpenGrp&&state.orderOpenGrp[g]);
+    html+='<button type="button" class="ord-grp ord-grp-btn" onclick="orderToggleGrp(\''+g+'\')"><span>'+label+' <small>'+rows.length+(picked?' · '+picked+' picked':'')+'</small></span><span>'+(g==='fav'&&!q?'':open?'▾':'▸')+'</span></button>';
+    if(!open)return;
+    html+=rows.map(({it,i})=>{const v=Number(state.orderWh[i]||0);
       return '<div class="ord-row'+(v?' on':'')+'" id="ordr-wh-'+i+'"><div class="ord-name">'+escapeHtml(it.itemName)+(it.pack||it.unit||it._hint?'<small>'+escapeHtml([it._hint?'⭐ '+it._hint:'',it.pack,it.unit].filter(Boolean).join(' · '))+'</small>':'')+'</div>'+orderStepBtns('wh',i,v)+'</div>';}).join('');
   });
   el.innerHTML=html||'<div class="notice info" style="font-size:12px">Nothing matches your search.</div>';
 }
+function orderOtherLine(kind){
+  const t=((document.getElementById('order-'+kind+'-other')||{}).value||'').trim();
+  if(!t)return null;
+  const q=Math.max(1,Math.min(99,parseInt((document.getElementById('order-'+kind+'-other-q')||{}).value,10)||1));
+  return {name:t,qty:q};
+}
+function orderToggleGrp(g){ if(g==='fav')return; state.orderOpenGrp=state.orderOpenGrp||{}; state.orderOpenGrp[g]=!state.orderOpenGrp[g]; orderRenderWh(); }
 function orderRenderFood(){
   const el=document.getElementById('order-food-list');if(!el)return;
+  { const r=document.getElementById('order-food-other-row'); if(r)r.style.display=state.orderQ3Blocked?'none':''; if(state.orderQ3Blocked){const i=document.getElementById('order-food-other');if(i)i.value='';} }
   if(state.orderQ3Blocked){el.innerHTML='<div class="q3-note" style="font-size:14px;padding:12px">🔒 Food is closed for the 3rd quarter.<br><span style="font-weight:600">Still need food? Ask your Supervisor — they can order it for your stand.</span></div>';return;}
   el.innerHTML=ORDER_FOOD.map(f=>{const v=Number((state.orderFood||{})[f.key]||0);
     return '<div class="ord-row'+(v?' on':'')+'" id="ordr-food-'+f.key+'"><div class="ord-name">'+f.icon+' '+escapeHtml(f.name)+(f.sub?'<small>'+escapeHtml(f.sub)+'</small>':'')+'</div>'+orderStepBtns('food',f.key,v)+'</div>';}).join('');
@@ -10096,10 +10130,14 @@ function orderStep(kind,key,d){
 function orderPickUrgency(btn,v){state.orderUrgency=v;document.querySelectorAll('#order-urgency .chip').forEach(c=>c.classList.remove('selected'));btn.classList.add('selected');}
 function orderPickEta(btn,m){state.orderEta=m;document.querySelectorAll('#order-eta .chip').forEach(c=>c.classList.remove('selected'));btn.classList.add('selected');}
 function orderSummary(){
-  const w=Object.values(state.orderWh||{}).reduce((a,b)=>a+Number(b||0),0);
-  const f=Object.values(state.orderFood||{}).reduce((a,b)=>a+Number(b||0),0);
+  const ow=orderOtherLine('wh'),of=state.orderQ3Blocked?null:orderOtherLine('food');
+  const w=Object.values(state.orderWh||{}).reduce((a,b)=>a+Number(b||0),0)+(ow?ow.qty:0);
+  const f=Object.values(state.orderFood||{}).reduce((a,b)=>a+Number(b||0),0)+(of?of.qty:0);
   const parts=[];if(w)parts.push('📦 Warehouse: '+w+' case'+(w===1?'':'s'));if(f)parts.push('🍔 Food: '+f);
-  const s=document.getElementById('order-summary');if(s)s.textContent=parts.length?parts.join('  ·  '):'Nothing picked yet';
+  const names=[];(state.orderWhItems||[]).forEach((it,i)=>{const v=Number((state.orderWh||{})[i]||0);if(v)names.push(v+'× '+String(it.itemName||'').replace(/^(BEER|WATER|CANDY|SUPPLIES|JANITORIAL|BOTTLED?( SODA)?) ?-? ?/i,'').slice(0,22));});
+  if(ow)names.push(ow.qty+'× '+ow.name.slice(0,22));
+  ORDER_FOOD.forEach(x=>{const v=Number((state.orderFood||{})[x.key]||0);if(v)names.push(v+'× '+x.name);});if(of)names.push(of.qty+'× '+of.name.slice(0,22));
+  const s=document.getElementById('order-summary');if(s)s.innerHTML=parts.length?escapeHtml(parts.join('  ·  '))+'<div class="ord-picked">'+escapeHtml(names.slice(0,6).join(' · ')+(names.length>6?' +'+(names.length-6)+' more':''))+'</div>':'Nothing picked yet';
   const b=document.getElementById('order-send-btn');
   if(b){b.disabled=!(w||f);b.textContent=(w&&f)?'Send to Warehouse + Kitchen →':w?'Send to Warehouse →':f?'Send to Kitchen →':'Send order →';}
 }
@@ -10111,6 +10149,10 @@ async function submitUnifiedOrder(){
   const stand=state.orderStand;if(!stand)return toast('Pick a stand first','error');
   const wh=[];(state.orderWhItems||[]).forEach((it,i)=>{const v=Number(state.orderWh[i]||0);if(v>0)wh.push({itemName:it.itemName,unit:it.unit||'',pack:it.pack||'',qty:v,cases:v,word:it._word||''});});
   const food=ORDER_FOOD.filter(f=>Number(state.orderFood[f.key]||0)>0).map(f=>({itemName:f.name,qty:Number(state.orderFood[f.key]),unit:'each',pack:'',track_inventory:false}));
+  // Typed "not on the list" lines go with their part of the order.
+  { const ow=orderOtherLine('wh'),of=orderOtherLine('food');
+    if(ow)wh.push({itemName:ow.name,unit:'',pack:'',qty:ow.qty,cases:ow.qty,word:'each',typed:true});
+    if(of)food.push({itemName:of.name,qty:of.qty,unit:'each',pack:'',track_inventory:false,typed:true}); }
   { // 3rd quarter can start while the screen is open — check again at Send.
     const st=await q3State(true).catch(()=>null);
     if(st&&st.locked&&!q3CanOrder()){
@@ -10185,8 +10227,8 @@ async function submitUnifiedOrder(){
   if(!out.wh&&!out.food)return;
   const okAll=(!out.wh||out.wh.ok)&&(!out.food||out.food.ok);
   // Only the part that went through is cleared, so a failed part can be resent as-is.
-  if(out.wh&&out.wh.ok){state.orderWh={};state._orderWhUuid=genUUID();}
-  if(out.food&&out.food.ok){state.orderFood={};state._orderFoodUuid=genUUID();}
+  if(out.wh&&out.wh.ok){state.orderWh={};state._orderWhUuid=genUUID();const e=document.getElementById('order-wh-other');if(e)e.value='';}
+  if(out.food&&out.food.ok){state.orderFood={};state._orderFoodUuid=genUUID();const e=document.getElementById('order-food-other');if(e)e.value='';}
   const line=(icon,dept,r,extra)=>!r?'':r.ok
     ?'<div class="ord-done ok">✅ '+icon+' <b>'+dept+'</b> got it'+(r.queued?' (queued — sends when WiFi returns)':'')+'<div style="font-size:12px;font-weight:600;color:var(--text-2);margin-top:3px">'+extra+'</div></div>'
     :'<div class="ord-done bad">❌ '+icon+' <b>'+dept+'</b> did not go through — tap Send again<div style="font-size:12px;font-weight:600;color:var(--text-2);margin-top:3px">'+escapeHtml(r.error||'Network')+'</div></div>';
@@ -11555,7 +11597,10 @@ function prepareRequestHub(){
     if(sub)sub.textContent=leadership?'Stock · Food · IT across all stands':(state.user&&state.user.role==='supervisor'?'Stock · Food · IT · pick any stand or all':'Stock · Food · IT · see what is coming');
   }
   { const ab=document.getElementById('addstock-btn'); if(ab)ab.style.display=canForceStock()?'':'none'; }
-  { const ob=document.getElementById('req-hub-order-btn'); if(ob)ob.style.display=''; const tg=document.getElementById('req-hub-order-tag'); if(tg)tg.textContent=orderTestMode()?'TEST MODE':'NEW'; }
+  { const ob=document.getElementById('req-hub-order-btn'); if(ob)ob.style.display=''; const tg=document.getElementById('req-hub-order-tag'); if(tg)tg.textContent=orderTestMode()?'TEST MODE':((state.user&&state.user.isSubcontractor)?'STOCK · IT':'STOCK · FOOD · IT'); }
+  // One screen does Stock + Food + IT now. The old single forms stay only for
+  // Supervisors (and managers), who order for other stands.
+  { const cl=document.getElementById('req-hub-classic'); if(cl)cl.style.display=(leadership||isSupervisorSession())?'':'none'; }
   const who=getRequesterIdentity();
   const stand=getOperationalStand(who)||state.activeStand||who.homeStand||'';
   const sub=document.getElementById('request-hub-context');
@@ -17967,12 +18012,11 @@ function supportOpsScopeLabel(){if(state.supportOpsScope==='__my__')return state
 // V11.11.8 — AUTHORITATIVE MOUNTAIN AMERICA STADIUM CURRENT STANDS
 // Exactly 68 current locations supplied by operations on 2026-09-04.
 // Historical aliases remain accepted, but current pickers show ONLY these 68.
-const STAND_SOURCE_2026 = [{"name": "140 Inferno Favorites", "description": "Aramark - 8 all", "operator": "Aramark"}, {"name": "142 Inferno Burgers", "description": "4 staffing or bahama", "operator": "Review"}, {"name": "203P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "203P Game Day", "description": "NPO--", "operator": "NPO"}, {"name": "204 Pitchfork Pizza", "description": "NPO Ottawa", "operator": "NPO"}, {"name": "204P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "205P Bar S Sausage", "description": "NPO black hawk", "operator": "NPO"}, {"name": "205P Chick Fil A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "206P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "206P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "207 Sun Devil Burgers & Tenders", "description": "Aramark - 22 all", "operator": "Aramark"}, {"name": "207P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "208P Beer Portable", "description": "Aramark - 3 all (double portables)", "operator": "Aramark"}, {"name": "208P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "209P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "210 Fan Fuel Nacho", "description": "NPO Global Dental Brigades", "operator": "NPO"}, {"name": "210P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "210P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "211P Game Day", "description": "NPO--", "operator": "NPO"}, {"name": "212P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "214P Bahamas Bucks SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "215B Draft House", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "216 Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "216M - Fan Fuel BevMKT (Mashgin/S4 combo)", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "217P - BarS Draft", "description": "NPO - 6", "operator": "NPO"}, {"name": "217P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "218P Fan Fuel Beverage MKT", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "218T StreetEats", "description": "COHO-", "operator": "COHO"}, {"name": "219 Cold Beer Cheeseburgers SC", "description": "NPO The Well", "operator": "NPO"}, {"name": "219 P Kathy's Cookies SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219P Chick Fil A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219P Venezia Brick Oven SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219T BBQ Trailer", "description": "COHO-", "operator": "COHO"}, {"name": "220B Draft House", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "221P Taco Bar", "description": "NPO St Mattews", "operator": "NPO"}, {"name": "222M - Fan Fuel BevMKT (Mashgin/S4 combo)", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "224P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "225P Game Day", "description": "NPO--", "operator": "NPO"}, {"name": "226 Pitchfork Pizza", "description": "NPO Ottawa", "operator": "NPO"}, {"name": "226P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "227P Chick-Fil-A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "228P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "228P Stiger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "229 Sun Devil Burger & Tenders", "description": "Aramark - 22 all", "operator": "Aramark"}, {"name": "229P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "230P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "230P Stiger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "231P BarS Sausage", "description": "NPO--", "operator": "NPO"}, {"name": "232 Fan Fuel Nacho", "description": "NPO--", "operator": "NPO"}, {"name": "232P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "233P Game Day", "description": "NPO--", "operator": "NPO"}, {"name": "234P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "310P Beer Portable", "description": "Aramark - 1 all", "operator": "Aramark"}, {"name": "316P Beer Portable", "description": "Aramark - 1 all", "operator": "Aramark"}, {"name": "334 San Tan Favorites", "description": "NPO/Aramark - 12 all", "operator": "Mixed"}, {"name": "348 San Tan Venezia's", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "401P BarS Sausage", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "403M - Fan Fuel BevMKT (mashgin/S4 Combo)", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "404 Chick-Fill A", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "404P Bahamas Buck SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "405P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "408 Cold Beer Cheeseburgers SC", "description": "NPO--", "operator": "NPO"}, {"name": "409P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "414 Sun Devil Favorites", "description": "NPO--", "operator": "NPO"}, {"name": "438 Huss Hideout Favorites", "description": "NPO--", "operator": "NPO"}, {"name": "442 Huss Hideout Favorites", "description": "NPO/ Aramark -22 all", "operator": "Mixed"}, {"name": "SE Gate-144 SE Gate Dogs/H2O/Beer", "description": "Subcontractor 100H Hawking SC", "operator": "Subcontractor"}, {"name": "SW Gate-138SW Gate Dogs/H2O/Beer", "description": "Subcontractor 100H Hawking SC", "operator": "Subcontractor"}];
+const STAND_SOURCE_2026 = [{"name": "140 Inferno Favorites", "description": "Aramark - 8 all", "operator": "Aramark"}, {"name": "142 Inferno Burgers", "description": "4 staffing or bahama", "operator": "Review"}, {"name": "202P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "203P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "203P Game Day", "description": "NPO--", "operator": "NPO"}, {"name": "204 Pitchfork Pizza", "description": "NPO Ottawa", "operator": "NPO"}, {"name": "204P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "205P Bar S Sausage", "description": "NPO black hawk", "operator": "NPO"}, {"name": "205P Chick Fil A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "206P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "206P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "206P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "207 Sun Devil Burgers & Tenders", "description": "Aramark - 22 all", "operator": "Aramark"}, {"name": "207P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "208P BarS Sausage", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "208P Beer Portable", "description": "Aramark - 3 all (double portables)", "operator": "Aramark"}, {"name": "208P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "209P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "209P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "210 Fan Fuel Nacho", "description": "NPO Global Dental Brigades", "operator": "NPO"}, {"name": "210P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "210P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "211P Game Day", "description": "NPO--", "operator": "NPO"}, {"name": "212P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "214P Bahamas Bucks SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "215B Draft House", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "216 Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "216M - Fan Fuel BevMKT (Mashgin/S4 combo)", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "216P - SunDeck Grill", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "217P - BarS Draft", "description": "NPO - 6", "operator": "NPO"}, {"name": "217P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "218P Fan Fuel Beverage MKT", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "218T StreetEats", "description": "COHO-", "operator": "COHO"}, {"name": "219 Cold Beer Cheeseburgers SC", "description": "NPO The Well", "operator": "NPO"}, {"name": "219 P Kathy's Cookies SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219P Chick Fil A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219P Venezia Brick Oven SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219T BBQ Trailer", "description": "COHO-", "operator": "COHO"}, {"name": "220B Draft House", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "220P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "221B Fork Em BBQ", "description": "COHO - added 10/10 inventory", "operator": "COHO"}, {"name": "221P Taco Bar", "description": "NPO St Mattews", "operator": "NPO"}, {"name": "222M - Fan Fuel BevMKT (Mashgin/S4 combo)", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "224P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "224P Venezia Brick Oven SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "225P Game Day", "description": "NPO--", "operator": "NPO"}, {"name": "226 Pitchfork Pizza", "description": "NPO Ottawa", "operator": "NPO"}, {"name": "226P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "226P Chick-Fil-A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "227P BarS Sausage", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "227P Chick-Fil-A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "228P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "228P Fan Fuel Beverage MKT", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "228P Stiger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "229 Sun Devil Burger & Tenders", "description": "Aramark - 22 all", "operator": "Aramark"}, {"name": "229P BarS Sausage", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "229P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "229P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "229P Game Day", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "230P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "230P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "230P Stiger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "231P BarS Sausage", "description": "NPO--", "operator": "NPO"}, {"name": "231P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "232 Fan Fuel Nacho", "description": "NPO--", "operator": "NPO"}, {"name": "232P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "233P Game Day", "description": "NPO--", "operator": "NPO"}, {"name": "234P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "234P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "243P Lemonade SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "310P Beer Portable", "description": "Aramark - 1 all", "operator": "Aramark"}, {"name": "316P Beer Portable", "description": "Aramark - 1 all", "operator": "Aramark"}, {"name": "334 San Tan Favorites", "description": "NPO/Aramark - 12 all", "operator": "Mixed"}, {"name": "348 San Tan Venezia's", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "401P BarS Sausage", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "403M - Fan Fuel BevMKT (mashgin/S4 Combo)", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "404 Chick-Fill A", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "404P Bahamas Buck SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "405P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "408 Cold Beer Cheeseburgers SC", "description": "NPO--", "operator": "NPO"}, {"name": "409P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "414 Sun Devil Favorites", "description": "NPO--", "operator": "NPO"}, {"name": "438 Huss Hideout Favorites", "description": "NPO--", "operator": "NPO"}, {"name": "442 Huss Hideout Favorites", "description": "NPO/ Aramark -22 all", "operator": "Mixed"}, {"name": "Fan Fuel Beverage Market", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "SE Gate-144 SE Gate Dogs/H2O/Beer", "description": "Subcontractor 100H Hawking SC", "operator": "Subcontractor"}, {"name": "SW Gate-138SW Gate Dogs/H2O/Beer", "description": "Subcontractor 100H Hawking SC", "operator": "Subcontractor"}];
 const STAND_NAME_ALIASES_2026 = {"226P Fan Fuel Beverage MKT": "226P Beer Portable", "229P Fan Fuel Bev Market": "229P Fan Fuel Beverage MKT", "404 Chichk-Fil-A": "404 Chick-Fill A", "237P Bahama Bucks": "234P Bahama Bucks", "403P Bahamas Buck SC": "404P Bahamas Buck SC", "SW Gate-138 SW Gate Dogs/H2O/Beer": "SW Gate-138SW Gate Dogs/H2O/Beer"};
 // V11.9.1 — inactive locations stay in Supabase for history, but are hidden
 // from current game-day assignment/mapping pickers.
 const HIDDEN_INACTIVE_STANDS_2026 = new Set([
-  '216P - SunDeck Grill',
   '218P Fan Faves Cart (Fryers-Corndog)'
 ]);
 function canonicalStandName2026(name){
@@ -18188,7 +18232,7 @@ async function q3Toggle() {
   const roles = ['worker','lead','supervisor'];
   const n = close
     ? await pushOnDuty(roles, Q3_TITLE, 'No more food or alcohol orders from workers. Need some? Ask your Supervisor or Stand Lead — they can still order for your stand.', me.empId).catch(()=>0)
-    : await pushOnDuty(roles, '✅ Food & alcohol ordering is open again', 'You can order food and alcohol in Order for my stand.', me.empId).catch(()=>0);
+    : await pushOnDuty(roles, '✅ Food & alcohol ordering is open again', 'You can order food and alcohol in My Stand Order.', me.empId).catch(()=>0);
   toast((close ? '🔒 Food & alcohol ordering closed for the 3rd quarter' : '✅ Ordering reopened') + (n ? ' · alert sent to ' + n + ' people' : ''), close ? 'error' : 'success');
   q3RenderBar('mgr-q3-bar', true); q3RenderBar('food-q3-bar', true);
 }
@@ -18213,7 +18257,7 @@ async function q3Watch() {
   try { localStorage.setItem(key, now); } catch(e) {}
   if (!was && !st.locked) return;
   if (st.locked) showNotificationBanner(Q3_TITLE, q3CanOrder() ? 'Workers can no longer order food or alcohol — you still can.' : 'Need food or alcohol? Ask your Supervisor or Stand Lead — they can still order for your stand.', 'warn');
-  else showNotificationBanner('✅ Food & alcohol ordering is open again', 'You can order food and alcohol in Order for my stand.', 'info');
+  else showNotificationBanner('✅ Food & alcohol ordering is open again', 'You can order food and alcohol in My Stand Order.', 'info');
   if (state.currentScreen === 'screen-order') { await orderApplyQ3(); orderRenderWh(); orderRenderFood(); orderSummary(); }
   if (state.currentScreen === 'screen-submenu-requests') { const el = document.getElementById('hub-q3'); if (el) el.innerHTML = q3NoticeHtml(st); }
 }
@@ -20117,9 +20161,16 @@ function renderInvItems() {
     html += '</div>';
   });
   document.getElementById('inv-items-list').innerHTML = html;
+  state.invBlankOnly = false; document.getElementById('inv-items-list').classList.remove('inv-blank-only');
   const search = document.getElementById('inv-search');
   if (search) { search.value = ''; filterInvItems(''); }
   invDraftRestore(getInventoryTargetStand(), phase);
+  invUpdateProgress();
+}
+// "Only blank": hide lines already counted so the rest are easy to find.
+function invToggleBlankOnly() {
+  state.invBlankOnly = !state.invBlankOnly;
+  const l = document.getElementById('inv-items-list'); if (l) l.classList.toggle('inv-blank-only', !!state.invBlankOnly);
   invUpdateProgress();
 }
 function invSectionOf(item) {
@@ -20144,6 +20195,7 @@ function invUpdateProgress() {
     sec[k] = sec[k] || {t:0, d:0}; sec[k].t++; total++; if (ok) { sec[k].d++; done++; }
     const card = inp.closest('.inv-item-card');
     const zeroWarn = ok && Number(v) === 0 && invExpectedFor(i) > 0;
+    if (card) card.classList.toggle('inv-done', ok && !zeroWarn);
     if (card) { card.style.borderLeft = zeroWarn ? '4px solid #F59E0B' : ok ? '4px solid #16A34A' : ''; card.classList.toggle('inv-zero-warn', zeroWarn);
       const zn = card.querySelector('.inv-zero-note'); if (zn) zn.textContent = zeroWarn ? '⚠️ Expected about ' + invExpectedFor(i) + ' — is it really 0? Go look.' : ''; }
   });
@@ -20152,7 +20204,7 @@ function invUpdateProgress() {
   const left = total - done, pct = Math.round(done / total * 100);
   const lbl = {CHARGEABLES:'💲 Chargeables','NON-CHARGEABLES':'🧾 Non-chargeables',SUPPLIES:'📦 Supplies'};
   box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:900;font-size:15px">' + (left ? phase + ': ' + done + ' / ' + total + ' counted' : '✅ All ' + total + ' lines counted') + '</div>' +
-    (left ? '<button type="button" class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px;font-weight:800" onclick="invJumpNextBlank()">Next blank ↓</button>' : '') + '</div>' +
+    (left ? '<div style="display:flex;gap:6px"><button type="button" class="btn btn-ghost" style="width:auto;margin:0;padding:6px 9px;font-size:12px;font-weight:800;white-space:nowrap" onclick="invToggleBlankOnly()">' + (state.invBlankOnly ? '👁 Show all' : '🙈 Only blank') + '</button><button type="button" class="btn btn-ghost" style="width:auto;margin:0;padding:6px 9px;font-size:12px;font-weight:800;white-space:nowrap" onclick="invJumpNextBlank()">Next ↓</button></div>' : '') + '</div>' +
     '<div style="height:7px;background:var(--border);border-radius:4px;margin:7px 0;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:' + (left ? '#F59E0B' : '#16A34A') + '"></div></div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:6px">' + ['CHARGEABLES','NON-CHARGEABLES','SUPPLIES'].filter(k => sec[k]).map(k => { const x = sec[k], l = x.t - x.d;
       return '<span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;background:' + (l ? '#FEF3C7;color:#92400E' : '#DCFCE7;color:#166534') + '">' + lbl[k] + ' ' + (l ? l + ' left' : '✓') + '</span>'; }).join('') + '</div>';
