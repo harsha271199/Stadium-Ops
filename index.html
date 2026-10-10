@@ -2267,7 +2267,7 @@
 
     <button class="sub-menu-btn req-hub-main" id="req-hub-order-btn" style="display:none" onclick="requestHubGoOrder()">
       <span class="smb-icon">🛒</span>
-      <div><div class="smb-label">My Stand Order <span id="req-hub-order-tag" class="req-hub-tag">STOCK · FOOD · IT</span></div><div class="smb-sub">Drinks, snacks, ice, supplies → Warehouse · Food → Kitchen · something broken → IT. All in one screen.</div></div>
+      <div><div class="smb-label">My Stand Order <span id="req-hub-order-tag" class="req-hub-tag">STOCK · FOOD · IT</span></div><div class="smb-sub">Drinks, snacks, ice → Warehouse · Food → Kitchen · something broken → IT. All in one screen.</div></div>
     </button>
 
     <div id="req-hub-classic">
@@ -2831,17 +2831,6 @@
     </div>
     <div class="ord-howto">Tap <b>+</b> on what you need. One <b>Send</b> → drinks &amp; snacks go to the <b>Warehouse</b>, food goes to the <b>Kitchen</b>, at the same time.</div>
 
-    <div class="ord-sec ord-sec-it ord-it-top" style="border-left:5px solid #2563EB">
-      <div class="ord-sec-h"><span>🔧 Something broken?</span></div>
-      <div class="ord-sec-sub">Tap it — IT gets a ticket for this stand right away (separate from your order)</div>
-      <div class="ord-it-chips">
-        <button type="button" onclick="orderOpenIT('POS Handheld')">📱 POS Handheld</button>
-        <button type="button" onclick="orderOpenIT('POS Menu')">📋 POS Menu</button>
-        <button type="button" onclick="orderOpenIT('POS Tablet')">💳 POS Tablet</button>
-        <button type="button" onclick="orderOpenIT('TV / Menu Board')">📺 TV / Menu Board</button>
-        <button type="button" onclick="orderOpenIT('Other')">❓ Other</button>
-      </div>
-    </div>
     <div class="ord-sec ord-sec-wh">
       <div class="ord-sec-h"><span>📦 Warehouse</span><span class="ord-sec-unit">cases</span></div>
       <div class="ord-sec-sub">Drinks · popcorn · candy · snacks · ice · CO2 · draft &amp; souvenir cups</div>
@@ -2855,6 +2844,18 @@
       <div class="ord-sec-sub">From the kitchen · a runner brings it</div>
       <div id="order-food-list" style="margin-top:8px"></div>
       <div class="ord-other" id="order-food-other-row"><input class="form-input" type="text" id="order-food-other" maxlength="120" placeholder="✏️ Other food? Type it (e.g. nacho chips)" oninput="orderSummary()"><input class="form-input ord-other-q" type="number" min="1" max="99" id="order-food-other-q" value="1" inputmode="numeric" oninput="orderSummary()"></div>
+    </div>
+    <div class="ord-sec ord-sec-it" style="border-left:5px solid #2563EB;margin-top:14px">
+      <div class="ord-sec-h"><span>🔧 Something broken?</span></div>
+      <div class="ord-sec-sub">Tap it — IT gets a ticket for this stand right away (separate from your order)</div>
+      <div class="ord-it-chips">
+        <button type="button" onclick="orderOpenIT('POS Handheld')">📱 POS Handheld</button>
+        <button type="button" onclick="orderOpenIT('POS Menu')">📋 POS Menu</button>
+        <button type="button" onclick="orderOpenIT('POS Tablet')">💳 POS Tablet</button>
+        <button type="button" onclick="orderOpenIT('Self Checkout')">🛒 Self Checkout</button>
+        <button type="button" onclick="orderOpenIT('TV / Menu Board')">📺 TV / Menu Board</button>
+        <button type="button" onclick="orderOpenIT('Other')">❓ Other</button>
+      </div>
     </div>
     <div id="order-note-row" style="display:none;margin-top:10px"><label class="form-label" style="margin-top:0">📝 Note to Warehouse / Kitchen <small style="font-weight:600;color:var(--text-3)">Supervisors</small></label><input class="form-input" type="text" id="order-note" maxlength="160" placeholder="e.g. bring to the back door · call when close"></div>
 
@@ -4674,7 +4675,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-64';
+const BUILD_TAG = '2026-10-10-fix-65';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10062,6 +10063,8 @@ async function orderLoadStand(stand){
   // Ice was the #1 thing typed by hand ("3 bags of ice") but is on few
   // sheets — every stand can order it.
   orderAddExtras(stand,(res.ok&&res.items)||[]);
+  // 🧰 Supplies (gloves, napkins, towels, condiment bags…) — Supervisors and Managers only.
+  if(!orderCanType())state.orderWhItems=state.orderWhItems.filter(it=>it._grp!=='stand');
   state.orderFavs=orderPickFavorites(stand,state.orderWhItems,hist);
   state.orderFavs.forEach(f=>{const it=state.orderWhItems[f.i];it._home=it._grp;it._grp='fav';it._hint=f.why;});
   orderRenderWh();orderSummary();
@@ -10111,8 +10114,15 @@ function orderCanType(){
   const a=state.staffAccount;
   return !!(isSupervisorSession()||(a&&!state.user&&(a.group==='manager'||['manager','support_manager','admin'].includes(a.role))));
 }
+// Food "not on the list" box: Supervisors, Managers and real Stand Leads only —
+// not bartenders, students, NPOs or a worker standing in as the stand's lead.
+function orderCanTypeFood(){
+  if(orderCanType())return true;
+  const u=state.user;
+  return !!(u&&u.role==='lead'&&!u.isNpo&&!u.leadAccessGranted&&!u.isSubcontractor);
+}
 function orderOtherLine(kind){
-  if(!orderCanType())return null;
+  if(!(kind==='food'?orderCanTypeFood():orderCanType()))return null;
   const t=((document.getElementById('order-'+kind+'-other')||{}).value||'').trim();
   if(!t)return null;
   const q=Math.max(1,Math.min(99,parseInt((document.getElementById('order-'+kind+'-other-q')||{}).value,10)||1));
@@ -10121,7 +10131,7 @@ function orderOtherLine(kind){
 function orderToggleGrp(g){ if(g==='fav')return; state.orderOpenGrp=state.orderOpenGrp||{}; state.orderOpenGrp[g]=!state.orderOpenGrp[g]; orderRenderWh(); }
 function orderRenderFood(){
   const el=document.getElementById('order-food-list');if(!el)return;
-  { const r=document.getElementById('order-food-other-row'); if(r)r.style.display=(state.orderQ3Blocked||!orderCanType())?'none':''; if(state.orderQ3Blocked){const i=document.getElementById('order-food-other');if(i)i.value='';} }
+  { const r=document.getElementById('order-food-other-row'); if(r)r.style.display=(state.orderQ3Blocked||!orderCanTypeFood())?'none':''; if(state.orderQ3Blocked){const i=document.getElementById('order-food-other');if(i)i.value='';} }
   if(state.orderQ3Blocked){el.innerHTML='<div class="q3-note" style="font-size:14px;padding:12px">🔒 Food is closed for the 3rd quarter.<br><span style="font-weight:600">Still need food? Ask your Supervisor — they can order it for your stand.</span></div>';return;}
   el.innerHTML=ORDER_FOOD.map(f=>{const v=Number((state.orderFood||{})[f.key]||0);
     return '<div class="ord-row'+(v?' on':'')+'" id="ordr-food-'+f.key+'"><div class="ord-name">'+f.icon+' '+escapeHtml(f.name)+(f.sub?'<small>'+escapeHtml(f.sub)+'</small>':'')+'</div>'+orderStepBtns('food',f.key,v)+'</div>';}).join('');

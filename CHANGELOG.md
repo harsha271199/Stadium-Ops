@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-65
+- **My Stand Order**:
+  - The 🧰 **Supplies** group (gloves, napkins, towels, condiment bags, wipes…) now shows only for Supervisors and Managers. Stand staff no longer see supply lines, even in ⭐ Most needed.
+  - **IT ("Something broken?") moved to the bottom** for everyone, and it has a new **🛒 Self Checkout** button.
+  - The **Food "not on the list" box** is now for Supervisors, Managers and real Stand Leads only. Bartenders, students, NPOs and workers standing in as the stand's lead don't get it. The Warehouse box and the note stay Supervisors/Managers only.
+
 ## 2026-10-10-fix-64
 - **No free typing for stand staff**: the "Not on the list? Type it" boxes in My Stand Order now show only for Supervisors (including limited-area supervisors) and Managers. Stand staff kept mixing food and warehouse items in free text.
 - **Supervisor note**: Supervisors and Managers also get a 📝 note line. It goes with both the Warehouse and the Kitchen part of the order.
