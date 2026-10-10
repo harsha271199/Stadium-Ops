@@ -4691,7 +4691,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-69';
+const BUILD_TAG = '2026-10-10-fix-70';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -18270,8 +18270,11 @@ function q3CanOrder() {
 }
 function q3CanSwitch() {
   const a = state.staffAccount; if (!a || state.user) return false;
-  return ['manager','support_manager','admin','food_manager','kitchen_coordinator'].includes(a.role);
+  // Only Admin and Yadzia (manager 00190000) can switch the 3rd quarter on/off.
+  if (state._adminActAs) return true;
+  return a.role === 'admin' || String(a.empId || a.employee_id || '') === Q3_SWITCH_IDS[0] || /yadzia/i.test(String(a.name || '')) && a.role === 'manager';
 }
+const Q3_SWITCH_IDS = ['00190000'];
 function q3IsAlcohol(name) {
   const n = String(name || '').toUpperCase();
   if (/\bN\/A\b|NON[- ]?ALC/.test(n)) return false;
@@ -18292,7 +18295,7 @@ async function q3RenderBar(id, force) {
 }
 function foodRenderQ3Bar() { q3RenderBar('food-q3-bar'); }
 async function q3Toggle() {
-  if (!q3CanSwitch()) return toast('Only Managers and the Food Manager can change this', 'error');
+  if (!q3CanSwitch()) return toast('Only Admin and Yadzia can switch the 3rd quarter', 'error');
   const st = await q3State(true), close = !st.locked;
   const ok = await confirmAction(close
     ? 'Close food & alcohol ordering for the 3rd quarter?\n\nWorkers will see a big notice and can\'t order food or alcohol. Supervisors, Stand Leads and Managers can still order. Ice, water, cups and IT still work.'

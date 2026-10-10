@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-70
+- **3rd-quarter switch: Admin and Yadzia only.** Other Managers, Support Managers and the Food Manager no longer see the "3rd quarter started — close food & alcohol" button or "Reopen ordering". When it's closed, food staff still see the 🔒 notice.
+
 ## 2026-10-10-fix-69
 - **Warehouse runners get chat**: every warehouse login (runners too, not only Managers/Supervisors) now has 💬 Chat → **🏭 Warehouse Team**. Before, warehouse runners had no chat, only 📞 contacts.
 - **Both runner teams can reach Supervisors and Managers**: in Warehouse Team and Food Team, SEND TO has three choices:
