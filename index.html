@@ -4659,7 +4659,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-09-fix-61';
+const BUILD_TAG = '2026-10-09-fix-62';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4939,11 +4939,17 @@ function standSort(a, b) {
   return String(a).localeCompare(String(b));
 }
 
-function localISODate(){
+// Arizona calendar date (changes at midnight).
+function calendarISODate(){
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Phoenix', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(new Date());
   const y = parts.find(p=>p.type==='year').value, m = parts.find(p=>p.type==='month').value, d = parts.find(p=>p.type==='day').value;
   return y + '-' + m + '-' + d;
 }
+// "Today" everywhere in the app = the GAME day, which runs until 6 AM. A late
+// game (last one went past midnight) keeps the same day after 12 AM: the
+// Supervisor still sees their whole team, can clock people out, and counts /
+// attendance land on the game that just ended — not on tomorrow.
+function localISODate(){ return stadiumDay(); }
 // "Stadium day" — a night game commonly runs past midnight, so the actual
 // closing/count-out work happens after the calendar date has already
 // rolled over. Plain localISODate() would silently attribute that work to
@@ -4957,7 +4963,7 @@ function localISODate(){
 // the small hours before the usual 6 AM roll-over.
 const FIRST_GAME_DAY = '2026-10-03';
 function stadiumDay() {
-  const d = localISODate();
+  const d = calendarISODate();
   const sd = arizonaNowMinutes() < 360 ? prevISODate(d) : d;
   return (sd < FIRST_GAME_DAY && d >= FIRST_GAME_DAY) ? FIRST_GAME_DAY : sd;
 }

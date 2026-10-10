@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-09-fix-62
+- **Late games**: "today" in every screen is now the GAME day, which runs until 6 AM. Before, most screens switched to the next calendar date at 12 AM, so after midnight a Supervisor's team list, attendance, clock-outs and counts looked at tomorrow's (empty) schedule. Now a 10/10 game keeps working until 6 AM on 10/11 — Supervisors can still see and clock out their whole team. (calendarISODate() keeps the plain calendar date; localISODate() = stadiumDay().)
+
 ## 2026-10-09-fix-61
 - **Admin → People → Runners**: two buttons, **🍽️ Open Food Manager** and **📦 Open Warehouse Manager**, open those screens with their full tools (assign runners, change areas, decline, 3rd-quarter switch, warehouse team/plan…). A black bar at the top says "Admin viewing as…" with **← Back to Admin**; Sign out or reloading also returns to Admin.
 - **🔀 Split orders inside an area** (Admin, separate switches for Food and Warehouse, stored in app_settings split_food / split_wh, default OFF): when 2+ people cover a stand, each new order goes to ONE person — the least busy (people signed in today first). Warehouse: only that person sees/hears it; if nobody takes it in 10 min it opens to the whole area. Food: the order is assigned to the least-busy runner on the area. OFF = old way.
