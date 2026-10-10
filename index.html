@@ -450,7 +450,12 @@
   /* ── FLOATING CONTACT BUTTON ── */
   .float-contact{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom));right:14px;z-index:800;background:var(--aramark-red);color:#fff;border:none;border-radius:999px;min-width:52px;height:48px;padding:0 14px;font-size:15px;font-weight:850;cursor:pointer;box-shadow:0 4px 16px rgba(228,0,43,0.34);display:none;align-items:center;justify-content:center;gap:7px;font-family:inherit}
   .float-contact.visible{display:flex}
+  /* Emergency numbers are always one tap away, for every login — chat no longer hides them. */
+  .float-sos{position:fixed;bottom:calc(76px + env(safe-area-inset-bottom));right:14px;z-index:800;width:46px;height:46px;border-radius:50%;border:2px solid var(--aramark-red);background:var(--bg-card,#fff);color:var(--aramark-red);font-size:20px;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.18)}
+  .float-sos.visible{display:flex}
+  .float-sos.solo{bottom:calc(18px + env(safe-area-inset-bottom))}
   body.has-float-btn .screen.active .content{padding-bottom:88px}
+  body.has-float-2 .screen.active .content{padding-bottom:140px}
   .float-contact .fc-badge{background:#fff;color:var(--aramark-red);border-radius:999px;min-width:20px;height:20px;padding:0 6px;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center}
   .float-contact .fc-badge.on{display:inline-flex}
   .float-contact.has-unread{animation:fcPulse 1.6s ease-in-out infinite}
@@ -2186,6 +2191,7 @@
 </div>
 
 <!-- ============ FLOATING CONTACT BUTTON ============ -->
+<button class="float-sos" id="float-sos-btn" onclick="showContactPopup()" title="Emergency numbers" aria-label="Emergency numbers">📞</button>
 <button class="float-contact" id="float-contact-btn" onclick="floatContactTap()" title="Game day contacts"><span id="fc-icon">📞</span><span class="fc-label" id="fc-label">Contacts</span><span class="fc-badge" id="fc-badge"></span></button>
 <!-- Connection status — was a bare 12px dot at bottom-right, easy to miss and not
      actually "in the header." Now pinned to the top of the viewport (visible over
@@ -3458,6 +3464,23 @@
         <div class="admin-access-note">Game-day <b>stand-group assignments</b> are separate below in Game-Day Coverage Plan. This Access Center controls who can log in as Manager, Support, Warehouse, Food or IT.</div>
       </div>
 
+      <div data-adm="people" class="v11-admin-section" id="admin-runners">
+        <div class="v11-admin-title">🏃 Runners — Food ↔ Warehouse</div>
+        <div class="v11-admin-sub">Move a runner between the Food team and the Warehouse with one tap, give them an area, or add a new runner. Changes work right away (today's game).</div>
+        <div class="card" style="padding:12px;margin-bottom:10px">
+          <div style="font-weight:800;font-size:13px;margin-bottom:6px">＋ Add a runner</div>
+          <div class="admin-access-editor-grid">
+            <div><label class="form-label" style="margin-top:0">Name (Last, First)</label><input class="form-input" id="rn-name" placeholder="Nariya, Kartik" style="margin:0"></div>
+            <div><label class="form-label" style="margin-top:0">Employee ID</label><input class="form-input" id="rn-id" inputmode="numeric" placeholder="8-digit ID" style="margin:0"></div>
+            <div><label class="form-label" style="margin-top:0">Team</label><select class="form-input" id="rn-team" style="margin:0"><option value="food">🍽️ Food runner</option><option value="warehouse">📦 Warehouse runner</option></select></div>
+            <div><label class="form-label" style="margin-top:0">Area</label><select class="form-input" id="rn-area" style="margin:0"></select></div>
+          </div>
+          <button class="btn btn-primary" onclick="runnersAdd(this)" style="margin-top:10px">Add runner</button>
+        </div>
+        <input class="form-input" id="rn-search" placeholder="🔍 Find a runner…" oninput="runnersRender()" style="margin:0 0 8px">
+        <div id="rn-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+      </div>
+
       <div data-adm="game" class="v11-admin-section">
         <div class="v11-admin-title">🏟️ Game Day Information</div>
         <div class="v11-admin-sub">Set the information staff see for each game. Saved production settings sync to Supabase so the same date loads on every device.</div>
@@ -4628,7 +4651,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-09-fix-59';
+const BUILD_TAG = '2026-10-09-fix-60';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5271,15 +5294,39 @@ function urgNorm(u){ const x=(u||'').toLowerCase(); if(x.includes('urg'))return'
 // different people asks for the full last name.
 // Warehouse screens show people as "First Last" (the database keeps "Last, First"
 // so sign-in and everything else keep working). Display only.
-// Open-request limits per stand: IT 1, Food 3, Stock 3 for portables / small
-// kiosks (P, M, T, B stands) and 5 for the big stands. Checked live against the
-// database when sending, so two phones can't both slip past. A request that is
-// delivered / resolved frees its slot straight away. Only the last 18h count.
+// Open-request limits per stand: up to 5 Stock and 5 Food orders on the go at
+// once (every stand), IT 1. Checked live against the database when sending, so
+// two phones can't both slip past. A delivered / resolved request frees its
+// slot straight away; one left open over 45 min (IT 60) stops counting.
+const OPEN_ORDER_LIMIT = 5;
 function openRequestLimit(kind, stand){
   if(kind==='it')return 1;
-  if(kind==='food')return 3;
-  const small=/^\s*\d{3}\s*[PMTB]\b/i.test(String(stand||''))||/portable/i.test(String(stand||''));
-  return small?3:5;
+  return OPEN_ORDER_LIMIT;
+}
+// Same item already on an open order from this stand (still counting, see
+// above) → it can't be ordered again until that one is delivered.
+function orderItemKey(n){return String(n||'').toLowerCase().replace(/\([^)]*\)/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+async function openDuplicateItems(kind, stand, names){
+  if(!stand||!names||!names.length)return [];
+  const since=encodeURIComponent(stadiumDayStartISO()),st=encodeURIComponent(stand);
+  const url=kind==='food'
+    ?'kitchen_requests?stand=eq.'+st+'&status=not.in.(delivered,cancelled)&created_at=gte.'+since+'&select=items,items_json,requested_by,created_at,status,assigned_runner_name'
+    :'stock_requests?stand=eq.'+st+'&status=in.(open,claimed)&created_at=gte.'+since+'&select=items,items_json,requested_by,created_at,status,claimed_by';
+  let rows=await sb(url).catch(()=>({_err:true}));
+  if(!Array.isArray(rows))return [];
+  rows=rows.filter(x=>Date.now()-new Date(x.created_at).getTime()<45*60000);
+  const hits=[];
+  names.forEach(n=>{
+    const k=orderItemKey(n);if(!k)return;
+    const r=rows.find(x=>{let j=x.items_json;if(typeof j==='string'){try{j=JSON.parse(j);}catch(e){j=null;}}
+      const list=j&&Array.isArray(j.items)?j.items:[];
+      return list.length?list.some(it=>orderItemKey(it.itemName)===k):orderItemKey(x.items).includes(k);});
+    if(r)hits.push({name:n,by:r.requested_by||'',status:r.status,who:r.claimed_by||r.assigned_runner_name||''});
+  });
+  return hits;
+}
+function openDuplicateMsg(hits,label){
+  return '🔁 Already ordered — '+hits.slice(0,4).map(h=>h.name+' ('+(h.status==='claimed'||h.status==='on_the_way'?'on the way'+(h.who?' with '+h.who:''):'waiting')+')').join(', ')+(hits.length>4?' …':'')+'. Wait for that '+label+' order to arrive before ordering it again.';
 }
 async function openRequestGuard(kind, stand){
   if(!stand)return null;
@@ -9595,14 +9642,8 @@ async function submitStock() {
       if (alc.length) return toast('🔒 3rd quarter — alcohol can\'t be ordered now. Take off: ' + alc.slice(0,3).join(', ') + (alc.length > 3 ? '…' : '') + ' — or ask your Supervisor.', 'error', 10000);
     } }
   { const gStand=state.stockTargetStand||getRequesterIdentity().homeStand; const gMsg=await openRequestGuard('stock',gStand); if(gMsg) return toast(gMsg,'error',8000); }
-  const duplicateHits=stockDuplicateOverlap(jsonItems);
-  if(duplicateHits.length){
-    const lines=duplicateHits.slice(0,4).map(h=>{
-      const r=h.r,who=r.requestedBy||'someone',status=r.status==='On the way'?('on the way with '+(r.claimedBy||'Warehouse')):'still waiting';
-      return '• '+h.name+(h.qty?' × '+h.qty:'')+' — requested by '+who+' ('+status+')';
-    }).join('\n');
-    if(!confirm('This already went through — it\'s in the queue:\n\n'+lines+'\n\nSending it again won\'t speed it up, and it can look like a bug to your manager. Only continue if you genuinely need MORE than what was already requested.\n\nSend anyway?'))return;
-  }
+  { const dup=await openDuplicateItems('stock',state.stockTargetStand||getRequesterIdentity().homeStand,jsonItems.map(x=>x.itemName));
+    if(dup.length) return toast(openDuplicateMsg(dup,'Warehouse')+' Take it off and send the rest.','error',10000); }
   let itemsText = lines.join('; ');
   if (other) itemsText += (itemsText ? '; ' : '') + 'Other: ' + other;
   const who = getRequesterIdentity();
@@ -9992,6 +10033,18 @@ async function submitUnifiedOrder(){
     const other=gW?'Food':'Warehouse';
     const ok=await confirmAction((gW||gF)+'\n\nSend just the '+other+' part now?',{title:'🔒 '+(gW?'Warehouse':'Food')+' part has to wait',confirmLabel:'Send '+other+' only',cancelLabel:'Cancel'});
     if(!ok)return;if(gW)sendWh=false;if(gF)sendFood=false;
+  }
+  { // Same item already on an open order from this stand → not again.
+    const [dW,dF]=await Promise.all([sendWh?openDuplicateItems('stock',stand,wh.map(x=>x.itemName)):[],sendFood?openDuplicateItems('food',stand,food.map(x=>x.itemName)):[]]);
+    if(dW.length||dF.length){
+      const drop=new Set([...dW,...dF].map(h=>h.name));
+      for(let i=wh.length-1;i>=0;i--)if(drop.has(wh[i].itemName))wh.splice(i,1);
+      for(let i=food.length-1;i>=0;i--)if(drop.has(food[i].itemName))food.splice(i,1);
+      sendWh=sendWh&&wh.length>0;sendFood=sendFood&&food.length>0;
+      const msg=[dW.length?openDuplicateMsg(dW,'Warehouse'):'',dF.length?openDuplicateMsg(dF,'Kitchen'):''].filter(Boolean).join('\n\n');
+      if(!sendWh&&!sendFood)return toast(msg,'error',10000);
+      if(!await confirmAction(msg+'\n\nSend the rest of your order now?',{title:'🔁 Already ordered',confirmLabel:'Send the rest',cancelLabel:'Cancel'}))return;
+    }
   }
   const who=getRequesterIdentity();
   const requestedBy=TIER_LABELS[who.tier]?who.name+' ('+TIER_LABELS[who.tier]+')':who.name;
@@ -12163,12 +12216,108 @@ function mgrSimpleToolBack(){
 // Admin Control: a hub of 5 groups instead of one long page. Every section is
 // still here (nothing removed) — only one group is shown at a time.
 const ADM_GROUP_TITLE={game:'🏟️ Game day',people:'👥 People & logins',coverage:'🗺️ Who covers what',warehouse:'🏭 Warehouse crew',uploads:'📤 Uploads'};
+// ---- Admin: runners between Food and Warehouse ----
+// Food runners sign in with the last 5 of their ID + last name and get Food
+// areas (kitchen_runner_assignments). Warehouse runners sign in with 60000 +
+// last name (pin 60000) and get today's warehouse stands (game_day_assignments).
+// Moving switches the login role and the area in one step.
+let _rnPeople=[],_rnFood=[],_rnWh=[],_rnStands=[];
+function rnAreas(){return [['','— No area (sees every stand) —']].concat(WH_GROUPS.map(g=>[g.key,g.name]));}
+function rnAreaOptions(sel){return rnAreas().map(([k,n])=>'<option value="'+k+'"'+(k===sel?' selected':'')+'>'+escapeHtml(n)+'</option>').join('');}
+function rnStandsFor(key){const g=WH_GROUPS.find(x=>x.key===key);return g?_rnStands.filter(n=>g.test(n)):[];}
+// The group most of this person's stands fall in (shown in the area picker).
+function rnAreaOf(stands){const list=(stands||[]).map(canonicalStandName2026);if(!list.length)return '';let best='',n=0;WH_GROUPS.forEach(g=>{const k=list.filter(x=>g.test(x)).length;if(k>n){n=k;best=g.key;}});return n*2>=list.length?best:'';}
+async function runnersLoad(){
+  if(!isAdminSession())return;
+  const a=document.getElementById('rn-area');if(a&&!a.innerHTML)a.innerHTML=rnAreaOptions('');
+  const [acc,food,wh,stands]=await Promise.all([
+    sb('staff_accounts?is_active=eq.true&role=in.(food_runner,kitchen_runner,warehouse_employee)&select=employee_id,name,role,pin&order=name.asc').catch(()=>({_err:true})),
+    kitchenFetchAssignments().catch(()=>[]),
+    coverageGetAssignments(stadiumDay(),'Mountain America Stadium').catch(()=>[]),
+    allVenueStands().catch(()=>[])]);
+  // Real-ID runners only — the shared xxx60000 warehouse staff logins are not runners.
+  _rnPeople=(Array.isArray(acc)?acc:[]).filter(p=>!/60000$/.test(String(p.employee_id)));
+  _rnFood=Array.isArray(food)?food:[];_rnWh=(Array.isArray(wh)?wh:[]).filter(x=>x.team==='warehouse');
+  _rnStands=(stands||[]).filter(x=>/Mountain America/i.test(x.venue||'Mountain America')).map(x=>x.name);
+  runnersRender();
+}
+function runnersRender(){
+  const el=document.getElementById('rn-list');if(!el)return;
+  const q=((document.getElementById('rn-search')||{}).value||'').toLowerCase().trim();
+  const list=_rnPeople.filter(p=>!q||String(p.name).toLowerCase().includes(q)||String(p.employee_id).includes(q));
+  const row=p=>{
+    const food=/runner/.test(p.role)&&p.role!=='warehouse_employee';
+    const fa=_rnFood.find(x=>String(x.employee_id)===String(p.employee_id)&&x.is_active!==false);
+    const wa=_rnWh.find(x=>String(x.employee_id)===String(p.employee_id));
+    const area=food?rnAreaOf(fa&&fa.stands):rnAreaOf(wa&&wa.direct_stands);
+    const id=escapeAttr(p.employee_id);
+    return '<div class="fr-card" style="cursor:default"><div class="fr-top"><div class="fr-name">'+(food?'🍽️ ':'📦 ')+escapeHtml(whDisp(p.name))+' <small style="font-weight:600;color:var(--text-3)">'+escapeHtml(p.employee_id)+'</small></div><span class="fr-load'+(food?'':' busy')+'">'+(food?'Food runner':'Warehouse')+'</span></div>'+
+      '<div style="display:flex;gap:6px;margin-top:7px;align-items:center"><select class="form-input" style="margin:0;flex:1;font-size:13px" onchange="runnersSetArea(\''+id+'\',this.value,this)">'+rnAreaOptions(area)+'</select>'+
+      '<button class="btn btn-ghost" style="width:auto;margin:0;padding:8px 10px;font-size:12px" onclick="runnersMove(\''+id+'\',\''+(food?'warehouse':'food')+'\',this)">'+(food?'→ 📦 Warehouse':'→ 🍽️ Food')+'</button></div>'+
+      '<div class="fr-area" style="margin-top:4px">Sign in: '+(food?'last 5 of ID + last name':'60000 + last name')+'</div></div>';
+  };
+  const f=list.filter(p=>p.role!=='warehouse_employee'),w=list.filter(p=>p.role==='warehouse_employee');
+  el.innerHTML=(f.length?'<div class="fd-k">🍽️ FOOD RUNNERS · '+f.length+'</div>'+f.map(row).join(''):'')+(w.length?'<div class="fd-k" style="margin-top:12px">📦 WAREHOUSE RUNNERS · '+w.length+'</div>'+w.map(row).join(''):'')||'<div class="empty"><p>No runners match.</p></div>';
+}
+async function rnSaveArea(p,team,key,exact){
+  const stands=exact&&exact.length?exact:rnStandsFor(key);
+  if(team==='food'){
+    return !!(await kitchenSaveAssignment({employee_id:p.employee_id,name:p.name,role:'food_runner',stands,is_active:stands.length>0,updated_at:new Date().toISOString()}));
+  }
+  if(!stands.length)return coverageDeleteAssignment(stadiumDay(),'Mountain America Stadium',p.employee_id,'warehouse');
+  return coverageSaveAssignment({event_date:stadiumDay(),venue:'Mountain America Stadium',employee_id:p.employee_id,name:p.name,role:'warehouse_employee',team:'warehouse',area_keys:[],direct_stands:stands,notify_requests:true,updated_at:new Date().toISOString()});
+}
+async function runnersSetArea(emp,key,sel){
+  if(!isAdminSession())return toast('Admin access required','error');
+  const p=_rnPeople.find(x=>String(x.employee_id)===String(emp));if(!p)return;
+  const team=p.role==='warehouse_employee'?'warehouse':'food';
+  if(await rnSaveArea(p,team,key)){toast('✅ '+whDisp(p.name)+' → '+((rnAreas().find(x=>x[0]===key)||[])[1]||'no area'));runnersLoad();}
+  else toast('Could not save the area — try again','error');
+}
+async function runnersMove(emp,to,btn){
+  if(!isAdminSession())return toast('Admin access required','error');
+  const p=_rnPeople.find(x=>String(x.employee_id)===String(emp));if(!p)return;
+  const fa=_rnFood.find(x=>String(x.employee_id)===String(emp)&&x.is_active!==false),wa=_rnWh.find(x=>String(x.employee_id)===String(emp));
+  const keepArea=to==='food'?rnAreaOf(wa&&wa.direct_stands):rnAreaOf(fa&&fa.stands);
+  if(!await confirmAction('Move '+whDisp(p.name)+' to '+(to==='food'?'Food runners':'Warehouse')+'?\n\nThey sign in with '+(to==='food'?'the last 5 of their ID + last name':'60000 + last name')+' from now on'+(keepArea?' and keep the same area.':'.'),{title:to==='food'?'→ 🍽️ Food':'→ 📦 Warehouse',confirmLabel:'Move'}))return;
+  await withLock(btn,'Moving…',async()=>{
+    const patch=to==='food'?{role:'food_runner'}:{role:'warehouse_employee',pin:p.pin||'60000'};
+    if(to==='warehouse'&&!/^\d+$/.test(String(p.pin||'')))patch.pin='60000';
+    const r=await sb('staff_accounts?employee_id=eq.'+encodeURIComponent(emp),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(patch)}).catch(()=>({_err:true}));
+    if(r&&r._err)return toast('Could not move — try again','error');
+    p.role=patch.role;
+    // Same stands as before the move — nothing to redo.
+    if(to==='food'){await coverageDeleteAssignment(stadiumDay(),'Mountain America Stadium',emp,'warehouse').catch(()=>{});await rnSaveArea(p,'food',keepArea,wa&&wa.direct_stands);}
+    else{if(fa)await kitchenSaveAssignment({employee_id:emp,name:p.name,role:'food_runner',stands:[],is_active:false,updated_at:new Date().toISOString()}).catch(()=>{});await rnSaveArea(p,'warehouse',keepArea,fa&&fa.stands);}
+    toast('✅ '+whDisp(p.name)+' is now '+(to==='food'?'a Food runner':'on the Warehouse team'));
+    await runnersLoad();
+  });
+}
+async function runnersAdd(btn){
+  if(!isAdminSession())return toast('Admin access required','error');
+  const name=document.getElementById('rn-name').value.trim(),id=document.getElementById('rn-id').value.replace(/\D/g,''),team=document.getElementById('rn-team').value,area=document.getElementById('rn-area').value;
+  if(!name||!name.includes(','))return toast('Type the name as Last, First','error');
+  if(id.length<5)return toast('Enter the employee ID','error');
+  await withLock(btn,'Adding…',async()=>{
+    const ex=await sb('staff_accounts?employee_id=eq.'+id+'&select=employee_id,role,is_active').catch(()=>({_err:true}));
+    const row={employee_id:id,name,role:team==='food'?'food_runner':'warehouse_employee',pin:team==='food'?String(Math.floor(1000+Math.random()*9000)):'60000',is_active:true};
+    const r=Array.isArray(ex)&&ex.length
+      ?await sb('staff_accounts?employee_id=eq.'+id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({name,role:row.role,is_active:true,...(team==='warehouse'?{pin:'60000'}:{})})}).catch(()=>({_err:true}))
+      :await sb('staff_accounts',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)}).catch(()=>({_err:true}));
+    if(r&&r._err)return toast('Could not add — check the ID and try again','error');
+    await rnSaveArea({employee_id:id,name},team,area);
+    toast('✅ Added '+whDisp(name)+' — sign in: '+(team==='food'?'last 5 of ID + last name':'60000 + last name'));
+    ['rn-name','rn-id'].forEach(x=>{const e=document.getElementById(x);if(e)e.value='';});
+    await runnersLoad();
+  });
+}
 function admShow(g){
   document.querySelectorAll('#mgr-admin [data-adm]').forEach(el=>el.classList.toggle('adm-hide', el.dataset.adm!==g));
   const hub=document.getElementById('adm-hub'); if(hub)hub.style.display='none';
   const bar=document.getElementById('adm-group-bar'); if(bar)bar.style.display='flex';
   const t=document.getElementById('adm-group-title'); if(t)t.textContent=ADM_GROUP_TITLE[g]||'';
   state._admGroup=g; window.scrollTo(0,0);
+  if(g==='people')runnersLoad();
 }
 function admHub(){
   document.querySelectorAll('#mgr-admin [data-adm]').forEach(el=>el.classList.toggle('adm-hide', el.dataset.adm!=='notice'));
@@ -15484,7 +15633,7 @@ function bcSetStatusFilter(f, btn) {
 // ============================================================
 // Default contacts — manager updates these via Admin tab in Supabase
 // or they're loaded from the contacts table
-let _contacts = [];
+let _contacts = [], _contactsLoading = false;
 
 async function loadContacts() {
   try {
@@ -15518,6 +15667,13 @@ function updateFloatingContactVisibility(){
   if(lb)lb.textContent=chat?'Chat':'Contacts';
   btn.classList.toggle('visible',loggedIn&&!blocked&&(chat||_contacts.length>0));
   document.body.classList.toggle('has-float-btn',btn.classList.contains('visible'));
+  // 📞 Emergency numbers: every login, every screen except sign-in.
+  if(loggedIn&&!_contacts.length&&!_contactsLoading){_contactsLoading=true;loadContacts().finally(()=>{_contactsLoading=false;});}
+  const sos=document.getElementById('float-sos-btn');
+  if(sos){const show=loggedIn&&_contacts.length>0&&!['screen-login','screen-npo-login','screen-npo-stand-picker','screen-pin'].includes(state.currentScreen)&&!(btn.classList.contains('visible')&&!chat);
+    sos.classList.toggle('visible',show);sos.classList.toggle('solo',show&&!btn.classList.contains('visible'));
+    if(show)document.body.classList.add('has-float-btn');
+    document.body.classList.toggle('has-float-2',show&&btn.classList.contains('visible'));}
   btn.classList.toggle('active',!!document.getElementById('contact-popup-overlay'));
 }
 

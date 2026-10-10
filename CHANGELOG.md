@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-09-fix-60
+- **Order limits**: every stand can have up to **5 open Stock** and **5 open Food** orders at once (was 3 for portables / 3 food). IT stays 1. An order left open over 45 min stops counting.
+- **No duplicate items**: an item already on an open order from the stand (waiting or on the way) can't be ordered again until it arrives. Order for my stand takes it off and offers to send the rest; Request Stock refuses it.
+- **📞 Emergency numbers for everyone**: a 📞 button sits above Chat on every screen for every login (stand staff, Food, Warehouse, Managers). Contacts now load for staff logins too (before: only schedule logins, and Chat hid them).
+- **Admin → People → 🏃 Runners — Food ↔ Warehouse**: list of food and warehouse runners; one tap moves a runner between teams (login role, sign-in method and area move with them); pick an area per runner; add a new runner with ID + team + area.
+- Data (10/10): supervisor areas — Estelle Teo 2 Infernos, Esther Teo Upper West, David Powers East Concourse, Kijana Gaines North (215–221), Steven Skinner West Concourse; Krish Shah West Portables; Estelle + Kijana added to the 10/10 schedule; 21 warehouse people assigned (10/3 plan + Rathod, Nayak, Boleneti, Vijayakumar, Nariya); Nariya warehouse login created; food runners Mohammed + Inferno, Patel + Draft Houses.
+
 ## 2026-10-09-fix-59
 - Premium: inside each location people are grouped by role — **Bartenders first**, then Supervisors, Expo Captains, Suite Attendants, Catering Workers, Runners, Student Workers — never mixed. Same order on the check-in screen (with role headings), the CSV and the PDF (pink role heading rows).
 
