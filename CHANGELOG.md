@@ -14,6 +14,7 @@ the deploy date — always verify the tag on the live site after deploying.
   - Count In / Transfer / Count Out sit side by side;
   - new **🙈 Only blank** button hides lines already counted (never the one you are typing in);
   - shorter instructions.
+- **Warehouse on 10/10 runs like 10/3**: stand requests + Force Stock only, no planned transfers and no manager sign-off (10/10 added to WH_REQUESTS_ONLY_DATES and WH_SKIP_VERIFY_DATES).
 - 📞 and 💬 float above the Submit / Send bars instead of covering them.
 - **10/10 inventory**:
   - Yellow Dog file loaded: 2,771 lines on 66 stands.

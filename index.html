@@ -25657,7 +25657,7 @@ async function tsQuickMarkDelivered() {
   await tsCompleteDelivery({ scanSkipped: true });
 }
 
-const WH_SKIP_VERIFY_DATES = ['2026-10-02', '2026-10-03'];
+const WH_SKIP_VERIFY_DATES = ['2026-10-02', '2026-10-03', '2026-10-10'];
 function whSkipVerifyToday() { return WH_SKIP_VERIFY_DATES.includes(stadiumDay()); }
 async function tsSyncLinkedRequests() {
   const ids = [...new Set(_tsItems.map(it => it.source_request_id).filter(Boolean))];
@@ -25983,7 +25983,7 @@ async function whFinalApprove(fromVerify) {
 
 
 // Game day: the warehouse runs on stand requests + Force Stock only — no transfers.
-const WH_REQUESTS_ONLY_DATES = ['2026-10-03'];
+const WH_REQUESTS_ONLY_DATES = ['2026-10-03', '2026-10-10'];
 function whRequestsOnlyToday() { return WH_REQUESTS_ONLY_DATES.includes(stadiumDay()); }
 // Opens the Requests list on Open ('open') or In Progress ('claimed'), always showing every stand.
 function whOpenRequests(tab) {
