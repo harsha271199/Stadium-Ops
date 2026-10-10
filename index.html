@@ -2276,10 +2276,6 @@
         <span class="smb-icon">📦</span>
         <div><div class="smb-label">Request Stock</div><div class="smb-sub">Warehouse · quantity · urgency · ETA</div></div>
       </button>
-      <button class="sub-menu-btn" style="border-left:4px solid #F97316" onclick="requestHubGoKitchen()">
-        <span class="smb-icon">🍔</span>
-        <div><div class="smb-label">Request Food Delivery</div><div class="smb-sub">Food item · quantity · runner</div></div>
-      </button>
       <button class="sub-menu-btn" style="border-left:4px solid #2196F3" onclick="requestHubGoIT()">
         <span class="smb-icon">🔧</span>
         <div><div class="smb-label">Report IT Issue</div><div class="smb-sub">POS · tablet · TV · network</div></div>
@@ -2851,7 +2847,7 @@
       <div class="ord-sec-sub">Drinks · popcorn · candy · snacks · ice · CO2 · draft &amp; souvenir cups</div>
       <input class="form-input" type="text" id="order-search" placeholder="🔍 Search drinks & snacks…" oninput="orderRenderWh()" style="margin:8px 0">
       <div id="order-wh-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
-      <div class="ord-other"><input class="form-input" type="text" id="order-wh-other" maxlength="120" placeholder="✏️ Not on the list? Type it (e.g. sanitizer buckets)" oninput="orderSummary()"><input class="form-input ord-other-q" type="number" min="1" max="99" id="order-wh-other-q" value="1" inputmode="numeric" oninput="orderSummary()"></div>
+      <div class="ord-other" id="order-wh-other-row"><input class="form-input" type="text" id="order-wh-other" maxlength="120" placeholder="✏️ Not on the list? Type it (e.g. sanitizer buckets)" oninput="orderSummary()"><input class="form-input ord-other-q" type="number" min="1" max="99" id="order-wh-other-q" value="1" inputmode="numeric" oninput="orderSummary()"></div>
     </div>
 
     <div class="ord-sec ord-sec-food">
@@ -2860,6 +2856,7 @@
       <div id="order-food-list" style="margin-top:8px"></div>
       <div class="ord-other" id="order-food-other-row"><input class="form-input" type="text" id="order-food-other" maxlength="120" placeholder="✏️ Other food? Type it (e.g. nacho chips)" oninput="orderSummary()"><input class="form-input ord-other-q" type="number" min="1" max="99" id="order-food-other-q" value="1" inputmode="numeric" oninput="orderSummary()"></div>
     </div>
+    <div id="order-note-row" style="display:none;margin-top:10px"><label class="form-label" style="margin-top:0">📝 Note to Warehouse / Kitchen <small style="font-weight:600;color:var(--text-3)">Supervisors</small></label><input class="form-input" type="text" id="order-note" maxlength="160" placeholder="e.g. bring to the back door · call when close"></div>
 
 
 
@@ -4677,7 +4674,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-63';
+const BUILD_TAG = '2026-10-10-fix-64';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10020,6 +10017,9 @@ async function goOrder(){
   document.getElementById('order-search').value='';
   ['order-wh-other','order-food-other'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   ['order-wh-other-q','order-food-other-q'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='1';});
+  { const w=document.getElementById('order-wh-other-row'); if(w)w.style.display=orderCanType()?'':'none';
+    const nr=document.getElementById('order-note-row'); if(nr)nr.style.display=orderCanType()?'':'none';
+    const ni=document.getElementById('order-note'); if(ni)ni.value=''; }
   document.getElementById('order-test-banner').style.display=orderTestMode()?'':'none';
   document.querySelectorAll('#order-eta .chip').forEach(c=>c.classList.toggle('selected',c.textContent.trim()==='30m'));
   document.querySelectorAll('#order-urgency .chip').forEach((c,i)=>c.classList.toggle('selected',i===0));
@@ -10105,7 +10105,14 @@ function orderRenderWh(){
   });
   el.innerHTML=html||'<div class="notice info" style="font-size:12px">Nothing matches your search.</div>';
 }
+// Typed "not on the list" lines: Supervisors and Managers only — stand staff
+// were mixing food and warehouse items in free text.
+function orderCanType(){
+  const a=state.staffAccount;
+  return !!(isSupervisorSession()||(a&&!state.user&&(a.group==='manager'||['manager','support_manager','admin'].includes(a.role))));
+}
 function orderOtherLine(kind){
+  if(!orderCanType())return null;
   const t=((document.getElementById('order-'+kind+'-other')||{}).value||'').trim();
   if(!t)return null;
   const q=Math.max(1,Math.min(99,parseInt((document.getElementById('order-'+kind+'-other-q')||{}).value,10)||1));
@@ -10114,7 +10121,7 @@ function orderOtherLine(kind){
 function orderToggleGrp(g){ if(g==='fav')return; state.orderOpenGrp=state.orderOpenGrp||{}; state.orderOpenGrp[g]=!state.orderOpenGrp[g]; orderRenderWh(); }
 function orderRenderFood(){
   const el=document.getElementById('order-food-list');if(!el)return;
-  { const r=document.getElementById('order-food-other-row'); if(r)r.style.display=state.orderQ3Blocked?'none':''; if(state.orderQ3Blocked){const i=document.getElementById('order-food-other');if(i)i.value='';} }
+  { const r=document.getElementById('order-food-other-row'); if(r)r.style.display=(state.orderQ3Blocked||!orderCanType())?'none':''; if(state.orderQ3Blocked){const i=document.getElementById('order-food-other');if(i)i.value='';} }
   if(state.orderQ3Blocked){el.innerHTML='<div class="q3-note" style="font-size:14px;padding:12px">🔒 Food is closed for the 3rd quarter.<br><span style="font-weight:600">Still need food? Ask your Supervisor — they can order it for your stand.</span></div>';return;}
   el.innerHTML=ORDER_FOOD.map(f=>{const v=Number((state.orderFood||{})[f.key]||0);
     return '<div class="ord-row'+(v?' on':'')+'" id="ordr-food-'+f.key+'"><div class="ord-name">'+f.icon+' '+escapeHtml(f.name)+(f.sub?'<small>'+escapeHtml(f.sub)+'</small>':'')+'</div>'+orderStepBtns('food',f.key,v)+'</div>';}).join('');
@@ -10190,7 +10197,7 @@ async function submitUnifiedOrder(){
   const who=getRequesterIdentity();
   const requestedBy=TIER_LABELS[who.tier]?who.name+' ('+TIER_LABELS[who.tier]+')':who.name;
   const etaMins=Number(state.orderEta||30),deadline=new Date(Date.now()+etaMins*60000).toISOString();
-  const typed='';
+  const typed=orderCanType()?((document.getElementById('order-note')||{}).value||'').trim():'';
   const note=(test?'[TEST] ':'')+typed;
   const out={wh:null,food:null};
   await withLock(btn,'Sending…',async()=>{
@@ -10226,6 +10233,7 @@ async function submitUnifiedOrder(){
   });
   if(!out.wh&&!out.food)return;
   const okAll=(!out.wh||out.wh.ok)&&(!out.food||out.food.ok);
+  if(okAll){const n=document.getElementById('order-note');if(n)n.value='';}
   // Only the part that went through is cleared, so a failed part can be resent as-is.
   if(out.wh&&out.wh.ok){state.orderWh={};state._orderWhUuid=genUUID();const e=document.getElementById('order-wh-other');if(e)e.value='';}
   if(out.food&&out.food.ok){state.orderFood={};state._orderFoodUuid=genUUID();const e=document.getElementById('order-food-other');if(e)e.value='';}

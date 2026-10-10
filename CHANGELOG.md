@@ -4,6 +4,19 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-64
+- **No free typing for stand staff**: the "Not on the list? Type it" boxes in My Stand Order now show only for Supervisors (including limited-area supervisors) and Managers. Stand staff kept mixing food and warehouse items in free text.
+- **Supervisor note**: Supervisors and Managers also get a 📝 note line. It goes with both the Warehouse and the Kitchen part of the order.
+- **Request Food Delivery button removed** from the Requests menu for everyone. Food is ordered in My Stand Order. Supervisors still keep Request Stock and Report IT Issue.
+- Data (10/10 NPO stands):
+  - Infinity Booster: added 233P Game Day and 231P BarS Sausage.
+  - Global Dental: 231P removed.
+  - Az Omega: added 310P and 316P Beer Portable.
+  - Beggars Gate / The Well: moved to 219 Cold Beer Cheeseburgers SC.
+  - Global Medical Brigades: 208P BarS Sausage. The sheet said "206 Bar S", but there is no 206 Bar S stand.
+  - Mujeres Latinas: no stand.
+  - The rest are unchanged. Member lists already matched the rosters.
+
 ## 2026-10-10-fix-63
 - **One screen for stand orders**: the Requests menu now leads with one big **🛒 My Stand Order** button (renamed from "Order for my stand"). It covers Stock (Warehouse), Food (Kitchen) and IT in one place. The old single forms (Request Stock / Request Food Delivery / Report IT Issue) are now shown only to Supervisors (including limited-area supervisors) and Managers.
 - **Gaps filled in My Stand Order**:
