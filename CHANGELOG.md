@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-72
+- **IT requests blocked by old tickets**: the "already reported" check on Report IT Issue looked at every unresolved ticket ever, so tickets left open from 9/5, 10/3 and 10/8 blocked new ones. It now only looks at today. Data: 43 old open/claimed IT tickets closed, with "[Auto-closed 10/10: left open from a previous game]". Today's tickets were not touched.
+- **NPO members at main stands**: members can now sign in at any assigned stand where Admin's self-login switch is ON, main stands included. Before, Infinity members could not pick or check in at 408 Cold Beer Cheeseburgers. Stands with the switch OFF (210, 140, 142, 204, 226, 232) stay NPO-Lead-only, with a clearer message.
+- Data: Martha Tovar added to Infinity Booster.
+
 ## 2026-10-10-fix-71
 - **No more "ASU vs Morgan State"**: the game-day banner and the Game Day Info screen used to start with hard-coded 9/5 Morgan State text, which stayed on any screen that hadn't loaded today's info. They now start as "Game Day" and fill in from Admin → Game Day Info ("ASU vs.Hawaii · Oct 10, 2026"). The built-in fallback game info, and the photo label, are updated to the Hawaii 10/10 game.
 - **NPO sign-in only uses today's schedule**: when looking up a stand's event, it used to pick any test schedule row for that stand, whatever its date. It now only uses today's rows.

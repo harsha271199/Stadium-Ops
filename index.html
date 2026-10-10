@@ -4691,7 +4691,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-71';
+const BUILD_TAG = '2026-10-10-fix-72';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7767,17 +7767,18 @@ async function doNpoLogin() {
     if (!member.is_lead) {
       const standRes = await api('getStandsList', {}).catch(()=>({ok:false,stands:[]}));
       const meta = new Map((standRes.stands||[]).map(s=>[canonicalStandName2026(s.stand_name),s]));
-      // Regular NPO members self-login ONLY at portable/non-main stands whose
-      // Admin self-login toggle is ON. Main-stand attendance is intentionally
-      // handled by the NPO Lead so the whole group does not need individual logins.
+      // Regular NPO members self-login at any assigned stand whose Admin
+      // self-login toggle is ON — main stands included (10/10: Infinity members
+      // could not reach 408 Cold Beer Cheeseburgers). Stands with the toggle OFF
+      // stay NPO-Lead-only.
       available = assigned.filter(s => {
         const m=meta.get(s);
-        return m && !m.is_main_stand && m.lead_access_for_all;
+        return m && m.lead_access_for_all;
       });
       if (!available.length) {
         const hasMain=assigned.some(s=>{const m=meta.get(s);return m&&m.is_main_stand;});
         return toast(hasMain
-          ? 'Main stand: your NPO Lead signs in and manages the group attendance. Regular member self-login is only for enabled portable/non-main stands.'
+          ? 'Self-login is OFF at this main stand — your NPO Lead signs in and does the group attendance. Ask the Aramark manager if you should sign in yourself.'
           : 'Self-login is OFF for your assigned portable stand. Ask the Aramark manager to enable that stand.', 'error', 9000);
       }
     }
@@ -22667,7 +22668,8 @@ async function checkITCategoryHold(){
   //    gave zero warning and could be re-reported endlessly. Matches the
   //    resolve-guard's own status=neq.resolved used elsewhere in this
   //    flow — a ticket should only stop counting once actually resolved.
-  const rows=await sb('it_issues?stand=eq.'+encodeURIComponent(stand)+'&category=eq.'+encodeURIComponent(state.itCategory)+'&status=neq.resolved&order=created_at.desc&limit=1&select=reported_by,created_at,status,claimed_by').catch(()=>({_err:true}));
+  // Today only — a ticket left open from an earlier game must never block a new one.
+  const rows=await sb('it_issues?stand=eq.'+encodeURIComponent(stand)+'&category=eq.'+encodeURIComponent(state.itCategory)+'&status=neq.resolved&created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.desc&limit=1&select=reported_by,created_at,status,claimed_by').catch(()=>({_err:true}));
   if(rows._err||!Array.isArray(rows)||!rows.length){notice.style.display='none';notice.innerHTML='';state._itHoldActive=false;return;}
   state._itHoldActive=true;
   const row=rows[0];
