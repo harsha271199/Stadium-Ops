@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-09-fix-61
+- **Admin → People → Runners**: two buttons, **🍽️ Open Food Manager** and **📦 Open Warehouse Manager**, open those screens with their full tools (assign runners, change areas, decline, 3rd-quarter switch, warehouse team/plan…). A black bar at the top says "Admin viewing as…" with **← Back to Admin**; Sign out or reloading also returns to Admin.
+- **🔀 Split orders inside an area** (Admin, separate switches for Food and Warehouse, stored in app_settings split_food / split_wh, default OFF): when 2+ people cover a stand, each new order goes to ONE person — the least busy (people signed in today first). Warehouse: only that person sees/hears it; if nobody takes it in 10 min it opens to the whole area. Food: the order is assigned to the least-busy runner on the area. OFF = old way.
+- **IT limit**: 3 open IT tickets at a main stand, 1 at portables / markets / bars / carts (P, M, T, B stands).
+
 ## 2026-10-09-fix-60
 - **Order limits**: every stand can have up to **5 open Stock** and **5 open Food** orders at once (was 3 for portables / 3 food). IT stays 1. An order left open over 45 min stops counting.
 - **No duplicate items**: an item already on an open order from the stand (waiting or on the way) can't be ordered again until it arrives. Order for my stand takes it off and offers to send the rest; Request Stock refuses it.

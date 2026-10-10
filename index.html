@@ -450,6 +450,9 @@
   /* ── FLOATING CONTACT BUTTON ── */
   .float-contact{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom));right:14px;z-index:800;background:var(--aramark-red);color:#fff;border:none;border-radius:999px;min-width:52px;height:48px;padding:0 14px;font-size:15px;font-weight:850;cursor:pointer;box-shadow:0 4px 16px rgba(228,0,43,0.34);display:none;align-items:center;justify-content:center;gap:7px;font-family:inherit}
   .float-contact.visible{display:flex}
+  #admin-actas-bar{position:fixed;top:0;left:0;right:0;z-index:950;background:#111827;color:#fff;font-size:12px;font-weight:800;padding:6px 10px calc(6px) 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  #admin-actas-bar button{background:#FFC627;color:#000;border:none;border-radius:8px;font-weight:900;font-size:12px;padding:6px 10px}
+  body.acting-admin .screen.active{padding-top:36px}
   /* Emergency numbers are always one tap away, for every login — chat no longer hides them. */
   .float-sos{position:fixed;bottom:calc(76px + env(safe-area-inset-bottom));right:14px;z-index:800;width:46px;height:46px;border-radius:50%;border:2px solid var(--aramark-red);background:var(--bg-card,#fff);color:var(--aramark-red);font-size:20px;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.18)}
   .float-sos.visible{display:flex}
@@ -3467,6 +3470,11 @@
       <div data-adm="people" class="v11-admin-section" id="admin-runners">
         <div class="v11-admin-title">🏃 Runners — Food ↔ Warehouse</div>
         <div class="v11-admin-sub">Move a runner between the Food team and the Warehouse with one tap, give them an area, or add a new runner. Changes work right away (today's game).</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <button class="btn btn-primary" style="margin:0" onclick="adminActAs('food_manager')">🍽️ Open Food Manager</button>
+          <button class="btn btn-primary" style="margin:0" onclick="adminActAs('warehouse_manager')">📦 Open Warehouse Manager</button>
+        </div>
+        <div id="rn-split" class="card" style="padding:12px;margin-bottom:10px"></div>
         <div class="card" style="padding:12px;margin-bottom:10px">
           <div style="font-weight:800;font-size:13px;margin-bottom:6px">＋ Add a runner</div>
           <div class="admin-access-editor-grid">
@@ -4651,7 +4659,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-09-fix-60';
+const BUILD_TAG = '2026-10-09-fix-61';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5295,12 +5303,15 @@ function urgNorm(u){ const x=(u||'').toLowerCase(); if(x.includes('urg'))return'
 // Warehouse screens show people as "First Last" (the database keeps "Last, First"
 // so sign-in and everything else keep working). Display only.
 // Open-request limits per stand: up to 5 Stock and 5 Food orders on the go at
-// once (every stand), IT 1. Checked live against the database when sending, so
-// two phones can't both slip past. A delivered / resolved request frees its
-// slot straight away; one left open over 45 min (IT 60) stops counting.
+// once (every stand). IT: 3 open tickets at a main stand (many registers /
+// screens), 1 at a portable / kiosk (P, M, T, B stands). Checked live against
+// the database when sending, so two phones can't both slip past. A delivered /
+// resolved request frees its slot straight away; one left open over 45 min
+// (IT 60) stops counting.
 const OPEN_ORDER_LIMIT = 5;
+function isSmallStand(stand){const s=String(stand||'');return /^\s*\d{3}\s*[PMTB]\b/i.test(s)||/portable|\bcart\b/i.test(s);}
 function openRequestLimit(kind, stand){
-  if(kind==='it')return 1;
+  if(kind==='it')return isSmallStand(stand)?1:3;
   return OPEN_ORDER_LIMIT;
 }
 // Same item already on an open order from this stand (still counting, see
@@ -7241,6 +7252,57 @@ function stockEtaHtml(r) {
   const color = e.late ? '#DC2626' : e.soon ? '#D97706' : 'var(--info)';
   return '<div style="font-size:11px;font-weight:700;color:'+color+';margin-top:5px">'+escapeHtml(e.text)+'</div>';
 }
+// ---- Split orders inside an area (Admin switch, Food and Warehouse separate) ----
+// ON: each new order goes to ONE person covering that stand — whoever has the
+// fewest open jobs right now (people signed in today first) — instead of to
+// everyone in the area. If nobody takes it within SPLIT_STALE_MIN minutes it
+// opens up to the whole area again. OFF: food → the first runner on the area,
+// warehouse → everyone in the area (the old way).
+const SPLIT_STALE_MIN = 10;
+let _split = { at:0, food:false, wh:false };
+async function splitSettings(force){
+  if(!force&&Date.now()-_split.at<30000)return _split;
+  const rows=await sb('app_settings?key=in.(split_food,split_wh)&select=key,value').catch(()=>({_err:true}));
+  if(Array.isArray(rows)){const v=k=>{const r=rows.find(x=>x.key===k);return !!(r&&r.value==='on');};_split={at:Date.now(),food:v('split_food'),wh:v('split_wh')};}
+  return _split;
+}
+async function splitSet(team,on){
+  if(!isAdminSession())return toast('Admin access required','error');
+  const key=team==='food'?'split_food':'split_wh';
+  const r=await sb('app_settings?on_conflict=key',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key,value:on?'on':'off',updated_by:String((state.staffAccount&&state.staffAccount.empId)||''),updated_at:new Date().toISOString()})}).catch(()=>({_err:true}));
+  if(r&&r._err)return toast('Could not save — try again','error');
+  _split.at=0;await splitSettings(true);
+  toast(on?'✅ '+(team==='food'?'Food':'Warehouse')+': one order → one person in the area':'↩️ '+(team==='food'?'Food':'Warehouse')+': back to normal');
+  splitRenderAdmin();
+}
+// Least busy first; people signed in today before people who are not.
+async function splitPickOne(team,people){
+  if(!people||people.length<=1)return people||[];
+  const since=encodeURIComponent(stadiumDayStartISO());
+  const [duty,rows]=await Promise.all([
+    onDutyIds(team==='food'?['food_runner','kitchen_runner','food_manager']:['warehouse_employee','warehouse_supervisor','warehouse_manager']).catch(()=>[]),
+    team==='food'
+      ?sb('kitchen_requests?created_at=gte.'+since+'&status=not.in.(delivered,cancelled)&select=assigned_runner_id').catch(()=>[])
+      :sb('stock_requests?created_at=gte.'+since+'&status=in.(open,claimed)&select=claimed_by,items_json').catch(()=>[])]);
+  const on=new Set((duty||[]).map(String));
+  const load=p=>{const id=String(p.employee_id),nm=String(p.name||'');return (Array.isArray(rows)?rows:[]).filter(r=>{
+    if(team==='food')return String(r.assigned_runner_id||'')===id;
+    if(r.claimed_by)return r.claimed_by===nm||whDisp(r.claimed_by)===whDisp(nm);
+    let j=r.items_json;if(typeof j==='string'){try{j=JSON.parse(j);}catch(e){j=null;}}
+    const ids=j&&j.meta&&Array.isArray(j.meta.assigned_to_ids)?j.meta.assigned_to_ids.map(String):[];
+    return ids.length===1&&ids[0]===id;}).length;};
+  const pool=people.some(p=>on.has(String(p.employee_id)))?people.filter(p=>on.has(String(p.employee_id))):people;
+  const scored=pool.map(p=>({p,n:load(p),r:Math.random()})).sort((a,b)=>a.n-b.n||a.r-b.r);
+  return [scored[0].p];
+}
+// Order created by someone else in my area that nobody has taken for a while → I can see it too.
+function splitStaleForArea(createdAt){return !!(createdAt&&Date.now()-new Date(createdAt).getTime()>SPLIT_STALE_MIN*60000);}
+async function resolveWarehouseRouting(stand){
+  const cov=await resolveWarehouseAssigneesForStand(stand).catch(()=>({people:[]}));
+  const st=await splitSettings().catch(()=>_split);
+  if(!st.wh||!cov.people||cov.people.length<2)return cov;
+  return {...cov,people:await splitPickOne('wh',cov.people),split:true};
+}
 async function resolveWarehouseAssigneesForStand(stand) {
   const routed=await coverageResolveStand('stock',stand).catch(()=>({operational:[]}));
   if(routed.operational&&routed.operational.length)return {available:true,people:routed.operational.map(r=>({employee_id:r.employee_id,name:r.name,stands:[stand]}))};
@@ -7821,7 +7883,38 @@ function whRoleLabel(role) {
 // both for the normal case (shift ends) and especially if these end up on
 // shared devices — someone handing a phone to the next person needs a fast,
 // obvious way to clear the previous person's identity before continuing.
+// ---- Admin: open the Food Manager / Warehouse Manager screens with their full tools ----
+// The admin's own login stays saved on the device; "Back to Admin" (or Sign
+// out / a page reload) returns to it.
+function adminActAs(role){
+  const a=state.staffAccount;
+  if(!a||a.role!=='admin'||state._adminActAs)return toast('Admin access required','error');
+  state._adminActAs={acct:{...a}};
+  const food=role==='food_manager';
+  state.staffAccount={...a,role,group:food?'food':'warehouse',actingAdmin:true};
+  _kitchenMonitorReturn='';
+  if(food){renderKitchenForRole();showScreen('screen-kitchen');}
+  else{state.whName=a.name;renderWarehouseForRole();showScreen('screen-warehouse');}
+  adminActAsBar();
+  toast((food?'🍽️ Food Manager':'📦 Warehouse Manager')+' view — tap “Back to Admin” at the top to return');
+}
+function adminActAsBar(){
+  let b=document.getElementById('admin-actas-bar');
+  if(!state._adminActAs){if(b)b.remove();document.body.classList.remove('acting-admin');return;}
+  if(!b){b=document.createElement('div');b.id='admin-actas-bar';document.body.appendChild(b);}
+  b.innerHTML='👤 Admin viewing as '+(state.staffAccount.group==='food'?'Food Manager':'Warehouse Manager')+' <button onclick="adminActAsExit()">← Back to Admin</button>';
+  document.body.classList.add('acting-admin');
+}
+function adminActAsExit(){
+  if(!state._adminActAs)return;
+  state.staffAccount=state._adminActAs.acct;state._adminActAs=null;
+  state.whName=null;state._myWhZoneStands=undefined;state._whRequestMode=false;_kitchenMonitorReturn='';
+  adminActAsBar();
+  showScreen('screen-bedcheck');restoreMgrSidebarState();
+  try{mgrV10OpenTool('admin');admShow('people');}catch(e){}
+}
 async function staffLogout() {
+  if (state._adminActAs) return adminActAsExit();
   if (!(await confirmAction('You’ll need your ID and PIN to sign back in on this device.', {title:'Log out on this device?', confirmLabel:'Log out'}))) return;
   localStorage.removeItem('stadium_staff');
   state.staffAccount = null;
@@ -9658,7 +9751,7 @@ async function submitStock() {
   const requestedBy = TIER_LABELS[who.tier] ? who.name + ' (' + TIER_LABELS[who.tier] + ')' : who.name;
   const etaMins = Number(state.selectedETA || 0);
   const etaDeadline = etaMins > 0 ? new Date(Date.now() + etaMins * 60000).toISOString() : null;
-  const coverage = await resolveWarehouseAssigneesForStand(targetStand);
+  const coverage = await resolveWarehouseRouting(targetStand);
   const assignedIds = coverage.people.map(p => String(p.employee_id||'')).filter(Boolean);
   const assignedNames = coverage.people.map(p => p.name || p.employee_id).filter(Boolean);
   const structuredRequest = {items:jsonItems,other:other,meta:{eta_minutes:etaMins,eta_deadline:etaDeadline,assigned_to_ids:assignedIds,assigned_to_names:assignedNames}};
@@ -10056,7 +10149,7 @@ async function submitUnifiedOrder(){
     const jobs=[];
     if(sendWh)jobs.push((async()=>{
       const itemsText=wh.map(x=>{const w=x.word||(/\bICE\b/i.test(x.itemName)&&/BAG/i.test(x.unit||x.itemName)?'bag':'case');return x.qty+' '+(w==='each'?'×':w+(x.qty!==1?'s':'')+' ×')+' '+x.itemName+(x.pack?' ('+x.pack+')':'');}).join('; ');
-      const coverage=await resolveWarehouseAssigneesForStand(stand).catch(()=>({people:[]}));
+      const coverage=await resolveWarehouseRouting(stand).catch(()=>({people:[]}));
       const ids=(coverage.people||[]).map(p=>String(p.employee_id||'')).filter(Boolean);
       const names=(coverage.people||[]).map(p=>p.name||p.employee_id).filter(Boolean);
       const meta={eta_minutes:etaMins,eta_deadline:deadline,assigned_to_ids:ids,assigned_to_names:names,source:'one_order'};if(test)meta.test=true;
@@ -12227,8 +12320,14 @@ function rnAreaOptions(sel){return rnAreas().map(([k,n])=>'<option value="'+k+'"
 function rnStandsFor(key){const g=WH_GROUPS.find(x=>x.key===key);return g?_rnStands.filter(n=>g.test(n)):[];}
 // The group most of this person's stands fall in (shown in the area picker).
 function rnAreaOf(stands){const list=(stands||[]).map(canonicalStandName2026);if(!list.length)return '';let best='',n=0;WH_GROUPS.forEach(g=>{const k=list.filter(x=>g.test(x)).length;if(k>n){n=k;best=g.key;}});return n*2>=list.length?best:'';}
+function splitRenderAdmin(){
+  const el=document.getElementById('rn-split');if(!el)return;
+  const sw=(team,on,label)=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0"><div><div style="font-weight:800;font-size:13px">'+label+'</div><div style="font-size:11px;color:var(--text-2)">'+(on?'ON — each order goes to ONE person in the area (least busy)':'OFF — '+(team==='food'?'first runner on the area gets it':'everyone in the area sees it'))+'</div></div><button class="btn '+(on?'btn-primary':'btn-ghost')+'" style="width:auto;margin:0;padding:8px 14px" onclick="splitSet(\''+team+'\','+(!on)+')">'+(on?'ON':'OFF')+'</button></div>';
+  el.innerHTML='<div style="font-weight:900;font-size:13px;margin-bottom:2px">🔀 Split orders inside an area</div><div style="font-size:11px;color:var(--text-2);margin-bottom:6px">With 2+ people on one area: 1st order → person A, next order → person B. Not taken in '+SPLIT_STALE_MIN+' min → everyone in the area sees it.</div>'+sw('food',_split.food,'🍽️ Food runners')+sw('wh',_split.wh,'📦 Warehouse');
+}
 async function runnersLoad(){
   if(!isAdminSession())return;
+  splitSettings(true).then(splitRenderAdmin).catch(()=>{});
   const a=document.getElementById('rn-area');if(a&&!a.innerHTML)a.innerHTML=rnAreaOptions('');
   const [acc,food,wh,stands]=await Promise.all([
     sb('staff_accounts?is_active=eq.true&role=in.(food_runner,kitchen_runner,warehouse_employee)&select=employee_id,name,role,pin&order=name.asc').catch(()=>({_err:true})),
@@ -16344,7 +16443,13 @@ async function kitchenGetRunners(){
   if(BUILD_TAG.includes('preview-8')||BUILD_TAG.includes('preview-9')||BUILD_TAG.includes('preview-11')||BUILD_TAG.includes('preview-11-1')||BUILD_TAG.includes('preview-11-2'))return [1,2,3,4].map(i=>({employee_id:'8800'+i,name:'Food Runner '+i,preview:true}));
   return [];
 }
-async function kitchenSuggestedRunner(stand){const a=await kitchenFetchAssignments();return a.find(x=>Array.isArray(x.stands)&&x.stands.includes(stand))||null;}
+async function kitchenSuggestedRunner(stand){
+  const a=(await kitchenFetchAssignments()).filter(x=>x.is_active!==false&&Array.isArray(x.stands)&&x.stands.map(canonicalStandName2026).includes(canonicalStandName2026(stand)));
+  if(a.length<2)return a[0]||null;
+  const st=await splitSettings().catch(()=>_split);
+  if(!st.food)return a[0];
+  return (await splitPickOne('food',a))[0]||a[0];
+}
 
 function addFoodQuick(name){
   if(_kitchenDraft.length===1&&!String(_kitchenDraft[0].itemName||'').trim())_kitchenDraft[0].itemName=name;
@@ -24052,8 +24157,8 @@ function whRequestIsMine(r) {
   const myId = String(acct.empId || ''), myName = state.whName || acct.name || '';
   if (r.status === 'On the way') return !r.claimedBy || r.claimedBy === myName;
   const routed = (r.assignedToIds || []).map(String);
-  if (routed.length) return routed.includes(myId);
   const zone = state._myWhZoneStands;
+  if (routed.length) return routed.includes(myId) || (splitStaleForArea(r.timestamp) && (!zone || !zone.length || zone.includes(r.stand)));
   return zone && zone.length ? zone.includes(r.stand) : true;
 }
 async function loadWhToDeliver() {
@@ -24084,6 +24189,7 @@ async function loadWhToDeliver() {
     const routedToMe=routed.length ? routed.includes(String(myId)) : null;
     const coveredByMe=state._myWhZoneStands&&state._myWhZoneStands.length ? state._myWhZoneStands.includes(r.stand) : null;
     if(r.status==='Pending'){
+      if(routedToMe===false&&splitStaleForArea(r.timestamp)&&coveredByMe!==false)return true;
       if(routedToMe!==null)return routedToMe;
       if(coveredByMe!==null)return coveredByMe;
       return true;
@@ -24145,8 +24251,8 @@ function whMappedRequestRoutedToMe(r){
   const myName=state.whName||(state.staffAccount&&state.staffAccount.name)||'';
   if(r.status==='On the way')return !r.claimedBy||r.claimedBy===myName;
   const routed=Array.isArray(r.assignedToIds)?r.assignedToIds.map(String):[];
-  if(routed.length)return routed.includes(myId);
   const zone=state._myWhZoneStands;
+  if(routed.length)return routed.includes(myId)||(splitStaleForArea(r.timestamp)&&(!Array.isArray(zone)||!zone.length||zone.includes(r.stand)));
   if(Array.isArray(zone)&&zone.length)return zone.includes(r.stand);
   return true;
 }
@@ -24158,8 +24264,8 @@ function whRawRequestRoutedToMe(r){
   if(r.status==='claimed')return !r.claimed_by||r.claimed_by===myName;
   const meta=(r.items_json&&r.items_json.meta)||{};
   const routed=Array.isArray(meta.assigned_to_ids)?meta.assigned_to_ids.map(String):[];
-  if(routed.length)return routed.includes(myId);
   const zone=state._myWhZoneStands;
+  if(routed.length)return routed.includes(myId)||(splitStaleForArea(r.created_at)&&(!Array.isArray(zone)||!zone.length||zone.includes(r.stand)));
   if(Array.isArray(zone)&&zone.length)return zone.includes(r.stand);
   return true;
 }
