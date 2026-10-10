@@ -4628,7 +4628,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-09-fix-58';
+const BUILD_TAG = '2026-10-09-fix-59';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -23324,13 +23324,15 @@ function premiumRenderCheckinsList() {
 
   list.innerHTML = locNames.map(loc => {
     const all = byLoc[loc];
-    const rows = all.filter(matches);
+    const rows = all.filter(matches).sort(premRoleSort);
     if (!rows.length) return '';
+    let lastGrp = '';
     const presentCount = all.filter(r => r.status === 'present').length;
     const isOpen = searching || _premOpenGroups.has(loc);
     const rowsHtml = rows.map(r => {
       const cls = r.status === 'present' ? 'present' : r.status === 'absent' ? 'absent' : '';
-      return '<div class="prem-row ' + cls + '" id="prem-row-' + r.id + '">' +
+      const g = premRoleGroupName(r), head = g !== lastGrp ? '<div style="font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--asu-maroon);margin:8px 2px 3px">' + escapeHtml(g) + '</div>' : ''; lastGrp = g;
+      return head + '<div class="prem-row ' + cls + '" id="prem-row-' + r.id + '">' +
         '<div class="prem-row-info">' +
           '<div class="prem-row-name">' + escapeHtml(r.worker_name) + (r.is_walkin ? ' <span style="font-size:9px;color:var(--aramark-red);font-weight:800">WALK-IN</span>' : '') + '</div>' +
           '<div class="prem-row-meta">' + escapeHtml(r.role_title || '') + (r.start_time ? ' · ' + escapeHtml(r.start_time) + '–' + escapeHtml(r.end_time || '') : '') + '</div>' +
@@ -23356,6 +23358,13 @@ function premiumRenderCheckinsList() {
 
   if (!list.innerHTML) list.innerHTML = '<div style="font-size:11px;color:var(--text-3);padding:10px 0">No one matches — clear the search or filter.</div>';
 }
+// Inside each location people are grouped by role — Bartenders first, then
+// Supervisors, Expo, Suite Attendants, Catering, Runners, Student Workers —
+// never mixed. Same order on screen, in the CSV and in the PDF.
+const PREM_ROLE_GROUPS = [['Bartenders',/bartend/i],['Supervisors',/supervisor/i],['Expo Captains',/expo/i],['Suite Attendants',/suite attendant/i],['Catering Workers',/catering services worker|food prep/i],['Runners',/runner|busser/i],['Student Workers',/student/i]];
+function premRoleRank(r) { const t = String(r.role_title || ''); const i = PREM_ROLE_GROUPS.findIndex(g => g[1].test(t)); return i < 0 ? PREM_ROLE_GROUPS.length : i; }
+function premRoleGroupName(r) { const i = premRoleRank(r); return i < PREM_ROLE_GROUPS.length ? PREM_ROLE_GROUPS[i][0] : 'Other'; }
+function premRoleSort(a, b) { return premRoleRank(a) - premRoleRank(b) || String(a.worker_name || '').localeCompare(String(b.worker_name || '')); }
 // -- Export today's check-ins (CSV + printable "PDF") --
 function premiumExportCheckinsCSV() {
   if (!_premScheduleRows.length) return toast('Nothing to export', 'error');
@@ -23364,7 +23373,7 @@ function premiumExportCheckinsCSV() {
   const idCell = v => { const t = String(v == null ? '' : v).trim(); return t ? '="' + t.replace(/"/g, '') + '"' : ''; };
   const tm = v => v ? new Date(v).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Phoenix' }) : '';
   let csv = 'Location,Employee ID,Name,Role,Start,End,Status,Checked In,Checked Out,Walk-in\n';
-  [..._premScheduleRows].sort((a, b) => a.location_name.localeCompare(b.location_name) || a.worker_name.localeCompare(b.worker_name)).forEach(r => {
+  [..._premScheduleRows].sort((a, b) => a.location_name.localeCompare(b.location_name) || premRoleSort(a, b)).forEach(r => {
     csv += [r.location_name, '\u0000ID', r.worker_name, r.role_title || '', r.start_time || '', r.end_time || '', r.status, tm(r.checked_in_at), tm(r.checked_out_at), r.is_walkin ? 'Yes' : ''].map(esc).join(',').replace('\u0000ID', idCell(r.employee_id)) + '\n';
   });
   downloadCSV(csv, 'premium_checkins_' + premiumCheckinDate() + '.csv');
@@ -23399,6 +23408,7 @@ function premiumExportCheckinsPDF() {
     'th{border:1px solid #666;padding:5px 6px;background:#eee;font-weight:800;text-align:left}' +
     'td{border:1px solid #999;padding:5px 6px}' +
     'tr:nth-child(even) td{background:#f6f6f6}' +
+    'tr.grp td{background:#FDECEF!important;font-weight:800;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#8C1D40;border-color:#999}' +
     '.st{font-weight:800;font-size:9px;text-transform:uppercase}' +
     '.st.present{color:#00A651}.st.absent{color:#DC2626}' +
     '</style></head><body>' +
@@ -23408,10 +23418,11 @@ function premiumExportCheckinsPDF() {
       '<div class="hdr-cell"><span class="lbl">Printed</span>' + escapeHtml(new Date().toLocaleString()) + '</div>' +
     '</div></div>' +
     locNames.map(loc => {
-      const rows = byLoc[loc].slice().sort((a, b) => a.worker_name.localeCompare(b.worker_name));
+      const rows = byLoc[loc].slice().sort(premRoleSort);
+      let lastGrp = '';
       return '<div class="loc">' + escapeHtml(loc) + ' (' + rows.filter(r => r.status === 'present').length + '/' + rows.length + ')</div>' +
         '<table><thead><tr><th style="width:80px">Emp ID</th><th>Name</th><th>Role</th><th>Time</th><th style="width:70px">Status</th></tr></thead><tbody>' +
-        rows.map(r => '<tr><td>' + escapeHtml(r.employee_id || '') + '</td><td>' + escapeHtml(r.worker_name) + (r.is_walkin ? ' <small>(walk-in)</small>' : '') + '</td><td>' + escapeHtml(r.role_title || '') + '</td><td>' + escapeHtml(r.start_time || '') + '–' + escapeHtml(r.end_time || '') + '</td><td class="st ' + r.status + '">' + escapeHtml(r.status) + '</td></tr>').join('') +
+        rows.map(r => { const g = premRoleGroupName(r), head = g !== lastGrp ? '<tr class="grp"><td colspan="5">' + escapeHtml(g) + '</td></tr>' : ''; lastGrp = g; return head + '<tr><td>' + escapeHtml(r.employee_id || '') + '</td><td>' + escapeHtml(r.worker_name) + (r.is_walkin ? ' <small>(walk-in)</small>' : '') + '</td><td>' + escapeHtml(r.role_title || '') + '</td><td>' + escapeHtml(r.start_time || '') + '–' + escapeHtml(r.end_time || '') + '</td><td class="st ' + r.status + '">' + escapeHtml(r.status) + '</td></tr>'; }).join('') +
         '</tbody></table>';
     }).join('') +
     '<scr' + 'ipt>window.print()<\/scr' + 'ipt></body></html>';

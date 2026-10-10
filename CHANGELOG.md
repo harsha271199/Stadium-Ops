@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-09-fix-59
+- Premium: inside each location people are grouped by role — **Bartenders first**, then Supervisors, Expo Captains, Suite Attendants, Catering Workers, Runners, Student Workers — never mixed. Same order on the check-in screen (with role headings), the CSV and the PDF (pink role heading rows).
+
 ## 2026-10-09-fix-58
 - 3rd-quarter lock is **manual only** (no automatic close from kickoff time). Admin / Manager / Food Manager taps "🏈 3rd quarter started — close food & alcohol" on their home screen.
 - On tap: phone alert to workers, Stand Leads and Supervisors on duty; open apps show a banner within a minute and Order for my stand updates by itself.
