@@ -4691,7 +4691,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-67';
+const BUILD_TAG = '2026-10-10-fix-68';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6896,16 +6896,23 @@ async function api(action, data) {
       // the items that were counted on this game. Missing/unavailable items
       // therefore keep their normal paper row, while staff explain the issue
       // in the saved inventory Notes.
+      // Every sheet row in order, duplicates included — the Yellow Dog copy
+      // must have exactly as many rows as the sheet that was loaded.
+      const sheetRowsByStand = {};
       (Array.isArray(sheets) ? sheets : []).forEach(r => {
         const realStand = standKeys[(r.stand||'').trim().toLowerCase()];
         if (!realStand) return;
         const it = getItem(realStand, r.item_name);
+        { const ty0 = String(r.chargeable || '') + ' ' + String(r.category || '');
+          (sheetRowsByStand[realStand] = sheetRowsByStand[realStand] || []).push({ name: r.item_name, isAddon: !!r.is_addon,
+            ydType: /suppl/i.test(ty0) ? 'Supplies' : (/non/i.test(ty0) || String(r.chargeable).toLowerCase() === 'false') ? 'Non-Chargeable' : 'Chargeable' }); }
         if (!it.unit) it.unit = r.unit || '';
         if (!it.pack) it.pack = r.pack || '';
         if (!it.expStart) it.expStart = r.exp_start || '';
         if (it.onHand === undefined) it.onHand = r.on_hand;
         if (it.restock === undefined) it.restock = r.restock;
-        it.isAddon = !!r.is_addon;
+        // Same item as a sheet line AND an add-on line: it is a sheet line.
+        it.isAddon = it._rowSeen ? (it.isAddon && !!r.is_addon) : !!r.is_addon; it._rowSeen = true;
         // No longer sold (Coke → Pepsi): row stays in its place, counted as 0.
         if (isRetiredItem(r.item_name)) {
           it.retired = true;
@@ -6916,7 +6923,7 @@ async function api(action, data) {
         // store the type in `chargeable` ('Supplies') or in `category` with
         // chargeable 'true'/'false', depending on how they were uploaded.
         const ty = String(r.chargeable || '') + ' ' + String(r.category || '');
-        it.ydType = /suppl/i.test(ty) ? 'Supplies' : (/non/i.test(ty) || String(r.chargeable).toLowerCase() === 'false') ? 'Non-Chargeable' : 'Chargeable';
+        if (!r.is_addon || !it.ydType) it.ydType = /suppl/i.test(ty) ? 'Supplies' : (/non/i.test(ty) || String(r.chargeable).toLowerCase() === 'false') ? 'Non-Chargeable' : 'Chargeable';
       });
 
       // Delivered stock requests are useful for audit/display. These are NOT
@@ -7036,6 +7043,7 @@ async function api(action, data) {
           operator:(S.submitters&&S.submitters.length)?S.submitters[0]:'',
           notes:(S.noteEntries||[]).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||''))),
           items,
+          sheetRows:sheetRowsByStand[S.stand]||[],
           totalItems:items.length,
           countedItems:items.filter(i=>i.counted).length
         };
@@ -14301,6 +14309,13 @@ function ydSplit(s) {
   const byName = {};
   // Prefer an item that actually has counts when two spellings exist.
   s.items.forEach(it => { const k = ydItemKey(it.itemName), o = byName[k]; if (!o || (!['countIn', 'waste', 'countOut'].some(f => ydNum(o[f]) !== 0) && ['countIn', 'waste', 'countOut'].some(f => ydNum(it[f]) !== 0))) byName[k] = it; });
+  // App order = the loaded sheet, row for row (a name listed twice — e.g.
+  // PORK - PULLED SMOKED as Chargeable and as Non-Chargeable — keeps both rows).
+  if (Array.isArray(s.sheetRows) && s.sheetRows.length) {
+    const rowsOf = ch => s.sheetRows.filter(r => !r.isAddon && (ch ? r.ydType === 'Chargeable' : r.ydType !== 'Chargeable'))
+      .map(r => byName[ydItemKey(r.name)] || { itemName: r.name, missing: true });
+    g.charge = rowsOf(true); g.nonch = rowsOf(false);
+  }
   const lists = {};
   const sh = ydSheetGet(), ys = sh && ydMapStand(s.stand);
   if (ys && sh.stands[ys]) {
@@ -20149,7 +20164,20 @@ async function loadInventoryForStand(stand) {
     return;
   }
 
-  state.invItems = res.items;
+  // One box per item: a name the sheet lists twice (e.g. PORK - PULLED SMOKED
+  // as Chargeable and Non-Chargeable, or a sheet line repeated as an add-on)
+  // is counted once — counts are saved by item name, so two boxes would
+  // overwrite each other. The sheet itself keeps every row for Yellow Dog.
+  state.invItems = (function (list) {
+    const pos = {}, out = [];
+    (list || []).forEach(it => {
+      const k = ydItemKey(it.itemName);
+      if (!(k in pos)) { pos[k] = out.length; out.push(it); return; }
+      const cur = out[pos[k]];
+      if (cur.isAddon && !it.isAddon) out[pos[k]] = it; // prefer the sheet line over the add-on copy
+    });
+    return out;
+  })(res.items);
   document.getElementById('inv-sub').textContent = stand + ' · ' + res.items.length + ' items';
   renderInvItems();
 

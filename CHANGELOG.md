@@ -4,9 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-68
+- **Stand sheets back to exactly the 10/10 Yellow Dog file**: the 80 duplicate lines removed in fix-67 are restored in their original positions. All 66 stands match the file row for row (2,771 lines). The 3 lines added to DFA Market were taken off, so it has its 17 lines again. Duplicates stay on the sheet so the Yellow Dog copy-paste row count is right.
+- **Yellow Dog copy follows the sheet row by row**: Chargeables and Non-Chargeables & Supplies now list every sheet line in order, including a name listed twice. For example, PORK - PULLED SMOKED is on both tabs. Before, same-name lines were merged, so a tab could come out a row short. A sheet line that is repeated as an add-on no longer drops out of the copy.
+- **Count screen shows each item once**: when the sheet lists a name twice, staff get one box, because counts are saved by item name and two boxes would overwrite each other. Both Yellow Dog rows get that number.
+
 ## 2026-10-10-fix-67
 - **Count Out names match Count In**: Count Out now also lists every item counted at Count In that isn't on the stand's sheet, plus anything delivered today that isn't on the sheet. These lines are marked "➕ Counted in today / Delivered today — not on the sheet". (10/9 DFA Market: Gatorade Red and Devils Halo Amber were counted in, then missing at Count Out.)
-- **Stand sheets cleaned**: removed 80 duplicate lines where the same item was listed twice in one stand ("PORK - PULLED SMOKED" as both Chargeable and Non-Chargeable, and add-on copies of sheet lines). Counts are saved by item name, so the two lines overwrote each other. No stand has a duplicate now. DFA Market sheet now has Gatorade Red, Devils Halo Amber and Huss IPA.
+- **Stand sheets cleaned** (undone in fix-68): removed 80 duplicate lines where the same item was listed twice in one stand ("PORK - PULLED SMOKED" as both Chargeable and Non-Chargeable, and add-on copies of sheet lines). Counts are saved by item name, so the two lines overwrote each other. No stand has a duplicate now. DFA Market sheet now has Gatorade Red, Devils Halo Amber and Huss IPA.
 - **My Stand Order made easier**:
   - A blue "How it works" box at the top with 3 numbered steps.
   - One big search box for everything, food included. Every word must match, in any order. Category words like "beer", "soda" and "candy" also work. If nothing matches, it says who to ask.
