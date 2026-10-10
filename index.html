@@ -1697,6 +1697,13 @@
 .wh-changed-note{font-size:12px;color:#B45309;background:rgba(245,158,11,.10);border-radius:8px;padding:6px 8px;margin-top:6px}
   /* One order screen (Warehouse + Food) */
   .ord-test{background:#FEF3C7;color:#92400E;border:2px dashed #F59E0B;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:800;margin-bottom:10px}
+  .ord-guide{border:1px solid #BFDBFE;background:#EFF6FF;border-radius:12px;padding:10px 12px;margin-bottom:10px}
+  .ord-guide-t{font-size:13px;font-weight:900;margin-bottom:4px;color:#1E3A8A}
+  .ord-guide-s{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.35;margin:4px 0;color:var(--text)}
+  .ord-step{flex:0 0 20px;height:20px;border-radius:50%;background:#2563EB;color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center}
+  .ord-guide-n{font-size:12px;color:#1E3A8A;margin-top:6px}
+  .ord-search{font-size:16px!important;margin:0 0 10px!important;border:2px solid #2563EB!important}
+  .ord-search-empty{background:#FEF3C7;color:#78350F;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:10px}
   .ord-howto{font-size:13px;color:var(--text-2);margin-bottom:12px;line-height:1.4}
   .ord-sec{border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:12px;background:var(--bg-elevated)}
   .ord-sec-wh{border-left:5px solid #DC2626}
@@ -1712,7 +1719,7 @@
   .ord-name small{display:block;font-weight:500;font-size:11px;color:var(--text-2)}
   .ord-qty{width:34px;text-align:center;font-weight:900;font-size:17px}
   .ord-hint{font-size:11px;color:var(--text-3);margin-top:8px}
-  .ord-grp-btn{display:flex!important;justify-content:space-between;align-items:center;width:100%;border:none;background:none;cursor:pointer;font-family:inherit;text-align:left}
+  .ord-grp-btn{display:flex!important;justify-content:space-between;align-items:center;width:100%;border:none;background:var(--border,#e5e7eb);border-radius:8px;padding:9px 10px!important;cursor:pointer;font-family:inherit;text-align:left;color:var(--text)!important}
   .ord-grp-btn small{font-weight:600;color:var(--text-3);letter-spacing:0;text-transform:none}
   .ord-picked{font-size:11px;font-weight:600;color:var(--text-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ord-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--bg-elevated,#1a1d24);border-top:1px solid var(--border,#2a2f3a);padding:10px 16px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(0,0,0,0.25)}
@@ -2830,26 +2837,33 @@
       <label class="form-label" style="margin-top:0">Which stand?</label>
       <select class="form-input" id="order-stand-select" onchange="orderStandChanged()"></select>
     </div>
-    <div class="ord-howto">Tap <b>+</b> on what you need. One <b>Send</b> → drinks &amp; snacks go to the <b>Warehouse</b>, food goes to the <b>Kitchen</b>, at the same time.</div>
+    <div class="ord-guide">
+      <div class="ord-guide-t">How it works</div>
+      <div class="ord-guide-s"><span class="ord-step">1</span><div>Tap <b>+</b> on what you need. Use the search box to find anything fast.</div></div>
+      <div class="ord-guide-s"><span class="ord-step">2</span><div>Pick how fast you need it at the bottom.</div></div>
+      <div class="ord-guide-s"><span class="ord-step">3</span><div>Tap <b>Send</b>. 📦 Drinks, snacks &amp; ice go to the <b>Warehouse</b>. 🍔 Food goes to a <b>food runner</b>. Both at once.</div></div>
+      <div class="ord-guide-n">🔧 Something broken (POS, TV, self checkout)? Use the blue <b>IT</b> box at the very bottom.</div>
+    </div>
+    <input class="form-input ord-search" type="search" id="order-search" placeholder="🔍 Search everything: water, ice, beer, fries…" oninput="orderSearchChanged()" autocomplete="off">
+    <div id="order-search-empty" class="ord-search-empty" style="display:none"></div>
 
     <div class="ord-sec ord-sec-wh">
-      <div class="ord-sec-h"><span>📦 Warehouse</span><span class="ord-sec-unit">cases</span></div>
-      <div class="ord-sec-sub">Drinks · popcorn · candy · snacks · ice · CO2 · draft &amp; souvenir cups</div>
-      <input class="form-input" type="text" id="order-search" placeholder="🔍 Search drinks & snacks…" oninput="orderRenderWh()" style="margin:8px 0">
+      <div class="ord-sec-h"><span>📦 Warehouse</span><span class="ord-sec-unit">count in cases</span></div>
+      <div class="ord-sec-sub">Drinks · popcorn · candy · snacks · ice · CO2 · cups. Tap a gray bar to open it.</div>
       <div id="order-wh-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
       <div id="order-sup-hint" class="ord-sup-hint"></div>
       <div class="ord-other" id="order-wh-other-row"><input class="form-input" type="text" id="order-wh-other" maxlength="120" placeholder="✏️ Not on the list? Type it (e.g. sanitizer buckets)" oninput="orderSummary()"><input class="form-input ord-other-q" type="number" min="1" max="99" id="order-wh-other-q" value="1" inputmode="numeric" oninput="orderSummary()"></div>
     </div>
 
     <div class="ord-sec ord-sec-food">
-      <div class="ord-sec-h"><span>🍔 Food</span><span class="ord-sec-unit">how many</span></div>
-      <div class="ord-sec-sub">From the kitchen · a runner brings it</div>
+      <div class="ord-sec-h"><span>🍔 Food</span><span class="ord-sec-unit">count each</span></div>
+      <div class="ord-sec-sub">Cooked in the kitchen · a food runner brings it to you</div>
       <div id="order-food-list" style="margin-top:8px"></div>
       <div class="ord-other" id="order-food-other-row"><input class="form-input" type="text" id="order-food-other" maxlength="120" placeholder="✏️ Other food? Type it (e.g. nacho chips)" oninput="orderSummary()"><input class="form-input ord-other-q" type="number" min="1" max="99" id="order-food-other-q" value="1" inputmode="numeric" oninput="orderSummary()"></div>
     </div>
     <div class="ord-sec ord-sec-it" style="border-left:5px solid #2563EB;margin-top:14px">
-      <div class="ord-sec-h"><span>🔧 Something broken?</span></div>
-      <div class="ord-sec-sub">Tap it — IT gets a ticket for this stand right away (separate from your order)</div>
+      <div class="ord-sec-h"><span>🔧 IT · Something broken?</span></div>
+      <div class="ord-sec-sub">Tap what is broken — IT gets a ticket for this stand right away. This is separate from your order.</div>
       <div class="ord-it-chips">
         <button type="button" onclick="orderOpenIT('POS Handheld')">📱 POS Handheld</button>
         <button type="button" onclick="orderOpenIT('POS Menu')">📋 POS Menu</button>
@@ -4677,7 +4691,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-66';
+const BUILD_TAG = '2026-10-10-fix-67';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10019,6 +10033,7 @@ async function goOrder(){
   state.orderWh={};state.orderFood={};state.orderEta=30;state.orderUrgency='Normal';state.orderOpenGrp={};
   state.orderStand=getOperationalStand(who)||who.homeStand||'';
   document.getElementById('order-search').value='';
+  { const e=document.getElementById('order-search-empty'); if(e)e.style.display='none'; }
   ['order-wh-other','order-food-other'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   ['order-wh-other-q','order-food-other-q'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='1';});
   { const h=document.getElementById('order-sup-hint'); if(h)h.innerHTML=orderCanType()
@@ -10101,7 +10116,9 @@ function orderRenderWh(){
   let html='';
   ORDER_WH_GROUPS.forEach(([g,label])=>{
     if(q3&&g==='beer'){html+='<div class="ord-grp">'+label+'</div><div class="q3-note">🔒 Closed for the 3rd quarter — ask your Supervisor if you still need it.</div>';return;}
-    let rows=items.map((it,i)=>({it,i})).filter(x=>x.it._grp===g&&(!q||String(x.it.itemName).toLowerCase().includes(q))&&!(q3&&q3IsAlcohol(x.it.itemName)));
+    // Item names first; only when no name matches, match the group ("beer", "candy"…).
+    const byGroup=!!q&&(!items.some(it=>orderMatch(it.itemName,q))||/^(beers?|seltzers?|wine|sodas?|drinks?|snacks?|candy|chips|cups?|supplies)$/i.test(q));
+    let rows=items.map((it,i)=>({it,i})).filter(x=>x.it._grp===g&&orderMatch(byGroup?x.it.itemName+' '+label+' '+(ORDER_WH_GROUPS.find(z=>z[0]===x.it._home)||['',''])[1]:x.it.itemName,q)&&!(q3&&q3IsAlcohol(x.it.itemName)));
     if(g==='fav'){const ord=(state.orderFavs||[]).map(f=>f.i);rows.sort((a,b)=>ord.indexOf(a.i)-ord.indexOf(b.i));}
     if(!rows.length)return;
     // Only ⭐ Most needed starts open — tap a group to open it (search opens all).
@@ -10112,7 +10129,7 @@ function orderRenderWh(){
     html+=rows.map(({it,i})=>{const v=Number(state.orderWh[i]||0);
       return '<div class="ord-row'+(v?' on':'')+'" id="ordr-wh-'+i+'"><div class="ord-name">'+escapeHtml(it.itemName)+(it.pack||it.unit||it._hint?'<small>'+escapeHtml([it._hint?'⭐ '+it._hint:'',it.pack,it.unit].filter(Boolean).join(' · '))+'</small>':'')+'</div>'+orderStepBtns('wh',i,v)+'</div>';}).join('');
   });
-  el.innerHTML=html||'<div class="notice info" style="font-size:12px">Nothing matches your search.</div>';
+  el.innerHTML=html||'<div class="notice info" style="font-size:12px">No warehouse items match your search.</div>';
 }
 // Typed "not on the list" lines: Supervisors and Managers only — stand staff
 // were mixing food and warehouse items in free text.
@@ -10134,12 +10151,31 @@ function orderOtherLine(kind){
   const q=Math.max(1,Math.min(99,parseInt((document.getElementById('order-'+kind+'-other-q')||{}).value,10)||1));
   return {name:t,qty:q};
 }
+// Search: every word must appear in the item name or its group ("beer",
+// "soda", "candy", "ice"…), in any order.
+function orderMatch(text,q){
+  if(!q)return true;
+  const h=String(text||'').toLowerCase().replace(/[^a-z0-9& ]+/g,' ');
+  return q.toLowerCase().split(/\s+/).filter(Boolean).every(w=>h.includes(w));
+}
+function orderSearchChanged(){
+  orderRenderWh();orderRenderFood();
+  const q=(document.getElementById('order-search').value||'').trim();
+  const box=document.getElementById('order-search-empty');if(!box)return;
+  if(!q){box.style.display='none';return;}
+  const wh=document.querySelectorAll('#order-wh-list .ord-row').length,fd=document.querySelectorAll('#order-food-list .ord-row').length;
+  box.style.display=(wh||fd)?'none':'';
+  box.innerHTML='Nothing called “'+escapeHtml(q)+'” is on your stand’s list.'+(orderCanType()?' Use the ✏️ box under Warehouse or Food to type it.':' Ask your <b>Supervisor</b> — they can order other items for your stand.');
+}
 function orderToggleGrp(g){ if(g==='fav')return; state.orderOpenGrp=state.orderOpenGrp||{}; state.orderOpenGrp[g]=!state.orderOpenGrp[g]; orderRenderWh(); }
 function orderRenderFood(){
   const el=document.getElementById('order-food-list');if(!el)return;
   { const r=document.getElementById('order-food-other-row'); if(r)r.style.display=(state.orderQ3Blocked||!orderCanTypeFood())?'none':''; if(state.orderQ3Blocked){const i=document.getElementById('order-food-other');if(i)i.value='';} }
   if(state.orderQ3Blocked){el.innerHTML='<div class="q3-note" style="font-size:14px;padding:12px">🔒 Food is closed for the 3rd quarter.<br><span style="font-weight:600">Still need food? Ask your Supervisor — they can order it for your stand.</span></div>';return;}
-  el.innerHTML=ORDER_FOOD.map(f=>{const v=Number((state.orderFood||{})[f.key]||0);
+  const fq=((document.getElementById('order-search')||{}).value||'').trim();
+  const list=ORDER_FOOD.filter(f=>orderMatch(f.name+' '+(f.sub||'')+' food kitchen',fq));
+  if(!list.length){el.innerHTML='<div class="notice info" style="font-size:12px">No food matches your search.</div>';return;}
+  el.innerHTML=list.map(f=>{const v=Number((state.orderFood||{})[f.key]||0);
     return '<div class="ord-row'+(v?' on':'')+'" id="ordr-food-'+f.key+'"><div class="ord-name">'+f.icon+' '+escapeHtml(f.name)+(f.sub?'<small>'+escapeHtml(f.sub)+'</small>':'')+'</div>'+orderStepBtns('food',f.key,v)+'</div>';}).join('');
 }
 function orderStep(kind,key,d){
@@ -20156,7 +20192,7 @@ function renderInvItems() {
     // on the right with the unit under it, and a "0" shortcut for "none".
     const unit = String(item.unit || '').trim();
     const unitWord = unit ? unit.toUpperCase() : 'COUNT';
-    const meta = [item.pack, (item.expStart !== '' && item.expStart != null) ? 'Exp start ' + item.expStart : ''].filter(Boolean).map(escapeHtml).join(' · ');
+    const meta = [item._fromCountIn ? '➕ ' + (item._fromCountIn === true ? 'Added today' : item._fromCountIn) + ' — not on the sheet' : '', item.pack, (!item._fromCountIn && item.expStart !== '' && item.expStart != null) ? 'Exp start ' + item.expStart : ''].filter(Boolean).map(escapeHtml).join(' · ');
     const box = (field, big, extra) => '<input type="number" min="0" step="any" class="form-input inv-num' + (big ? '' : ' inv-num-sm') + '" data-inv-idx="' + i + '" data-field="' + field + '" inputmode="decimal" enterkeyhint="next" autocomplete="off" placeholder="' + (big ? '' : '0') + '"' + (extra || '') + '>';
     html += '<div class="card inv-item-card inv-row" data-search="' + escapeAttr((item.itemName||'').toLowerCase()) + '" data-cat="' + escapeAttr(cat) + '">';
     const head = '<div class="inv-row-name"><span class="inv-row-no">' + (item.seq || i + 1) + '.</span>' + escapeHtml(item.itemName) + '<div class="inv-row-meta">' + meta + '</div></div>';
@@ -20281,9 +20317,26 @@ async function invLoadExpectedOut(stand) {
     let c = cinRows[0].counts; if (typeof c === 'string') { try { c = JSON.parse(c); } catch (e) { c = {}; } }
     Object.values(c || {}).forEach(it => { if (it && it.itemName && it.countIn !== undefined && it.countIn !== '') { const k = ydItemKey(it.itemName); cin[k] = it.countIn; exp[k] = (parseFloat(it.countIn) || 0); } });
     state._invCinMap = cin;
+    // Count Out must list EVERY line counted at Count In — including items
+    // added during Count In that aren't on the stand's sheet (10/9 DFA Market:
+    // Gatorade Red + Devils Halo Amber were counted in, then missing at Count Out).
+    invAppendExtraLines(Object.values(c || {}).filter(it => it && it.itemName && it.countIn !== undefined && it.countIn !== '').map(it => ({ itemName: it.itemName, unit: it.unit || '', pack: it.pack || '' })), 'Counted in today');
   }
   if (Array.isArray(ledger)) ledger.forEach(l => { const k = ydItemKey(l.item_name); exp[k] = (exp[k] || 0) + (parseFloat(l.qty) || 0); });
+  // Delivered today but not on the sheet → it has to be counted out too.
+  if (Array.isArray(ledger)) invAppendExtraLines(ledger.filter(l => l && l.item_name && (parseFloat(l.qty) || 0) > 0).map(l => ({ itemName: l.item_name, unit: '', pack: '' })), 'Delivered today');
   state._invExpOutMap = exp;
+}
+// Adds lines that aren't on this stand's sheet (same name match as Count In ↔
+// Count Out: ydItemKey) so Count Out names always match what came in.
+function invAppendExtraLines(lines, why) {
+  if (!Array.isArray(state.invItems)) state.invItems = [];
+  const have = new Set(state.invItems.map(x => ydItemKey(x.itemName)));
+  (lines || []).forEach(l => {
+    const k = ydItemKey(l.itemName); if (!k || have.has(k)) return;
+    have.add(k);
+    state.invItems.push({ itemName: l.itemName, unit: l.unit || '', pack: l.pack || '', category: 'Added today', chargeable: 'Chargeable', expStart: 0, _fromCountIn: why || true });
+  });
 }
 // Review sheet: every 0 where stock was expected must be changed or confirmed.
 function invZeroReview(list, phase) {

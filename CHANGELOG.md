@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-67
+- **Count Out names match Count In**: Count Out now also lists every item counted at Count In that isn't on the stand's sheet, plus anything delivered today that isn't on the sheet. These lines are marked "➕ Counted in today / Delivered today — not on the sheet". (10/9 DFA Market: Gatorade Red and Devils Halo Amber were counted in, then missing at Count Out.)
+- **Stand sheets cleaned**: removed 80 duplicate lines where the same item was listed twice in one stand ("PORK - PULLED SMOKED" as both Chargeable and Non-Chargeable, and add-on copies of sheet lines). Counts are saved by item name, so the two lines overwrote each other. No stand has a duplicate now. DFA Market sheet now has Gatorade Red, Devils Halo Amber and Huss IPA.
+- **My Stand Order made easier**:
+  - A blue "How it works" box at the top with 3 numbered steps.
+  - One big search box for everything, food included. Every word must match, in any order. Category words like "beer", "soda" and "candy" also work. If nothing matches, it says who to ask.
+  - Order on the screen: Warehouse, Food, IT.
+  - Groups are gray tap bars.
+
 ## 2026-10-10-fix-66
 - **Napkins for every stand**: Supervisors and Managers see NAPKINS in 🧰 Supplies at every stand, even when the stand's sheet doesn't list them.
 - **Clear supplies notes in My Stand Order**:
