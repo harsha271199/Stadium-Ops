@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-81
+- Request Stock: Managers (Warehouse Manager via Warehouse → New Request, plus Manager / Support Manager / Admin) can type an item that is not on the stand's sheet + how many, any stand. Typed lines go into the order with their quantity and show on the delivery checklist. Supervisors keep the free-text "Other" box.
+- Fix: switching stands on Request Stock no longer carries the previous stand's quantities over.
+- Sheet (live): 219P Venezia gets Pepsi 20oz, Gatorade Blue Zero, Gatorade Red (Aquafina already on it).
+
 ## 2026-10-10-fix-80
 - Warehouse backup layer: new column game_day_assignments.backup_stands. A new order goes to the stand's MAIN person first; if not taken in 10 min it passes to the next main person, then to backups (one at a time), then to everyone on that stand. A stand with no main person goes straight to a backup.
 - 10/10 setup: full-timers now cover their home stand + nearby portables (Gilmer 204, Dean 207, Rodriquez/Selle 210 + Upper West, Paul 226, Harris/Purcell 229 + Upper East, Robles 232). Backups stay on their side: West people back up West + Upper West (Bentley/Derico back up Upper West); East people back up East + Upper East.

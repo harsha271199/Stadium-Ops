@@ -2795,6 +2795,14 @@
     <input class="form-input" type="text" id="stock-search" placeholder="🔍 Search items…" oninput="renderStockItems()" style="margin-bottom:8px">
     <div id="stock-items-list"><div class="loading"><div class="spinner"></div>Loading your stand's items…</div></div>
     <div id="stock-free-text-wrap">
+    <div id="stock-typed-row">
+    <label class="form-label">✍️ Item not on the list — type it + how many</label>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <input class="form-input" type="text" id="stock-typed-name" placeholder="Item name, e.g. Pepsi 20oz" style="flex:1;margin:0" onkeydown="if(event.key==='Enter'){event.preventDefault();stockAddTyped();}">
+      <input class="form-input" type="number" min="1" step="1" id="stock-typed-qty" placeholder="Qty" inputmode="numeric" style="width:64px;margin:0;text-align:center" onkeydown="if(event.key==='Enter'){event.preventDefault();stockAddTyped();}">
+      <button type="button" class="btn btn-primary" style="width:auto;margin:0;padding:10px 14px" onclick="stockAddTyped()">+ Add</button>
+    </div>
+    </div>
     <label class="form-label">Other / not on the list</label>
     <textarea class="form-input" id="stock-other" placeholder="e.g. 1 bag ice, 2 rolls receipt paper"></textarea>
     <label class="form-label">Notes</label>
@@ -4694,7 +4702,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-80';
+const BUILD_TAG = '2026-10-10-fix-81';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9652,6 +9660,9 @@ function getRequesterIdentity() {
 // distinction, just who actually made the request.
 // Only Supervisors and Managers/Admin may type a free-text stock request; everyone else picks from the list.
 function canTypeFreeRequests(){
+  // Warehouse Manager making a request for a stand (Warehouse → New Request)
+  // can type items that aren't on the stand's sheet, then deliver them.
+  if (state._whRequestMode && state.staffAccount && state.staffAccount.group==='warehouse' && state.staffAccount.role==='warehouse_manager') return true;
   return isSupervisorSession() || !!(state.staffAccount && state.staffAccount.group==='manager' && ['support_manager','manager','admin'].includes(state.staffAccount.role));
 }
 const TIER_LABELS = { supervisor:'Supervisor', support_manager:'Manager', manager:'Manager', admin:'Admin' };
@@ -9666,6 +9677,7 @@ async function goStock() {
   document.getElementById('stock-search').value = '';
   document.getElementById('stock-other').value = '';
   document.getElementById('stock-notes').value = '';
+  { const a=document.getElementById('stock-typed-name'),b=document.getElementById('stock-typed-qty'); if(a)a.value=''; if(b)b.value=''; const row=document.getElementById('stock-typed-row'); if(row)row.style.display=canTypeItemLines()?'':'none'; }
   setStockEta(30);
   { const ok=canTypeFreeRequests(), w=document.getElementById('stock-free-text-wrap'), n=document.getElementById('stock-free-text-note'); if(w)w.style.display=ok?'':'none'; if(n)n.style.display=ok?'none':''; }
   showScreen('screen-stock');
@@ -9773,6 +9785,7 @@ async function loadStockItemsForStand(stand) {
   // request is what actually makes that protection work as intended.
   state._stockRequestUuid = genUUID();
   loadExistingStockRequestsForStand(stand);
+  state.stockQty = {}; // quantities belong to the stand's own item list
   const res = await api('getStandSheet', { stand });
   if (!res.ok || !res.items || res.items.length === 0) {
     state.stockItems = [];
@@ -9819,6 +9832,32 @@ function stockDuplicateOverlap(newItems){
   return hits;
 }
 
+// Typed item + qty: Managers only (Warehouse Manager, Manager, Support
+// Manager, Admin) — any stand. Supervisors keep the free-text "Other" box.
+function canTypeItemLines(){
+  const a=state.staffAccount;
+  if(!a)return false;
+  if(a.group==='warehouse'&&a.role==='warehouse_manager'&&state._whRequestMode)return true;
+  return a.group==='manager'&&['support_manager','manager','admin'].includes(a.role);
+}
+// Typed item: becomes a real line
+// with a quantity, so it shows on the delivery checklist like any sheet item.
+function stockAddTyped() {
+  if (!canTypeItemLines()) return toast('Only Managers can type items', 'error');
+  const n = document.getElementById('stock-typed-name'), q = document.getElementById('stock-typed-qty');
+  const name = String((n && n.value) || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  const qty = parseFloat((q && q.value) || '');
+  if (!name) return toast('Type the item name', 'error');
+  if (!qty || qty <= 0) return toast('Enter how many', 'error');
+  state.stockItems = state.stockItems || [];
+  let i = state.stockItems.findIndex(x => (x.itemName || '').toLowerCase() === name.toLowerCase());
+  if (i < 0) { state.stockItems.push({ itemName: name, unit: '✍️ typed', pack: '', typed: true }); i = state.stockItems.length - 1; }
+  state.stockQty[i] = (parseFloat(state.stockQty[i]) || 0) + qty;
+  if (n) n.value = ''; if (q) q.value = '';
+  const srch = document.getElementById('stock-search'); if (srch) srch.value = '';
+  renderStockItems();
+  toast('✅ Added ' + qty + ' × ' + name);
+}
 function renderStockItems() {
   if (!state.stockItems || !state.stockItems.length) return;
   const q = (document.getElementById('stock-search').value || '').toLowerCase().trim();
@@ -9858,7 +9897,7 @@ async function submitStock() {
   (state.stockItems || []).forEach(function(item, i) {
     const v = parseFloat(state.stockQty[i]);
     if (!v || v <= 0) return;
-    jsonItems.push({ itemName: item.itemName, unit: item.unit || '', pack: item.pack || '', qty: v, cases: v });
+    jsonItems.push({ itemName: item.itemName, unit: item.typed ? '' : (item.unit || ''), pack: item.pack || '', qty: v, cases: v, typed: item.typed ? true : undefined });
     lines.push(v + ' case' + (v !== 1 ? 's' : '') + ' × ' + item.itemName + (item.pack ? ' (' + item.pack + ')' : ''));
   });
   const other = canTypeFreeRequests() ? document.getElementById('stock-other').value.trim() : '';
