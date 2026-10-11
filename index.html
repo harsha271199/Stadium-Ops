@@ -4694,7 +4694,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-79';
+const BUILD_TAG = '2026-10-10-fix-80';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7380,10 +7380,14 @@ async function whAutoPassStale(reqs){
   for(const r of due.slice(0,5)){
     try{
       const cov=await resolveWarehouseAssigneesForStand(r.stand).catch(()=>({people:[]}));
-      const people=(cov.people||[]).filter(p=>p&&p.employee_id);
+      const main=(cov.people||[]).filter(p=>p&&p.employee_id);
+      const mainIds=new Set(main.map(p=>String(p.employee_id)));
+      const backup=(await whBackupPeopleForStand(r.stand).catch(()=>[])).filter(p=>p&&p.employee_id&&!mainIds.has(String(p.employee_id)));
+      const people=[...main,...backup];
       if(people.length<2)continue;
       const tried=new Set([...(r.triedIds||[]),...(r.assignedToIds||[])].map(String));
-      const left=people.filter(p=>!tried.has(String(p.employee_id)));
+      const leftMain=main.filter(p=>!tried.has(String(p.employee_id)));
+      const left=leftMain.length?leftMain:backup.filter(p=>!tried.has(String(p.employee_id)));
       const next=left.length?await splitPickOne('wh',left):people;
       const rows=await sb('stock_requests?id=eq.'+encodeURIComponent(r.id)+'&status=eq.open&select=id,stand,items_json,claimed_by').catch(()=>({_err:true}));
       if(rows._err||!Array.isArray(rows)||!rows[0]||rows[0].claimed_by)continue;
@@ -7399,8 +7403,19 @@ async function whAutoPassStale(reqs){
     }catch(e){}
   }
 }
+// Backup layer: game_day_assignments.backup_stands. A backup never gets a new
+// order first — only when the stand has no main person, or on the 10-min pass
+// after every main person had it (West backs up West + Upper West, East backs
+// up East + Upper East).
+async function whBackupPeopleForStand(stand){
+  const rows=await coverageGetAssignments(stadiumDay(),'').catch(()=>[]);
+  const c=canonicalStandName2026(stand).toLowerCase();
+  return (Array.isArray(rows)?rows:[]).filter(a=>a.team==='warehouse'&&Array.isArray(a.backup_stands)&&a.backup_stands.some(x=>x===stand||canonicalStandName2026(x).toLowerCase()===c))
+    .map(a=>({employee_id:a.employee_id,name:a.name||a.employee_name||a.employee_id,stands:[stand]}));
+}
 async function resolveWarehouseRouting(stand){
-  const cov=await resolveWarehouseAssigneesForStand(stand).catch(()=>({people:[]}));
+  let cov=await resolveWarehouseAssigneesForStand(stand).catch(()=>({people:[]}));
+  if(!cov.people||!cov.people.length){const bk=await whBackupPeopleForStand(stand).catch(()=>[]);if(bk.length)cov={available:true,people:bk};}
   const st=await splitSettings().catch(()=>_split);
   if(!st.wh||!cov.people||cov.people.length<2)return cov;
   return {...cov,people:await splitPickOne('wh',cov.people),split:true};
