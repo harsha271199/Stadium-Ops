@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-77
+- 218T StreetEats is now a subcontractor stand with its own login: ID 50000 + `218` (Count In/Out + Requests). Stand hint on the tracker now reads "218T" instead of "218 T".
+
 ## 2026-10-10-fix-76
 - Stand-to-stand transfer now works NPO ↔ Aramark: NPO Leads and NPO members can "Give Stock to Another Stand" and confirm "Incoming Transfers", same as Stand Leads. Anyone running a stand (including temp lead access at a portable) can confirm incoming stock.
 - Both transfer buttons moved out of "More request tools" onto the main Requests screen, with a red count on Incoming Transfers when something is waiting.
