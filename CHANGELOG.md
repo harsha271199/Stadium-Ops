@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-79
+- Stand Requests cards now show what people typed: the IT problem description (e.g. "Self check out no power 222m"), the note on stock/food orders, and the IT fix note once resolved.
+- Warehouse split ON: an order nobody claims within 10 min now passes to the next least-busy person covering that stand (same area only), with a push. After everyone in the area has had it, it opens to the whole area. Visibility safety net moved to 30 min. Split OFF unchanged: everyone in the area sees only their area's orders.
+- split_wh turned back ON (live setting).
+
 ## 2026-10-10-fix-78
 - Subcontractor stand logins (50000 + stand) now get the same request tools as an NPO stand: Stock · Food · IT order, Give Stock / Incoming Transfers, Refund and Maintenance. Force Restock stays off for this shared, PIN-less login.
 

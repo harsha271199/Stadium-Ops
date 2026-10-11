@@ -4694,7 +4694,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-78';
+const BUILD_TAG = '2026-10-10-fix-79';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7300,6 +7300,8 @@ function mapStock(r){
     etaEscalatedAt:r.eta_escalated_at || meta.eta_escalated_at || null,
     assignedToIds:Array.isArray(meta.assigned_to_ids) ? meta.assigned_to_ids.map(String) : [],
     assignedToNames:Array.isArray(meta.assigned_to_names) ? meta.assigned_to_names : [],
+    assignedAt:meta.assigned_at||meta.reassigned_at||r.created_at,
+    triedIds:Array.isArray(meta.tried_ids) ? meta.tried_ids.map(String) : [],
     deniedReason:meta.denied_reason||'', deniedBy:meta.denied_by||'', editedBy:meta.edited_by||'', editNote:meta.edit_note||''
   };
 }
@@ -7324,7 +7326,7 @@ function stockEtaHtml(r) {
 // ON: each new order goes to ONE person covering that stand — whoever has the
 // fewest open jobs right now (people signed in today first) — instead of to
 // everyone in the area. If nobody takes it within SPLIT_STALE_MIN minutes it
-// opens up to the whole area again. OFF: food → the first runner on the area,
+// passes to the next person in the area (warehouse); after everyone, the whole area. OFF: food → the first runner on the area,
 // warehouse → everyone in the area (the old way).
 const SPLIT_STALE_MIN = 10;
 let _split = { at:0, food:false, wh:false };
@@ -7364,7 +7366,39 @@ async function splitPickOne(team,people){
   return [scored[0].p];
 }
 // Order created by someone else in my area that nobody has taken for a while → I can see it too.
-function splitStaleForArea(createdAt){return !!(createdAt&&Date.now()-new Date(createdAt).getTime()>SPLIT_STALE_MIN*60000);}
+function splitStaleForArea(createdAt,mult){return !!(createdAt&&Date.now()-new Date(createdAt).getTime()>SPLIT_STALE_MIN*(mult||1)*60000);}
+// Split ON: an order nobody has taken SPLIT_STALE_MIN minutes after it was
+// given to someone moves to the next least-busy person covering that stand
+// (same area only). Once everyone in the area has had it, it opens to the
+// whole area. Any warehouse phone that is open runs this; the guarded PATCH
+// (still open, unclaimed, same assignment stamp) makes sure only one wins.
+let _whAutoPassAt=0;
+async function whAutoPassStale(reqs){
+  if(Date.now()-_whAutoPassAt<30000)return;_whAutoPassAt=Date.now();
+  const st=await splitSettings().catch(()=>_split);if(!st.wh)return;
+  const due=(reqs||[]).filter(r=>r.status==='Pending'&&!r.claimedBy&&(r.assignedToIds||[]).length===1&&splitStaleForArea(r.assignedAt||r.timestamp));
+  for(const r of due.slice(0,5)){
+    try{
+      const cov=await resolveWarehouseAssigneesForStand(r.stand).catch(()=>({people:[]}));
+      const people=(cov.people||[]).filter(p=>p&&p.employee_id);
+      if(people.length<2)continue;
+      const tried=new Set([...(r.triedIds||[]),...(r.assignedToIds||[])].map(String));
+      const left=people.filter(p=>!tried.has(String(p.employee_id)));
+      const next=left.length?await splitPickOne('wh',left):people;
+      const rows=await sb('stock_requests?id=eq.'+encodeURIComponent(r.id)+'&status=eq.open&select=id,stand,items_json,claimed_by').catch(()=>({_err:true}));
+      if(rows._err||!Array.isArray(rows)||!rows[0]||rows[0].claimed_by)continue;
+      let j=rows[0].items_json;if(typeof j==='string'){try{j=JSON.parse(j);}catch(e){j=null;}}
+      if(!j||typeof j!=='object')continue;
+      const old=(j.meta&&j.meta.assigned_at)||'';
+      const meta=Object.assign({},j.meta||{},{assigned_to_ids:next.map(p=>String(p.employee_id)),assigned_to_names:next.map(p=>p.name||p.employee_id),
+        assigned_at:new Date().toISOString(),tried_ids:[...tried],auto_passed:((j.meta&&j.meta.auto_passed)||0)+1,opened_to_area:!left.length});
+      const guard='&status=eq.open&claimed_by=is.null&items_json->meta->>assigned_at='+(old?'eq.'+encodeURIComponent(old):'is.null');
+      const res=await sb('stock_requests?id=eq.'+encodeURIComponent(r.id)+guard,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({items_json:Object.assign({},j,{meta})})}).catch(()=>({_err:true}));
+      if(res._err||!Array.isArray(res)||!res.length)continue;
+      next.forEach(p=>sendPushTo(String(p.employee_id),left.length?'📥 Request passed to you':'📥 Open request in your area',r.stand+' — not picked up in '+SPLIT_STALE_MIN+' min'));
+    }catch(e){}
+  }
+}
 async function resolveWarehouseRouting(stand){
   const cov=await resolveWarehouseAssigneesForStand(stand).catch(()=>({people:[]}));
   const st=await splitSettings().catch(()=>_split);
@@ -9839,7 +9873,7 @@ async function submitStock() {
   const coverage = await resolveWarehouseRouting(targetStand);
   const assignedIds = coverage.people.map(p => String(p.employee_id||'')).filter(Boolean);
   const assignedNames = coverage.people.map(p => p.name || p.employee_id).filter(Boolean);
-  const structuredRequest = {items:jsonItems,other:other,meta:{eta_minutes:etaMins,eta_deadline:etaDeadline,assigned_to_ids:assignedIds,assigned_to_names:assignedNames}};
+  const structuredRequest = {items:jsonItems,other:other,meta:{eta_minutes:etaMins,eta_deadline:etaDeadline,assigned_to_ids:assignedIds,assigned_to_names:assignedNames,assigned_at:new Date().toISOString()}};
   await withLock(evtBtn(), 'Sending…', async () => {
     const requestClientUuid=state._stockRequestUuid || (state._stockRequestUuid = genUUID());
     const res = await api('submitStock', {
@@ -10305,7 +10339,7 @@ async function submitUnifiedOrder(){
       const coverage=await resolveWarehouseRouting(stand).catch(()=>({people:[]}));
       const ids=(coverage.people||[]).map(p=>String(p.employee_id||'')).filter(Boolean);
       const names=(coverage.people||[]).map(p=>p.name||p.employee_id).filter(Boolean);
-      const meta={eta_minutes:etaMins,eta_deadline:deadline,assigned_to_ids:ids,assigned_to_names:names,source:'one_order'};if(test)meta.test=true;
+      const meta={eta_minutes:etaMins,eta_deadline:deadline,assigned_to_ids:ids,assigned_to_names:names,assigned_at:new Date().toISOString(),source:'one_order'};if(test)meta.test=true;
       const res=await api('submitStock',{clientUuid:state._orderWhUuid||(state._orderWhUuid=genUUID()),stand,requestedBy,empId:who.empId||'',itemsText,itemsJson:{items:wh,other:'',meta},urgency:state.orderUrgency||'Normal',eta_minutes:etaMins,eta_deadline:deadline,notes:note}).catch(e=>({ok:false,error:String(e&&e.message||e)}));
       out.wh={ok:!!res.ok,queued:!!res.queued,error:res.error,names,count:wh.reduce((a,b)=>a+b.qty,0)};
       if(res.ok&&!test){
@@ -10683,12 +10717,19 @@ function standRequestCompactCard(kind,r,isOpen,showStand){
       ? (kitchenEtaText(r)+(r.assigned_runner_name?' · 🏃 '+escapeHtml(r.assigned_runner_name):''))
       : (r.claimedBy?'🔧 '+escapeHtml(r.claimedBy):'');
   const color=standRequestStatusColor(kind,r.status);
+  // What the person actually typed: the IT problem description, or the note on
+  // a stock / food order — plus the IT tech's fix note once it's resolved.
+  const typed=kind==='it'?(r.details||''):kind==='stock'?(r.notes||''):(r.note||'');
+  const fixNote=kind==='it'?(r.techMessage||''):'';
+  const typedHtml=(typed?`<div style="font-size:12px;margin-top:4px;padding:6px 8px;background:var(--bg-secondary,rgba(0,0,0,.04));border-radius:6px;white-space:pre-wrap;word-break:break-word">💬 “${escapeHtml(typed)}”</div>`:'')+
+    (fixNote?`<div style="font-size:11px;margin-top:4px;color:var(--success)">🔧 ${escapeHtml(fixNote)}</div>`:'');
   return `<div class="card" style="padding:10px 11px;margin-bottom:7px;border-left:4px solid ${color};opacity:${isOpen?'1':'.72'}">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
       <div style="min-width:0;flex:1">
         ${showStand?`<div style="font-size:10px;font-weight:900;color:var(--aramark-red);margin-bottom:3px">📍 ${escapeHtml(r.stand||'Unknown stand')}</div>`:''}
         <div style="font-size:11px;font-weight:850">${icon} ${type}</div>
         <div style="font-size:12px;font-weight:700;margin-top:3px">${body}</div>
+        ${typedHtml}
       </div>
       <span style="font-size:9px;font-weight:850;white-space:nowrap;color:${color}">${escapeHtml(status)}</span>
     </div>
@@ -12483,7 +12524,7 @@ function rnAreaOf(stands){const list=(stands||[]).map(canonicalStandName2026);if
 function splitRenderAdmin(){
   const el=document.getElementById('rn-split');if(!el)return;
   const sw=(team,on,label)=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0"><div><div style="font-weight:800;font-size:13px">'+label+'</div><div style="font-size:11px;color:var(--text-2)">'+(on?'ON — each order goes to ONE person in the area (least busy)':'OFF — '+(team==='food'?'first runner on the area gets it':'everyone in the area sees it'))+'</div></div><button class="btn '+(on?'btn-primary':'btn-ghost')+'" style="width:auto;margin:0;padding:8px 14px" onclick="splitSet(\''+team+'\','+(!on)+')">'+(on?'ON':'OFF')+'</button></div>';
-  el.innerHTML='<div style="font-weight:900;font-size:13px;margin-bottom:2px">🔀 Split orders inside an area</div><div style="font-size:11px;color:var(--text-2);margin-bottom:6px">With 2+ people on one area: 1st order → person A, next order → person B. Not taken in '+SPLIT_STALE_MIN+' min → everyone in the area sees it.</div>'+sw('food',_split.food,'🍽️ Food runners')+sw('wh',_split.wh,'📦 Warehouse');
+  el.innerHTML='<div style="font-weight:900;font-size:13px;margin-bottom:2px">🔀 Split orders inside an area</div><div style="font-size:11px;color:var(--text-2);margin-bottom:6px">With 2+ people on one area: 1st order → person A, next order → person B. Not taken in '+SPLIT_STALE_MIN+' min → Warehouse: passes to the next person in that area (after everyone: whole area) · Food: everyone in the area sees it. OFF → everyone in the area sees their area’s orders.</div>'+sw('food',_split.food,'🍽️ Food runners')+sw('wh',_split.wh,'📦 Warehouse');
 }
 async function runnersLoad(){
   if(!isAdminSession())return;
@@ -24272,6 +24313,7 @@ async function loadWarehouse() {
   state._whLoadedOnce = true;
   const [res] = await Promise.all([api('getStockRequests', {}), whOpenTransfers()]);
   state.wRequests = res.requests || [];
+  whAutoPassStale(state.wRequests).catch(()=>{});
   renderOpsAlertStatus('warehouse');
   await whInitZoneToggle();
   opsNewJobAlert('warehouse',state.wRequests); // after the area loads, so it only pops for my stands
@@ -24379,7 +24421,7 @@ function whRequestIsMine(r) {
   if (r.status === 'On the way') return !r.claimedBy || r.claimedBy === myName;
   const routed = (r.assignedToIds || []).map(String);
   const zone = state._myWhZoneStands;
-  if (routed.length) return routed.includes(myId) || (splitStaleForArea(r.timestamp) && (!zone || !zone.length || zone.includes(r.stand)));
+  if (routed.length) return routed.includes(myId) || (splitStaleForArea(r.assignedAt||r.timestamp,3) && (!zone || !zone.length || zone.includes(r.stand)));
   return zone && zone.length ? zone.includes(r.stand) : true;
 }
 async function loadWhToDeliver() {
@@ -24410,7 +24452,7 @@ async function loadWhToDeliver() {
     const routedToMe=routed.length ? routed.includes(String(myId)) : null;
     const coveredByMe=state._myWhZoneStands&&state._myWhZoneStands.length ? state._myWhZoneStands.includes(r.stand) : null;
     if(r.status==='Pending'){
-      if(routedToMe===false&&splitStaleForArea(r.timestamp)&&coveredByMe!==false)return true;
+      if(routedToMe===false&&splitStaleForArea(r.assignedAt||r.timestamp,3)&&coveredByMe!==false)return true;
       if(routedToMe!==null)return routedToMe;
       if(coveredByMe!==null)return coveredByMe;
       return true;
@@ -24473,7 +24515,7 @@ function whMappedRequestRoutedToMe(r){
   if(r.status==='On the way')return !r.claimedBy||r.claimedBy===myName;
   const routed=Array.isArray(r.assignedToIds)?r.assignedToIds.map(String):[];
   const zone=state._myWhZoneStands;
-  if(routed.length)return routed.includes(myId)||(splitStaleForArea(r.timestamp)&&(!Array.isArray(zone)||!zone.length||zone.includes(r.stand)));
+  if(routed.length)return routed.includes(myId)||(splitStaleForArea(r.assignedAt||r.timestamp,3)&&(!Array.isArray(zone)||!zone.length||zone.includes(r.stand)));
   if(Array.isArray(zone)&&zone.length)return zone.includes(r.stand);
   return true;
 }
@@ -24486,7 +24528,7 @@ function whRawRequestRoutedToMe(r){
   const meta=(r.items_json&&r.items_json.meta)||{};
   const routed=Array.isArray(meta.assigned_to_ids)?meta.assigned_to_ids.map(String):[];
   const zone=state._myWhZoneStands;
-  if(routed.length)return routed.includes(myId)||(splitStaleForArea(r.created_at)&&(!Array.isArray(zone)||!zone.length||zone.includes(r.stand)));
+  if(routed.length)return routed.includes(myId)||(splitStaleForArea(meta.assigned_at||meta.reassigned_at||r.created_at,3)&&(!Array.isArray(zone)||!zone.length||zone.includes(r.stand)));
   if(Array.isArray(zone)&&zone.length)return zone.includes(r.stand);
   return true;
 }
