@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-82
+- Warehouse workers get "➕ Request Stock" on their To Deliver screen (next to Quick Drop): pick a stand, choose items from its sheet, and — same as the Warehouse Manager — type an item that is not on the sheet + how many (plus the Other / Notes boxes). Stand staff and supervisors unchanged.
+
 ## 2026-10-10-fix-81
 - Request Stock: Managers (Warehouse Manager via Warehouse → New Request, plus Manager / Support Manager / Admin) can type an item that is not on the stand's sheet + how many, any stand. Typed lines go into the order with their quantity and show on the delivery checklist. Supervisors keep the free-text "Other" box.
 - Fix: switching stands on Request Stock no longer carries the previous stand's quantities over.
