@@ -2289,25 +2289,28 @@
         <div><div class="smb-label">Report IT Issue</div><div class="smb-sub">POS · tablet · TV · network</div></div>
       </button>
     </div>
+    <div id="req-hub-transfers">
+      <div class="request-primary-note">Stand to stand · NPO ↔ Aramark stands too</div>
+        <button class="sub-menu-btn" id="givestock-btn" style="border-left:4px solid #7C3AED" onclick="goGiveStock()">
+          <span class="smb-icon">🤝</span>
+          <div><div class="smb-label">Give Stock to Another Stand</div><div class="smb-sub">Send items to any stand — they confirm</div></div>
+        </button>
+        <button class="sub-menu-btn" id="incoming-transfers-btn" style="border-left:4px solid #00A651" onclick="goIncomingTransfers()">
+          <span class="smb-icon">📥</span>
+          <div><div class="smb-label">Incoming Transfers <span id="incoming-badge" style="display:none;background:var(--aramark-red);color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;margin-left:6px"></span></div><div class="smb-sub">Confirm stock another stand sent you</div></div>
+        </button>
+    </div>
     <button class="sub-menu-btn smb-green" onclick="goRefund()">
       <span class="smb-icon">💵</span>
       <div><div class="smb-label">Refund Assistance</div><div class="smb-sub">Notify a Supervisor to come help</div></div>
     </button>
 
     <details class="request-more" id="stand-request-more">
-      <summary><span>••• More request tools</span><span style="color:var(--text-3)">Transfers · Maintenance</span></summary>
+      <summary><span>••• More request tools</span><span style="color:var(--text-3)">Add stock · Maintenance</span></summary>
       <div class="request-more-body">
         <button class="sub-menu-btn" id="addstock-btn" style="border-left:4px solid #F59E0B" onclick="goAddStockMyself()">
           <span class="smb-icon">➕</span>
           <div><div class="smb-label">Add Stock Myself</div><div class="smb-sub">Log stock you brought in directly</div></div>
-        </button>
-        <button class="sub-menu-btn" id="givestock-btn" style="border-left:4px solid #7C3AED" onclick="goGiveStock()">
-          <span class="smb-icon">🤝</span>
-          <div><div class="smb-label">Give Stock to Another Stand</div><div class="smb-sub">Direct stand-to-stand handoff</div></div>
-        </button>
-        <button class="sub-menu-btn" id="incoming-transfers-btn" style="border-left:4px solid #00A651" onclick="goIncomingTransfers()">
-          <span class="smb-icon">📥</span>
-          <div><div class="smb-label">Incoming Transfers <span id="incoming-badge" style="display:none;background:var(--aramark-red);color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;margin-left:6px"></span></div><div class="smb-sub">Confirm stock another stand sent you</div></div>
         </button>
         <button class="sub-menu-btn smb-green" id="supervisor-refunds-btn" style="display:none;border-left-color:#7C3AED" onclick="goSupervisorRefunds()">
           <span class="smb-icon">🧾</span>
@@ -4691,7 +4694,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-75';
+const BUILD_TAG = '2026-10-10-fix-76';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -8359,9 +8362,11 @@ function renderHome() {
   const moveBtn = document.getElementById('moverequest-btn');
   if (moveBtn) moveBtn.style.display = (u.isNpo || u.leadAccessGranted) ? 'none' : '';
   const giveStockBtn = document.getElementById('givestock-btn');
-  if (giveStockBtn) giveStockBtn.style.display = (u.isNpo || u.leadAccessGranted) ? 'none' : '';
+  // Stand-to-stand: NPO stands give/receive like any stand (NPO ↔ Aramark).
+  // Temp lead access (bartender/student at a portable) can still receive.
+  if (giveStockBtn) giveStockBtn.style.display = (u.leadAccessGranted && !u.isNpo) ? 'none' : '';
   const incomingBtn = document.getElementById('incoming-transfers-btn');
-  if (incomingBtn) incomingBtn.style.display = (u.isNpo || u.leadAccessGranted) ? 'none' : '';
+  if (incomingBtn) incomingBtn.style.display = '';
   const srBtn=document.getElementById('supervisor-refunds-btn');if(srBtn)srBtn.style.display=u.role==='supervisor'?'':'none';
   if(u.role==='supervisor')pollSupervisorRefundBadge();
   if (u.isNpo) document.getElementById('home-fullname').textContent = u.name + ' — ' + u.npoGroup;
@@ -9129,6 +9134,17 @@ async function gsSend(itemName, i) {
   if (res._err) return toast('Could not send — try again', 'error');
   toast('✅ Sent ' + qty + ' ' + itemName + ' to ' + toStand + ' — waiting for them to confirm');
   document.getElementById('gs-qty-'+i).value = '';
+}
+
+// Red count on "Incoming Transfers" so the receiving stand (NPO or Aramark)
+// sees there is something to confirm without opening the screen.
+async function refreshIncomingTransferBadge(stand){
+  const badge=document.getElementById('incoming-badge');
+  if(!badge)return;
+  if(!stand){badge.style.display='none';return;}
+  const rows=await sb('stand_transfers?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&to_stand=eq.'+encodeURIComponent(stand)+'&status=eq.pending&select=id').catch(()=>({_err:true}));
+  const n=(!rows._err&&Array.isArray(rows))?rows.length:0;
+  badge.style.display=n?'inline-block':'none';badge.textContent=n;
 }
 
 async function goIncomingTransfers() {
@@ -11676,7 +11692,7 @@ function prepareRequestHub(){
   // Managers: every stand. Stand Leads / Supervisors: their stand (multi-stand leads: all
   // their stands; supervisors can switch stands) — Stock, Food and IT in one list.
   const standLeader=!!(state.user&&(['lead','supervisor'].includes(state.user.role)||state.user.isSubcontractor));
-  { const sc=!!(state.user&&state.user.isSubcontractor); document.querySelectorAll('#screen-submenu-requests [onclick="requestHubGoKitchen()"], #stand-request-more').forEach(b=>{b.style.display=sc?'none':'';}); }
+  { const sc=!!(state.user&&state.user.isSubcontractor); document.querySelectorAll('#screen-submenu-requests [onclick="requestHubGoKitchen()"], #stand-request-more, #req-hub-transfers').forEach(b=>{b.style.display=sc?'none':'';}); }
   const exBtn=document.getElementById('req-hub-existing-btn');
   if(exBtn){
     exBtn.style.display=(leadership||standLeader)?'':'none';
@@ -11693,6 +11709,7 @@ function prepareRequestHub(){
   { const cl=document.getElementById('req-hub-classic'); if(cl)cl.style.display=(leadership||isSupervisorSession())?'':'none'; }
   const who=getRequesterIdentity();
   const stand=getOperationalStand(who)||state.activeStand||who.homeStand||'';
+  refreshIncomingTransferBadge(stand);
   const sub=document.getElementById('request-hub-context');
   if(sub)sub.textContent=(stand?stand+' · ':'')+requestHubRoleLabel()+' help';
 }

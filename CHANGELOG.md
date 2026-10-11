@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-76
+- Stand-to-stand transfer now works NPO ↔ Aramark: NPO Leads and NPO members can "Give Stock to Another Stand" and confirm "Incoming Transfers", same as Stand Leads. Anyone running a stand (including temp lead access at a portable) can confirm incoming stock.
+- Both transfer buttons moved out of "More request tools" onto the main Requests screen, with a red count on Incoming Transfers when something is waiting.
+- Sheets (live data): 217P, 221P, 219T, 219P Venezia, 227P Chick-Fil-A, Kathy's Cookies and 218T StreetEats now use a matching 10/10 sheet.
+
 ## 2026-10-10-fix-75
 - Fixed: scanning a stand QR (e.g. at 210) on a phone that still had an old saved sign-in (9/5 Morgan State) brought that old session back with the old game, date and stand. Saved sign-ins now carry the game day they were made on; one from an earlier game day is dropped and the person signs in fresh. Applies to QR scans and normal app opens, NPO sessions included.
 - 205P Bar S Sausage sheet now matches the 10/10 BarS Sausage sheet exactly (34 lines; the second pork line renamed back to "PORK - PULLED SMOKED"). All Beer Portable sheets confirmed present and matching the 10/10 file.
