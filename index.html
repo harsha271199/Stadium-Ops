@@ -2075,14 +2075,14 @@
     <div id="worker-actions"></div>
 
     <div id="sc-actions" style="display:none">
-      <div class="sc-howto">🏪 <b>Subcontractor stand.</b> Two jobs in this app: <b>count your inventory</b> at opening and closing, and <b>request stock</b> from the Warehouse.</div>
+      <div class="sc-howto">🏪 <b>Subcontractor stand.</b> <b>Count your inventory</b> at opening and closing, and use <b>Requests</b> for everything else — same as an NPO stand.</div>
       <button class="big-action primary" onclick="goInventory()" style="border-left:5px solid #16A34A">
         <span class="icon">📋</span>
         <span class="text"><div>Inventory — Count In / Count Out</div><div class="sub" id="sc-inv-status">Count In at opening · Count Out at closing · every line</div></span>
       </button>
       <button class="big-action" onclick="showScreen('screen-submenu-requests')" style="border-left:5px solid #DC2626">
         <span class="icon">📦</span>
-        <span class="text"><div>Requests</div><div class="sub">Stock from Warehouse · IT problem · Refund</div></span>
+        <span class="text"><div>Requests</div><div class="sub">Stock · Food · IT · Stand-to-stand transfer · Refund · Maintenance</div></span>
       </button>
       <div class="sc-howto" style="margin-top:10px;font-size:12px">Need help? Your Supervisor can also do these for you from their own login.</div>
     </div>
@@ -4694,7 +4694,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-77';
+const BUILD_TAG = '2026-10-10-fix-78';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10092,7 +10092,7 @@ async function goOrder(){
   document.querySelectorAll('#order-eta .chip').forEach(c=>c.classList.toggle('selected',c.textContent.trim()==='30m'));
   document.querySelectorAll('#order-urgency .chip').forEach((c,i)=>c.classList.toggle('selected',i===0));
   showScreen('screen-order');
-  { const f=document.querySelector('#screen-order .ord-sec-food'); if(f)f.style.display=(state.user&&state.user.isSubcontractor)?'none':''; }
+  { const f=document.querySelector('#screen-order .ord-sec-food'); if(f)f.style.display=''; }
   state.orderQ3Blocked=false;document.getElementById('order-q3').innerHTML='';
   await orderApplyQ3();
   orderRenderFood();
@@ -11692,7 +11692,9 @@ function prepareRequestHub(){
   // Managers: every stand. Stand Leads / Supervisors: their stand (multi-stand leads: all
   // their stands; supervisors can switch stands) — Stock, Food and IT in one list.
   const standLeader=!!(state.user&&(['lead','supervisor'].includes(state.user.role)||state.user.isSubcontractor));
-  { const sc=!!(state.user&&state.user.isSubcontractor); document.querySelectorAll('#screen-submenu-requests [onclick="requestHubGoKitchen()"], #stand-request-more, #req-hub-transfers').forEach(b=>{b.style.display=sc?'none':'';}); }
+  // Subcontractor stand logins get the same request tools as an NPO stand:
+  // Stock · Food · IT order, transfers, refund and maintenance.
+  document.querySelectorAll('#screen-submenu-requests [onclick="requestHubGoKitchen()"], #stand-request-more, #req-hub-transfers').forEach(b=>{b.style.display='';});
   const exBtn=document.getElementById('req-hub-existing-btn');
   if(exBtn){
     exBtn.style.display=(leadership||standLeader)?'':'none';
@@ -11703,7 +11705,7 @@ function prepareRequestHub(){
     if(sub)sub.textContent=leadership?'Stock · Food · IT across all stands':(state.user&&state.user.role==='supervisor'?'Stock · Food · IT · pick any stand or all':'Stock · Food · IT · see what is coming');
   }
   { const ab=document.getElementById('addstock-btn'); if(ab)ab.style.display=canForceStock()?'':'none'; }
-  { const ob=document.getElementById('req-hub-order-btn'); if(ob)ob.style.display=''; const tg=document.getElementById('req-hub-order-tag'); if(tg)tg.textContent=orderTestMode()?'TEST MODE':((state.user&&state.user.isSubcontractor)?'STOCK · IT':'STOCK · FOOD · IT'); }
+  { const ob=document.getElementById('req-hub-order-btn'); if(ob)ob.style.display=''; const tg=document.getElementById('req-hub-order-tag'); if(tg)tg.textContent=orderTestMode()?'TEST MODE':'STOCK · FOOD · IT'; }
   // One screen does Stock + Food + IT now. The old single forms stay only for
   // Supervisors (and managers), who order for other stands.
   { const cl=document.getElementById('req-hub-classic'); if(cl)cl.style.display=(leadership||isSupervisorSession())?'':'none'; }

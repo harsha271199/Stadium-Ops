@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-10-fix-78
+- Subcontractor stand logins (50000 + stand) now get the same request tools as an NPO stand: Stock · Food · IT order, Give Stock / Incoming Transfers, Refund and Maintenance. Force Restock stays off for this shared, PIN-less login.
+
 ## 2026-10-10-fix-77
 - 218T StreetEats is now a subcontractor stand with its own login: ID 50000 + `218` (Count In/Out + Requests). Stand hint on the tracker now reads "218T" instead of "218 T".
 
