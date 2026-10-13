@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-13-fix-83
+- Refund form fixed. Every "Request Supervisor" submission was failing ("Could not send — try again") because the app sent a customer-phone column the table didn't have, and the fallback checked the wrong error field. The DB now has customer_phone, requested_by_id, card_last4, completed_by_id, completed_at and refund_reference, and the fallback reads the real error text (and keeps phone/last 4 in the reason if a column is ever missing).
+- New "Card last 4 digits" field on the refund form (blank = cash/other). Phone and last 4 show on the Supervisor's Pending Refunds card, the manager Refunds tab and the refunds CSV.
+
 ## 2026-10-10-fix-82
 - Warehouse workers get "➕ Request Stock" on their To Deliver screen (next to Quick Drop): pick a stand, choose items from its sheet, and — same as the Warehouse Manager — type an item that is not on the sheet + how many (plus the Other / Notes boxes). Stand staff and supervisors unchanged.
 

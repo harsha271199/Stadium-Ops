@@ -2922,6 +2922,8 @@
     <input class="form-input" type="text" id="refund-customer" placeholder="e.g. John Smith">
     <label class="form-label">Customer phone / contact no.</label>
     <input class="form-input" type="tel" id="refund-phone" placeholder="e.g. 480-555-0123" inputmode="tel">
+    <label class="form-label">Card last 4 digits</label>
+    <input class="form-input" type="text" id="refund-last4" placeholder="e.g. 1532 (leave blank if cash)" inputmode="numeric" maxlength="4">
     <label class="form-label">Amount ($) *</label>
     <input class="form-input" type="number" min="0" step="0.01" inputmode="decimal" id="refund-amount" placeholder="0.00">
     <label class="form-label">What did they buy?</label>
@@ -4702,7 +4704,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-10-fix-82';
+const BUILD_TAG = '2026-10-13-fix-83';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6170,11 +6172,14 @@ async function api(action, data) {
 
     // ---------- REFUND REQUESTS ----------
     case 'submitRefund': {
-      const body = { stand:data.stand, requested_by:data.requestedBy, requested_by_role:data.requestedByRole||'', requested_by_id:data.requestedById||'', customer_name:data.customerName, customer_phone:data.customerPhone||'', amount:data.amount, item:data.item||'', payment_type:data.paymentType||'', reason:data.reason, status:'pending' };
+      const body = { stand:data.stand, requested_by:data.requestedBy, requested_by_role:data.requestedByRole||'', requested_by_id:data.requestedById||'', customer_name:data.customerName, customer_phone:data.customerPhone||'', card_last4:data.cardLast4||'', amount:data.amount, item:data.item||'', payment_type:data.paymentType||'', reason:data.reason, status:'pending' };
       let r = await sb('refund_requests', { method:'POST', headers:{Prefer:'return=representation'}, body: JSON.stringify(body) });
       // Backward-compatible with today's table if V11.9.0 optional columns are not installed yet.
-      if(r._err && /customer_phone|requested_by_id|schema|column/i.test(String(r.error||r.message||''))){
-        const fallback={...body};delete fallback.customer_phone;delete fallback.requested_by_id;
+      if(r._err && /customer_phone|requested_by_id|card_last4|schema|column/i.test(String(r.msg||r.error||r.message||''))){
+        // Column missing: keep phone/last 4 inside the reason so the details are never lost.
+        const fallback={...body};delete fallback.customer_phone;delete fallback.requested_by_id;delete fallback.card_last4;
+        const extra=[body.customer_phone?'Phone: '+body.customer_phone:'',body.card_last4?'Card last 4: '+body.card_last4:''].filter(Boolean).join(' · ');
+        if(extra)fallback.reason=(fallback.reason||'')+' ['+extra+']';
         r=await sb('refund_requests',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(fallback)});
       }
       if (r._err) return { ok:false, error: r.status === 404 ? 'Refunds table missing — run stadium_update.sql' : 'Could not send — try again' };
@@ -6189,7 +6194,7 @@ async function api(action, data) {
       const patch={ status:data.status, reviewed_by:data.reviewedBy, review_note:data.note||'', updated_at:new Date().toISOString() };
       if(data.completedById)patch.completed_by_id=data.completedById;if(data.completedAt)patch.completed_at=data.completedAt;if(data.refundReference)patch.refund_reference=data.refundReference;
       let r = await sb('refund_requests?id=eq.' + data.id, { method:'PATCH', headers:{Prefer:'return=minimal'}, body: JSON.stringify(patch) });
-      if(r._err && /completed_by_id|completed_at|refund_reference|schema|column/i.test(String(r.error||r.message||''))){delete patch.completed_by_id;delete patch.completed_at;delete patch.refund_reference;r=await sb('refund_requests?id=eq.'+data.id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(patch)});}
+      if(r._err && /completed_by_id|completed_at|refund_reference|schema|column/i.test(String(r.msg||r.error||r.message||''))){delete patch.completed_by_id;delete patch.completed_at;delete patch.refund_reference;r=await sb('refund_requests?id=eq.'+data.id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(patch)});}
       return r._err ? {ok:false} : {ok:true};
     }
 
@@ -10448,7 +10453,7 @@ function goRefund() {
   const who=getRequesterIdentity();
   document.getElementById('refund-sub').textContent=(who.name||'Staff')+' · '+(getOperationalStand(who)||who.homeStand||'');
   document.getElementById('refund-stand').value = getOperationalStand(who) || who.homeStand || (state.user&&state.user.stand) || '';
-  ['refund-customer','refund-phone','refund-amount','refund-item','refund-reason'].forEach(id => document.getElementById(id).value = '');
+  ['refund-customer','refund-phone','refund-last4','refund-amount','refund-item','refund-reason'].forEach(id => document.getElementById(id).value = '');
   showScreen('screen-refund');
 }
 async function refundNotifySupervisors(stand,amount,customer){
@@ -10472,12 +10477,14 @@ async function submitRefund() {
   if (!customer) return toast('Enter the customer name', 'error');
   if (!amount || amount <= 0) return toast('Enter the refund amount', 'error');
   if (!reason) return toast('Enter the reason for the refund', 'error');
+  const last4 = document.getElementById('refund-last4').value.replace(/\D/g,'');
+  if (last4 && last4.length !== 4) return toast('Card last 4 must be 4 digits', 'error');
   const who=getRequesterIdentity();
   await withLock(evtBtn(), 'Requesting…', async () => {
     const res = await api('submitRefund', {
       stand, requestedBy:who.name||'', requestedById:who.empId||'', requestedByRole:TIER_LABELS[who.tier]||who.tier||'',
       customerName: customer, customerPhone: document.getElementById('refund-phone').value.trim(),
-      amount: amount.toFixed(2), item: document.getElementById('refund-item').value.trim(), paymentType: 'Card', reason
+      amount: amount.toFixed(2), item: document.getElementById('refund-item').value.trim(), paymentType: last4 ? 'Card' : 'Cash/other', cardLast4: last4, reason
     });
     if (res.ok) {
       const n=await refundNotifySupervisors(stand,amount,customer);
@@ -10504,7 +10511,7 @@ async function loadSupervisorRefunds(){
   if(!rows.length){el.innerHTML='<div class="empty"><div class="empty-icon">✅</div><p>No pending refund assistance.</p></div>';return;}
   el.innerHTML=rows.map(r=>'<div class="card" style="border-left:4px solid #7C3AED;padding:13px;margin-bottom:9px">'+
     '<div style="display:flex;justify-content:space-between;gap:8px"><div><div style="font-size:16px;font-weight:850">'+escapeHtml(r.stand||'')+'</div><div style="font-size:11px;color:var(--text-2)">'+timeAgo(r.created_at)+' · requested by '+escapeHtml(r.requested_by||'')+'</div></div><div style="font-size:17px;font-weight:900">$'+Number(r.amount||0).toFixed(2)+'</div></div>'+
-    '<div style="font-size:12px;margin-top:7px"><b>'+escapeHtml(r.customer_name||'')+'</b>'+(r.item?' · '+escapeHtml(r.item):'')+'</div><div style="font-size:11px;color:var(--text-2);margin-top:4px">'+escapeHtml(r.reason||'')+'</div>'+
+    '<div style="font-size:12px;margin-top:7px"><b>'+escapeHtml(r.customer_name||'')+'</b>'+(r.item?' · '+escapeHtml(r.item):'')+'</div>'+((r.customer_phone||r.card_last4)?'<div style="font-size:12px;margin-top:3px">'+(r.customer_phone?'📞 '+escapeHtml(r.customer_phone):'')+(r.customer_phone&&r.card_last4?' · ':'')+(r.card_last4?'💳 •••• '+escapeHtml(r.card_last4):'')+'</div>':'')+'<div style="font-size:11px;color:var(--text-2);margin-top:4px">'+escapeHtml(r.reason||'')+'</div>'+
     '<button class="btn btn-primary" onclick="supervisorCompleteRefund('+r.id+')" style="margin-top:10px">✅ Complete refund at this stand</button></div>').join('');
 }
 async function supervisorCompleteRefund(id){
@@ -14786,7 +14793,8 @@ async function loadMgrRefunds() {
       return '<div class="card" style="margin-bottom:8px;padding:12px 14px;border-left:4px solid ' + border + '">' +
         '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">' +
         '<div><div style="font-weight:700;font-size:14px">$' + (parseFloat(r.amount) || 0).toFixed(2) + ' — ' + escapeHtml(r.customer_name || '') + '</div>' +
-        '<div style="font-size:11px;color:var(--text-2);margin-top:2px">' + escapeHtml(r.stand) + ' · ' + escapeHtml(r.payment_type || '') + (r.item ? ' · ' + escapeHtml(r.item) : '') + '</div></div>' +
+        '<div style="font-size:11px;color:var(--text-2);margin-top:2px">' + escapeHtml(r.stand) + ' · ' + escapeHtml(r.payment_type || '') + (r.card_last4 ? ' •••• ' + escapeHtml(r.card_last4) : '') + (r.item ? ' · ' + escapeHtml(r.item) : '') + '</div>' +
+        (r.customer_phone ? '<div style="font-size:11px;color:var(--text-2);margin-top:2px">📞 ' + escapeHtml(r.customer_phone) + '</div>' : '') + '</div>' +
         '<span style="font-size:10px;font-weight:700;color:' + border + ';white-space:nowrap">' + pill + '</span></div>' +
         '<div style="font-size:12px;margin-top:6px">"' + escapeHtml(r.reason || '') + '"</div>' +
         '<div style="font-size:11px;color:var(--text-3);margin-top:4px">By ' + escapeHtml(r.requested_by || '') + (r.requested_by_role ? ' (' + escapeHtml(r.requested_by_role) + ')' : '') + ' · ' + new Date(r.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + '</div>' +
@@ -14804,10 +14812,10 @@ async function mgrRefund(id, status) {
 function exportRefundsCSV() {
   const rows = state._refunds || [];
   if (!rows.length) return toast('Load refunds first', 'error');
-  let csv = 'Date,Stand,Customer,Amount,Item,Payment,Reason,Requested By,Role,Status,Reviewed By,Note\n';
+  let csv = 'Date,Stand,Customer,Phone,Card Last 4,Amount,Item,Payment,Reason,Requested By,Role,Status,Reviewed By,Note,Reference\n';
   const esc = v => { const t = String(v == null ? '' : v); return (t.indexOf(',') >= 0 || t.indexOf('"') >= 0) ? '"' + t.replace(/"/g,'""') + '"' : t; };
   rows.forEach(r => {
-    csv += [new Date(r.created_at).toLocaleString(), r.stand, r.customer_name, r.amount, r.item || '', r.payment_type || '', r.reason || '', r.requested_by, r.requested_by_role || '', r.status, r.reviewed_by || '', r.review_note || ''].map(esc).join(',') + '\n';
+    csv += [new Date(r.created_at).toLocaleString(), r.stand, r.customer_name, r.customer_phone || '', r.card_last4 || '', r.amount, r.item || '', r.payment_type || '', r.reason || '', r.requested_by, r.requested_by_role || '', r.status, r.reviewed_by || '', r.review_note || '', r.refund_reference || ''].map(esc).join(',') + '\n';
   });
   const blob = new Blob([csv], { type:'text/csv' });
   const url = URL.createObjectURL(blob);
