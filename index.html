@@ -1900,7 +1900,7 @@
       <div class="smart-login-hint">
         Use the last 5 digits of your employee ID and the sign-in credential provided for your role.
       </div>
-      <div class="smart-login-hint" style="margin-top:6px">🏪 <b>Subcontractor stand?</b> ID <b>50000</b> + your stand number (e.g. <b>205</b>).</div>
+      <div class="smart-login-hint" style="margin-top:6px">🏪 <b>Subcontractor stand?</b> ID <b>50000</b> + your stand number (e.g. <b>205</b>) or the login word your manager gave you.</div>
       <div class="smart-login-role" id="smart-login-role"></div>
       <button class="btn btn-primary" id="login-submit-btn" onclick="doLogin()">Sign in →</button>
     </div>
@@ -3462,6 +3462,7 @@
           <button class="adm-tile" onclick="admShow('people')"><span class="adm-ic">👥</span><span class="adm-t">People &amp; logins</span><span class="adm-s">Access Center · stand self-login · NPO groups</span></button>
           <button class="adm-tile" onclick="admShow('coverage')"><span class="adm-ic">🗺️</span><span class="adm-t">Who covers what</span><span class="adm-s">Coverage plan · chat routing · multi-stand leads</span></button>
           <button class="adm-tile" onclick="admShow('warehouse')"><span class="adm-ic">🏭</span><span class="adm-t">Warehouse crew</span><span class="adm-s">Roster upload · walk-in &amp; check-in</span></button>
+          <button class="adm-tile" onclick="admShow('stands')"><span class="adm-ic">🏪</span><span class="adm-t">Stands</span><span class="adm-s">Create stands · subcontractor logins</span></button>
           <button class="adm-tile" onclick="admShow('uploads')"><span class="adm-ic">📤</span><span class="adm-t">Uploads</span><span class="adm-s">Schedule · Yellow Dog stand sheets</span></button>
         </div>
       </div>
@@ -3630,6 +3631,50 @@
         <button class="btn btn-primary" onclick="adminSaveAreaLeadAssignment()" style="margin-top:9px">Save Selected Stands</button>
         <button class="btn btn-ghost" onclick="adminClearAreaLeadAssignment()" style="margin-top:6px">Remove temporary access</button>
         <div id="sla-status" style="font-size:10px;color:var(--text-2);margin-top:6px"></div>
+      </div>
+
+      <div data-adm="stands" class="card" style="margin-top:12px;padding:14px;border-left:4px solid #8C1D40">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">➕ Create a stand</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Adds a new stand to a venue. It shows up everywhere stands are picked (schedule, coverage, warehouse, requests, Yellow Dog PDF upload). Use the stand name exactly as you want staff to see it, with its number first (e.g. <b>236P Kona Ice SC</b>).</div>
+        <label class="form-label" style="margin-top:0">Venue *</label>
+        <select class="form-input" id="adm-st-venue"></select>
+        <label class="form-label">Stand name *</label>
+        <input class="form-input" type="text" id="adm-st-name" placeholder="e.g. 236P Kona Ice SC">
+        <label class="form-label">Who runs it *</label>
+        <select class="form-input" id="adm-st-op" onchange="admStandOpChanged()">
+          <option value="Aramark">Aramark staff</option><option value="NPO">NPO group</option><option value="Subcontractor">Subcontractor</option><option value="COHO">COHO</option><option value="Mixed">NPO + Aramark</option>
+        </select>
+        <div id="adm-st-sc-wrap" style="display:none">
+          <label class="form-label">Subcontractor login word <span style="font-weight:400;color:var(--text-3)">(optional — needed if the stand has no 3-digit number or shares its number)</span></label>
+          <input class="form-input" type="text" id="adm-st-sclogin" placeholder="e.g. kona" maxlength="30">
+        </div>
+        <label class="form-label">Note <span style="font-weight:400;color:var(--text-3)">(optional — e.g. the NPO group or company)</span></label>
+        <input class="form-input" type="text" id="adm-st-desc" placeholder="e.g. Kona Ice Arizona">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:10px 0"><input type="checkbox" id="adm-st-main" style="width:16px;height:16px"> Main stand (not a portable / cart)</label>
+        <label class="form-label">Inventory (stand sheet)</label>
+        <select class="form-input" id="adm-st-inv" onchange="document.getElementById('adm-st-copy-wrap').style.display=this.value==='copy'?'':'none'">
+          <option value="yd">I'll load it from the Yellow Dog PDF (Uploads)</option>
+          <option value="copy">Copy the item list from another stand</option>
+        </select>
+        <div id="adm-st-copy-wrap" style="display:none"><select class="form-input" id="adm-st-copy"></select></div>
+        <button class="btn btn-primary" id="adm-st-create-btn" onclick="admStandCreate()" style="margin-top:10px">➕ Create stand</button>
+        <div id="adm-st-status" style="font-size:12px;margin-top:8px"></div>
+      </div>
+
+      <div data-adm="stands" class="card" style="margin-top:12px;padding:14px;border-left:4px solid #7C3AED">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">🏪 Subcontractor logins</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Every subcontractor stand signs in with ID <b>50000</b> and the text shown below — no schedule needed. They get Count In / Count Out, Requests and stand-to-stand transfers for their stand.</div>
+        <label class="form-label" style="margin-top:0">Give an existing stand a subcontractor login</label>
+        <select class="form-input" id="adm-sc-make"></select>
+        <input class="form-input" type="text" id="adm-sc-make-word" placeholder="Login word (optional), e.g. kona" maxlength="30">
+        <button class="btn btn-ghost" id="adm-sc-make-btn" onclick="admScMake()">🏪 Make subcontractor stand</button>
+        <div id="adm-sc-list" style="margin-top:10px"></div>
+      </div>
+
+      <div data-adm="stands" class="card" style="margin-top:12px;padding:14px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">📋 Stands created in the app</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Stands added from this screen. Turning one off hides it from pickers; its counts and history are kept.</div>
+        <div id="adm-st-list"></div>
       </div>
 
       <div data-adm="retired" class="v11-admin-section">
@@ -4704,7 +4749,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-13-fix-83';
+const BUILD_TAG = '2026-10-15-fix-84';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5509,6 +5554,7 @@ async function api(action, data) {
       // schedule needed: ID 50000 + the stand number ("205", "219 chick").
       // Gives that stand Inventory (Count In / Count Out) and Requests only.
       if(idInput==='50000'){
+        await loadAdminStands().catch(()=>{});
         const m=scMatchStands(secret);
         if(!m.list.length)return {ok:false,error:m.num?('No subcontractor stand '+m.num+' — check the number on your stand sign'):'Type your stand number, e.g. 205'};
         if(m.list.length>1)return {ok:false,error:'More than one stand '+m.num+' — type the number and name: '+m.list.map(scStandHint).join(' · ')};
@@ -9982,12 +10028,18 @@ async function submitStock() {
 // no one could count or request for them. Login: ID 50000 + stand number.
 function scStandList(){
   if(state._scStands)return state._scStands;
-  return (state._scStands=[...new Set(STAND_SOURCE_2026.filter(s=>s.operator==='Subcontractor').map(s=>canonicalStandName2026(s.name)).filter(Boolean))].sort(standSort));
+  // Other venues' subcontractor stands (DFA etc.) come from the stands table.
+  const other=(state._adminStands||[]).filter(r=>r.operator==='Subcontractor'&&r.venue!=='Mountain America Stadium'&&!/inactive/i.test(r.venue||'')).map(r=>r.stand_name);
+  return (state._scStands=[...new Set(STAND_SOURCE_2026.filter(s=>s.operator==='Subcontractor').map(s=>canonicalStandName2026(s.name)).concat(other).filter(n=>n&&!isHiddenInactiveStand2026(n)))].sort(standSort));
 }
 function isSubcontractorStand(stand){const c=canonicalStandName2026(stand);return scStandList().includes(c);}
 function scStandHint(s){const num=(String(s).match(/\d{3}(?:\s*[A-Z]\b)?/)||[''])[0].replace(/\s+/g,'');const w=String(s).replace(/^.*?\d{3}(?:\s*[A-Z]\b)?/,'').replace(/\b(SC|Gate)\b/gi,'').replace(/[^A-Za-z' ]+/g,' ').trim().split(/\s+/)[0]||'';return (num+' '+w).trim();}
 function scMatchStands(secret){
   const t=String(secret||'').toUpperCase().trim();
+  // A login word set by Admin wins ("kona" → that stand).
+  const code=t.replace(/\s+/g,' '),sc=scStandList();
+  const byCode=(state._adminStands||[]).filter(r=>r.sc_login&&String(r.sc_login).toUpperCase().replace(/\s+/g,' ').trim()===code).map(r=>r.venue==='Mountain America Stadium'?canonicalStandName2026(r.stand_name):r.stand_name).filter(n=>sc.includes(n));
+  if(byCode.length)return {num:'',list:[...new Set(byCode)]};
   const num=(t.match(/\d{3}/)||[])[0]||'';
   if(!num)return {num:'',list:[]};
   const words=t.replace(/\d+\s*P\b/g,' ').replace(/\d+/g,' ').replace(/[^A-Z ]/g,' ').split(/\s+/).filter(w=>w.length>=3&&w!=='STAND');
@@ -9999,11 +10051,177 @@ function scMatchStands(secret){
   if(list.length>1){const wantP=new RegExp(num+'\\s*P\\b').test(t);const p=list.filter(s=>new RegExp(num+'\\s*P\\b','i').test(s)===wantP);if(p.length)list=p;}
   return {num,list};
 }
+// ============ ADMIN-CREATED STANDS ============
+// Stands made in Admin → Stands, and operator / subcontractor-login changes,
+// live in the stands table (operator, description, sc_login). They are merged
+// over STAND_SOURCE_2026 so every picker and the 50000 login see them.
+async function loadAdminStands(force){
+  if(!force&&state._adminStandsAt&&Date.now()-state._adminStandsAt<300000)return state._adminStands||[];
+  const rows=await sb('stands?operator=not.is.null&select=stand_name,venue,operator,description,sc_login,is_main_stand,created_by&order=stand_name.asc').catch(()=>({_err:true}));
+  if(!Array.isArray(rows))return state._adminStands||[];
+  rows.forEach(r=>{
+    const v=String(r.venue||''),n=canonicalStandName2026(r.stand_name);
+    if(/inactive/i.test(v)){if(/^mountain america/i.test(v))HIDDEN_INACTIVE_STANDS_2026.add(n);return;}
+    if(v!=='Mountain America Stadium')return;
+    HIDDEN_INACTIVE_STANDS_2026.delete(n);
+    const m=STAND_SOURCE_2026.find(x=>x.name===n);
+    if(m){m.operator=r.operator;if(r.description)m.description=r.description;}
+    else STAND_SOURCE_2026.push({name:n,description:r.description||r.operator,operator:r.operator,_admin:true});
+  });
+  state._adminStands=rows;state._adminStandsAt=Date.now();
+  state._scStands=null;state._allVenueStands=null;state._coverageVenueCache={};
+  return rows;
+}
+function scLoginText(stand){
+  const row=(state._adminStands||[]).find(r=>r.stand_name===stand||canonicalStandName2026(r.stand_name)===stand);
+  if(row&&row.sc_login)return {text:row.sc_login,ok:true,word:true};
+  const hint=scStandHint(stand),m=hint?scMatchStands(hint):{list:[]};
+  return {text:hint,ok:m.list.length===1&&m.list[0]===stand,word:false};
+}
+async function admStandVenues(){
+  const rows=await sb('stands?select=venue').catch(()=>({_err:true}));
+  const v=new Set(['Mountain America Stadium','Desert Financial Arena','Sun Devil Soccer Stadium']);
+  if(Array.isArray(rows))rows.forEach(r=>{if(r.venue&&!/inactive/i.test(r.venue))v.add(r.venue);});
+  return [...v];
+}
+async function admStandsLoad(){
+  if(!isAdminSession())return;
+  await loadAdminStands(true);
+  const vs=await admStandVenues(),vSel=document.getElementById('adm-st-venue');
+  if(vSel){const cur=vSel.value;vSel.innerHTML=vs.map(v=>'<option>'+escapeHtml(v)+'</option>').join('');if(cur&&vs.includes(cur))vSel.value=cur;}
+  const all=await allVenueStands(),sc=new Set(scStandList());
+  const opts=all.map(x=>'<option value="'+escapeAttr(x.name)+'">'+escapeHtml(x.name)+(x.venue!=='Mountain America Stadium'?' · '+escapeHtml(x.venue):'')+'</option>').join('');
+  const cp=document.getElementById('adm-st-copy');if(cp)cp.innerHTML=opts;
+  const mk=document.getElementById('adm-sc-make');if(mk)mk.innerHTML='<option value="">— pick a stand —</option>'+all.filter(x=>!sc.has(x.name)).map(x=>'<option value="'+escapeAttr(x.name)+'">'+escapeHtml(x.name)+(x.venue!=='Mountain America Stadium'?' · '+escapeHtml(x.venue):'')+'</option>').join('');
+  admStandOpChanged();admScRender();admStandListRender();
+}
+function admStandOpChanged(){const w=document.getElementById('adm-st-sc-wrap'),o=document.getElementById('adm-st-op');if(w&&o)w.style.display=o.value==='Subcontractor'?'':'none';}
+// Login words must be unique and must not look like a stand number.
+function admScWordProblem(word,stand){
+  const w=String(word||'').trim();if(!w)return '';
+  if(!/[a-z]/i.test(w))return 'Login word needs letters (numbers alone clash with stand numbers)';
+  const clash=(state._adminStands||[]).find(r=>r.sc_login&&r.sc_login.toLowerCase().trim()===w.toLowerCase()&&canonicalStandName2026(r.stand_name)!==stand&&r.stand_name!==stand&&!/inactive/i.test(r.venue||''));
+  return clash?'"'+w+'" is already the login for '+clash.stand_name:'';
+}
+// Update a stand's row by name, or add it (stands made from STAND_SOURCE may not be in the table yet).
+async function admStandUpsert(name,venue,patch){
+  const r=await sb('stands?stand_name=eq.'+encodeURIComponent(name),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(patch)});
+  if(r&&r._err)return r;
+  if(Array.isArray(r)&&r.length)return r;
+  return sb('stands',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(Object.assign({stand_name:name,venue:venue||'Mountain America Stadium',stand_type:'concession'},patch))});
+}
+async function admStandCreate(){
+  if(!isAdminSession())return toast('Admin access required','error');
+  const g=id=>document.getElementById(id),st=g('adm-st-status');
+  const venue=g('adm-st-venue').value,name=g('adm-st-name').value.replace(/\s+/g,' ').trim(),op=g('adm-st-op').value;
+  const word=op==='Subcontractor'?g('adm-st-sclogin').value.trim():'',desc=g('adm-st-desc').value.trim(),main=g('adm-st-main').checked;
+  const inv=g('adm-st-inv').value,copyFrom=inv==='copy'?g('adm-st-copy').value:'';
+  if(!venue)return toast('Pick the venue','error');
+  if(name.length<3)return toast('Type the stand name','error');
+  if(/warehouse/i.test(name))return toast('Warehouses are not stands — pick another name','error');
+  const all=await allVenueStands();
+  const same=all.find(x=>x.name.toLowerCase()===name.toLowerCase());if(same)return toast('"'+same.name+'" already exists ('+same.venue+')','error');
+  const dbSame=await sb('stands?stand_name=ilike.'+encodeURIComponent(name.replace(/[%_*]/g,''))+'&select=stand_name,venue').catch(()=>({_err:true}));
+  if(Array.isArray(dbSame)&&dbSame.length)return toast('"'+dbSame[0].stand_name+'" already exists ('+dbSame[0].venue+') — turn it back on from the list instead','error');
+  const wp=admScWordProblem(word,name);if(wp)return toast(wp,'error');
+  if(op==='Subcontractor'&&!word){
+    const num=(name.match(/\d{3}/)||[])[0];
+    if(!num)return toast('This stand has no 3-digit number — give it a login word','error');
+  }
+  await withLock(g('adm-st-create-btn'),'Creating…',async()=>{
+    const who=(state.staffAccount&&state.staffAccount.name)||'Admin';
+    const r=await sb('stands',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({stand_name:name,venue,stand_type:'concession',is_main_stand:main,operator:op,description:desc||null,sc_login:word||null,created_by:who})});
+    if(r&&r._err){st.style.color='#DC2626';st.textContent='⚠️ Could not create the stand — '+(/duplicate|unique/i.test(r.msg||'')?'that name already exists':'try again');return;}
+    let invMsg='No items yet — load it from the Yellow Dog PDF in Uploads.';
+    if(copyFrom){
+      const src=await sb('stand_sheets?stand=eq.'+encodeURIComponent(copyFrom)+'&select=*&order=sort_order.asc').catch(()=>({_err:true}));
+      if(Array.isArray(src)&&src.length){
+        const ins=await sbBulkInsert('stand_sheets',src.map(o=>{const c={...o};delete c.id;c.stand=name;return c;}),st);
+        invMsg=ins&&ins._err?'⚠️ Items could not be copied — load them from the Yellow Dog PDF.':'✅ '+src.length+' items copied from '+copyFrom+'.';
+      }else invMsg='⚠️ '+copyFrom+' has no item list — load this stand from the Yellow Dog PDF.';
+    }
+    await loadAdminStands(true);
+    let login='';
+    if(op==='Subcontractor'){const l=scLoginText(name);login=l.ok?'<div style="margin-top:4px">🏪 Login: ID <b>50000</b> + <b>'+escapeHtml(l.text)+'</b></div>':'<div style="margin-top:4px;color:#B45309">⚠️ Another stand has the same number — give it a login word in Subcontractor logins below.</div>';}
+    st.style.color='';st.innerHTML='<div style="color:var(--success);font-weight:800">✅ '+escapeHtml(name)+' created at '+escapeHtml(venue)+'</div><div style="margin-top:4px">'+escapeHtml(invMsg)+'</div>'+login+
+      '<button class="btn btn-ghost" style="margin-top:8px" onclick="admOpenYdPdf()">📄 Load its Yellow Dog PDF</button>';
+    ['adm-st-name','adm-st-sclogin','adm-st-desc'].forEach(x=>g(x).value='');g('adm-st-main').checked=false;
+    toast('✅ Stand created');
+    await admStandsLoad();
+  });
+}
+function admOpenYdPdf(){admShow('uploads');setTimeout(()=>{const f=document.getElementById('up-ydpdf-file');if(f){f.scrollIntoView({behavior:'smooth',block:'center'});}},100);}
+function admScRender(){
+  const el=document.getElementById('adm-sc-list');if(!el)return;
+  const list=scStandList();
+  if(!list.length){el.innerHTML='<div class="empty"><p>No subcontractor stands yet.</p></div>';return;}
+  el.innerHTML='<div style="font-size:12px;font-weight:800;margin:4px 0">'+list.length+' subcontractor stands</div>'+list.map(s=>{
+    const l=scLoginText(s);
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><div style="min-width:0"><div style="font-size:13px;font-weight:700">'+escapeHtml(s)+'</div>'+
+      (l.ok?'<div style="font-size:12px">ID <b>50000</b> + <b>'+escapeHtml(l.text)+'</b>'+(l.word?' <span style="color:var(--text-3)">(login word)</span>':'')+'</div>':'<div style="font-size:12px;color:#B45309">⚠️ Needs a login word — its number matches another stand</div>')+'</div>'+
+      '<div style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="admScSetWord(\''+escapeAttr(s)+'\')">✏️ Login word</button>'+
+      '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="admScRemove(\''+escapeAttr(s)+'\')">Remove</button></div></div>';
+  }).join('');
+}
+async function admStandVenue(stand){const x=(await allVenueStands()).find(v=>v.name===stand);return x?x.venue:'Mountain America Stadium';}
+async function admScMake(){
+  if(!isAdminSession())return toast('Admin access required','error');
+  const stand=document.getElementById('adm-sc-make').value,word=document.getElementById('adm-sc-make-word').value.trim();
+  if(!stand)return toast('Pick a stand','error');
+  const wp=admScWordProblem(word,stand);if(wp)return toast(wp,'error');
+  await withLock(document.getElementById('adm-sc-make-btn'),'Saving…',async()=>{
+    const r=await admStandUpsert(stand,await admStandVenue(stand),{operator:'Subcontractor',sc_login:word||null});
+    if(r&&r._err)return toast('Could not save — try again','error');
+    document.getElementById('adm-sc-make-word').value='';
+    await admStandsLoad();
+    const l=scLoginText(stand);
+    toast(l.ok?'✅ '+stand+' — login 50000 + '+l.text:'⚠️ Saved — now give it a login word (number is shared)');
+  });
+}
+async function admScSetWord(stand){
+  if(!isAdminSession())return;
+  const cur=scLoginText(stand);
+  const w=prompt('Login word for '+stand+'\n\nStaff type ID 50000 and this word. Leave blank to use the stand number ('+scStandHint(stand)+').',cur.word?cur.text:'');
+  if(w===null)return;
+  const wp=admScWordProblem(w,stand);if(wp)return toast(wp,'error');
+  const r=await admStandUpsert(stand,await admStandVenue(stand),{operator:'Subcontractor',sc_login:w.trim()||null});
+  if(r&&r._err)return toast('Could not save — try again','error');
+  await admStandsLoad();toast('✅ Login updated');
+}
+async function admScRemove(stand){
+  if(!isAdminSession())return;
+  const t=prompt('Who runs '+stand+' now?\nType: Aramark, NPO, COHO or Mixed\n\nThe 50000 login stops working for this stand.','Aramark');
+  if(t===null)return;
+  const op=['Aramark','NPO','COHO','Mixed'].find(x=>x.toLowerCase()===t.trim().toLowerCase());
+  if(!op)return toast('Type Aramark, NPO, COHO or Mixed','error');
+  const r=await admStandUpsert(stand,await admStandVenue(stand),{operator:op,sc_login:null});
+  if(r&&r._err)return toast('Could not save — try again','error');
+  await admStandsLoad();toast('✅ '+stand+' is now '+op);
+}
+function admStandListRender(){
+  const el=document.getElementById('adm-st-list');if(!el)return;
+  const rows=(state._adminStands||[]).filter(r=>r.created_by);
+  if(!rows.length){el.innerHTML='<div class="empty"><p>No stands created here yet.</p></div>';return;}
+  el.innerHTML=rows.map(r=>{const off=/inactive/i.test(r.venue||'');const venue=String(r.venue||'').replace(/\s*-\s*Inactive$/i,'');
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)'+(off?';opacity:.55':'')+'"><div style="min-width:0"><div style="font-size:13px;font-weight:700">'+escapeHtml(r.stand_name)+'</div><div style="font-size:11px;color:var(--text-2)">'+escapeHtml(venue)+' · '+escapeHtml(r.operator||'')+(r.is_main_stand?' · main stand':'')+(r.description?' · '+escapeHtml(r.description):'')+(off?' · <b>off</b>':'')+'</div></div>'+
+      '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px;flex-shrink:0" onclick="admStandToggle(\''+escapeAttr(r.stand_name)+'\','+(off?'true':'false')+')">'+(off?'Turn on':'Turn off')+'</button></div>';}).join('');
+}
+async function admStandToggle(name,turnOn){
+  if(!isAdminSession())return;
+  const row=(state._adminStands||[]).find(r=>r.stand_name===name);if(!row)return;
+  const base=String(row.venue||'').replace(/\s*-\s*Inactive$/i,'');
+  if(!turnOn&&!(await confirmAction('Turn off '+name+'? It disappears from schedule, coverage and request pickers. Counts and history are kept, and you can turn it back on.',{title:'Turn off stand?',confirmLabel:'Turn off'})))return;
+  const r=await sb('stands?stand_name=eq.'+encodeURIComponent(name),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({venue:turnOn?base:base+' - Inactive'})});
+  if(r&&r._err)return toast('Could not save — try again','error');
+  if(turnOn)HIDDEN_INACTIVE_STANDS_2026.delete(canonicalStandName2026(name));
+  else{const i=STAND_SOURCE_2026.findIndex(x=>x.name===name&&x._admin);if(i>=0&&base==='Mountain America Stadium')STAND_SOURCE_2026.splice(i,1);}
+  await admStandsLoad();toast(turnOn?'✅ '+name+' is back on':'✅ '+name+' turned off');
+}
 function scLoginLabel(){
   const v=(document.getElementById('login-empid')||{}).value||'';
   const l=document.getElementById('login-secret-label'),i=document.getElementById('login-lastname');
   if(!l||!i)return;
-  if(v==='50000'){l.textContent='Your stand number';i.placeholder='e.g. 205 or 219 chick';}
+  if(v==='50000'){l.textContent='Your stand number or login word';i.placeholder='e.g. 205 or 219 chick';}
   else{l.textContent='Last Name or Personal PIN';i.placeholder='Last name or personal PIN';}
 }
 async function scHomeInvStatus(){
@@ -12572,7 +12790,7 @@ function mgrSimpleToolBack(){
 
 // Admin Control: a hub of 5 groups instead of one long page. Every section is
 // still here (nothing removed) — only one group is shown at a time.
-const ADM_GROUP_TITLE={game:'🏟️ Game day',people:'👥 People & logins',coverage:'🗺️ Who covers what',warehouse:'🏭 Warehouse crew',uploads:'📤 Uploads'};
+const ADM_GROUP_TITLE={game:'🏟️ Game day',people:'👥 People & logins',coverage:'🗺️ Who covers what',warehouse:'🏭 Warehouse crew',uploads:'📤 Uploads',stands:'🏪 Stands'};
 // ---- Admin: runners between Food and Warehouse ----
 // Food runners sign in with the last 5 of their ID + last name and get Food
 // areas (kitchen_runner_assignments). Warehouse runners sign in with 60000 +
@@ -12681,6 +12899,7 @@ function admShow(g){
   const t=document.getElementById('adm-group-title'); if(t)t.textContent=ADM_GROUP_TITLE[g]||'';
   state._admGroup=g; window.scrollTo(0,0);
   if(g==='people')runnersLoad();
+  if(g==='stands')admStandsLoad();
 }
 function admHub(){
   document.querySelectorAll('#mgr-admin [data-adm]').forEach(el=>el.classList.toggle('adm-hide', el.dataset.adm!=='notice'));
@@ -27007,6 +27226,7 @@ async function init() {
   // deploy actually went live, without guessing or opening dev tools.
   const buildTagEl = document.getElementById('build-tag');
   if (buildTagEl) buildTagEl.textContent = BUILD_TAG;
+  loadAdminStands().catch(()=>{});
 
   // Register/update service worker for PWA support. The build query and
   // updateViaCache:'none' force installed/saved app launches to check the

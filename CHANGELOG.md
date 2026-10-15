@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-15-fix-84
+- Admin → new "🏪 Stands" tile:
+  - **Create a stand** at any venue (Mountain America Stadium, Desert Financial Arena, Sun Devil Soccer Stadium…): name, who runs it (Aramark / NPO / Subcontractor / COHO / Mixed), main stand or portable, note, and its inventory — copy another stand's item list now, or load it from the Yellow Dog PDF (button goes straight to the PDF upload, and the new stand is in the PDF's stand picker).
+  - **Subcontractor logins**: every subcontractor stand with its sign-in (ID 50000 + stand number, or a login word Admin sets). Give any existing stand a subcontractor login, change its login word, or take it away. Stands with no 3-digit number (or a shared number) need a login word; words must be unique.
+  - **Stands created in the app**: turn a stand off (hidden from pickers, history kept) or back on.
+- Stored in the `stands` table (new columns operator, description, sc_login, created_by) and merged over the built-in stand list at start-up and before every 50000 sign-in.
+
 ## 2026-10-13-fix-83
 - Refund form fixed. Every "Request Supervisor" submission was failing ("Could not send — try again") because the app sent a customer-phone column the table didn't have, and the fallback checked the wrong error field. The DB now has customer_phone, requested_by_id, card_last4, completed_by_id, completed_at and refund_reference, and the fallback reads the real error text (and keeps phone/last 4 in the reason if a column is ever missing).
 - New "Card last 4 digits" field on the refund form (blank = cash/other). Phone and last 4 show on the Supervisor's Pending Refunds card, the manager Refunds tab and the refunds CSV.
