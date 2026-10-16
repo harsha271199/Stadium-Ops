@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-15-fix-85
+- Runners scheduled at a real stand today (e.g. DFA volleyball: Hetansh at BEV MKT) now sign in to that stand from the schedule instead of the Food Runner / Warehouse Runner screen. On football days, when they're scheduled as "Concession Runner" / "Warehouse Runner" / "Kitchen Runner", they still get the runner screen.
+- BEV MKT (DFA) set to lead access for all, so its scheduled workers get Count In / Count Out and requests (no Stand Lead there).
+
 ## 2026-10-15-fix-84
 - Admin → new "🏪 Stands" tile:
   - **Create a stand** at any venue (Mountain America Stadium, Desert Financial Arena, Sun Devil Soccer Stadium…): name, who runs it (Aramark / NPO / Subcontractor / COHO / Mixed), main stand or portable, note, and its inventory — copy another stand's item list now, or load it from the Yellow Dog PDF (button goes straight to the PDF upload, and the new stand is in the PDF's stand picker).

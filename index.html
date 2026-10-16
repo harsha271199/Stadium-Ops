@@ -4749,7 +4749,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-15-fix-84';
+const BUILD_TAG = '2026-10-15-fix-85';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5657,6 +5657,13 @@ async function api(action, data) {
         }
         if(!acct && staffRows.length && /^\d{4}$/.test(secret)){
           return {ok:false,error:'PIN not recognized for this ID'};
+        }
+        // A runner scheduled at a real stand today (e.g. DFA volleyball) works that
+        // stand, so their schedule row wins over the runner account.
+        if(acct&&['food_runner','kitchen_runner','warehouse_employee'].includes(acct.role)){
+          const days=[...new Set([localISODate(),stadiumDay()])].join(',');
+          const sch=await sb('schedule?employee_id=eq.'+encodeURIComponent(acct.employee_id)+'&event_date=in.('+days+')&is_test=not.is.true&select=location').catch(()=>({_err:true}));
+          if(Array.isArray(sch)&&sch.some(r=>r.location&&!/runner|warehouse|kitchen/i.test(r.location)))acct=null;
         }
         if(acct){
           if(acct.role==='admin')return {ok:false,error:'Admin sign-in is only available at /manager'};
