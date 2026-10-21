@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-21-fix-89
+- **IT "Other games" tab:** IT tickets left open from earlier games (soccer, DFA, softball — nobody is signed in after those) stay in their own tab until a tech taps **✓ Mark fixed** (with what fixed it).
+- DB (live now): **6:05 AM auto-close** (pg_cron `stadium-morning-cleanup`) — stock requests, food requests and warehouse deliveries left open from the previous day are closed with "Auto-closed: left open after the game"; open IT tickets at Mountain America Stadium stands are closed; IT tickets from other venues and maintenance reports stay open. First run closed 93 stock, 14 food, 10 deliveries, 2 MAS IT tickets.
+
 ## 2026-10-21-fix-88
 Stand-to-stand transfers:
 - **Unconfirmed transfers no longer vanish at 6 AM** — Incoming (and its badge) shows pending transfers from the last 3 days, marked "still not confirmed" (10/3: 96 Life Water sent to 203P was never confirmed and disappeared).

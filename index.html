@@ -4095,6 +4095,7 @@
     <div class="tab-bar">
       <div class="tab-item active" id="tech-tab-available" onclick="techTab(this,'available')">Available <span class="badge-count" id="tech-open-count">0</span></div>
       <div class="tab-item" id="tech-tab-mine" onclick="techTab(this,'mine')">My Jobs <span class="badge-count" id="tech-prog-count" style="background:var(--info)">0</span></div>
+      <div class="tab-item" id="tech-tab-older" onclick="techTab(this,'older')">Other games <span class="badge-count" id="tech-older-count" style="background:#B45309">0</span></div>
       <div class="tab-item" id="tech-tab-resolved" onclick="techTab(this,'resolved')">Resolved</div>
     </div>
     <div id="tech-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>
@@ -4750,7 +4751,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-21-fix-88';
+const BUILD_TAG = '2026-10-21-fix-89';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6260,9 +6261,15 @@ async function api(action, data) {
       return r._err ? {ok:false,error:'Could not submit'} : {ok:true, id:'IT'};
     }
     case 'getITIssues': {
-      const rows = await sb('it_issues?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.desc&select=*');
+      const start = encodeURIComponent(stadiumDayStartISO());
+      const [rows, older] = await Promise.all([
+        sb('it_issues?created_at=gte.'+start+'&order=created_at.desc&select=*'),
+        // Soccer / DFA / softball tickets: nobody is signed in after the game,
+        // so they stay open (the 6 AM cleanup skips them) until IT marks them fixed.
+        sb('it_issues?created_at=lt.'+start+'&status=neq.resolved&order=created_at.desc&limit=200&select=*').catch(()=>[])
+      ]);
       if (rows._err) return {ok:false,error:'Network'};
-      return { ok:true, issues: rows.map(mapIT) };
+      return { ok:true, issues: rows.map(mapIT), older: Array.isArray(older) ? older.map(r => Object.assign(mapIT(r), { isOld: true })) : [] };
     }
     case 'getMyITIssues': {
       const rows = await sb('it_issues?stand=eq.'+encodeURIComponent(data.stand)+'&created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&order=created_at.desc&select=*');
@@ -23381,6 +23388,7 @@ async function loadTech() {
   if(state.techCoverageStands===undefined)await loadTechCoverageForSession();
   const res = await api('getITIssues', {});
   state.tIssues = res.issues || [];
+  state.tOlder = res.older || [];
   renderOpsAlertStatus('tech');
   opsNewJobAlert('tech',state.tIssues);
   renderTech();
@@ -23402,12 +23410,24 @@ function renderTech() {
   let done=all.filter(r => r.status === 'Resolved');
   document.getElementById('tech-open-count').textContent = available.length;
   document.getElementById('tech-prog-count').textContent = mine.length;
+  const older = state.tOlder || [];
+  { const oc = document.getElementById('tech-older-count'); if (oc) { oc.textContent = older.length; oc.style.display = older.length ? '' : 'none'; } }
   let tab = state.tTab || 'available';
   if(tab==='open')tab='available';if(tab==='progress')tab='mine';state.tTab=tab;
   document.querySelectorAll('#screen-tech .tab-item').forEach(x=>x.classList.remove('active'));
-  const activeTab=document.getElementById(tab==='mine'?'tech-tab-mine':tab==='resolved'?'tech-tab-resolved':'tech-tab-available');if(activeTab)activeTab.classList.add('active');
-  const list = tab === 'mine' ? mine : tab === 'resolved' ? done : available;
+  const activeTab=document.getElementById(tab==='mine'?'tech-tab-mine':tab==='resolved'?'tech-tab-resolved':tab==='older'?'tech-tab-older':'tech-tab-available');if(activeTab)activeTab.classList.add('active');
   const c = document.getElementById('tech-list');
+  if (tab === 'older') {
+    if (!older.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">✅</div><p>Nothing left open from earlier games.</p></div>'; return; }
+    c.innerHTML = '<div class="notice info" style="font-size:12px">Tickets from earlier games (soccer, DFA, softball…) stay here until IT marks them fixed. Football tickets close automatically at 6 AM.</div>' + older.map(r =>
+      '<div class="req-card ' + (r.urgency === 'URGENT' ? 'urgent' : 'normal') + '"><div class="req-header"><div><div class="req-stand">' + escapeHtml(r.stand || 'Unknown stand') + '</div><div class="req-time">' + new Date(r.timestamp).toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }) + ' · ' + escapeHtml(r.requestedBy || '') + '</div></div><span class="status-pill ' + (r.urgency === 'URGENT' ? 'urgent' : 'pending') + '">' + escapeHtml(r.urgency || 'Open') + '</span></div>' +
+      '<div class="req-items">' + escapeHtml(r.category || 'IT issue') + (r.subCategory ? ' — ' + escapeHtml(r.subCategory) : '') + '</div>' +
+      (r.details ? '<div class="req-qty">&quot;' + escapeHtml(r.details) + '&quot;</div>' : '') +
+      (r.claimedBy ? '<div class="req-qty">🔧 ' + escapeHtml(r.claimedBy) + ' was on it</div>' : '') +
+      '<div class="req-actions"><button class="btn-fulfill" onclick="resolveOldIT(\'' + r.id + '\')">✓ Mark fixed</button></div></div>').join('');
+    return;
+  }
+  const list = tab === 'mine' ? mine : tab === 'resolved' ? done : available;
   if (list.length === 0) { c.innerHTML = '<div class="empty"><div class="empty-icon">🔧</div><p>'+(tab==='mine'?'No jobs claimed by you.':tab==='resolved'?'No resolved tickets here.':'No available IT tickets.')+'</p></div>'; return; }
   c.innerHTML = list.map(r => {
     const urgClass = r.urgency === 'URGENT' ? 'urgent' : r.urgency === 'Soon' ? 'soon' : 'normal';
@@ -23429,6 +23449,16 @@ function renderTech() {
   }).join('');
 }
 
+async function resolveOldIT(id) {
+  const acct = state.staffAccount;
+  if (!acct || acct.group !== 'tech') return toast('IT login required', 'error');
+  const row = (state.tOlder || []).find(x => String(x.id) === String(id));
+  const note = await promptAction('What fixed it? (optional)', { title: 'Mark fixed', placeholder: 'e.g. Added Pepsi to the soccer POS menu', confirmLabel: '✓ Fixed' });
+  if (note === null) return;
+  const res = await api('updateITIssue', { issueId: id, status: 'Resolved', resolutionNote: (note ? note + ' · ' : '') + 'Fixed by ' + acct.name });
+  if (res.ok || res.simulated) { toast('✅ Marked fixed' + (row ? ' · ' + row.stand : '')); await loadTech(); }
+  else { toast(res.error || 'Could not update — try again', 'error'); loadTech(); }
+}
 async function claimIT(id) {
   const acct=state.staffAccount;
   if(!acct||acct.group!=='tech')return toast('IT login required','error');
