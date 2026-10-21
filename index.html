@@ -2354,6 +2354,7 @@
       <input class="form-input" type="text" id="gs-item-search" placeholder="🔍 Search your items…" oninput="gsRenderItems()" style="margin-bottom:8px">
       <div id="gs-items-list" style="max-height:300px;overflow-y:auto"></div>
     </div>
+    <div id="gs-sent" style="margin-top:16px"></div>
   </div>
 </div>
 
@@ -4749,7 +4750,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-21-fix-87';
+const BUILD_TAG = '2026-10-21-fix-88';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7038,6 +7039,9 @@ async function api(action, data) {
         const realStand = standKeys[(m.stand||'').trim().toLowerCase()];
         if (!realStand || !m.item_name) return;
         const it = getItem(realStand, m.item_name);
+        // Yellow Dog keeps In-Event Restocks and Stand-to-Stand transfers in separate columns.
+        if (m.movement_type === 'stand_transfer') { if (m.direction === 'out') it.s2sOut = num(it.s2sOut) + num(m.qty); else it.s2sIn = num(it.s2sIn) + num(m.qty); }
+        else if (m.direction !== 'out') it.restockIn = num(it.restockIn) + num(m.qty);
         if (m.direction === 'out') {
           it._ledgerOutSeen = true;
           it._ledgerOut = num(it._ledgerOut) + num(m.qty);
@@ -9247,6 +9251,7 @@ async function goGiveStock() {
   document.getElementById('gs-items-area').style.display = 'none';
   document.getElementById('gs-item-search').value = '';
   showScreen('screen-give-stock');
+  gsRenderSent();
   const sel = document.getElementById('gs-to-stand');
   if (sel.options.length <= 1) {
     const standRes = await api('getStandsList',{}).catch(()=>({ok:false,stands:[]}));
@@ -9279,15 +9284,45 @@ function gsRenderItems() {
 }
 
 async function gsSend(itemName, i) {
-  const qty = Number(document.getElementById('gs-qty-'+i).value);
+  const qtyEl = document.getElementById('gs-qty-'+i);
+  const qty = Number(qtyEl.value);
   if (!qty || qty <= 0) return toast('Enter a quantity first', 'error');
   const toStand = document.getElementById('gs-to-stand').value;
-  const res = await sb('stand_transfers', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({
-    from_stand: state.gsFromStand || getOperationalStand(getRequesterIdentity()), to_stand: toStand, item_name: itemName, qty, status:'pending', initiated_by: state.user.name
-  })}).catch(()=>({_err:true}));
-  if (res._err) return toast('Could not send — try again', 'error');
-  toast('✅ Sent ' + qty + ' ' + itemName + ' to ' + toStand + ' — waiting for them to confirm');
-  document.getElementById('gs-qty-'+i).value = '';
+  if (!toStand) return toast('Pick the stand first', 'error');
+  // Managers/Supervisors signed in with a staff account have no state.user — use the real identity.
+  const who = getRequesterIdentity();
+  await withLock(evtBtn(), 'Sending…', async () => {
+    const res = await sb('stand_transfers', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify({
+      from_stand: state.gsFromStand || getOperationalStand(who), to_stand: toStand, item_name: itemName, qty, status:'pending', initiated_by: who.name || 'Staff'
+    })}).catch(()=>({_err:true}));
+    if (res._err) return toast('Could not send — try again', 'error');
+    toast('✅ Sent ' + qty + ' ' + itemName + ' to ' + toStand + ' — waiting for them to confirm');
+    qtyEl.value = '';
+    gsRenderSent();
+  });
+}
+// What this stand sent: confirmed or still waiting. A pending one can be
+// cancelled (wrong stand / wrong number) before the other stand confirms.
+// 10/3: 96 Life Water sent to 203P was never confirmed and silently vanished next day.
+async function gsRenderSent() {
+  const el = document.getElementById('gs-sent'); if (!el) return;
+  const from = state.gsFromStand || getOperationalStand(getRequesterIdentity()); if (!from) { el.innerHTML = ''; return; }
+  const since = new Date(new Date(stadiumDayStartISO()).getTime() - 2 * 864e5).toISOString();
+  const rows = await sb('stand_transfers?from_stand=eq.' + encodeURIComponent(from) + '&created_at=gte.' + encodeURIComponent(since) + '&status=in.(pending,confirmed)&order=created_at.desc&limit=40&select=*').catch(() => ({ _err: true }));
+  if (!Array.isArray(rows) || !rows.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="section-title">Sent from ' + escapeHtml(from) + '</div>' + rows.map(r => {
+    const old = new Date(r.created_at) < new Date(stadiumDayStartISO());
+    return '<div class="card" style="padding:10px 12px;margin-bottom:6px;display:flex;gap:8px;align-items:center;border-left:4px solid ' + (r.status === 'confirmed' ? '#00A651' : '#F59E0B') + '"><div style="flex:1;min-width:0">' +
+      '<div style="font-size:13px;font-weight:700">' + escapeHtml(r.item_name) + ' — ' + escapeHtml(String(r.qty)) + '</div>' +
+      '<div style="font-size:11px;color:var(--text-2)">→ ' + escapeHtml(r.to_stand) + ' · ' + (old ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) + ' · ' : '') + (r.status === 'confirmed' ? '✅ received by ' + escapeHtml(r.confirmed_by || '') : '⏳ waiting for them to confirm') + '</div></div>' +
+      (r.status === 'pending' ? '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="gsCancelSent(' + r.id + ')">Cancel</button>' : '') + '</div>';
+  }).join('');
+}
+async function gsCancelSent(id) {
+  if (!(await confirmAction('Cancel this transfer? Use this if it went to the wrong stand or the number was wrong — then send it again.', { title: 'Cancel transfer?', confirmLabel: 'Cancel transfer', danger: true }))) return;
+  const r = await sb('stand_transfers?id=eq.' + id + '&status=eq.pending', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'cancelled', confirmed_by: 'Cancelled by ' + (getRequesterIdentity().name || 'sender'), confirmed_at: new Date().toISOString() }) }).catch(() => ({ _err: true }));
+  if (!Array.isArray(r) || !r.length) return toast('Already received — it can\'t be cancelled now', 'error');
+  toast('Transfer cancelled'); gsRenderSent();
 }
 
 // Red count on "Incoming Transfers" so the receiving stand (NPO or Aramark)
@@ -9296,7 +9331,7 @@ async function refreshIncomingTransferBadge(stand){
   const badge=document.getElementById('incoming-badge');
   if(!badge)return;
   if(!stand){badge.style.display='none';return;}
-  const rows=await sb('stand_transfers?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&to_stand=eq.'+encodeURIComponent(stand)+'&status=eq.pending&select=id').catch(()=>({_err:true}));
+  const rows=await sb('stand_transfers?created_at=gte.'+encodeURIComponent(s2sSinceISO())+'&to_stand=eq.'+encodeURIComponent(stand)+'&status=eq.pending&select=id').catch(()=>({_err:true}));
   const n=(!rows._err&&Array.isArray(rows))?rows.length:0;
   badge.style.display=n?'inline-block':'none';badge.textContent=n;
 }
@@ -9305,7 +9340,7 @@ async function goIncomingTransfers() {
   const stand = getOperationalStand(getRequesterIdentity());
   if (!stand) return toast('Choose a working stand first', 'error');
   showScreen('screen-incoming-transfers');
-  const rows = await sb('stand_transfers?created_at=gte.'+encodeURIComponent(stadiumDayStartISO())+'&to_stand=eq.'+encodeURIComponent(stand)+'&status=eq.pending&order=created_at.desc&select=*').catch(()=>({_err:true}));
+  const rows = await sb('stand_transfers?created_at=gte.'+encodeURIComponent(s2sSinceISO())+'&to_stand=eq.'+encodeURIComponent(stand)+'&status=eq.pending&order=created_at.desc&select=*').catch(()=>({_err:true}));
   const el = document.getElementById('incoming-list');
   if (rows._err) { el.innerHTML = '<div class="notice" style="background:rgba(220,38,38,0.08);color:#DC2626">Could not load — try again</div>'; return; }
   const badge = document.getElementById('incoming-badge');
@@ -9314,13 +9349,15 @@ async function goIncomingTransfers() {
   el.innerHTML = rows.map(r => `
     <div class="card" style="padding:14px;margin-bottom:10px">
       <div style="font-weight:700;font-size:14px">${escapeHtml(r.item_name)} — ${r.qty}</div>
-      <div style="font-size:12px;color:var(--text-2);margin-top:2px">From ${escapeHtml(r.from_stand)} · sent by ${escapeHtml(r.initiated_by||'—')}</div>
+      <div style="font-size:12px;color:var(--text-2);margin-top:2px">From ${escapeHtml(r.from_stand)} · sent by ${escapeHtml(r.initiated_by||'—')}${new Date(r.created_at)<new Date(stadiumDayStartISO())?' · <b style="color:#B45309">sent '+new Date(r.created_at).toLocaleDateString('en-US',{month:'numeric',day:'numeric'})+' — still not confirmed</b>':''}</div>
       <button class="btn btn-primary" style="margin-top:10px" onclick="confirmIncoming(${r.id})">✅ Confirm received</button>
     </div>`).join('');
 }
 
+// Unconfirmed transfers stay visible for 3 game days instead of vanishing at 6 AM.
+function s2sSinceISO(){return new Date(new Date(stadiumDayStartISO()).getTime()-2*864e5).toISOString();}
 async function confirmIncoming(id) {
-  const actor = (state.user && state.user.name) || 'Stand Lead';
+  const actor = getRequesterIdentity().name || (state.user && state.user.name) || 'Stand Lead';
   let r = null;
 
   // First attempt the state transition. If another tap/device already made
@@ -14851,12 +14888,15 @@ function ydPasteCSV() {
   const data = state.mgrInvData;
   if (!data || !data.stands) return toast('Load inventory first', 'error');
   const q = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  let csv = 'Stand,Yellow Dog Stand,Tab,#,Description,Count In,Waste,Count Out\n';
+  let csv = 'Stand,Yellow Dog Stand,Tab,#,Description,Count In,In-Event Restocks,S to S Tran In,S to S Tran Out,Waste,Count Out\n';
+  // Restocks: warehouse deliveries from the ledger, else the stand's own Transfer form.
+  const rs = it => it.restockIn !== undefined ? ydNum(it.restockIn) : (it.s2sIn === undefined && it.transferIn !== undefined && it.transferIn !== '' ? ydNum(it.transferIn) : 0);
+  const mv = it => [rs(it), ydNum(it.s2sIn), ydNum(it.s2sOut)];
   data.stands.forEach(s => {
     const g = ydSplit(s), y = g.ydStand || '(app sheet order)';
-    g.charge.forEach((it, i) => { csv += [s.stand, y, 'Chargeables', i + 1, it.itemName, ydNum(it.countIn), ydNum(it.waste), ydNum(it.countOut)].map(q).join(',') + '\n'; });
-    g.nonch.forEach((it, i) => { csv += [s.stand, y, 'Non-Chargeables & Supplies', i + 1, it.itemName, '', '', ydNum(it.countOut)].map(q).join(',') + '\n'; });
-    g.extra.forEach(it => { csv += [s.stand, y, 'NOT IN YELLOW DOG LIST - enter by hand', '', it.itemName, ydNum(it.countIn), ydNum(it.waste), ydNum(it.countOut)].map(q).join(',') + '\n'; });
+    g.charge.forEach((it, i) => { csv += [s.stand, y, 'Chargeables', i + 1, it.itemName, ydNum(it.countIn)].concat(mv(it), [ydNum(it.waste), ydNum(it.countOut)]).map(q).join(',') + '\n'; });
+    g.nonch.forEach((it, i) => { csv += [s.stand, y, 'Non-Chargeables & Supplies', i + 1, it.itemName, '', '', '', '', '', ydNum(it.countOut)].map(q).join(',') + '\n'; });
+    g.extra.forEach(it => { csv += [s.stand, y, 'NOT IN YELLOW DOG LIST - enter by hand', '', it.itemName, ydNum(it.countIn)].concat(mv(it), [ydNum(it.waste), ydNum(it.countOut)]).map(q).join(',') + '\n'; });
   });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));

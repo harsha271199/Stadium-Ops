@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-21-fix-88
+Stand-to-stand transfers:
+- **Unconfirmed transfers no longer vanish at 6 AM** — Incoming (and its badge) shows pending transfers from the last 3 days, marked "still not confirmed" (10/3: 96 Life Water sent to 203P was never confirmed and disappeared).
+- **"Sent from <stand>" list** on Give Stock: each transfer shows ⏳ waiting or ✅ received by whom; a pending one can be **cancelled** (wrong stand / wrong number).
+- **Managers/Supervisors signed in with a staff account can send** (Send used state.user.name and broke for them).
+- **Double-tap Send** no longer creates two transfers.
+- Confirm uses the real signed-in name.
+Yellow Dog download:
+- New columns **In-Event Restocks**, **S to S Tran In**, **S to S Tran Out** (Chargeables), split from the ledger, so Yellow Dog reconciliation gets transfers too.
+
 ## 2026-10-21-fix-87
 Chat + refunds:
 - Chat **💵 Refund** button now opens the refund form (customer, phone, card last 4, amount, item, reason) with the stand filled in; when sent, it posts back into the stand chat as a Refund request card with all the details and alerts the Supervisor (or Managers if none).
