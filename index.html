@@ -4749,7 +4749,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-15-fix-85';
+const BUILD_TAG = '2026-10-21-fix-86';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6969,7 +6969,7 @@ async function api(action, data) {
         // Compatibility only for older movement rows created before game_date
         // was consistently written. New preview writes game_date on every
         // movement, so this branch naturally fades out over time.
-        sb('stock_ledger?game_date=is.null&created_at=gte.'+d+'T00:00:00-07:00&created_at=lt.'+next+'T00:00:00-07:00&movement_type=in.(transfer_in,force_stock,stand_transfer)&select=*'),
+        sb('stock_ledger?game_date=is.null&ts=gte.'+d+'T00:00:00-07:00&ts=lt.'+next+'T00:00:00-07:00&movement_type=in.(transfer_in,force_stock,stand_transfer)&select=*'),
         sb('stands?select=stand_name,venue'),
         sb('schedule?event_date=eq.'+d+'&is_test=neq.true&select=event_name,event_date,site,location')
       ]);
@@ -7713,6 +7713,21 @@ async function goNpoRoster() {
       ${actions?`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">${actions}</div>`:''}
     </div>`;
   }).join('') || '<div class="notice">No active members are loaded for this NPO group.</div>';
+  // 10/10: two members who showed up for 408 were not on the roster and the lead had no way to add them.
+  if(canManage)el.innerHTML+='<button class="btn btn-ghost" onclick="npoAddWalkIn()" style="margin-top:6px">➕ Add a member who is not on the list</button>';
+}
+async function npoAddWalkIn(){
+  const ctx=npoManageContext();
+  if(!(ctx&&ctx.canManage))return toast('Only the NPO Lead can add members','error');
+  const name=(prompt('Full name of the member to add to '+(ctx.groupName||'your group')+':\n\nThey can then sign in with the group and their name, and you can mark them Present.')||'').replace(/[<>]/g,'').replace(/\s+/g,' ').trim();
+  if(!name)return;
+  if(name.length<3||!/[a-z]/i.test(name))return toast('Type their full name','error');
+  const have=(state._npoRoster||[]).find(m=>String(m.member_name||'').toLowerCase().replace(/[^a-z]/g,'')===name.toLowerCase().replace(/[^a-z]/g,''));
+  if(have)return toast(have.member_name+' is already on the list','error');
+  const r=await sb('npo_members',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({group_id:ctx.groupId,member_name:name,is_lead:false,is_active:true,notes:'Added at the stand by '+(ctx.actorName||'NPO Lead')+' on '+localISODate()})}).catch(()=>({_err:true}));
+  if(r._err||!Array.isArray(r)||!r.length)return toast('Could not add — try again','error');
+  toast('✅ '+name+' added — mark them Present');
+  await goNpoRoster();
 }
 async function npoSetMemberAttendance(i,status){
   const m=state._npoRoster&&state._npoRoster[i]; if(!m)return;
@@ -8859,7 +8874,31 @@ async function confirmLeave() {
     }
   }
   if (!(await confirmAction('Only do this at end of shift OR if you’re moving to another stand.' + lastNote, {title:'Leave this stand?', confirmLabel:'Leave stand', danger:true}))) return;
+  if (lockMode === 'lead') await invCloseOutOthers(state.user.stand);
   markLeft();
+}
+// End of night: the lead closing the stand clocks out everyone still showing
+// "working" there (10/10: 157 people, 73 of them NPO, were never clocked out).
+async function invStillHere(stand) {
+  const ids = await invOthersStillWorking(stand);
+  if (!ids || !ids.length) return [];
+  const days = [...new Set([localISODate(), stadiumDay()])].join(',');
+  const rows = await sb('attendance?employee_id=in.(' + ids.map(i => '"' + String(i).replace(/"/g, '') + '"').join(',') + ')&entry_date=in.(' + days + ')&order=id.desc&select=employee_id,worker_name,stand,status').catch(() => ({ _err: true }));
+  if (!Array.isArray(rows)) return [];
+  const latest = {};
+  rows.forEach(r => { if (!(r.employee_id in latest)) latest[r.employee_id] = r; });
+  // Only people whose latest row is still this stand (a moved worker belongs to their new stand).
+  return Object.values(latest).filter(r => r.stand === stand && ['working', 'break', 'active'].includes(r.status));
+}
+async function invCloseOutOthers(stand) {
+  const left = await invStillHere(stand).catch(() => []);
+  if (!left.length) return;
+  const names = left.map(r => whDisp(r.worker_name || r.employee_id));
+  const ok = await confirmAction(left.length + (left.length === 1 ? ' person is' : ' people are') + ' still clocked in at ' + stand + ':\n\n' + names.slice(0, 12).join(', ') + (names.length > 12 ? ' +' + (names.length - 12) + ' more' : '') + '\n\nClock them all out now (end of shift)?', { title: 'Close out the stand?', confirmLabel: 'Clock everyone out', cancelLabel: 'Leave them' });
+  if (!ok) return;
+  const who = (state.user && state.user.name) || 'Stand Lead';
+  const res = await sbBulkInsert('attendance', left.map(r => ({ employee_id: r.employee_id, worker_name: r.worker_name, stand, status: 'ended', notes: 'Clocked out at stand close by ' + who })), {}).catch(() => ({ _err: true }));
+  toast(res && res._err ? 'Could not clock everyone out — use My Team' : '⏹ ' + left.length + ' clocked out at close', res && res._err ? 'error' : 'success');
 }
 
 // ============ INVENTORY LOCK (Stand Leads / NPO Leads) ============
@@ -14693,6 +14732,14 @@ function ydSplit(s) {
     g.source = 'pdf'; g.ydStand = ys;
     lists.charge = sh.stands[ys].filter(x => x[1] === 'C').map(x => x[0]);
     lists.nonch = sh.stands[ys].filter(x => x[1] !== 'C').map(x => x[0]);
+    // 10/15: this phone still had an old PDF that matched DFA Market to the
+    // 18-item "BEV MKT" sheet, so the download scrambled the market. If most
+    // counted items are not on that PDF stand, use the app's sheet order.
+    const pdfKeys = new Set(lists.charge.concat(lists.nonch).map(ydItemKey));
+    const counted = s.items.filter(it => !it.isAddon && ['countIn', 'waste', 'countOut'].some(f => ydNum(it[f]) !== 0));
+    if (counted.length >= 5 && counted.filter(it => pdfKeys.has(ydItemKey(it.itemName))).length / counted.length < 0.8) {
+      delete lists.charge; delete lists.nonch; g.source = 'app'; g.pdfMismatch = ys; g.ydStand = '';
+    }
   }
   ['charge', 'nonch'].forEach(tab => { const ord = ydGetOrder(s.stand, tab); if (ord) { lists[tab] = ord; g.custom[tab] = true; } });
   const used = new Set();
@@ -15496,7 +15543,11 @@ async function admYdPdfSave() {
   const u = state._ydPdfUpload, st = document.getElementById('up-ydpdf-status'); if (!u) return;
   const plan = u.plan.filter(p => p.app);
   const total = plan.reduce((a, p) => a + u.stands[p.yd].length, 0);
-  if (!(await confirmAction('Replace the item list of ' + plan.length + ' stands with the Yellow Dog PDF (' + total + ' items), in the PDF\'s exact order? Do this before Count In starts — items renamed mid-event won\'t line up with counts already entered.', { title: 'Replace stand item lists?', confirmLabel: 'Replace lists' }))) return;
+  // 10/15: sheets were replaced after stands had counted, so new items (Coke BIBs) had no Count In.
+  const counted = await sb('inventory_entries?entry_date=eq.' + stadiumDay() + '&phase=eq.Count%20In&stand=in.(' + plan.map(p => '"' + String(p.app).replace(/"/g, '') + '"').join(',') + ')&select=stand').catch(() => ({ _err: true }));
+  const already = Array.isArray(counted) ? [...new Set(counted.map(r => r.stand))] : [];
+  const warn = already.length ? '\n\n⚠️ ' + already.length + ' of these already did Count In today (' + already.slice(0, 6).join(', ') + (already.length > 6 ? '…' : '') + '). Items new to their list will have no Count In. Untick those stands (pick "— skip —") unless you mean to change them.' : '';
+  if (!(await confirmAction('Replace the item list of ' + plan.length + ' stands with the Yellow Dog PDF (' + total + ' items), in the PDF\'s exact order? Do this before Count In starts — items renamed mid-event won\'t line up with counts already entered.' + warn, { title: 'Replace stand item lists?', confirmLabel: 'Replace lists', danger: already.length > 0 }))) return;
   const numOrNull = v => { const t = String(v == null ? '' : v).replace(/[, ]/g, ''); if (!t) return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
   let done = 0; const failed = [];
   for (const p of plan) {
@@ -24870,10 +24921,25 @@ async function whStartDeliveryForStand(stand, transferId) {
   }
   return whClaimAndDeliver(stand, transferId);
 }
+async function whTakeOver(stand, ids, by, who) {
+  if(!ids.length)return false;
+  if(!(await confirmAction((by?whDisp(by):'Someone else')+' already took this '+stand+' order.\n\nAre you the one delivering it? Take it over so you can mark it delivered.',{title:'Take over this delivery?',confirmLabel:'🚚 Take over'})))return false;
+  const r=await sb('stock_requests?id=in.('+ids.map(encodeURIComponent).join(',')+')&status=in.(open,claimed)',{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({status:'claimed',claimed_by:who,claimed_at:new Date().toISOString()})}).catch(()=>({_err:true}));
+  if(!Array.isArray(r)||!r.length){toast('This order was just delivered or closed','error');await loadWhToDeliver();return false;}
+  (state.wRequests||[]).forEach(x=>{if(ids.map(String).includes(String(x.id))){x.status='On the way';x.claimedBy=who;}});
+  toast('🚚 You took over '+stand);
+  return true;
+}
 async function whClaimAndDeliver(stand, transferId) {
   const who = state.whName || (state.staffAccount && state.staffAccount.name) || 'Warehouse';
   const eligiblePending=(state.wRequests||[]).filter(r=>r.stand===stand&&r.status==='Pending'&&whMappedRequestRoutedToMe(r));
-  const alreadyMine=(state.wRequests||[]).some(r=>r.stand===stand&&r.status==='On the way'&&r.claimedBy===who);
+  let alreadyMine=(state.wRequests||[]).some(r=>r.stand===stand&&r.status==='On the way'&&r.claimedBy===who);
+  // 10/10: a runner who actually delivered an order someone else had claimed could not finish it.
+  const othersOnWay=(state.wRequests||[]).filter(r=>r.stand===stand&&r.status==='On the way'&&r.claimedBy&&r.claimedBy!==who);
+  if(!eligiblePending.length&&!alreadyMine&&othersOnWay.length){
+    if(!(await whTakeOver(stand,othersOnWay.map(r=>r.id),othersOnWay[0].claimedBy,who)))return;
+    alreadyMine=true;
+  }
 
   // The grouped To Deliver card visually prioritizes a stand request over a
   // planned transfer. Do the same in logic: handle the request batch first,
@@ -24895,8 +24961,7 @@ async function whClaimAndDeliver(stand, transferId) {
       const ids=eligiblePending.map(r=>encodeURIComponent(r.id)).join(',');
       const now=await sb('stock_requests?id=in.('+ids+')&select=claimed_by,status').catch(()=>({_err:true}));
       const by=Array.isArray(now)&&now.map(x=>x.claimed_by).find(Boolean);
-      toast('🚚 '+(by?by+' already took this':'Someone else already took this')+' — it\'s on the way','error',7000);
-      await loadWhToDeliver();return;
+      if(!(await whTakeOver(stand,eligiblePending.map(r=>r.id),by,who))){await loadWhToDeliver();return;}
     }
     const requestTransferId=await whGetOrCreateRequestTransfer(stand);
     if(!requestTransferId)return toast('Could not start this request delivery — try again','error');

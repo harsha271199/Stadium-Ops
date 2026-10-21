@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-21-fix-86
+Fixes from the 10/10 football and 10/15 volleyball audit:
+- **Stand close-out:** when a Stand Lead / NPO Lead leaves at end of night, the app lists everyone still clocked in at that stand and offers to clock them all out (10/10: 157 people, 73 NPO, were never clocked out).
+- **NPO walk-ins:** NPO Leads can add a member who is not on the roster ("➕ Add a member who is not on the list"), then mark them Present (10/10: two Gillilands at 408).
+- **Warehouse take-over:** a runner who delivers an order someone else claimed can take it over and mark it delivered (10/10: 222M stuck as "someone on the way").
+- **Yellow Dog download:** if the phone's saved Yellow Dog PDF doesn't match what the stand counted (most counted items missing), the download uses the app's sheet order instead of scrambling it (10/15: DFA Market matched to an old 18-item "BEV MKT").
+- **Yellow Dog PDF upload:** warns when a stand in the upload already did Count In today (10/15: Coke lines added after counts).
+- **Reports:** stand-transfer report query used a column that doesn't exist (created_at → ts) and failed silently.
+- DB (live now): attendance writes were doubled on every check-in/break/clock-out; a trigger now keeps one row and merges the note.
+
 ## 2026-10-15-fix-85
 - Runners scheduled at a real stand today (e.g. DFA volleyball: Hetansh at BEV MKT) now sign in to that stand from the schedule instead of the Food Runner / Warehouse Runner screen. On football days, when they're scheduled as "Concession Runner" / "Warehouse Runner" / "Kitchen Runner", they still get the runner screen.
 - BEV MKT (DFA) set to lead access for all, so its scheduled workers get Count In / Count Out and requests (no Stand Lead there).
