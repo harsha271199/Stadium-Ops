@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-21-fix-87
+Chat + refunds:
+- Chat **💵 Refund** button now opens the refund form (customer, phone, card last 4, amount, item, reason) with the stand filled in; when sent, it posts back into the stand chat as a Refund request card with all the details and alerts the Supervisor (or Managers if none).
+- Supervisor/Manager **✅ Done** on a chat refund closes the refund record and asks for the POS receipt / reference # — the manager Refunds list and download are complete.
+- If a Stand Lead / NPO Lead types an item from their stand sheet in chat ("Pretzel bags pls"), the app offers to send it as a Stock Request (chat never reached the warehouse).
+- Manager Refunds download now covers the whole season, not just today.
+
 ## 2026-10-21-fix-86
 Fixes from the 10/10 football and 10/15 volleyball audit:
 - **Stand close-out:** when a Stand Lead / NPO Lead leaves at end of night, the app lists everyone still clocked in at that stand and offers to clock them all out (10/10: 157 people, 73 NPO, were never clocked out).

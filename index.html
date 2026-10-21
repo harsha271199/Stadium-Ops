@@ -3449,7 +3449,7 @@
     <!-- Refunds tab -->
     <div id="mgr-refunds" style="display:none">
       <div class="notice info" style="font-size:12px">💵 Refund requests from stand leads &amp; supervisors. Approve or deny — everything is logged.</div>
-      <button class="btn btn-ghost" onclick="exportRefundsCSV()" id="rf-csv-btn" style="width:100%;margin:10px 0;display:none">⬇️ Download refunds CSV</button>
+      <button class="btn btn-ghost" onclick="exportRefundsCSV()" id="rf-csv-btn" style="width:100%;margin:10px 0;display:none">⬇️ Download all refunds (season) CSV</button>
       <div id="mgr-refunds-list"><div class="loading"><div class="spinner"></div>Loading...</div></div>
     </div>
 
@@ -4749,7 +4749,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-21-fix-86';
+const BUILD_TAG = '2026-10-21-fix-87';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10718,6 +10718,7 @@ function goRefund() {
   document.getElementById('refund-sub').textContent=(who.name||'Staff')+' · '+(getOperationalStand(who)||who.homeStand||'');
   document.getElementById('refund-stand').value = getOperationalStand(who) || who.homeStand || (state.user&&state.user.stand) || '';
   ['refund-customer','refund-phone','refund-last4','refund-amount','refund-item','refund-reason'].forEach(id => document.getElementById(id).value = '');
+  state._refundFromChat = null;
   showScreen('screen-refund');
 }
 async function refundNotifySupervisors(stand,amount,customer){
@@ -10751,6 +10752,19 @@ async function submitRefund() {
       amount: amount.toFixed(2), item: document.getElementById('refund-item').value.trim(), paymentType: last4 ? 'Card' : 'Cash/other', cardLast4: last4, reason
     });
     if (res.ok) {
+      const fromChat = state._refundFromChat; state._refundFromChat = null;
+      const item = document.getElementById('refund-item').value.trim();
+      const summary = '$' + amount.toFixed(2) + ' · ' + customer + (last4 ? ' · card ••' + last4 : ' · cash') + (item ? ' · ' + item : '') + ' · ' + reason;
+      if (fromChat && chatLevel()) {
+        // The chat request alerts the stand's Supervisor (or Managers if none).
+        await goChat(fromChat);
+        state._chatReturn = 'screen-home';
+        const th = state._chatThread;
+        if (th) { if (!th.people) th.people = await chatPeopleFor(fromChat).catch(()=>null); th.to = th.people && th.people.sup && th.people.sup.length ? 'sup' : 'mgr'; th._toTouched = true; chatRenderTo(); }
+        await chatSend('🙋 REQUEST · Refund — ' + summary);
+        toast('🔔 Refund sent to the Supervisor');
+        return;
+      }
       const n=await refundNotifySupervisors(stand,amount,customer);
       toast('🔔 Supervisor requested'+(n?' · '+n+' notified':''));
       if(refundIsSupervisor()){goSupervisorRefunds();}else goRoleHome();
@@ -15053,7 +15067,7 @@ async function loadMgrRefunds() {
   state._refunds = rows;
   const pending = rows.filter(r => r.status === 'pending');
   setMgrBadge('mgr-refund-count', pending.length);
-  document.getElementById('rf-csv-btn').style.display = rows.length ? '' : 'none';
+  document.getElementById('rf-csv-btn').style.display = '';
   if (!rows.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">💵</div><p>No refund requests yet</p></div>'; return; }
   const totalPending = pending.reduce((n,r) => n + (parseFloat(r.amount) || 0), 0);
   const totalApproved = rows.filter(r => r.status === 'approved').reduce((n,r) => n + (parseFloat(r.amount) || 0), 0);
@@ -15082,9 +15096,11 @@ async function mgrRefund(id, status) {
   if (res.ok) { toast(status === 'approved' ? '✅ Refund approved' : '🚫 Refund denied'); loadMgrRefunds(); }
   else toast('Could not update — try again', 'error');
 }
-function exportRefundsCSV() {
-  const rows = state._refunds || [];
-  if (!rows.length) return toast('Load refunds first', 'error');
+async function exportRefundsCSV() {
+  // Whole season, not just today — refund data is asked for days later.
+  const all = await sb('refund_requests?order=created_at.desc&limit=2000&select=*').catch(() => ({ _err: true }));
+  const rows = Array.isArray(all) ? all : (state._refunds || []);
+  if (!rows.length) return toast('No refunds recorded yet', 'error');
   let csv = 'Date,Stand,Customer,Phone,Card Last 4,Amount,Item,Payment,Reason,Requested By,Role,Status,Reviewed By,Note,Reference\n';
   const esc = v => { const t = String(v == null ? '' : v); return (t.indexOf(',') >= 0 || t.indexOf('"') >= 0) ? '"' + t.replace(/"/g,'""') + '"' : t; };
   rows.forEach(r => {
@@ -15093,7 +15109,7 @@ function exportRefundsCSV() {
   const blob = new Blob([csv], { type:'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'refunds_' + localISODate() + '.csv'; a.click();
+  a.href = url; a.download = 'refunds_season_' + localISODate() + '.csv'; a.click();
   URL.revokeObjectURL(url);
   toast('📥 Refunds CSV downloaded');
 }
@@ -22349,6 +22365,17 @@ function chatRenderInbox() {
 const CHAT_REQUESTS = [['💵','Refund'],['😠','Customer complaint'],['🏷️','Comp / price'],['🆘','SOS']];
 async function chatRequest(kind) {
   const th = state._chatThread; if (!th) return;
+  // 10/10: chat refunds had no customer, amount or card — and the form was separate.
+  // The chat button now opens the refund form; it comes back here as a request card.
+  if (kind === 'Refund') {
+    const input = document.getElementById('chat-input'), extra = String(input && input.value || '').trim();
+    if (input) input.value = '';
+    goRefund();
+    state._refundFromChat = th.stand;
+    document.getElementById('refund-stand').value = th.stand;
+    if (extra) document.getElementById('refund-reason').value = extra;
+    return;
+  }
   if (!th.people) th.people = await chatPeopleFor(th.stand).catch(()=>null);
   const input = document.getElementById('chat-input'), extra = String(input.value || '').trim();
   // Flexible: whatever is typed in the box rides along ("$12 hot dog");
@@ -22519,6 +22546,24 @@ function chatReplyReq(id, what) {
   const q = chatParseReq(r.body); if (!q) return;
   if (r.sender_level && chatToOptions(th.people).includes(r.sender_level)) { th.to = r.sender_level; th._toTouched = true; chatRenderTo(); }
   chatSend('↩ ' + q.kind + ' — ' + what);
+  if (q.kind === 'Refund' && /Done/.test(what)) chatCompleteRefund(th.stand, r);
+}
+// "✅ Done" on a chat refund closes the matching refund record with the POS
+// reference, so the manager's Refunds list and download are complete.
+async function chatCompleteRefund(stand, msg) {
+  const rows = await sb('refund_requests?stand=eq.' + encodeURIComponent(stand) + '&status=eq.pending&created_at=gte.' + encodeURIComponent(stadiumDayStartISO()) + '&order=created_at.desc&select=id,amount,customer_name,created_at').catch(() => ({ _err: true }));
+  const me = chatMe();
+  const ref = (prompt('Refund done — POS receipt / reference # (optional):') || '').trim();
+  if (!Array.isArray(rows) || !rows.length) {
+    // Old-style chat refund with no form: keep a record anyway.
+    const req = chatParseReq(msg.body) || {};
+    await api('submitRefund', { stand, requestedBy: msg.sender_name || '', requestedByRole: msg.sender_role || '', customerName: '(not entered)', amount: '0', reason: req.detail || 'Refund from chat', paymentType: '' }).then(async res => {
+      if (res && res.ok && res.id) await api('updateRefund', { id: res.id, status: 'approved', reviewedBy: me.name, note: (ref ? 'Ref: ' + ref + ' · ' : '') + 'Done from chat', completedAt: new Date().toISOString(), refundReference: ref });
+    }).catch(() => {});
+    return;
+  }
+  const res = await api('updateRefund', { id: rows[0].id, status: 'approved', reviewedBy: me.name, note: (ref ? 'Ref: ' + ref + ' · ' : '') + 'Done from chat', completedById: me.id, completedAt: new Date().toISOString(), refundReference: ref });
+  if (res && res.ok) toast('💵 Refund recorded as done' + (ref ? ' · ref ' + ref : ''));
 }
 function chatRenderThread() {
   const th = state._chatThread, el = document.getElementById('chat-thread'); if (!th || !el) return;
@@ -22610,6 +22655,28 @@ async function chatSend(quick) {
   else if (note) toast(note);
   chatNotify(th.stand, to, me, body);
   chatLoadThread(false);
+  if (!quick) chatSuggestOrder(th.stand, body);
+}
+// 10/10: NPO leads typed "Pretzel bags", "Popcorn" in chat — the warehouse
+// never saw those. If a stand message names an item on the stand's sheet,
+// offer to send it as a Stock Request.
+async function chatSuggestOrder(stand, body) {
+  const lvl = chatLevel(), u = state.user;
+  if (!['crew', 'lead'].includes(lvl) || chatIsGroup(stand) || chatParseReq(body) || body.length > 80) return;
+  if (!u || canonicalStandName2026(u.stand) !== canonicalStandName2026(stand)) return;
+  if (!state._chatSheet || state._chatSheet.stand !== stand) {
+    const rows = await sb('stand_sheets?stand=eq.' + encodeURIComponent(stand) + '&select=item_name').catch(() => ({ _err: true }));
+    state._chatSheet = { stand, names: Array.isArray(rows) ? rows.map(x => x.item_name) : [] };
+  }
+  const stop = new Set(['need', 'more', 'please', 'pls', 'plz', 'some', 'the', 'and', 'for', 'can', 'get', 'have', 'any', 'out', 'bag', 'bags', 'case', 'cases', 'box', 'boxes', 'stand', 'thanks', 'thank', 'you']);
+  const words = body.toLowerCase().replace(/[^a-z ]/g, ' ').split(/\s+/).filter(w => w.length >= 4 && !stop.has(w)).map(w => w.replace(/s$/, ''));
+  if (!words.length) return;
+  const hit = state._chatSheet.names.find(n => { const nl = n.toLowerCase(); return words.some(w => nl.includes(w)); });
+  if (!hit) return;
+  if (!(await confirmAction('"' + body + '" — want the warehouse to bring it?\n\nChat messages don\'t reach the warehouse. Send it as a Stock Request.', { title: 'Order from the warehouse?', confirmLabel: '📦 Make a Stock Request', cancelLabel: 'No, just chat' }))) return;
+  await goStock();
+  const search = document.getElementById('stock-search');
+  if (search) { search.value = words[0]; if (typeof renderStockItems === 'function') renderStockItems(); }
 }
 // Only the addressed level is alerted. The stand name leads the title so a
 // lead over several portables knows at a glance which one is asking.
