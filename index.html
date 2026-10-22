@@ -4751,7 +4751,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-21-fix-89';
+const BUILD_TAG = '2026-10-22-fix-90';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -25685,7 +25685,7 @@ async function openTransferStand(stand, source, transferId) {
     if(search)search.value='';
     if(title)title.textContent=(source==='qr'||source==='fieldqr'||source==='qrforce'||source==='camera_restock')?'⚡ Force Restock — stand inventory menu':'📋 Your stand’s items';
     if(help)help.textContent=(source==='qr'||source==='fieldqr'||source==='qrforce'||source==='camera_restock')
-      ?'Tap +1 or enter an exact quantity. Saved instantly to this stand — no request or delivery workflow is changed.'
+      ?'Nothing is added until you tap Add. Type how many (or tap +), then Add — it saves instantly to this stand.'
       :'Tap +1 or use the quantity box below.';
     renderTsQuickPicker();
   } else pickerEl.style.display='none';
@@ -25726,7 +25726,7 @@ function renderTsQuickPicker() {
       </div>
       <div style="display:flex;align-items:center;gap:0;flex-shrink:0">
         <button class="btn btn-ghost" onclick="tsQtyStep('${safe}',-1)" style="width:auto;margin:0;padding:0;width:42px;height:48px;font-size:22px;font-weight:900;border-radius:10px 0 0 10px">−</button>
-        <input type="tel" inputmode="numeric" id="tsqty-${safe}" value="1" onfocus="try{this.select()}catch(e){}" style="width:56px;height:48px;text-align:center;font-size:18px;font-weight:800;border:1px solid var(--border);border-left:none;border-right:none;margin:0;padding:0">
+        <input type="tel" inputmode="numeric" id="tsqty-${safe}" value="" placeholder="0" onfocus="try{this.select()}catch(e){}" style="width:56px;height:48px;text-align:center;font-size:18px;font-weight:800;border:1px solid var(--border);border-left:none;border-right:none;margin:0;padding:0">
         <button class="btn btn-ghost" onclick="tsQtyStep('${safe}',1)" style="width:auto;margin:0;padding:0;width:42px;height:48px;font-size:22px;font-weight:900;border-radius:0 10px 10px 0">+</button>
         <button class="btn btn-primary" onclick="tsQuickAddQty('${safe}',this)" style="width:auto;margin:0 0 0 8px;padding:0 18px;height:48px;font-size:15px;font-weight:800">Add</button>
       </div>
@@ -25740,7 +25740,7 @@ function tsQtyStep(safeName, delta){
   if(!inp)return;
   let v=parseInt(inp.value,10); if(isNaN(v))v=0;
   v=Math.max(0,v+delta);
-  inp.value=v;
+  inp.value=v?String(v):'';
 }
 // Real fix for "30 cases = 30 taps": adds the typed quantity in ONE
 // action instead of forcing +1 repeatedly. Reads the per-item box, drops
@@ -25751,13 +25751,13 @@ async function tsQuickAddQty(safeName, btn){
   const qty=document.getElementById('ts-add-qty');
   if(!inp||!item||!qty)return;
   const n=parseInt(inp.value,10);
-  if(isNaN(n)||n<=0){toast('Enter a quantity first','error');return;}
+  if(isNaN(n)||n<=0){toast('Type how many first (or tap +)','error');try{inp.focus();}catch(e){}return;}
   // Recover the real item name from the safe attr version.
   const realName=(_tsSheetItems||[]).find(x=>escapeAttr(x)===safeName)||inp.getAttribute('data-name')||safeName;
   item.value=realName;
   qty.value=String(n);
   await withLock(btn,'Adding…',async()=>{ await tsAddItem(); });
-  inp.value='1';
+  inp.value='';
 }
 function tsPickSelfItem(name){const item=document.getElementById('ts-add-item'),qty=document.getElementById('ts-add-qty');if(item)item.value=name;if(qty){qty.value=qty.value||'1';qty.focus();try{qty.select();}catch(e){}}}
 async function tsQuickAddOne(name,btn){const item=document.getElementById('ts-add-item'),qty=document.getElementById('ts-add-qty');if(!item||!qty)return;item.value=name;qty.value='1';await withLock(btn,'Adding…',async()=>{await tsAddItem();});}

@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-22-fix-90
+- **Force Restock (QR scan):** every item's quantity box used to start pre-filled with 1, so it looked like the scan restocked 1 of everything. Boxes now start empty (0); nothing is added until a quantity is typed (or + tapped) and Add is pressed. The box clears after each add. Help text says so.
+
 ## 2026-10-21-fix-89
 - **IT "Other games" tab:** IT tickets left open from earlier games (soccer, DFA, softball — nobody is signed in after those) stay in their own tab until a tech taps **✓ Mark fixed** (with what fixed it).
 - DB (live now): **6:05 AM auto-close** (pg_cron `stadium-morning-cleanup`) — stock requests, food requests and warehouse deliveries left open from the previous day are closed with "Auto-closed: left open after the game"; open IT tickets at Mountain America Stadium stands are closed; IT tickets from other venues and maintenance reports stay open. First run closed 93 stock, 14 food, 10 deliveries, 2 MAS IT tickets.
