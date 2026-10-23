@@ -9,6 +9,7 @@ the deploy date — always verify the tag on the live site after deploying.
 - **Stands working the next game come first:** 📅 marks stands with people scheduled for the next game, and matching prefers them. A yellow box lists every scheduled stand that got **no** sheet from the PDF, with a picker to copy a PDF sheet into it (suggested when Yellow Dog uses the same number, or the neighbour number for the same kind of stand, e.g. YD 202P Beer Portable → 203P Beer Portable).
 - **Turning a stand off now works for every stand:** before, only stands created in Admin were hidden; built-in stands (208P BarS Sausage, 216P SunDeck Grill) kept showing. Admin → Stands also has a "turn off a stand" picker for any Mountain America stand and lists every stand that is off, with Turn on.
 - "210/232 Fan Fuel Nachos" recognised as 210/232 Fan Fuel Nacho.
+- DB (10/23): stands working 10/24 that got no sheet from the Yellow Dog PDF were given a copy of a fresh one — 203P/210P/226P Beer Portable ← 208P Beer Portable; 209P/218P/229P Fan Fuel Beverage MKT ← 207P Fan Fuel Beverage MKT. Each stand keeps its own on-hand/restock/exp-start numbers where the item was already on its list. Old lists kept in `stand_sheets_backup_1024`.
 
 ## 2026-10-23-fix-92
 - **205P Bar S Sausage is now 206P Bar S Sausage** (correct stand number). Renamed in the app and in the database, history included (34 inventory lines, 7 attendance, 5 check-ins, 3 counts, NPO group Global Medical Brigades). Old name still recognised; its QR code (same stand id) keeps working.
