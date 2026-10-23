@@ -3673,8 +3673,8 @@
       </div>
 
       <div data-adm="stands" class="card" style="margin-top:12px;padding:14px">
-        <div style="font-weight:700;font-size:14px;margin-bottom:4px">📋 Stands created in the app</div>
-        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Stands added from this screen. Turning one off hides it from pickers; its counts and history are kept.</div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">📋 Stands created in the app · stands turned off</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">Stands added from this screen, and any stand that is turned off. Turning one off hides it from pickers and the Yellow Dog upload; its counts and history are kept.</div>
         <div id="adm-st-list"></div>
       </div>
 
@@ -4751,7 +4751,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-23-fix-92';
+const BUILD_TAG = '2026-10-23-fix-93';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7158,7 +7158,7 @@ async function api(action, data) {
     case 'getAllStandsList': {
       const rows = await sb('stand_sheets?select=stand');
       if (rows._err) return {ok:true, stands:[]};
-      return { ok:true, stands:[...new Set(rows.map(r=>r.stand))].sort(standSort) };
+      return { ok:true, stands:[...new Set(rows.map(r=>r.stand))].filter(n=>!/^zz-/.test(n||'')).sort(standSort) };
     }
 
     // ---------- TIMESHEET (paper Break Time Sheet Log format) ----------
@@ -10150,12 +10150,14 @@ function scMatchStands(secret){
 // over STAND_SOURCE_2026 so every picker and the 50000 login see them.
 async function loadAdminStands(force){
   if(!force&&state._adminStandsAt&&Date.now()-state._adminStandsAt<300000)return state._adminStands||[];
-  const rows=await sb('stands?operator=not.is.null&select=stand_name,venue,operator,description,sc_login,is_main_stand,created_by&order=stand_name.asc').catch(()=>({_err:true}));
+  // Every row, so a built-in stand turned off (venue "… - Inactive") is hidden too —
+  // 10/23: 208P BarS Sausage / 216P SunDeck Grill had no operator and kept showing.
+  const rows=await sb('stands?select=stand_name,venue,operator,description,sc_login,is_main_stand,created_by&order=stand_name.asc').catch(()=>({_err:true}));
   if(!Array.isArray(rows))return state._adminStands||[];
   rows.forEach(r=>{
     const v=String(r.venue||''),n=canonicalStandName2026(r.stand_name);
     if(/inactive/i.test(v)){if(/^mountain america/i.test(v))HIDDEN_INACTIVE_STANDS_2026.add(n);return;}
-    if(v!=='Mountain America Stadium')return;
+    if(v!=='Mountain America Stadium'||!r.operator)return;
     HIDDEN_INACTIVE_STANDS_2026.delete(n);
     const m=STAND_SOURCE_2026.find(x=>x.name===n);
     if(m){m.operator=r.operator;if(r.description)m.description=r.description;}
@@ -10293,11 +10295,24 @@ async function admScRemove(stand){
 }
 function admStandListRender(){
   const el=document.getElementById('adm-st-list');if(!el)return;
-  const rows=(state._adminStands||[]).filter(r=>r.created_by);
-  if(!rows.length){el.innerHTML='<div class="empty"><p>No stands created here yet.</p></div>';return;}
-  el.innerHTML=rows.map(r=>{const off=/inactive/i.test(r.venue||'');const venue=String(r.venue||'').replace(/\s*-\s*Inactive$/i,'');
+  const rows=(state._adminStands||[]).filter(r=>r.created_by||/inactive/i.test(r.venue||''));
+  const offPick=(state._allVenueStands&&state._allVenueStands.rows||[]).filter(x=>x.venue==='Mountain America Stadium');
+  const pick='<div style="display:flex;gap:6px;margin-bottom:8px"><select id="adm-st-offpick" class="form-input" style="margin:0;font-size:12px;padding:8px"><option value="">— turn off a stand —</option>'+offPick.map(x=>'<option value="'+escapeAttr(x.name)+'">'+escapeHtml(x.name)+'</option>').join('')+'</select><button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="admStandOffPick()">Turn off</button></div>';
+  if(!rows.length){el.innerHTML=pick+'<div class="empty"><p>No stands created here yet.</p></div>';return;}
+  el.innerHTML=pick+rows.map(r=>{const off=/inactive/i.test(r.venue||'');const venue=String(r.venue||'').replace(/\s*-\s*Inactive$/i,'');
     return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)'+(off?';opacity:.55':'')+'"><div style="min-width:0"><div style="font-size:13px;font-weight:700">'+escapeHtml(r.stand_name)+'</div><div style="font-size:11px;color:var(--text-2)">'+escapeHtml(venue)+' · '+escapeHtml(r.operator||'')+(r.is_main_stand?' · main stand':'')+(r.description?' · '+escapeHtml(r.description):'')+(off?' · <b>off</b>':'')+'</div></div>'+
       '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px;flex-shrink:0" onclick="admStandToggle(\''+escapeAttr(r.stand_name)+'\','+(off?'true':'false')+')">'+(off?'Turn on':'Turn off')+'</button></div>';}).join('');
+}
+async function admStandOffPick(){
+  const n=(document.getElementById('adm-st-offpick')||{}).value;if(!n)return toast('Pick a stand','error');
+  if(!(state._adminStands||[]).some(r=>r.stand_name===n)){
+    if(!(await confirmAction('Turn off '+n+'? It disappears from schedule, coverage and request pickers. Counts and history are kept, and you can turn it back on.',{title:'Turn off stand?',confirmLabel:'Turn off'})))return;
+    const r=await admStandUpsert(n,'Mountain America Stadium',{venue:'Mountain America Stadium - Inactive'});
+    if(r&&r._err)return toast('Could not save — try again','error');
+    HIDDEN_INACTIVE_STANDS_2026.add(canonicalStandName2026(n));state._allVenueStands=null;
+    await admStandsLoad();return toast('✅ '+n+' turned off');
+  }
+  return admStandToggle(n,false);
 }
 async function admStandToggle(name,turnOn){
   if(!isAdminSession())return;
@@ -10306,8 +10321,9 @@ async function admStandToggle(name,turnOn){
   if(!turnOn&&!(await confirmAction('Turn off '+name+'? It disappears from schedule, coverage and request pickers. Counts and history are kept, and you can turn it back on.',{title:'Turn off stand?',confirmLabel:'Turn off'})))return;
   const r=await sb('stands?stand_name=eq.'+encodeURIComponent(name),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({venue:turnOn?base:base+' - Inactive'})});
   if(r&&r._err)return toast('Could not save — try again','error');
+  state._allVenueStands=null;
   if(turnOn)HIDDEN_INACTIVE_STANDS_2026.delete(canonicalStandName2026(name));
-  else{const i=STAND_SOURCE_2026.findIndex(x=>x.name===name&&x._admin);if(i>=0&&base==='Mountain America Stadium')STAND_SOURCE_2026.splice(i,1);}
+  else{HIDDEN_INACTIVE_STANDS_2026.add(canonicalStandName2026(name));const i=STAND_SOURCE_2026.findIndex(x=>x.name===name&&x._admin);if(i>=0&&base==='Mountain America Stadium')STAND_SOURCE_2026.splice(i,1);}
   await admStandsLoad();toast(turnOn?'✅ '+name+' is back on':'✅ '+name+' turned off');
 }
 function scLoginLabel(){
@@ -15536,10 +15552,12 @@ async function adminRollCountOut(){
 // Pass 1 = same name / same number + same kind; pass 2 = same kind one
 // number away (Yellow Dog "202P Beer Portable" = app "203P Beer Portable").
 // Names staff actually counted under recently win ties.
-function ydSuggestAppStand(ydName, appNames, taken, pass, active) {
+function ydSuggestAppStand(ydName, appNames, taken, pass, active, sched) {
   const k = n => ydNorm(canonicalStandName2026(n) || n);
   const free = appNames.filter(a => !taken.has(a));
-  const pref = list => list.slice().sort((x, y) => (active.has(y) ? 1 : 0) - (active.has(x) ? 1 : 0));
+  const sc = sched || new Set();
+  // Stands working the next game first, then stands counted recently.
+  const pref = list => list.slice().sort((x, y) => ((sc.has(y) ? 2 : 0) + (active.has(y) ? 1 : 0)) - ((sc.has(x) ? 2 : 0) + (active.has(x) ? 1 : 0)));
   const num = invStandNum(ydName), fam = invFamily(ydName), kind = invKind(ydName);
   if (pass === 1) {
     const ex = free.filter(a => k(a) === k(ydName) || ydNorm(a) === ydNorm(ydName));
@@ -15570,26 +15588,49 @@ async function admYdPdfRead() {
     // Also feed the Yellow Dog copy-paste screen on this device.
     try { const compact = {}; ydStands.forEach(k => { compact[k] = r.stands[k].map(x => [x.item, x.type === 'Chargeable' ? 'C' : x.type === 'Supplies' ? 'S' : 'N']); });
       localStorage.setItem('ydSheet', JSON.stringify({ event: r.event, file: f.name, at: new Date().toISOString(), stands: compact })); } catch (e) {}
-    // App stands = names the counting screens use today (stand_sheets) + every active stand.
-    const sheetNames = await sb('stand_sheets?select=stand').catch(() => ({ _err: true }));
-    const names = new Set(Array.isArray(sheetNames) ? sheetNames.map(x => x.stand) : []);
-    (await allVenueStands()).forEach(x => names.add(x.name));
-    // Save under each stand's official name — that is the name the counting
-    // screen reads first (standDbCandidateNames2026), so the new list is used.
-    const appNames = [...new Set([...names].filter(Boolean).map(n => canonicalStandName2026(n) || n))]
-      .filter(n => !isHiddenInactiveStand2026(n) && !/warehouse/i.test(n)).sort(standSort);
+    // App stands = every switched-on stand, by its official name — the name the
+    // counting screen reads first (standDbCandidateNames2026). Old spellings
+    // left in stand_sheets and stands that are turned off are not offered
+    // (10/23: lists landed on "207 Sun Devil Burger & Tenders", "210 Fan Fuel
+    // Nachos", "205P Bar S Sausage" and the counting screens never saw them).
+    await loadAdminStands(true).catch(() => {}); state._allVenueStands = null;
+    const appNames = [...new Set((await allVenueStands()).map(x => canonicalStandName2026(x.name) || x.name))]
+      .filter(n => n && !isHiddenInactiveStand2026(n) && !/warehouse/i.test(n)).sort(standSort);
+    // Stands people are scheduled at for the next game (today or later).
+    const schRows = await sb('schedule?event_date=gte.' + stadiumDay() + '&is_test=not.is.true&order=event_date.asc&select=event_date,location&limit=3000').catch(() => ({ _err: true }));
+    const nextDay = Array.isArray(schRows) && schRows.length ? schRows[0].event_date : '';
+    const sched = new Set(Array.isArray(schRows) ? schRows.filter(x => x.event_date === nextDay).map(x => canonicalStandName2026(x.location)).filter(n => appNames.includes(n)) : []);
     const since = localISODate(new Date(Date.now() - 60 * 864e5));
     const recent = await sb('inventory_entries?entry_date=gte.' + since + '&select=stand').catch(() => ({ _err: true }));
     const active = new Set(Array.isArray(recent) ? recent.map(x => canonicalStandName2026(x.stand) || x.stand) : []);
     const taken = new Set(), plan = ydStands.map(y => ({ yd: y, app: '' }));
-    [1, 2].forEach(pass => plan.forEach(p => { if (p.app) return; const a = ydSuggestAppStand(p.yd, appNames, taken, pass, active); if (a) { p.app = a; taken.add(a); } }));
-    state._ydPdfUpload = { event: r.event, file: f.name, stands: r.stands, plan, appNames, active };
+    const prio = new Set([...sched, ...active]);
+    [1, 2].forEach(pass => plan.forEach(p => { if (p.app) return; const a = ydSuggestAppStand(p.yd, appNames, taken, pass, prio, sched); if (a) { p.app = a; taken.add(a); } }));
+    state._ydPdfUpload = { event: r.event, file: f.name, stands: r.stands, plan, appNames, active, sched: [...sched].sort(standSort), nextDay, extraPick: {} };
     admYdPdfRender();
   });
 }
+// A stand working the next game that no Yellow Dog sheet was matched to:
+// suggest the PDF sheet with the same number and kind, else same kind ±1.
+function ydGuessForMissing(app, u) {
+  const yds = u.plan.map(p => p.yd), num = invStandNum(app), fam = invFamily(app);
+  const same = yds.filter(y => num && invStandNum(y) === num && invFamily(y) === fam);
+  if (same.length === 1) return same[0];
+  // ±1 only when that sheet isn't already going to a stand that is working
+  // (Yellow Dog "202P Beer Portable" = scheduled "203P Beer Portable").
+  const sc = new Set(u.sched || []), busy = new Set(u.plan.filter(p => p.app && sc.has(p.app)).map(p => p.yd));
+  const near = yds.filter(y => num && invFamily(y) === fam && invStandNum(y) && Math.abs(invStandNum(y) - num) === 1 && !busy.has(y));
+  return near.length === 1 ? near[0] : '';
+}
+function admYdPdfExtra(i, yd) { const u = state._ydPdfUpload; if (!u || !u.extra[i]) return; u.extraPick[u.extra[i].app] = yd; admYdPdfRender(); }
 function admYdPdfRender() {
   const u = state._ydPdfUpload, st = document.getElementById('up-ydpdf-status'); if (!u || !st) return;
-  const opt = sel => '<option value="">— skip —</option>' + u.appNames.map(a => '<option value="' + escapeHtml(a) + '"' + (a === sel ? ' selected' : '') + '>' + (u.active.has(a) ? '★ ' : '') + escapeHtml(a) + '</option>').join('');
+  const usedApps = new Set(u.plan.filter(p => p.app).map(p => p.app));
+  const missing = (u.sched || []).filter(a => !usedApps.has(a));
+  missing.forEach(a => { if (!(a in u.extraPick)) u.extraPick[a] = ydGuessForMissing(a, u); });
+  u.extra = missing.map(a => ({ app: a, yd: u.extraPick[a] || '' }));
+  const sc = new Set(u.sched || []);
+  const opt = sel => '<option value="">— skip —</option>' + u.appNames.map(a => '<option value="' + escapeHtml(a) + '"' + (a === sel ? ' selected' : '') + '>' + (sc.has(a) ? '📅 ' : '') + (u.active.has(a) ? '★ ' : '') + escapeHtml(a) + '</option>').join('');
   const count = {}; u.plan.forEach(p => { if (p.app) count[p.app] = (count[p.app] || 0) + 1; });
   const rows = u.plan.map((p, i) => {
     const dup = p.app && count[p.app] > 1, exact = p.app && ydNorm(p.app) === ydNorm(p.yd);
@@ -15600,14 +15641,20 @@ function admYdPdfRender() {
       (alt.length ? '<div style="font-size:11px;color:#B45309">⚠️ Staff counted under <b>' + alt.map(escapeHtml).join('</b> / <b>') + '</b> recently — pick that if it\'s the same stand</div>' : '') +
       (dup ? '<div style="font-size:11px;color:#DC2626">Two Yellow Dog stands go to this app stand — pick one</div>' : !p.app ? '<div style="font-size:11px;color:#B45309">No app stand picked — will be skipped</div>' : !exact ? '<div style="font-size:11px;color:#2563EB">Different name — check this is the same stand</div>' : '') + '</div>';
   }).join('');
-  const n = u.plan.filter(p => p.app).length, dups = Object.values(count).some(c => c > 1);
+  const ydOpt = (app, sel) => '<option value="">— no sheet (keep its current list) —</option>' + u.plan.map(p => '<option value="' + escapeHtml(p.yd) + '"' + (p.yd === sel ? ' selected' : '') + '>' + escapeHtml(p.yd) + ' (' + u.stands[p.yd].length + ' items)</option>').join('');
+  const extraRows = u.extra.length ? '<div style="margin-top:12px;padding:8px;border:1px solid #F59E0B;border-radius:8px;background:rgba(245,158,11,.06)"><div style="font-size:12px;font-weight:800;color:#B45309">📅 ' + u.extra.length + ' stand' + (u.extra.length === 1 ? '' : 's') + ' working ' + escapeHtml(u.nextDay) + ' got no sheet from this PDF</div><div style="font-size:11px;color:var(--text-2);margin:2px 0 6px">Yellow Dog may name them differently. Pick the PDF sheet to copy into each one, or leave it to keep its current list.</div>' +
+    u.extra.map((e, i) => { const sameNum = u.plan.filter(p => invStandNum(p.yd) && invStandNum(p.yd) === invStandNum(e.app)).map(p => p.yd);
+      return '<div style="padding:5px 0;border-top:1px solid var(--border)"><div style="font-size:12px;font-weight:700">' + escapeHtml(e.app) + '</div><select class="form-input" style="margin:3px 0 0;font-size:12px;padding:8px" onchange="admYdPdfExtra(' + i + ',this.value)">' + ydOpt(e.app, e.yd) + '</select>' +
+        (!e.yd && sameNum.length ? '<div style="font-size:11px;color:#B45309">Same number in the PDF: <b>' + sameNum.map(escapeHtml).join('</b> / <b>') + '</b></div>' : '') + '</div>'; }).join('') + '</div>' : '';
+  const nx = u.extra.filter(e => e.yd).length;
+  const n = u.plan.filter(p => p.app).length + nx, dups = Object.values(count).some(c => c > 1);
   st.innerHTML = '<div style="font-weight:800;margin:6px 0">' + escapeHtml(u.event || u.file) + ' · ' + u.plan.length + ' stands in PDF</div>' +
-    '<div style="font-size:11px;color:var(--text-2);margin-bottom:6px">Yellow Dog stand → app stand. ★ = stand counted in the app in the last 60 days. Blue = different name (check it); orange = skipped.</div>' + rows +
+    '<div style="font-size:11px;color:var(--text-2);margin-bottom:6px">Yellow Dog stand → app stand. 📅 = people scheduled there for the next game · ★ = counted in the app in the last 60 days. Blue = different name (check it); orange = skipped. Stands that are turned off are not listed.</div>' + rows + extraRows +
     '<button class="btn btn-primary" style="margin-top:10px" ' + (dups || !n ? 'disabled' : 'onclick="admYdPdfSave()"') + '>✅ Save ' + n + ' stand' + (n === 1 ? '' : 's') + ' to inventory</button>';
 }
 async function admYdPdfSave() {
   const u = state._ydPdfUpload, st = document.getElementById('up-ydpdf-status'); if (!u) return;
-  const plan = u.plan.filter(p => p.app);
+  const plan = u.plan.filter(p => p.app).concat((u.extra || []).filter(e => e.yd).map(e => ({ yd: e.yd, app: e.app })));
   const total = plan.reduce((a, p) => a + u.stands[p.yd].length, 0);
   // 10/15: sheets were replaced after stands had counted, so new items (Coke BIBs) had no Count In.
   const counted = await sb('inventory_entries?entry_date=eq.' + stadiumDay() + '&phase=eq.Count%20In&stand=in.(' + plan.map(p => '"' + String(p.app).replace(/"/g, '') + '"').join(',') + ')&select=stand').catch(() => ({ _err: true }));
@@ -18357,7 +18404,7 @@ async function allVenueStands(){
   if(state._allVenueStands&&Date.now()-state._allVenueStands.at<600000)return state._allVenueStands.rows;
   const rows=await sb('stands?select=stand_name,venue,stand_type').catch(()=>({_err:true}));
   const seen=new Map();
-  mountainAmericaStandNames2026().forEach(n=>seen.set(n,'Mountain America Stadium'));
+  mountainAmericaStandNames2026().filter(n=>!isHiddenInactiveStand2026(n)).forEach(n=>seen.set(n,'Mountain America Stadium'));
   if(Array.isArray(rows))rows.forEach(r=>{const v=String(r.venue||'');if(!r.stand_name||/inactive/i.test(v)||r.stand_type==='warehouse')return;const n=v==='Mountain America Stadium'?canonicalStandName2026(r.stand_name):r.stand_name;if(v==='Mountain America Stadium'&&isHiddenInactiveStand2026(n))return;if(!seen.has(n))seen.set(n,v||'Other');});
   const out=[...seen].map(([name,venue])=>({name,venue})).sort((a,b)=>(a.venue==='Mountain America Stadium'?0:1)-(b.venue==='Mountain America Stadium'?0:1)||a.venue.localeCompare(b.venue)||standSort(a.name,b.name));
   state._allVenueStands={at:Date.now(),rows:out};
@@ -18577,7 +18624,7 @@ function supportOpsScopeLabel(){if(state.supportOpsScope==='__my__')return state
 // Exactly 68 current locations supplied by operations on 2026-09-04.
 // Historical aliases remain accepted, but current pickers show ONLY these 68.
 const STAND_SOURCE_2026 = [{"name": "140 Inferno Favorites", "description": "Aramark - 8 all", "operator": "Aramark"}, {"name": "142 Inferno Burgers", "description": "4 staffing or bahama", "operator": "Review"}, {"name": "202P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "203P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "203P Game Day", "description": "NPO Black Hawk Band Boosters", "operator": "NPO"}, {"name": "204 Pitchfork Pizza", "description": "NPO Ottawa University", "operator": "NPO"}, {"name": "204P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "206P Bar S Sausage", "description": "NPO Global Medical Brigades", "operator": "NPO"}, {"name": "205P Chick Fil A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "206P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "206P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "206P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "207 Sun Devil Burgers & Tenders", "description": "Aramark - 22 all", "operator": "Aramark"}, {"name": "207P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "208P BarS Sausage", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "208P Beer Portable", "description": "Aramark - 3 all (double portables)", "operator": "Aramark"}, {"name": "208P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "209P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "209P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "210 Fan Fuel Nacho", "description": "NPO Global Dental Brigades", "operator": "NPO"}, {"name": "210P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "210P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "211P Game Day", "description": "NPO Black Hawk Band Boosters", "operator": "NPO"}, {"name": "212P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "214P Bahamas Bucks SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "215B Draft House", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "216 Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "216M - Fan Fuel BevMKT (Mashgin/S4 combo)", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "216P - SunDeck Grill", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "217P - BarS Draft", "description": "NPO Black Hawk Band Boosters", "operator": "NPO"}, {"name": "217P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "218P Fan Fuel Beverage MKT", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "218T StreetEats", "description": "Subcontractor (COHO) - stand login 50000 + 218", "operator": "Subcontractor"}, {"name": "219 Cold Beer Cheeseburgers SC", "description": "NPO Beggars Gate", "operator": "NPO"}, {"name": "219 P Kathy's Cookies SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219P Chick Fil A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219P Venezia Brick Oven SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219T BBQ Trailer", "description": "COHO-", "operator": "COHO"}, {"name": "220B Draft House", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "220P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "221B Fork Em BBQ", "description": "COHO - added 10/10 inventory", "operator": "COHO"}, {"name": "221P Taco Bar", "description": "NPO Global Dental Brigades", "operator": "NPO"}, {"name": "222M - Fan Fuel BevMKT (Mashgin/S4 combo)", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "224P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "224P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "224P Venezia Brick Oven SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "225P Game Day", "description": "NPO Valley Vista Boosters", "operator": "NPO"}, {"name": "226 Pitchfork Pizza", "description": "NPO Ottawa University", "operator": "NPO"}, {"name": "226P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "226P Chick-Fil-A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "227P BarS Sausage", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "227P Chick-Fil-A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "228P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "228P Fan Fuel Beverage MKT", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "228P Stiger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "229 Sun Devil Burger & Tenders", "description": "Aramark - 22 all", "operator": "Aramark"}, {"name": "229P BarS Sausage", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "229P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "229P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "229P Game Day", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "230P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "230P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "230P Stiger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "231P BarS Sausage", "description": "NPO Infinity Booster", "operator": "NPO"}, {"name": "231P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "232 Fan Fuel Nacho", "description": "NPO Cactus Boosters", "operator": "NPO"}, {"name": "232P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "233P Game Day", "description": "NPO Infinity Booster", "operator": "NPO"}, {"name": "234P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "234P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "243P Lemonade SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "310P Beer Portable", "description": "Aramark - 1 all", "operator": "Aramark"}, {"name": "316P Beer Portable", "description": "Aramark - 1 all", "operator": "Aramark"}, {"name": "334 San Tan Favorites", "description": "NPO/Aramark - 12 all", "operator": "Mixed"}, {"name": "348 San Tan Venezia's", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "401P BarS Sausage", "description": "NPO Infinity Booster", "operator": "NPO"}, {"name": "403M - Fan Fuel BevMKT (mashgin/S4 Combo)", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "404 Chick-Fill A", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "404P Bahamas Buck SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "405P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "408 Cold Beer Cheeseburgers SC", "description": "NPO Infinity Booster", "operator": "NPO"}, {"name": "409P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "414 Sun Devil Favorites", "description": "NPO Copa Health", "operator": "NPO"}, {"name": "438 Huss Hideout Favorites", "description": "NPO--", "operator": "NPO"}, {"name": "442 Huss Hideout Favorites", "description": "NPO/ Aramark -22 all", "operator": "Mixed"}, {"name": "Fan Fuel Beverage Market", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "SE Gate-144 SE Gate Dogs/H2O/Beer", "description": "Subcontractor 100H Hawking SC", "operator": "Subcontractor"}, {"name": "SW Gate-138SW Gate Dogs/H2O/Beer", "description": "Subcontractor 100H Hawking SC", "operator": "Subcontractor"}];
-const STAND_NAME_ALIASES_2026 = {"226P Fan Fuel Beverage MKT": "226P Beer Portable", "229P Fan Fuel Bev Market": "229P Fan Fuel Beverage MKT", "404 Chichk-Fil-A": "404 Chick-Fill A", "237P Bahama Bucks": "234P Bahama Bucks", "403P Bahamas Buck SC": "404P Bahamas Buck SC", "SW Gate-138 SW Gate Dogs/H2O/Beer": "SW Gate-138SW Gate Dogs/H2O/Beer", "207 Sun Devil Burger & Tenders": "207 Sun Devil Burgers & Tenders", "229 Sun Devil Burgers & Tenders": "229 Sun Devil Burger & Tenders", "207 Fan Fuel Beverage": "207P Fan Fuel Beverage MKT", "229 Fan Fuel Beverage": "229P Fan Fuel Beverage MKT", "204 Fan Fuel Beverage MKT": "204P Fan Fuel Beverage MKT", "205P Bar S Sausage": "206P Bar S Sausage", "205P BarS Sausage": "206P Bar S Sausage", "206P Bar S Sausage - NPO": "206P Bar S Sausage", "224P Bahama Bucks SC": "224P Bahama Bucks", "209 Fan Fuel Beverage MKT": "209P Fan Fuel Beverage MKT"};
+const STAND_NAME_ALIASES_2026 = {"226P Fan Fuel Beverage MKT": "226P Beer Portable", "229P Fan Fuel Bev Market": "229P Fan Fuel Beverage MKT", "404 Chichk-Fil-A": "404 Chick-Fill A", "237P Bahama Bucks": "234P Bahama Bucks", "403P Bahamas Buck SC": "404P Bahamas Buck SC", "SW Gate-138 SW Gate Dogs/H2O/Beer": "SW Gate-138SW Gate Dogs/H2O/Beer", "207 Sun Devil Burger & Tenders": "207 Sun Devil Burgers & Tenders", "229 Sun Devil Burgers & Tenders": "229 Sun Devil Burger & Tenders", "207 Fan Fuel Beverage": "207P Fan Fuel Beverage MKT", "229 Fan Fuel Beverage": "229P Fan Fuel Beverage MKT", "204 Fan Fuel Beverage MKT": "204P Fan Fuel Beverage MKT", "205P Bar S Sausage": "206P Bar S Sausage", "205P BarS Sausage": "206P Bar S Sausage", "206P Bar S Sausage - NPO": "206P Bar S Sausage", "224P Bahama Bucks SC": "224P Bahama Bucks", "210 Fan Fuel Nachos": "210 Fan Fuel Nacho", "232 Fan Fuel Nachos": "232 Fan Fuel Nacho", "209 Fan Fuel Beverage MKT": "209P Fan Fuel Beverage MKT"};
 // V11.9.1 — inactive locations stay in Supabase for history, but are hidden
 // from current game-day assignment/mapping pickers.
 const HIDDEN_INACTIVE_STANDS_2026 = new Set([

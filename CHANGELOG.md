@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-23-fix-93
+- **Yellow Dog PDF upload — only real stands:** the app-stand list is now just the switched-on stands under their official names. Old spellings left in the item-list table ("207 Sun Devil Burger & Tenders", "210 Fan Fuel Nachos", "205P Bar S Sausage", "438 Nacho HUSS"…) and stands that are turned off are no longer offered. On 10/23 three lists were saved under those old spellings and the counting screens never saw them (fixed in the DB: moved to 207 Sun Devil Burgers & Tenders, 210 Fan Fuel Nacho, 206P Bar S Sausage; replaced lists kept in `stand_sheets_backup_1024`).
+- **Stands working the next game come first:** 📅 marks stands with people scheduled for the next game, and matching prefers them. A yellow box lists every scheduled stand that got **no** sheet from the PDF, with a picker to copy a PDF sheet into it (suggested when Yellow Dog uses the same number, or the neighbour number for the same kind of stand, e.g. YD 202P Beer Portable → 203P Beer Portable).
+- **Turning a stand off now works for every stand:** before, only stands created in Admin were hidden; built-in stands (208P BarS Sausage, 216P SunDeck Grill) kept showing. Admin → Stands also has a "turn off a stand" picker for any Mountain America stand and lists every stand that is off, with Turn on.
+- "210/232 Fan Fuel Nachos" recognised as 210/232 Fan Fuel Nacho.
+
 ## 2026-10-23-fix-92
 - **205P Bar S Sausage is now 206P Bar S Sausage** (correct stand number). Renamed in the app and in the database, history included (34 inventory lines, 7 attendance, 5 check-ins, 3 counts, NPO group Global Medical Brigades). Old name still recognised; its QR code (same stand id) keeps working.
 - **New stand: 224P Bahama Bucks** (Subcontractor), with the 234P Bahama Bucks item list.
