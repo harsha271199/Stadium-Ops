@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-23-fix-91
+- **Stand name spellings from the roster:** "207 Sun Devil Burger & Tenders", "229 Sun Devil Burgers & Tenders", "207 Fan Fuel Beverage", "229 Fan Fuel Beverage", "204/209 Fan Fuel Beverage MKT" are now recognised as the same stands everywhere (schedule upload, login, pickers). No stand was renamed; inventory history is untouched.
+- DB: 10/24 ASU vs Kansas State schedule loaded (125 people).
+
 ## 2026-10-22-fix-90
 - **Force Restock (QR scan):** every item's quantity box used to start pre-filled with 1, so it looked like the scan restocked 1 of everything. Boxes now start empty (0); nothing is added until a quantity is typed (or + tapped) and Add is pressed. The box clears after each add. Help text says so.
 
