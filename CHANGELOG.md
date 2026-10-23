@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-23-fix-92
+- **205P Bar S Sausage is now 206P Bar S Sausage** (correct stand number). Renamed in the app and in the database, history included (34 inventory lines, 7 attendance, 5 check-ins, 3 counts, NPO group Global Medical Brigades). Old name still recognised; its QR code (same stand id) keeps working.
+- **New stand: 224P Bahama Bucks** (Subcontractor), with the 234P Bahama Bucks item list.
+- DB: 10/24 Premium roster loaded (87 people, same locations as 10/10).
+
 ## 2026-10-23-fix-91
 - **Stand name spellings from the roster:** "207 Sun Devil Burger & Tenders", "229 Sun Devil Burgers & Tenders", "207 Fan Fuel Beverage", "229 Fan Fuel Beverage", "204/209 Fan Fuel Beverage MKT" are now recognised as the same stands everywhere (schedule upload, login, pickers). No stand was renamed; inventory history is untouched.
 - DB: 10/24 ASU vs Kansas State schedule loaded (125 people).
