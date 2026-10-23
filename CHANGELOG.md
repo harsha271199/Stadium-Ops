@@ -7,7 +7,8 @@ the deploy date — always verify the tag on the live site after deploying.
 ## 2026-10-23-fix-92
 - **205P Bar S Sausage is now 206P Bar S Sausage** (correct stand number). Renamed in the app and in the database, history included (34 inventory lines, 7 attendance, 5 check-ins, 3 counts, NPO group Global Medical Brigades). Old name still recognised; its QR code (same stand id) keeps working.
 - **New stand: 224P Bahama Bucks** (Subcontractor), with the 234P Bahama Bucks item list.
-- DB: 10/24 Premium roster loaded (87 people, same locations as 10/10).
+- DB: 10/24 Premium roster loaded (88 people incl. Anurag Singh added to Founders, same locations as 10/10).
+- DB: **208P BarS Sausage** and **216P - SunDeck Grill** turned off (hidden from pickers/schedule; counts and history kept; can be turned back on in Admin → Stands).
 - DB: Premium locations renamed to the official names, past check-ins (9/24–10/10) and 10/24 roster included: West Club Coaches → Coaches Club Bar, West Clubs Founders → Founders Club Bar, West Clubs Legends → Legends Club Bar, North Terrace → North Terrace Club Bar, South Loge → South Loge Club Bar, Field Box → Field Boxes Bar, Stadium Club → Stadium Club Bar (stays off; Stadium Club staff are under "Suites 200 — Stadium Club"). Added Suite level Bar 1st Floor, Suite level Bar 2nd Floor, South Loge Club N/A Bev.
 
 ## 2026-10-23-fix-91
