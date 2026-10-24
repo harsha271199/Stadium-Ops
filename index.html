@@ -4757,7 +4757,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-104';
+const BUILD_TAG = '2026-10-24-fix-105';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -8430,7 +8430,8 @@ function getInventoryTargetStand() {
 function returnAfterStandTaskOrHome() {
   const dest = state.standTaskReturnScreen || 'screen-home';
   state.standTaskReturnScreen = '';
-  if (dest === 'screen-all-checks') showScreen('screen-all-checks');
+  if (dest === 'screen-inv-tracker' && invTrackerAllowed()) showScreen('screen-inv-tracker');
+  else if (dest === 'screen-all-checks') showScreen('screen-all-checks');
   else if (dest === 'screen-submenu-checks') showScreen('screen-submenu-checks');
   else if (dest === 'screen-bedcheck' || isManagerOpsSession()) { showScreen('screen-bedcheck'); restoreMgrSidebarState(); }
   else { renderHome(); goRoleHome(); }

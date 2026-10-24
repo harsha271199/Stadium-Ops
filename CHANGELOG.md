@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-105
+- Inventory opened from the Checkout & Inventory Tracker returns to the tracker after Save (it went to the home screen).
+
 ## 2026-10-24-fix-104
 - **Checkout & Inventory Tracker for named non-managers.** Besides Managers/Admin, anyone whose employee ID is in app_settings `inv_tracker_access` (comma list) can open it; IT techs on that list get the button on their IT screen. DB: Krishil Patel (IT, 31210079 / 32310079) added.
 
