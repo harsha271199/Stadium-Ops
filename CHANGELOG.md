@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-100
+- **Stock requests only go to warehouse people who are signed in today.** A request goes to the people covering the stand who have opened the app today; if none of them have, to that stand's backups who have; if nobody, it stays open for everyone and every signed-in warehouse phone is alerted. The 10-minute pass-along also skips people who aren't signed in. Matched by ID or name (warehouse staff often have two accounts).
+- DB (10/24): Anup Madake and Adit Raut moved to Concession Runner — logins changed to food runner (same ID/PIN), today's schedule moved to Concession Runner, warehouse stands cleared (still covered by Gilmer / Rodriquez / Selle / Derico / Bentley). Runner stands: Anup = West (same as Shivam Gaikwad), Adit = East (same as Abdulrahman Bahri).
+
 ## 2026-10-24-fix-99
 - **"Two people match that ID and name" for one person (Donal Pradeep, 10/24).** Old 9/5 and 9/27 schedule rows had him under a short ID ("70498", last 5 digits), so his sign-in found two IDs. Sign-in now decides using today's schedule rows first, and a short ID that is the end of the full ID with the same name counts as the same person.
 - DB: short IDs replaced with the full ID in schedule, attendance and check-ins for Donal Pradeep, Joel Thangirala, Mansi Nayak, Vedang Verma and Janhavi Mane; the short-ID copies in the people directory switched off. No other short/full ID pairs left.

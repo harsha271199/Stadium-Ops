@@ -4751,7 +4751,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-99';
+const BUILD_TAG = '2026-10-24-fix-100';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7469,11 +7469,13 @@ async function whAutoPassStale(reqs){
       const main=(cov.people||[]).filter(p=>p&&p.employee_id);
       const mainIds=new Set(main.map(p=>String(p.employee_id)));
       const backup=(await whBackupPeopleForStand(r.stand).catch(()=>[])).filter(p=>p&&p.employee_id&&!mainIds.has(String(p.employee_id)));
-      const people=[...main,...backup];
+      const onM=await whOnDutyMatcher().catch(()=>null);
+      const mainOn=main.filter(p=>!onM||onM(p)),backupOn=backup.filter(p=>!onM||onM(p));
+      const people=[...mainOn,...backupOn];
       if(people.length<2)continue;
       const tried=new Set([...(r.triedIds||[]),...(r.assignedToIds||[])].map(String));
-      const leftMain=main.filter(p=>!tried.has(String(p.employee_id)));
-      const left=leftMain.length?leftMain:backup.filter(p=>!tried.has(String(p.employee_id)));
+      const leftMain=mainOn.filter(p=>!tried.has(String(p.employee_id)));
+      const left=leftMain.length?leftMain:backupOn.filter(p=>!tried.has(String(p.employee_id)));
       const next=left.length?await splitPickOne('wh',left):people;
       const rows=await sb('stock_requests?id=eq.'+encodeURIComponent(r.id)+'&status=eq.open&select=id,stand,items_json,claimed_by').catch(()=>({_err:true}));
       if(rows._err||!Array.isArray(rows)||!rows[0]||rows[0].claimed_by)continue;
@@ -7499,9 +7501,24 @@ async function whBackupPeopleForStand(stand){
   return (Array.isArray(rows)?rows:[]).filter(a=>a.team==='warehouse'&&Array.isArray(a.backup_stands)&&a.backup_stands.some(x=>x===stand||canonicalStandName2026(x).toLowerCase()===c))
     .map(a=>({employee_id:a.employee_id,name:a.name||a.employee_name||a.employee_id,stands:[stand]}));
 }
+// Who in the warehouse has opened the app today. Matched by ID or name — many
+// warehouse staff have two accounts (temp "…60000" + real ID).
+async function whOnDutyMatcher(){
+  const rows=await sb('on_duty?day=eq.'+stadiumDay()+'&role=in.(warehouse_employee,warehouse_supervisor,warehouse_manager)&select=employee_id,name').catch(()=>({_err:true}));
+  if(!Array.isArray(rows)||!rows.length)return null;
+  const nk=n=>loginFold(n).replace(/[^a-z ]/g,' ').split(/\s+/).filter(Boolean).sort().join(' ');
+  const ids=new Set(rows.map(r=>String(r.employee_id))),names=new Set(rows.map(r=>nk(r.name)).filter(Boolean));
+  return p=>ids.has(String(p.employee_id))||names.has(nk(p.name));
+}
 async function resolveWarehouseRouting(stand){
   let cov=await resolveWarehouseAssigneesForStand(stand).catch(()=>({people:[]}));
-  if(!cov.people||!cov.people.length){const bk=await whBackupPeopleForStand(stand).catch(()=>[]);if(bk.length)cov={available:true,people:bk};}
+  // A request goes to the people covering the stand who are signed in today.
+  // Nobody signed in for that stand → its backups who are signed in → else it
+  // is left open and every signed-in warehouse phone is alerted (10/24: students
+  // given stands who never opened the app would have sat on orders).
+  const on=await whOnDutyMatcher().catch(()=>null);
+  if(on&&cov.people&&cov.people.length){const live=cov.people.filter(on);cov={...cov,people:live};}
+  if(!cov.people||!cov.people.length){const bk=(await whBackupPeopleForStand(stand).catch(()=>[])).filter(p=>!on||on(p));cov={available:true,people:bk};}
   const st=await splitSettings().catch(()=>_split);
   if(!st.wh||!cov.people||cov.people.length<2)return cov;
   return {...cov,people:await splitPickOne('wh',cov.people),split:true};
