@@ -4751,7 +4751,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-97';
+const BUILD_TAG = '2026-10-24-fix-98';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10935,6 +10935,16 @@ async function leadershipOpenWalkin(){
 // pressure — which is both slow and the main source of typo'd IDs that
 // later break tip distribution. Searching the real employee directory
 // and tapping the right person fills both fields exactly right.
+// People search: every typed word must be in the name, any order — the
+// directory stores "Last, First", people type "Deonte Lang". Digits search the ID.
+function dirSearchFilter(q, col) {
+  col = col || 'full_name';
+  const t = String(q || '').replace(/[*,()."]/g, ' ').trim();
+  if (/^\d+$/.test(t)) return 'employee_id=ilike.' + encodeURIComponent('*' + t + '*');
+  const w = t.split(/\s+/).filter(Boolean).slice(0, 4);
+  if (w.length <= 1) return col + '=ilike.' + encodeURIComponent('*' + (w[0] || '') + '*');
+  return 'and=(' + w.map(x => col + '.ilike.' + encodeURIComponent('*' + x + '*')).join(',') + ')';
+}
 let _walkinSearchTimer = null;
 function walkinSearchPeople(term){
   clearTimeout(_walkinSearchTimer);
@@ -10945,7 +10955,7 @@ function walkinSearchPeople(term){
   box.innerHTML = '<div style="font-size:11px;color:var(--text-2);padding:6px 0">Searching…</div>';
   _walkinSearchTimer = setTimeout(async ()=>{
     const safe = encodeURIComponent('*'+q.replace(/[*,()]/g,'')+'*');
-    const rows = await sb('employee_directory?full_name=ilike.'+safe+'&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(()=>({_err:true}));
+    const rows = await sb('employee_directory?'+dirSearchFilter(q)+'&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(()=>({_err:true}));
     if(rows._err){ box.innerHTML='<div class="notice" style="font-size:11px">Could not search right now — type the name and ID manually below.</div>'; return; }
     if(!Array.isArray(rows)||!rows.length){
       box.innerHTML='<div class="notice info" style="font-size:11px;padding:8px 10px">No match found — type their name and ID manually below. They\'ll still be added.</div>';
@@ -11638,7 +11648,7 @@ function teamWalkinSearch(term){
     // rejection popup after the fact. One schedule query, reused for every
     // candidate below, same suffix-match rule addWalkin's own backend uses.
     const [rows,todaySched]=await Promise.all([
-      sb('employee_directory?full_name=ilike.'+safe+'&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(()=>({_err:true})),
+      sb('employee_directory?'+dirSearchFilter(q)+'&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(()=>({_err:true})),
       sb('schedule?event_date=eq.'+encodeURIComponent(today)+'&select=employee_id,location,event_name').catch(()=>({_err:true}))
     ]);
     if(rows._err){box.innerHTML='<div class="notice" style="font-size:11px">Could not search right now — type the name and ID manually below.</div>';return;}
@@ -23914,7 +23924,7 @@ function whTempSearch(term) {
   box.innerHTML = '<div style="font-size:11px;color:var(--text-2);padding:6px 0">Searching…</div>';
   _whTempTimer = setTimeout(async () => {
     const safe = encodeURIComponent('*' + q.replace(/[*,()]/g, '') + '*');
-    const filter = /^\d+$/.test(q) ? 'employee_id=ilike.' + safe : 'full_name=ilike.' + safe;
+    const filter = dirSearchFilter(q);
     const rows = await sb('employee_directory?' + filter + '&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(() => ({ _err: true }));
     if (rows._err || !Array.isArray(rows)) { box.innerHTML = '<div class="notice" style="font-size:11px">Search failed — try again.</div>'; return; }
     _whTempHits = rows;
@@ -24626,8 +24636,8 @@ function premiumWalkinSearch(term) {
     // from the actual roster) so Role auto-fills correctly; the generic
     // employee_directory fills in anyone not in that list yet.
     const [posRows, dirRows] = await Promise.all([
-      sb('premium_positions?full_name=ilike.' + safe + '&order=full_name.asc&limit=8&select=employee_id,full_name,position').catch(() => ({ _err: true })),
-      sb('employee_directory?full_name=ilike.' + safe + '&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(() => ({ _err: true }))
+      sb('premium_positions?' + dirSearchFilter(q) + '&order=full_name.asc&limit=8&select=employee_id,full_name,position').catch(() => ({ _err: true })),
+      sb('employee_directory?' + dirSearchFilter(q) + '&is_active=eq.true&order=full_name.asc&limit=8&select=employee_id,full_name,role').catch(() => ({ _err: true }))
     ]);
     const seen = new Set();
     const results = [];

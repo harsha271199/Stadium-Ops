@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-98
+- **People search finds "First Last".** Walk-in, team "Add person", warehouse temp and Premium walk-in searches now match every typed word in any order ("Deonte Lang" finds "Lang, Deonte"); digits search the employee ID.
+- DB: ReadyOn people list (ASU Athletics, 563 rows) loaded into the people directory: 488 with an employee ID (75 new, the rest already there and kept as they were; nobody removed). Skipped: 72 rows with no employee ID (mostly "Review by manager") and 3 with an ID that isn't a number (Amorette Ysea, joszett whitford, Andy Torres). Anup Madake / Adit Raut added with their temporary IDs.
+
 ## 2026-10-24-fix-97
 - **Admin → Access search finds names in any order.** Names are stored "Last, First", so searching "Anup Madake" found nothing; now every typed word just has to appear ("Anup Madake", "madake", "8816…" all find Madake, Anup).
 
