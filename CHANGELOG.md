@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-101
+- **Warehouse pass-along waits 20 minutes (was 10).** An order nobody picks up now moves to the next person covering the stand / the backups after 20 minutes. Food runners stay at 10. The area-wide "open to everyone" step is unchanged (30 min).
+- DB (10/24): warehouse coverage updated — Raymond 204 side, Robert 210 + Upper West, Darrell 210, Larry 229 + Upper East, Michael 210 (backup Upper West); SE Gate-144 turned off.
+
 ## 2026-10-24-fix-100
 - **Stock requests only go to warehouse people who are signed in today.** A request goes to the people covering the stand who have opened the app today; if none of them have, to that stand's backups who have; if nobody, it stays open for everyone and every signed-in warehouse phone is alerted. The 10-minute pass-along also skips people who aren't signed in. Matched by ID or name (warehouse staff often have two accounts).
 - DB (10/24): Anup Madake and Adit Raut moved to Concession Runner — logins changed to food runner (same ID/PIN), today's schedule moved to Concession Runner, warehouse stands cleared (still covered by Gilmer / Rodriquez / Selle / Derico / Bentley). Runner stands: Anup = West (same as Shivam Gaikwad), Adit = East (same as Abdulrahman Bahri).

@@ -4751,7 +4751,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-100';
+const BUILD_TAG = '2026-10-24-fix-101';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7415,6 +7415,8 @@ function stockEtaHtml(r) {
 // passes to the next person in the area (warehouse); after everyone, the whole area. OFF: food → the first runner on the area,
 // warehouse → everyone in the area (the old way).
 const SPLIT_STALE_MIN = 10;
+// Warehouse waits longer before an order moves to the next person / the backups (10/24: 20 min).
+const WH_PASS_MIN = 20;
 let _split = { at:0, food:false, wh:false };
 async function splitSettings(force){
   if(!force&&Date.now()-_split.at<30000)return _split;
@@ -7462,7 +7464,7 @@ let _whAutoPassAt=0;
 async function whAutoPassStale(reqs){
   if(Date.now()-_whAutoPassAt<30000)return;_whAutoPassAt=Date.now();
   const st=await splitSettings().catch(()=>_split);if(!st.wh)return;
-  const due=(reqs||[]).filter(r=>r.status==='Pending'&&!r.claimedBy&&(r.assignedToIds||[]).length===1&&splitStaleForArea(r.assignedAt||r.timestamp));
+  const due=(reqs||[]).filter(r=>r.status==='Pending'&&!r.claimedBy&&(r.assignedToIds||[]).length===1&&splitStaleForArea(r.assignedAt||r.timestamp,WH_PASS_MIN/SPLIT_STALE_MIN));
   for(const r of due.slice(0,5)){
     try{
       const cov=await resolveWarehouseAssigneesForStand(r.stand).catch(()=>({people:[]}));
@@ -7487,12 +7489,12 @@ async function whAutoPassStale(reqs){
       const guard='&status=eq.open&claimed_by=is.null&items_json->meta->>assigned_at='+(old?'eq.'+encodeURIComponent(old):'is.null');
       const res=await sb('stock_requests?id=eq.'+encodeURIComponent(r.id)+guard,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({items_json:Object.assign({},j,{meta})})}).catch(()=>({_err:true}));
       if(res._err||!Array.isArray(res)||!res.length)continue;
-      next.forEach(p=>sendPushTo(String(p.employee_id),left.length?'📥 Request passed to you':'📥 Open request in your area',r.stand+' — not picked up in '+SPLIT_STALE_MIN+' min'));
+      next.forEach(p=>sendPushTo(String(p.employee_id),left.length?'📥 Request passed to you':'📥 Open request in your area',r.stand+' — not picked up in '+WH_PASS_MIN+' min'));
     }catch(e){}
   }
 }
 // Backup layer: game_day_assignments.backup_stands. A backup never gets a new
-// order first — only when the stand has no main person, or on the 10-min pass
+// order first — only when the stand has no main person, or on the 20-min pass
 // after every main person had it (West backs up West + Upper West, East backs
 // up East + Upper East).
 async function whBackupPeopleForStand(stand){
@@ -12966,7 +12968,7 @@ function rnAreaOf(stands){const list=(stands||[]).map(canonicalStandName2026);if
 function splitRenderAdmin(){
   const el=document.getElementById('rn-split');if(!el)return;
   const sw=(team,on,label)=>'<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0"><div><div style="font-weight:800;font-size:13px">'+label+'</div><div style="font-size:11px;color:var(--text-2)">'+(on?'ON — each order goes to ONE person in the area (least busy)':'OFF — '+(team==='food'?'first runner on the area gets it':'everyone in the area sees it'))+'</div></div><button class="btn '+(on?'btn-primary':'btn-ghost')+'" style="width:auto;margin:0;padding:8px 14px" onclick="splitSet(\''+team+'\','+(!on)+')">'+(on?'ON':'OFF')+'</button></div>';
-  el.innerHTML='<div style="font-weight:900;font-size:13px;margin-bottom:2px">🔀 Split orders inside an area</div><div style="font-size:11px;color:var(--text-2);margin-bottom:6px">With 2+ people on one area: 1st order → person A, next order → person B. Not taken in '+SPLIT_STALE_MIN+' min → Warehouse: passes to the next person in that area (after everyone: whole area) · Food: everyone in the area sees it. OFF → everyone in the area sees their area’s orders.</div>'+sw('food',_split.food,'🍽️ Food runners')+sw('wh',_split.wh,'📦 Warehouse');
+  el.innerHTML='<div style="font-weight:900;font-size:13px;margin-bottom:2px">🔀 Split orders inside an area</div><div style="font-size:11px;color:var(--text-2);margin-bottom:6px">With 2+ people on one area: 1st order → person A, next order → person B. Not taken in time → Warehouse ('+WH_PASS_MIN+' min): passes to the next person in that area (after everyone: whole area) · Food ('+SPLIT_STALE_MIN+' min): everyone in the area sees it. OFF → everyone in the area sees their area’s orders.</div>'+sw('food',_split.food,'🍽️ Food runners')+sw('wh',_split.wh,'📦 Warehouse');
 }
 async function runnersLoad(){
   if(!isAdminSession())return;
