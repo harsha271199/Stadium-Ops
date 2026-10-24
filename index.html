@@ -4751,7 +4751,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-23-fix-93';
+const BUILD_TAG = '2026-10-24-fix-94';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6505,10 +6505,10 @@ async function api(action, data) {
       if(!data.supervisorView && data.actorEventName){
         sched=await sb('schedule?event_name=eq.'+encodeURIComponent(data.actorEventName)+'&is_test=neq.true&event_date=eq.'+today+'&select=*');
         if(!sched._err && (!Array.isArray(sched)||!sched.length)){
-          sched=await sb('schedule?location=eq.'+encodeURIComponent(data.stand)+'&is_test=neq.true&event_date=eq.'+today+'&select=*');
+          sched=await sb('schedule?'+schedLocFilter2026(data.stand)+'&is_test=neq.true&event_date=eq.'+today+'&select=*');
         }
       }else{
-        sched=await sb('schedule?location=eq.'+encodeURIComponent(data.stand)+'&is_test=neq.true&event_date=eq.'+today+'&select=*');
+        sched=await sb('schedule?'+schedLocFilter2026(data.stand)+'&is_test=neq.true&event_date=eq.'+today+'&select=*');
       }
       if (sched._err) return {ok:false,error:'Network'};
       // Resolve attendance to the crew's actual current stand, not a stale cached
@@ -6740,7 +6740,7 @@ async function api(action, data) {
       // possible so the destination Stand Lead sees them immediately.
       let eventName='';
       let ambiguousCrew=false;
-      const targetRows=await sb('schedule?location=eq.'+encodeURIComponent(data.stand)+'&event_date=eq.'+encodeURIComponent(today)+'&is_test=neq.true&select=event_name,role').catch(()=>({_err:true}));
+      const targetRows=await sb('schedule?'+schedLocFilter2026(data.stand)+'&event_date=eq.'+encodeURIComponent(today)+'&is_test=neq.true&select=event_name,role').catch(()=>({_err:true}));
       if(!targetRows._err&&Array.isArray(targetRows)&&targetRows.length){
         const crew=crewForStandRows(targetRows,data.stand);
         eventName=crew.name;
@@ -7980,7 +7980,7 @@ async function finishNpoLogin(g, memberName, stand, member) {
     const today = localISODate();
     // Today only — an old row for this stand (e.g. the 9/5 Morgan State game)
     // must never become the NPO's event or shift date.
-    const ctxRows = await sb('schedule?location=eq.'+encodeURIComponent(stand)+'&event_date=eq.'+today+'&select=event_name,site,event_date&limit=1').catch(()=>({_err:true}));
+    const ctxRows = await sb('schedule?'+schedLocFilter2026(stand)+'&event_date=eq.'+today+'&select=event_name,site,event_date&limit=1').catch(()=>({_err:true}));
     const ctx = (!ctxRows._err && Array.isArray(ctxRows) && ctxRows.length) ? ctxRows[0] : {};
     member = member || {id:g.id,is_lead:true};
     const standMetaRows=await sb('stands?stand_name=eq.'+encodeURIComponent(stand)+'&select=is_main_stand,lead_access_for_all&limit=1').catch(()=>({_err:true}));
@@ -15500,6 +15500,20 @@ async function populateRollStandSelect(){
 // when an admin explicitly presses the button between games, only for
 // stands that genuinely submitted a Count Out, and tells you exactly
 // what it changed.
+// A saved Count Out becomes the stand's Exp Start / On-Hand for its next
+// game, so next Count In "expected" = last Count Out. Before this only the
+// admin Roll button or a Yellow Dog PDF changed it — 10/22 soccer showed the
+// 9/18 Count Out as expected. A Yellow Dog PDF uploaded later still wins.
+async function invRollForwardFromCountOut(stand, counts) {
+  const names = standDbCandidateNames2026(stand).concat([stand]).filter((v, i, a) => v && a.indexOf(v) === i);
+  const inList = 'stand=in.(' + names.map(n => '"' + encodeURIComponent(n.replace(/"/g, '')) + '"').join(',') + ')';
+  for (const itemName of Object.keys(counts || {})) {
+    const co = counts[itemName] && counts[itemName].countOut;
+    if (co === undefined || co === null || String(co).trim() === '') continue;
+    const val = Number(co); if (!Number.isFinite(val)) continue;
+    await sb('stand_sheets?' + inList + '&item_name=eq.' + encodeURIComponent(itemName), { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ on_hand: val, exp_start: val }) }).catch(() => {});
+  }
+}
 async function adminRollCountOut(){
   const st=document.getElementById('roll-status');
   const sel=document.getElementById('roll-stand-select');
@@ -18425,7 +18439,7 @@ async function notifyStandPeople(stand,title,body){
 // every delivery. skipIds = people already told (e.g. the requester).
 async function notifyStandLeadsAndSupervisors(stand,title,body,skipIds){
   const day=stadiumDay(),skip=new Set((skipIds||[]).map(String));
-  const rows=await sb('schedule?event_date=eq.'+encodeURIComponent(day)+'&location=eq.'+encodeURIComponent(stand)+'&select=employee_id,role').catch(()=>({_err:true}));
+  const rows=await sb('schedule?event_date=eq.'+encodeURIComponent(day)+'&'+schedLocFilter2026(stand)+'&select=employee_id,role').catch(()=>({_err:true}));
   if(rows._err||!Array.isArray(rows))return [];
   const ids=[...new Set(rows.filter(r=>/stand lead/i.test(String(r.role||''))).map(r=>String(r.employee_id||'')).filter(Boolean))];
   ids.forEach(id=>{if(!skip.has(id))sendPushTo(id,title,body);});
@@ -18624,7 +18638,7 @@ function supportOpsScopeLabel(){if(state.supportOpsScope==='__my__')return state
 // Exactly 68 current locations supplied by operations on 2026-09-04.
 // Historical aliases remain accepted, but current pickers show ONLY these 68.
 const STAND_SOURCE_2026 = [{"name": "140 Inferno Favorites", "description": "Aramark - 8 all", "operator": "Aramark"}, {"name": "142 Inferno Burgers", "description": "4 staffing or bahama", "operator": "Review"}, {"name": "202P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "203P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "203P Game Day", "description": "NPO Black Hawk Band Boosters", "operator": "NPO"}, {"name": "204 Pitchfork Pizza", "description": "NPO Ottawa University", "operator": "NPO"}, {"name": "204P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "206P Bar S Sausage", "description": "NPO Global Medical Brigades", "operator": "NPO"}, {"name": "205P Chick Fil A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "206P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "206P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "206P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "207 Sun Devil Burgers & Tenders", "description": "Aramark - 22 all", "operator": "Aramark"}, {"name": "207P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "208P BarS Sausage", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "208P Beer Portable", "description": "Aramark - 3 all (double portables)", "operator": "Aramark"}, {"name": "208P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "209P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "209P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "210 Fan Fuel Nacho", "description": "NPO Global Dental Brigades", "operator": "NPO"}, {"name": "210P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "210P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "211P Game Day", "description": "NPO Black Hawk Band Boosters", "operator": "NPO"}, {"name": "212P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "214P Bahamas Bucks SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "215B Draft House", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "216 Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "216M - Fan Fuel BevMKT (Mashgin/S4 combo)", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "216P - SunDeck Grill", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "217P - BarS Draft", "description": "NPO Black Hawk Band Boosters", "operator": "NPO"}, {"name": "217P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "218P Fan Fuel Beverage MKT", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "218T StreetEats", "description": "Subcontractor (COHO) - stand login 50000 + 218", "operator": "Subcontractor"}, {"name": "219 Cold Beer Cheeseburgers SC", "description": "NPO Beggars Gate", "operator": "NPO"}, {"name": "219 P Kathy's Cookies SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219P Chick Fil A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219P Venezia Brick Oven SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "219T BBQ Trailer", "description": "COHO-", "operator": "COHO"}, {"name": "220B Draft House", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "220P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "221B Fork Em BBQ", "description": "COHO - added 10/10 inventory", "operator": "COHO"}, {"name": "221P Taco Bar", "description": "NPO Global Dental Brigades", "operator": "NPO"}, {"name": "222M - Fan Fuel BevMKT (Mashgin/S4 combo)", "description": "Aramark - 5 all", "operator": "Aramark"}, {"name": "224P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "224P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "224P Venezia Brick Oven SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "225P Game Day", "description": "NPO Valley Vista Boosters", "operator": "NPO"}, {"name": "226 Pitchfork Pizza", "description": "NPO Ottawa University", "operator": "NPO"}, {"name": "226P Beer Portable", "description": "Aramark - 2 all", "operator": "Aramark"}, {"name": "226P Chick-Fil-A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "227P BarS Sausage", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "227P Chick-Fil-A SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "228P Beer Portable", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "228P Fan Fuel Beverage MKT", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "228P Stiger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "229 Sun Devil Burger & Tenders", "description": "Aramark - 22 all", "operator": "Aramark"}, {"name": "229P BarS Sausage", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "229P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "229P Fan Fuel Beverage MKT", "description": "Aramark - 4 all", "operator": "Aramark"}, {"name": "229P Game Day", "description": "NPO - added 10/10 inventory", "operator": "NPO"}, {"name": "230P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "230P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "230P Stiger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "231P BarS Sausage", "description": "NPO Infinity Booster", "operator": "NPO"}, {"name": "231P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "232 Fan Fuel Nacho", "description": "NPO Cactus Boosters", "operator": "NPO"}, {"name": "232P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "233P Game Day", "description": "NPO Infinity Booster", "operator": "NPO"}, {"name": "234P Bahama Bucks", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "234P Beer Portable", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "243P Lemonade SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "310P Beer Portable", "description": "Aramark - 1 all", "operator": "Aramark"}, {"name": "316P Beer Portable", "description": "Aramark - 1 all", "operator": "Aramark"}, {"name": "334 San Tan Favorites", "description": "NPO/Aramark - 12 all", "operator": "Mixed"}, {"name": "348 San Tan Venezia's", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "401P BarS Sausage", "description": "NPO Infinity Booster", "operator": "NPO"}, {"name": "403M - Fan Fuel BevMKT (mashgin/S4 Combo)", "description": "Aramark - 3 all", "operator": "Aramark"}, {"name": "404 Chick-Fill A", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "404P Bahamas Buck SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "405P Stinger SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "408 Cold Beer Cheeseburgers SC", "description": "NPO Infinity Booster", "operator": "NPO"}, {"name": "409P Someburros SC", "description": "Subcontractor", "operator": "Subcontractor"}, {"name": "414 Sun Devil Favorites", "description": "NPO Copa Health", "operator": "NPO"}, {"name": "438 Huss Hideout Favorites", "description": "NPO--", "operator": "NPO"}, {"name": "442 Huss Hideout Favorites", "description": "NPO/ Aramark -22 all", "operator": "Mixed"}, {"name": "Fan Fuel Beverage Market", "description": "Aramark - added 10/10 inventory", "operator": "Aramark"}, {"name": "SE Gate-144 SE Gate Dogs/H2O/Beer", "description": "Subcontractor 100H Hawking SC", "operator": "Subcontractor"}, {"name": "SW Gate-138SW Gate Dogs/H2O/Beer", "description": "Subcontractor 100H Hawking SC", "operator": "Subcontractor"}];
-const STAND_NAME_ALIASES_2026 = {"226P Fan Fuel Beverage MKT": "226P Beer Portable", "229P Fan Fuel Bev Market": "229P Fan Fuel Beverage MKT", "404 Chichk-Fil-A": "404 Chick-Fill A", "237P Bahama Bucks": "234P Bahama Bucks", "403P Bahamas Buck SC": "404P Bahamas Buck SC", "SW Gate-138 SW Gate Dogs/H2O/Beer": "SW Gate-138SW Gate Dogs/H2O/Beer", "207 Sun Devil Burger & Tenders": "207 Sun Devil Burgers & Tenders", "229 Sun Devil Burgers & Tenders": "229 Sun Devil Burger & Tenders", "207 Fan Fuel Beverage": "207P Fan Fuel Beverage MKT", "229 Fan Fuel Beverage": "229P Fan Fuel Beverage MKT", "204 Fan Fuel Beverage MKT": "204P Fan Fuel Beverage MKT", "205P Bar S Sausage": "206P Bar S Sausage", "205P BarS Sausage": "206P Bar S Sausage", "206P Bar S Sausage - NPO": "206P Bar S Sausage", "224P Bahama Bucks SC": "224P Bahama Bucks", "210 Fan Fuel Nachos": "210 Fan Fuel Nacho", "232 Fan Fuel Nachos": "232 Fan Fuel Nacho", "209 Fan Fuel Beverage MKT": "209P Fan Fuel Beverage MKT"};
+const STAND_NAME_ALIASES_2026 = {"226P Fan Fuel Beverage MKT": "226P Beer Portable", "229P Fan Fuel Bev Market": "229P Fan Fuel Beverage MKT", "404 Chichk-Fil-A": "404 Chick-Fill A", "237P Bahama Bucks": "234P Bahama Bucks", "403P Bahamas Buck SC": "404P Bahamas Buck SC", "SW Gate-138 SW Gate Dogs/H2O/Beer": "SW Gate-138SW Gate Dogs/H2O/Beer", "207 Sun Devil Burger & Tenders": "207 Sun Devil Burgers & Tenders", "229 Sun Devil Burgers & Tenders": "229 Sun Devil Burger & Tenders", "207 Fan Fuel Beverage": "207P Fan Fuel Beverage MKT", "229 Fan Fuel Beverage": "229P Fan Fuel Beverage MKT", "204 Fan Fuel Beverage MKT": "204P Fan Fuel Beverage MKT", "205P Bar S Sausage": "206P Bar S Sausage", "205P BarS Sausage": "206P Bar S Sausage", "206P Bar S Sausage - NPO": "206P Bar S Sausage", "224P Bahama Bucks SC": "224P Bahama Bucks", "210 Fan Fuel Nachos": "210 Fan Fuel Nacho", "232 Fan Fuel Nachos": "232 Fan Fuel Nacho", "Soccer": "Sun Devil Soccer Stadium", "Soccer Stadium": "Sun Devil Soccer Stadium", "Softball": "Softball Stadium", "209 Fan Fuel Beverage MKT": "209P Fan Fuel Beverage MKT"};
 // V11.9.1 — inactive locations stay in Supabase for history, but are hidden
 // from current game-day assignment/mapping pickers.
 const HIDDEN_INACTIVE_STANDS_2026 = new Set([
@@ -18653,6 +18667,13 @@ function standDbCandidateNames2026(name){
   const canon=canonicalStandName2026(name);
   const old=Object.entries(STAND_NAME_ALIASES_2026).filter(([,v])=>v===canon).map(([k])=>k);
   return [canon,...old].filter((v,i,a)=>a.indexOf(v)===i);
+}
+// PostgREST filter for schedule rows at this stand under any of its names —
+// 10/22 soccer: ReadyOn put people at "Soccer", the stand is "Sun Devil
+// Soccer Stadium"; supervisors saw the list but no people, leads the reverse.
+function schedLocFilter2026(stand){
+  const c=canonicalStandName2026(stand),names=[...new Set([String(stand||'').trim(),...standDbCandidateNames2026(c)])].filter(Boolean);
+  return 'location=in.('+names.map(n=>'"'+encodeURIComponent(n.replace(/"/g,''))+'"').join(',')+')';
 }
 function isHiddenInactiveStand2026(name){
   return HIDDEN_INACTIVE_STANDS_2026.has(canonicalStandName2026(name));
@@ -21485,6 +21506,7 @@ async function submitInventory() {
     });
     if (res.ok) {
       toast('✅ Saved ' + entries.length + ' items (' + state.invPhase + ')');
+      if (state.invPhase === 'Count Out') invRollForwardFromCountOut(stand, counts);
       invDraftClear(stand, state.invPhase);
       state._invManuallyAdded = [];
       state._invEditingEntryId = null;
