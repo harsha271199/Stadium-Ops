@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-99
+- **"Two people match that ID and name" for one person (Donal Pradeep, 10/24).** Old 9/5 and 9/27 schedule rows had him under a short ID ("70498", last 5 digits), so his sign-in found two IDs. Sign-in now decides using today's schedule rows first, and a short ID that is the end of the full ID with the same name counts as the same person.
+- DB: short IDs replaced with the full ID in schedule, attendance and check-ins for Donal Pradeep, Joel Thangirala, Mansi Nayak, Vedang Verma and Janhavi Mane; the short-ID copies in the people directory switched off. No other short/full ID pairs left.
+
 ## 2026-10-24-fix-98
 - **People search finds "First Last".** Walk-in, team "Add person", warehouse temp and Premium walk-in searches now match every typed word in any order ("Deonte Lang" finds "Lang, Deonte"); digits search the employee ID.
 - DB: ReadyOn people list (ASU Athletics, 563 rows) loaded into the people directory: 488 with an employee ID (75 new, the rest already there and kept as they were; nobody removed). Skipped: 72 rows with no employee ID (mostly "Review by manager") and 3 with an ID that isn't a number (Amorette Ysea, joszett whitford, Andy Torres). Anup Madake / Adit Raut added with their temporary IDs.

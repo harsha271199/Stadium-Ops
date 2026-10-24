@@ -4751,7 +4751,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-98';
+const BUILD_TAG = '2026-10-24-fix-99';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5506,8 +5506,11 @@ function loginNameTier(entered,fullName){
 function loginPickByName(rows,entered,nameOf,idOf){
   let best=0,hits=[];
   (rows||[]).forEach(r=>{const t=loginNameTier(entered,nameOf(r));if(!t)return;if(!best||t<best){best=t;hits=[r];}else if(t===best)hits.push(r);});
-  const people=new Set(hits.map(r=>String(idOf(r))));
-  return {rows:hits,people:people.size,tier:best};
+  // An old short ID ("70498") and the full one ("32470498") with the same name
+  // are one person, not two (10/24: Donal Pradeep was told "Two people match").
+  const ids=[...new Set(hits.map(r=>String(idOf(r))))].sort((a,b)=>b.length-a.length);
+  const people=ids.filter((x,i)=>!ids.slice(0,i).some(y=>y.endsWith(x)));
+  return {rows:hits,people:people.length,tier:best};
 }
 // ── Products we no longer sell (switched from Coke to Pepsi, Oct 2026) ──
 // Matched by name, so it keeps working after every new Yellow Dog upload.
@@ -5686,7 +5689,10 @@ async function api(action, data) {
       // Forgiving match (see loginNameTier): "Gaona", "gaona de cazares",
       // "Bently" and "Flenard Bentley" all find the right person; one or two
       // letters never do.
-      const pickRows = loginPickByName(rows, data.lastName, r => r.worker_name, r => r.employee_id);
+      // Today's rows decide who this is; older games only matter if nobody is on today.
+      const todays = [...new Set([localISODate(), stadiumDay()])];
+      const todayRows = rows.filter(r => todays.includes(String(r.event_date || '')));
+      const pickRows = loginPickByName(todayRows.length ? todayRows : rows, data.lastName, r => r.worker_name, r => r.employee_id);
       if (pickRows.people > 1) return { ok:false, error:'Two people match that ID and name — type your full last name' };
       const candidates = pickRows.rows;
       if (!candidates.length) return { ok:false, error:"Last name doesn't match ID — type your last name as it is on the schedule" };
