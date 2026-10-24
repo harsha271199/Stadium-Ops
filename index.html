@@ -4094,6 +4094,10 @@
   <div class="content">
     <div id="tech-coverage-bar" class="first-game-help" style="margin-bottom:9px"><b>All-stadium IT:</b> your Tech team sees every open ticket. Claim a ticket to move it into My Jobs.</div>
     <div id="tech-alert-status" style="margin-bottom:9px"></div>
+    <button class="big-action" id="tech-invtracker-btn" style="display:none;border-left:4px solid var(--asu-maroon);margin-bottom:10px" onclick="goInvTracker()">
+      <span class="icon">📦</span>
+      <span class="text"><div>Checkout &amp; Inventory Tracker</div><div class="sub">Count In / Count Out · boxes received at the exit</div></span>
+    </button>
     <div class="tab-bar">
       <div class="tab-item active" id="tech-tab-available" onclick="techTab(this,'available')">Available <span class="badge-count" id="tech-open-count">0</span></div>
       <div class="tab-item" id="tech-tab-mine" onclick="techTab(this,'mine')">My Jobs <span class="badge-count" id="tech-prog-count" style="background:var(--info)">0</span></div>
@@ -4753,7 +4757,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-103';
+const BUILD_TAG = '2026-10-24-fix-104';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4805,6 +4809,7 @@ function showScreen(id) {
   if (id === 'screen-all-checks') { loadAllChecksStatus(); state.refreshInterval = setInterval(loadAllChecksStatus, 15000); }
   if (id === 'screen-transfer-record') { loadStandTransferRecord(); }
   if (id === 'screen-alerts-check') loadAlertsCheck();
+  if (id === 'screen-tech') loadInvTrackerAccess();
   if (id === 'screen-inv-tracker') { loadInvTracker(); state.refreshInterval = setInterval(loadInvTracker, 30000); }
   if (id !== 'screen-chat' && state._chatThreadTimer) { clearInterval(state._chatThreadTimer); state._chatThreadTimer = null; }
   if (id === 'screen-wh-create-transfer') { mtResetTransferForm(); mtLoadStands(); mtLoadAssignees(); }
@@ -21972,7 +21977,18 @@ async function standLeaderIds(stand) {
   if (Array.isArray(rows)) rows.forEach(r => { if (r.employee_id) ids.add(String(r.employee_id)); });
   return [...ids];
 }
-function invTrackerAllowed() { return !!(state.staffAccount && state.staffAccount.group === 'manager' && ['manager','admin'].includes(state.staffAccount.role)); }
+// Managers/Admin, plus anyone whose ID is in app_settings "inv_tracker_access"
+// (comma list) — e.g. an IT tech who runs the exit-table checkout (Krishil, 10/24).
+function invTrackerAllowed() {
+  const a = state.staffAccount; if (!a) return false;
+  if (a.group === 'manager' && ['manager','admin'].includes(a.role)) return true;
+  return !!(state._invTrackerIds && state._invTrackerIds.has(String(a.empId || '')));
+}
+async function loadInvTrackerAccess() {
+  const rows = await sb('app_settings?key=eq.inv_tracker_access&select=value').catch(() => ({ _err: true }));
+  state._invTrackerIds = new Set(Array.isArray(rows) && rows[0] ? String(rows[0].value || '').split(/[,\s]+/).filter(Boolean) : []);
+  const b = document.getElementById('tech-invtracker-btn'); if (b) b.style.display = invTrackerAllowed() ? '' : 'none';
+}
 function goInvTracker() {
   if (!invTrackerAllowed()) return toast('Managers only', 'error');
   showScreen('screen-inv-tracker');

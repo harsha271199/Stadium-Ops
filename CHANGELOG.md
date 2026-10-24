@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-104
+- **Checkout & Inventory Tracker for named non-managers.** Besides Managers/Admin, anyone whose employee ID is in app_settings `inv_tracker_access` (comma list) can open it; IT techs on that list get the button on their IT screen. DB: Krishil Patel (IT, 31210079 / 32310079) added.
+
 ## 2026-10-24-fix-103
 - **Subcontractor logins for Supervisors, Managers and Stand Leads.** The 📞 call list now has a "🏪 Subcontractor logins" section (tap to open) listing every subcontractor stand that is on with what to type: Employee ID 50000 + stand number / login word. Before, only Admin → Stands showed this. Stand crews don't see it.
 
