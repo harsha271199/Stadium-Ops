@@ -4132,8 +4132,9 @@
     <div><div class="page-title" id="chat-title">Stand Chat</div><div class="page-sub" id="chat-sub">Today's messages</div></div>
   </div>
   <div class="content">
-    <div class="chat-tabs" style="display:none">
+    <div class="chat-tabs">
       <button class="chip selected" id="chat-tab-chat" onclick="chatShowTab('chat')">💬 Chat</button>
+      <button class="chip" id="chat-tab-contacts" onclick="showContactPopup()">📞 Call · emergency numbers</button>
     </div>
     <div id="chat-inbox"></div>
     <div id="chat-thread-wrap" style="display:none">
@@ -4750,7 +4751,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-95';
+const BUILD_TAG = '2026-10-24-fix-96';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -16449,7 +16450,10 @@ function updateFloatingContactVisibility(){
   // 📞 Emergency numbers: every login, every screen except sign-in.
   if(loggedIn&&!_contacts.length&&!_contactsLoading){_contactsLoading=true;loadContacts().finally(()=>{_contactsLoading=false;});}
   const sos=document.getElementById('float-sos-btn');
-  if(sos){const show=loggedIn&&_contacts.length>0&&!['screen-login','screen-npo-login','screen-npo-stand-picker','screen-pin','screen-chat'].includes(state.currentScreen)&&!(btn.classList.contains('visible')&&!chat);
+  if(sos){    // One floating button: 💬 Chat holds both chat and the 📞 call list (tab inside
+    // chat); without chat it is 📞 Contacts. The separate 📞 only fills in on
+    // screens where that button is hidden (golf cart, kitchen…).
+    const show=loggedIn&&_contacts.length>0&&!['screen-login','screen-npo-login','screen-npo-stand-picker','screen-pin','screen-chat'].includes(state.currentScreen)&&!btn.classList.contains('visible');
     sos.classList.toggle('visible',show);sos.classList.toggle('solo',show&&!btn.classList.contains('visible'));
     if(show)document.body.classList.add('has-float-btn');
     document.body.classList.toggle('has-float-2',show&&btn.classList.contains('visible'));}

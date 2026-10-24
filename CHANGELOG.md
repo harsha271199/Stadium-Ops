@@ -4,9 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-96
+- **One floating button.** 💬 Chat now holds both chat and calling: inside chat, the **📞 Call · emergency numbers** tab opens the call list. The separate floating 📞 no longer shows next to it (it only appears on the few screens where the Chat button is hidden, e.g. golf cart). People without chat get one 📞 Contacts button, as before.
+
 ## 2026-10-24-fix-95
 - **New chat: 👔 Supervisors & Managers.** A private conversation for Supervisors and Managers only (stand crews, leads, warehouse and food never see it). It is at the top of the chat list; Supervisors on today's schedule and Managers who have opened the app today get the alert.
-- **Chat screen: no second call button.** The 📞 Emergency numbers chip and the floating 📞 button are hidden inside chat (they covered the message box); 📞 is still on every other screen.
+- **Chat screen:** the floating 📞 is hidden inside chat (it covered the message box). (Call list moved into the chat button in fix-96.)
 - **IT ticket sent many times by fast taps (10/15 DFA: 14 copies in one second).** The Send button now locks on the first tap, and the same stand + same text within 2 minutes is saved once. DB: the 13 copies closed as duplicates of #102.
 - **COHO trailers sign in like subcontractors:** 50000 + 219 BBQ / 221 BBQ. A bare stand number shared by several stands ("219", "404") now shows the choice instead of picking one.
 - DB (10/24 game): warehouse crew assigned the same stands as 10/10 (Anup Madake ← Soorya's stands, Adit Raut ← Kartik's, Simran Sharma ← Satwik's, Cassidy Cole ← Dean Vasquez's), 205P → 206P Bar S Sausage, off stands removed, 224P Bahama Bucks added; Rajesh Patti added as Warehouse Supervisor (monitor/assign). Logins created for Rajesh, Anup (88160000), Adit (88260000); all three added to today's schedule and warehouse roster with the missing crew (Campoy, Harris, Seay, Cole, Nguyen and the 5 students). Supervisors' stand coverage copied from 10/10.
