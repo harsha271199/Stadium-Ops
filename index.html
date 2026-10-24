@@ -4762,7 +4762,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-106';
+const BUILD_TAG = '2026-10-24-fix-107';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -27713,6 +27713,45 @@ async function init() {
       });
     }).catch(() => {});
   }
+
+  // ── AUTO-UPDATE ──
+  // People leave the app open all game and never refresh (10/24: leaders kept
+  // the old version for hours). Every 2 minutes, and whenever the app comes
+  // back to the screen, check the site's current version; if it is newer,
+  // reload by itself — but not while someone is typing or has a form/popup
+  // open (then a banner asks them to tap, and it retries every 20 seconds).
+  (function(){
+    let newer = '', bannerShown = false;
+    const busy = () => {
+      const a = document.activeElement;
+      if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+      if (document.querySelector('.contact-popup-overlay, #invt-receive-overlay')) return true;
+      const cm = document.getElementById('app-confirm-modal'); if (cm && getComputedStyle(cm).display !== 'none') return true;
+      // Forms that hold typed-in work: count sheets, stock / food / IT requests, refunds.
+      if (state.currentScreen === 'screen-inventory' && state.invPhase) return true;
+      return ['screen-stock','screen-it-report','screen-kitchen-request','screen-refund'].includes(state.currentScreen);
+    };
+    const go = () => { try { sessionStorage.setItem('autoUpdatedTo', newer); } catch (e) {} window.location.reload(); };
+    const tryNow = () => {
+      if (!newer) return;
+      if (!busy() || document.visibilityState === 'hidden') return go();
+      if (!bannerShown) { bannerShown = true; showNotificationBanner('🔄 New version of the app', 'Tap here to update now (takes 2 seconds).', 'info'); const bn = document.getElementById('notif-banner'); if (bn) bn.onclick = go; }
+      setTimeout(tryNow, 20000);
+    };
+    const check = async () => {
+      if (newer) return tryNow();
+      try {
+        const r = await fetch('/index.html?vc=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) return;
+        const m = (await r.text()).match(/const BUILD_TAG = '([^']+)'/);
+        if (m && m[1] && m[1] !== BUILD_TAG) { newer = m[1]; tryNow(); }
+      } catch (e) {}
+    };
+    setInterval(check, 120000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    setTimeout(check, 15000);
+    try { const u = sessionStorage.getItem('autoUpdatedTo'); if (u && u === BUILD_TAG) { sessionStorage.removeItem('autoUpdatedTo'); setTimeout(() => toast('✅ App updated'), 1500); } } catch (e) {}
+  })();
 
   // ── BACK BUTTON HANDLING ──
   // Trap the phone/browser back button so it navigates INSIDE the app
