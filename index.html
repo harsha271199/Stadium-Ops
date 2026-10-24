@@ -381,6 +381,8 @@
   .prem-move-btn:active{transform:scale(0.85) rotate(90deg)}
   .prem-move-row{max-height:0;overflow:hidden;transition:max-height .2s ease;padding:0 12px;border-bottom:1px solid var(--border)}
   .prem-move-row.open{max-height:80px;padding:8px 12px 10px}
+  .prem-fb-row.open{max-height:200px}
+  .prem-move-btn.fb-done{border-color:#16A34A;color:#16A34A}
 
   /* Walk-in panel — a colorful, obviously-tappable trigger (matches the
      Supervisor/Manager "Add Walk-in Worker" tile), then a panel that
@@ -4751,7 +4753,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-101';
+const BUILD_TAG = '2026-10-24-fix-102';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -24498,7 +24500,14 @@ function premiumRenderCheckinsList() {
           '<button class="prem-status-btn p' + (r.status === 'present' ? ' on' : '') + '" onclick="premiumSetCheckin(' + r.id + ',\'present\')" aria-label="Present">✓</button>' +
           '<button class="prem-status-btn a' + (r.status === 'absent' ? ' on' : '') + '" onclick="premiumSetCheckin(' + r.id + ',\'absent\')" aria-label="Absent">✕</button>' +
           '<button class="prem-move-btn" onclick="premiumToggleMoveRow(' + r.id + ')" aria-label="Move">↔</button>' +
+          '<button class="prem-move-btn' + (_premFbDone[r.id] ? ' fb-done' : '') + '" onclick="premiumToggleFb(' + r.id + ')" aria-label="Feedback">' + (_premFbDone[r.id] === 'good' ? '👍' : _premFbDone[r.id] ? '👎' : '⭐') + '</button>' +
         '</div>' +
+      '</div>' +
+      '<div class="prem-move-row prem-fb-row" id="prem-fb-' + r.id + '">' +
+        '<button class="btn btn-ghost" id="prem-fb-good-' + r.id + '" onclick="premiumFbRate(' + r.id + ',\'good\')" style="width:auto;padding:6px 10px;font-size:12px;margin:0 6px 0 0">👍 Good</button>' +
+        '<button class="btn btn-ghost" id="prem-fb-bad-' + r.id + '" onclick="premiumFbRate(' + r.id + ',\'needs_improvement\')" style="width:auto;padding:6px 10px;font-size:12px;margin:0">👎 Needs work</button>' +
+        '<input class="form-input" type="text" id="prem-fb-note-' + r.id + '" placeholder="Optional note (what went well / what to fix)" style="margin:8px 0 6px;font-size:13px">' +
+        '<button class="btn btn-primary" onclick="premiumSubmitFb(' + r.id + ')" style="padding:8px;margin:0">Save feedback</button>' +
       '</div>' +
       '<div class="prem-move-row" id="prem-move-' + r.id + '">' +
         '<select class="form-input" onchange="premiumMoveWorker(' + r.id + ',this.value)" style="margin:0;font-size:13px"><option value="">Move to…</option>' + locOptions + '</select>' +
@@ -24591,6 +24600,34 @@ function premiumToggleGroup(loc) {
   if (_premOpenGroups.has(loc)) _premOpenGroups.delete(loc); else _premOpenGroups.add(loc);
   const el = document.getElementById('prem-group-' + loc.replace(/[^a-zA-Z0-9]/g,'_'));
   if (el) el.classList.toggle('open', _premOpenGroups.has(loc));
+}
+// Feedback on a Premium worker — same 👍 / 👎 + note as the stands; saved to
+// worker_feedback (stand = "Premium · <location>") so it shows in Manager → Reports.
+const _premFbDone = {};
+let _premFbRating = {};
+function premiumToggleFb(id) {
+  const el = document.getElementById('prem-fb-' + id); if (!el) return;
+  const open = !el.classList.contains('open');
+  document.querySelectorAll('.prem-fb-row.open').forEach(x => x.classList.remove('open'));
+  if (open) el.classList.add('open');
+}
+function premiumFbRate(id, rating) {
+  _premFbRating[id] = rating;
+  const g = document.getElementById('prem-fb-good-' + id), b = document.getElementById('prem-fb-bad-' + id);
+  if (g) g.classList.toggle('selected', rating === 'good');
+  if (b) b.classList.toggle('selected', rating === 'needs_improvement');
+}
+async function premiumSubmitFb(id) {
+  const r = _premScheduleRows.find(x => x.id === id); if (!r) return;
+  const rating = _premFbRating[id];
+  if (!rating) return toast('Pick 👍 or 👎 first', 'error');
+  const who = getRequesterIdentity();
+  const note = ((document.getElementById('prem-fb-note-' + id) || { value: '' }).value || '').trim();
+  await withLock(evtBtn(), 'Saving…', async () => {
+    const res = await api('submitFeedback', { empId: r.employee_id, workerName: r.worker_name, stand: 'Premium · ' + r.location_name, givenBy: who.name, givenByRole: TIER_LABELS[who.tier] || who.tier || 'Premium', rating, note });
+    if (res.ok) { _premFbDone[id] = rating; delete _premFbRating[id]; toast('⭐ Feedback saved for ' + chatNice(r.worker_name)); premiumRenderCheckinsList(); }
+    else toast(res.error || 'Could not save feedback', 'error');
+  });
 }
 function premiumToggleMoveRow(id) {
   const el = document.getElementById('prem-move-' + id);

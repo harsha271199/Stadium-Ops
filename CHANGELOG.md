@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-102
+- **Premium check-in: ⭐ feedback on each person.** Tap ⭐ next to a name → 👍 Good / 👎 Needs work + optional note → Save. The button then shows 👍/👎. Saved with the other worker feedback (stand = "Premium · <location>"), so it appears in Manager → Reports → Feedback and its CSV/PDF.
+- DB (10/24): concession runners Adnan Alzahrani (East), Advik Aryan and Hetansh Patel (North 215–221) given stands — they had none, so they didn't show.
+
 ## 2026-10-24-fix-101
 - **Warehouse pass-along waits 20 minutes (was 10).** An order nobody picks up now moves to the next person covering the stand / the backups after 20 minutes. Food runners stay at 10. The area-wide "open to everyone" step is unchanged (30 min).
 - DB (10/24): warehouse coverage updated — Raymond 204 side, Robert 210 + Upper West, Darrell 210, Larry 229 + Upper East, Michael 210 (backup Upper West); SE Gate-144 turned off.
