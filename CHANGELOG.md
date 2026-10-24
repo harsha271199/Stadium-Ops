@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-103
+- **Subcontractor logins for Supervisors, Managers and Stand Leads.** The 📞 call list now has a "🏪 Subcontractor logins" section (tap to open) listing every subcontractor stand that is on with what to type: Employee ID 50000 + stand number / login word. Before, only Admin → Stands showed this. Stand crews don't see it.
+
 ## 2026-10-24-fix-102
 - **Premium check-in: ⭐ feedback on each person.** Tap ⭐ next to a name → 👍 Good / 👎 Needs work + optional note → Save. The button then shows 👍/👎. Saved with the other worker feedback (stand = "Premium · <location>"), so it appears in Manager → Reports → Feedback and its CSV/PDF.
 - DB (10/24): concession runners Adnan Alzahrani (East), Advik Aryan and Hetansh Patel (North 215–221) given stands — they had none, so they didn't show.

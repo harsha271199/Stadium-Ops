@@ -4753,7 +4753,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-102';
+const BUILD_TAG = '2026-10-24-fix-103';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -16502,6 +16502,17 @@ function callContact(phone, name) {
   window.location.href = 'tel:' + phone.replace(/[^0-9+]/g,'');
 }
 
+// Supervisors, Managers and Stand Leads can tell a subcontractor how to sign
+// in (ID 50000 + stand number or login word). Crew never sees this list.
+function scLoginsHtml() {
+  const lvl = chatLevel();
+  if (!(['sup','mgr','lead'].includes(lvl) || isAdminSession())) return '';
+  const list = scStandList();
+  if (!list.length) return '';
+  return '<details style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px"><summary style="font-size:13px;font-weight:800;cursor:pointer">🏪 Subcontractor logins (' + list.length + ')</summary>' +
+    '<div style="font-size:11px;color:var(--text-2);margin:6px 0">Sign in with <b>Employee ID 50000</b>, then type the stand number or login word below in the second box. No PIN needed.</div>' +
+    list.map(st => { const l = scLoginText(st); return '<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--border);font-size:12px"><span style="min-width:0">' + escapeHtml(st) + '</span><span style="flex-shrink:0;font-weight:800">' + (l.ok ? '50000 + ' + escapeHtml(l.text) : '<span style="color:#B45309">ask Admin</span>') + '</span></div>'; }).join('') + '</details>';
+}
 function showContactPopup() {
   const existing = document.getElementById('contact-popup-overlay');
   if (existing) { existing.remove(); updateFloatingContactVisibility(); return; }
@@ -16526,6 +16537,7 @@ function showContactPopup() {
           </div>
           <button class="cp-call" onclick="callContact('${c.phone||''}','${c.name}')">${c.phone?'📞 Call':'—'}</button>
         </div>`).join('')}
+      ${scLoginsHtml()}
 
       <div style="height:1px;background:var(--border);margin:14px 0"></div>
       ${isFootballGameEvent() ? `
