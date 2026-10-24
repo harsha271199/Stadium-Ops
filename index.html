@@ -3140,6 +3140,10 @@
           <span class="icon">📦</span>
           <span class="text"><div>Checkout &amp; Inventory Tracker</div><div class="sub">Count In / Count Out · boxes received at the exit</div></span>
         </button>
+        <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="showScLogins()">
+          <span class="icon">🏪</span>
+          <span class="text"><div>Subcontractor logins</div><div class="sub">What each subcontractor stand types to sign in</div></span>
+        </button>
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAllStandsLive()">
           <span class="icon">📊</span>
           <span class="text"><div>All Stands Live</div><div class="sub">Who's working at every stand</div></span>
@@ -4141,6 +4145,7 @@
     <div class="chat-tabs">
       <button class="chip selected" id="chat-tab-chat" onclick="chatShowTab('chat')">💬 Chat</button>
       <button class="chip" id="chat-tab-contacts" onclick="showContactPopup()">📞 Call · emergency numbers</button>
+      <button class="chip" id="chat-tab-sclogins" style="display:none" onclick="showScLogins()">🏪 Subcontractor logins</button>
     </div>
     <div id="chat-inbox"></div>
     <div id="chat-thread-wrap" style="display:none">
@@ -4757,7 +4762,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-105';
+const BUILD_TAG = '2026-10-24-fix-106';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -16510,14 +16515,24 @@ function callContact(phone, name) {
 
 // Supervisors, Managers and Stand Leads can tell a subcontractor how to sign
 // in (ID 50000 + stand number or login word). Crew never sees this list.
-function scLoginsHtml() {
-  const lvl = chatLevel();
-  if (!(['sup','mgr','lead'].includes(lvl) || isAdminSession())) return '';
+function scLoginsAllowed() { return ['sup','mgr','lead'].includes(chatLevel()) || isAdminSession() || isSupervisorSession() || isManagerOpsSession(); }
+function scLoginsHtml(open) {
+  if (!scLoginsAllowed()) return '';
   const list = scStandList();
   if (!list.length) return '';
-  return '<details style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px"><summary style="font-size:13px;font-weight:800;cursor:pointer">🏪 Subcontractor logins (' + list.length + ')</summary>' +
+  return '<details' + (open ? ' open' : '') + ' style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px"><summary style="font-size:13px;font-weight:800;cursor:pointer">🏪 Subcontractor logins (' + list.length + ')</summary>' +
     '<div style="font-size:11px;color:var(--text-2);margin:6px 0">Sign in with <b>Employee ID 50000</b>, then type the stand number or login word below in the second box. No PIN needed.</div>' +
     list.map(st => { const l = scLoginText(st); return '<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--border);font-size:12px"><span style="min-width:0">' + escapeHtml(st) + '</span><span style="flex-shrink:0;font-weight:800">' + (l.ok ? '50000 + ' + escapeHtml(l.text) : '<span style="color:#B45309">ask Admin</span>') + '</span></div>'; }).join('') + '</details>';
+}
+function showScLogins() {
+  const html = scLoginsHtml(true);
+  if (!html) return toast('Subcontractor logins are for Supervisors, Managers and Stand Leads', 'error');
+  const old = document.getElementById('sc-logins-overlay'); if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'sc-logins-overlay'; el.className = 'contact-popup-overlay';
+  el.innerHTML = '<div class="contact-popup"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:18px;font-weight:800">🏪 Subcontractor logins</div><button onclick="document.getElementById(\'sc-logins-overlay\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-2)">×</button></div>' + html + '<button class="btn btn-ghost" onclick="document.getElementById(\'sc-logins-overlay\').remove()" style="width:100%;margin-top:12px">Close</button></div>';
+  el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+  document.body.appendChild(el);
 }
 function showContactPopup() {
   const existing = document.getElementById('contact-popup-overlay');
@@ -22499,6 +22514,7 @@ async function goChat(stand) {
 }
 function chatShowTab(t) {
   document.getElementById('chat-tab-chat').classList.toggle('selected', t === 'chat');
+  const sc = document.getElementById('chat-tab-sclogins'); if (sc) sc.style.display = scLoginsAllowed() ? '' : 'none';
 }
 function chatBack() {
   const lvl = chatLevel();

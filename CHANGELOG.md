@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-106
+- **Subcontractor logins easier to find** (leaders said they couldn't see them — the list was folded at the bottom of 📞 Call): a **🏪 Subcontractor logins** button in Supervisor — All Stands (Supervisors/Managers) and a **🏪 Subcontractor logins** tab in Chat (Supervisors, Managers, Stand Leads). Opens the full list straight away.
+
 ## 2026-10-24-fix-105
 - Inventory opened from the Checkout & Inventory Tracker returns to the tracker after Save (it went to the home screen).
 
