@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-95
+- **New chat: 👔 Supervisors & Managers.** A private conversation for Supervisors and Managers only (stand crews, leads, warehouse and food never see it). It is at the top of the chat list; Supervisors on today's schedule and Managers who have opened the app today get the alert.
+- **Chat screen: no second call button.** The 📞 Emergency numbers chip and the floating 📞 button are hidden inside chat (they covered the message box); 📞 is still on every other screen.
+- **IT ticket sent many times by fast taps (10/15 DFA: 14 copies in one second).** The Send button now locks on the first tap, and the same stand + same text within 2 minutes is saved once. DB: the 13 copies closed as duplicates of #102.
+- **COHO trailers sign in like subcontractors:** 50000 + 219 BBQ / 221 BBQ. A bare stand number shared by several stands ("219", "404") now shows the choice instead of picking one.
+- DB (10/24 game): warehouse crew assigned the same stands as 10/10 (Anup Madake ← Soorya's stands, Adit Raut ← Kartik's, Simran Sharma ← Satwik's, Cassidy Cole ← Dean Vasquez's), 205P → 206P Bar S Sausage, off stands removed, 224P Bahama Bucks added; Rajesh Patti added as Warehouse Supervisor (monitor/assign). Logins created for Rajesh, Anup (88160000), Adit (88260000); all three added to today's schedule and warehouse roster with the missing crew (Campoy, Harris, Seay, Cole, Nguyen and the 5 students). Supervisors' stand coverage copied from 10/10.
+
 ## 2026-10-24-fix-94
 - **Soccer: supervisor saw the inventory but no people, Stand Lead saw people but no inventory (10/22).** ReadyOn put the crew at Area "Soccer"; the stand (and its item list) is "Sun Devil Soccer Stadium". "Soccer" / "Soccer Stadium" / "Softball" are now the same stand as Sun Devil Soccer Stadium / Softball Stadium, and team/roster, notifications and crew lookups find schedule rows under any of a stand's names. DB: 10/22 schedule, attendance and sessions moved from "Soccer" to "Sun Devil Soccer Stadium".
 - **Expected Count In = last Count Out.** Saving a Count Out now rolls each counted item into the stand's Exp Start / On-Hand, so the next game's "expected" is that Count Out. Before, only the admin Roll button or a Yellow Dog PDF changed it — soccer on 10/22 showed the 9/18 Count Out as expected. A Yellow Dog PDF uploaded after the Count Out still replaces the numbers (Yellow Dog's own expected start). DB: soccer rolled forward from its 10/22 Count Out (old values in `stand_sheets_backup_1024`).

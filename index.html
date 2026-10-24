@@ -4132,9 +4132,8 @@
     <div><div class="page-title" id="chat-title">Stand Chat</div><div class="page-sub" id="chat-sub">Today's messages</div></div>
   </div>
   <div class="content">
-    <div class="chat-tabs">
+    <div class="chat-tabs" style="display:none">
       <button class="chip selected" id="chat-tab-chat" onclick="chatShowTab('chat')">💬 Chat</button>
-      <button class="chip" id="chat-tab-contacts" onclick="showContactPopup()">📞 Emergency numbers</button>
     </div>
     <div id="chat-inbox"></div>
     <div id="chat-thread-wrap" style="display:none">
@@ -4751,7 +4750,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-94';
+const BUILD_TAG = '2026-10-24-fix-95';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6257,6 +6256,9 @@ async function api(action, data) {
     case 'submitITIssue': {
       { const blocked = await openRequestGuard('it', data.stand); if (blocked) return { ok:false, blocked:true, error:blocked }; }
       const body = { stand:data.stand, reported_by:data.requestedBy||data.reportedBy, category:data.category, urgency:urgNorm(data.urgency), status:'open', description:(data.subCategory?data.subCategory+' \u2014 ':'')+(data.details||'') };
+      // Same stand + same text in the last 2 minutes = the same ticket sent twice.
+      { const dup = await sb('it_issues?stand=eq.'+encodeURIComponent(body.stand)+'&description=eq.'+encodeURIComponent(body.description)+'&created_at=gte.'+encodeURIComponent(new Date(Date.now()-120000).toISOString())+'&select=id&limit=1').catch(()=>null);
+        if (Array.isArray(dup) && dup.length) return {ok:true, id:'IT', duplicate:true}; }
       const r = await sb('it_issues', { method:'POST', headers:{Prefer:'return=minimal'}, body: JSON.stringify(body) });
       return r._err ? {ok:false,error:'Could not submit'} : {ok:true, id:'IT'};
     }
@@ -10123,7 +10125,8 @@ function scStandList(){
   if(state._scStands)return state._scStands;
   // Other venues' subcontractor stands (DFA etc.) come from the stands table.
   const other=(state._adminStands||[]).filter(r=>r.operator==='Subcontractor'&&r.venue!=='Mountain America Stadium'&&!/inactive/i.test(r.venue||'')).map(r=>r.stand_name);
-  return (state._scStands=[...new Set(STAND_SOURCE_2026.filter(s=>s.operator==='Subcontractor').map(s=>canonicalStandName2026(s.name)).concat(other).filter(n=>n&&!isHiddenInactiveStand2026(n)))].sort(standSort));
+  // COHO trailers (219T BBQ Trailer, 221B Fork Em BBQ) sign in the same way: 50000 + stand number.
+  return (state._scStands=[...new Set(STAND_SOURCE_2026.filter(s=>s.operator==='Subcontractor'||s.operator==='COHO').map(s=>canonicalStandName2026(s.name)).concat(other).filter(n=>n&&!isHiddenInactiveStand2026(n)))].sort(standSort));
 }
 function isSubcontractorStand(stand){const c=canonicalStandName2026(stand);return scStandList().includes(c);}
 function scStandHint(s){const num=(String(s).match(/\d{3}(?:\s*[A-Z]\b)?/)||[''])[0].replace(/\s+/g,'');const w=String(s).replace(/^.*?\d{3}(?:\s*[A-Z]\b)?/,'').replace(/\b(SC|Gate)\b/gi,'').replace(/[^A-Za-z' ]+/g,' ').trim().split(/\s+/)[0]||'';return (num+' '+w).trim();}
@@ -10141,7 +10144,8 @@ function scMatchStands(secret){
   // Name words forgive a typo ("stinger" finds "Stiger", "bahama" finds "Bahamas").
   const wordHit=(x,s)=>plain(s).split(/\s+/).filter(w=>w.length>=3).some(w=>w.startsWith(x)||x.startsWith(w)||(x.length>=5&&loginDist(x,w)<=1));
   if(words.length){const w=list.filter(s=>words.some(x=>wordHit(x,s)));if(w.length)list=w;}
-  if(list.length>1){const wantP=new RegExp(num+'\\s*P\\b').test(t);const p=list.filter(s=>new RegExp(num+'\\s*P\\b','i').test(s)===wantP);if(p.length)list=p;}
+  // "219P" narrows to the portables; a bare "219" keeps every 219 stand so the person picks.
+  if(list.length>1){const wantP=new RegExp(num+'\\s*P\\b').test(t);if(wantP){const p=list.filter(s=>new RegExp(num+'\\s*P\\b','i').test(s));if(p.length)list=p;}}
   return {num,list};
 }
 // ============ ADMIN-CREATED STANDS ============
@@ -16445,7 +16449,7 @@ function updateFloatingContactVisibility(){
   // 📞 Emergency numbers: every login, every screen except sign-in.
   if(loggedIn&&!_contacts.length&&!_contactsLoading){_contactsLoading=true;loadContacts().finally(()=>{_contactsLoading=false;});}
   const sos=document.getElementById('float-sos-btn');
-  if(sos){const show=loggedIn&&_contacts.length>0&&!['screen-login','screen-npo-login','screen-npo-stand-picker','screen-pin'].includes(state.currentScreen)&&!(btn.classList.contains('visible')&&!chat);
+  if(sos){const show=loggedIn&&_contacts.length>0&&!['screen-login','screen-npo-login','screen-npo-stand-picker','screen-pin','screen-chat'].includes(state.currentScreen)&&!(btn.classList.contains('visible')&&!chat);
     sos.classList.toggle('visible',show);sos.classList.toggle('solo',show&&!btn.classList.contains('visible'));
     if(show)document.body.classList.add('has-float-btn');
     document.body.classList.toggle('has-float-2',show&&btn.classList.contains('visible'));}
@@ -22189,9 +22193,12 @@ const WH_GROUP = 'Warehouse Leaders';
 // Food runners + Food Manager share one group conversation. Supervisors and
 // Managers can open it too; a runner can send to the Supervisor of a stand.
 const FOOD_GROUP = 'Food Team';
-function chatIsGroup(stand) { return stand === WH_GROUP || stand === FOOD_GROUP; }
+// Supervisors + Managers only — their own conversation, no stand crews.
+const LEAD_GROUP = 'Supervisors & Managers';
+function chatIsGroup(stand) { return stand === WH_GROUP || stand === FOOD_GROUP || stand === LEAD_GROUP; }
 // Runners / team members of a group (Supervisors and Managers just read & reply).
-function chatIsGroupMember(stand) { const l = chatLevel(); return (stand === FOOD_GROUP && l === 'food') || (stand === WH_GROUP && l === 'whl'); }
+function chatIsGroupMember(stand) { const l = chatLevel(); return (stand === FOOD_GROUP && l === 'food') || (stand === WH_GROUP && l === 'whl') || (stand === LEAD_GROUP && (l === 'sup' || l === 'mgr')); }
+function chatGroupLabel(stand) { return stand === FOOD_GROUP ? '🍽️ Food Team' : stand === LEAD_GROUP ? '👔 Supervisors & Managers' : '🏭 Warehouse Team'; }
 function chatIsFoodSession() { const r = state.staffAccount && state.staffAccount.role || ''; return ['food_runner','kitchen_runner','food_manager','kitchen_coordinator'].includes(r); }
 function chatNice(n) { n = String(n||'').split(' (')[0]; return n.includes(',') ? (n.split(',')[1].trim().split(' ')[0] + ' ' + n.split(',')[0].trim()) : n; }
 function chatFirst(n) { return chatNice(n).split(' ')[0]; }
@@ -22328,6 +22335,7 @@ function chatIsForMe(r) {
   const me = chatMe(); if (!me.level || String(r.sender_id) === me.id) return false;
   if (me.level === 'whl') return r.stand === WH_GROUP;
   if (me.level === 'food') return r.stand === FOOD_GROUP;
+  if (r.stand === LEAD_GROUP) return me.level === 'sup' || me.level === 'mgr';
   if (chatIsGroup(r.stand)) {
     // Managers: team messages sent to the Managers. Supervisors: messages sent
     // to the Supervisor about one of their stands.
@@ -22448,7 +22456,7 @@ function chatRenderInbox() {
     const l = last[st], u = chatUnreadFor(st);
     const t = l ? new Date(l.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
     const to = l && l.to_level ? ' → ' + CHAT_LEVEL_LABEL[l.to_level] : '';
-    return '<div class="card chat-inbox-row' + (u ? ' unread' : '') + '" onclick="chatOpenThread(this.dataset.s)" data-s="' + escapeAttr(st) + '"><div style="min-width:0"><div class="cname">' + escapeHtml(st === WH_GROUP ? '🏭 Warehouse Team' : st === FOOD_GROUP ? '🍽️ Food Team' : st) + (mine.has(st) && lvl !== 'lead' ? ' <span style="font-size:10px;color:var(--asu-maroon)">· MY STAND</span>' : '') + '</div>' +
+    return '<div class="card chat-inbox-row' + (u ? ' unread' : '') + '" onclick="chatOpenThread(this.dataset.s)" data-s="' + escapeAttr(st) + '"><div style="min-width:0"><div class="cname">' + escapeHtml(chatIsGroup(st) ? chatGroupLabel(st) : st) + (mine.has(st) && lvl !== 'lead' ? ' <span style="font-size:10px;color:var(--asu-maroon)">· MY STAND</span>' : '') + '</div>' +
       '<div class="cprev">' + (l ? escapeHtml(chatNice(l.sender_name) + to + ': ' + l.body) : 'No messages yet — tap to start') + '</div></div>' +
       '<div style="text-align:right;flex:0 0 auto"><div style="font-size:10px;color:var(--text-2)">' + t + '</div>' + (u ? '<span class="chat-unread-pill">' + u + '</span>' : '') + '</div></div>';
   };
@@ -22459,6 +22467,7 @@ function chatRenderInbox() {
   const quiet = [...mine].filter(st => !last[st]).sort((a,b) => standSort(a,b));
   if ((lvl === 'sup' || lvl === 'mgr') && !last[FOOD_GROUP]) quiet.unshift(FOOD_GROUP);
   if ((lvl === 'sup' || lvl === 'mgr') && !last[WH_GROUP]) quiet.unshift(WH_GROUP);
+  if ((lvl === 'sup' || lvl === 'mgr') && !last[LEAD_GROUP]) quiet.unshift(LEAD_GROUP);
   let html = '';
   if (unread.length) html += '<div class="section-title">🔴 New for you</div>' + unread.map(row).join('');
   if (rest.length) html += '<div class="section-title">Today\'s conversations</div>' + rest.map(row).join('');
@@ -22538,6 +22547,7 @@ function chatRenderTo() {
   const th = state._chatThread, el = document.getElementById('chat-to'); if (!th || !el) return;
   if (th.people && th.people.group) {
     const nt = document.getElementById('chat-to-note');
+    if (th.stand === LEAD_GROUP) { el.innerHTML = ''; if (nt) nt.textContent = '🔔 Supervisors and Managers signed in today get an alert · stand crews never see this chat'; return; }
     // Food Team / Warehouse Team: a member sends to the whole team, to the
     // Supervisor of a stand, or to the Managers on duty.
     const food = th.stand === FOOD_GROUP, team = food ? '🍽️ Food Team' : '🏭 Warehouse Team';
@@ -22584,9 +22594,9 @@ async function chatOpenThread(stand) {
   if (sw) sw.style.display = chatIsGroup(stand) ? '' : 'none';
   if (whoEl) whoEl.style.display = chatIsGroup(stand) ? 'none' : '';
   if (chatIsGroup(stand)) {
-    const food = stand === FOOD_GROUP;
-    document.getElementById('chat-title').textContent = food ? '🍽️ Food Team' : '🏭 Warehouse Team';
-    document.getElementById('chat-sub').textContent = food ? 'Food Manager · runners · Supervisors · Managers' : 'Warehouse Managers, Supervisors & runners · Managers';
+    const food = stand === FOOD_GROUP, lead = stand === LEAD_GROUP;
+    document.getElementById('chat-title').textContent = chatGroupLabel(stand);
+    document.getElementById('chat-sub').textContent = lead ? 'Only Supervisors and Managers · today' : food ? 'Food Manager · runners · Supervisors · Managers' : 'Warehouse Managers, Supervisors & runners · Managers';
     const si = document.getElementById('chat-stand'); if (si) { si.value = ''; si.placeholder = '📍 Which stand? (optional)'; }
     if (!chatIsGroupMember(stand) && sw) sw.style.display = 'none';
     allVenueStands().then(all => { const dl = document.getElementById('chat-stand-list'); if (dl) dl.innerHTML = all.map(x => '<option value="' + escapeAttr(x.name) + '">').join(''); });
@@ -22598,6 +22608,19 @@ async function chatOpenThread(stand) {
   state._chatThreadTimer = setInterval(() => { if (document.hidden) return; chatLoadThread(false); const t = state._chatThread; if (t && t.rows.some(r => /^🙋 REQUEST/.test(r.body||'') && String(r.sender_id) === chatMe().id)) chatRenderThread(); }, 5000);
 }
 async function chatGroupPeople(stand) {
+  if (stand === LEAD_GROUP) {
+    // Managers with an account + Supervisors on today's schedule; 🟢 = opened the app today.
+    const day = stadiumDay();
+    const [mg, sc, duty] = await Promise.all([
+      sb('staff_accounts?is_active=eq.true&role=in.(manager,support_manager,admin)&select=employee_id,name,role&order=name.asc').catch(()=>({_err:true})),
+      sb('schedule?event_date=eq.' + day + '&is_test=neq.true&role=ilike.*supervisor*&select=employee_id,worker_name,role').catch(()=>({_err:true})),
+      sb('on_duty?day=eq.' + day + '&role=in.(manager,admin,support_manager,supervisor)&select=employee_id').catch(()=>({_err:true}))
+    ]);
+    const on = new Set(Array.isArray(duty) ? duty.map(d => String(d.employee_id)) : []), seen = new Set(), people = [];
+    (Array.isArray(sc) ? sc : []).filter(r => !/warehouse|custodial/i.test(r.role || '')).forEach(r => { const id = String(r.employee_id || ''); if (!id || seen.has(id)) return; seen.add(id); people.push({id, name:r.worker_name, role:'supervisor', on:on.has(id)}); });
+    (Array.isArray(mg) ? mg : []).forEach(a => { const id = String(a.employee_id); if (seen.has(id)) return; seen.add(id); people.push({id, name:a.name, role:a.role, on:on.has(id)}); });
+    return {group:people, crew:[], lead:[], sup:[], mgr:[], areas:[], pinned:{}};
+  }
   const roles = stand === FOOD_GROUP ? 'food_manager,kitchen_coordinator,food_runner,kitchen_runner' : 'warehouse_manager,warehouse_supervisor,warehouse_employee';
   const [all, duty] = await Promise.all([
     sb('staff_accounts?is_active=eq.true&role=in.(' + roles + ')&select=employee_id,name,role&order=role.desc,name.asc').catch(()=>({_err:true})),
@@ -22609,6 +22632,11 @@ async function chatGroupPeople(stand) {
 }
 function chatRenderWho() {
   const th = state._chatThread, el = document.getElementById('chat-who'); if (!th || !el || !th.people) return;
+  if (th.people.group && th.stand === LEAD_GROUP) {
+    const tag = r => r === 'supervisor' ? 'Sup' : r === 'admin' ? 'Admin' : 'Mgr';
+    const list = th.people.group.filter(x => x.on || x.role === 'supervisor');
+    el.innerHTML = '<div style="font-weight:800;margin-bottom:2px">👔 Supervisors & Managers — private to leaders</div>' + list.map(x => '<span style="display:inline-block;margin:2px 8px 0 0">' + (x.on ? '🟢' : '⚪') + ' ' + escapeHtml(chatNice(x.name)) + ' <small style="color:var(--text-3)">' + tag(x.role) + '</small></span>').join('') + '<div style="font-size:10px;color:var(--text-3);margin-top:3px">🟢 signed in today — gets the alert</div>'; return;
+  }
   if (th.people.group) {
     const food = th.stand === FOOD_GROUP;
     const tag = r => food ? (/manager|coordinator/.test(r) ? 'Food Mgr' : 'Runner') : (r === 'warehouse_manager' ? 'Mgr' : r === 'warehouse_supervisor' ? 'Sup' : 'Runner');
@@ -22800,6 +22828,13 @@ async function chatSuggestOrder(stand, body) {
 // Only the addressed level is alerted. The stand name leads the title so a
 // lead over several portables knows at a glance which one is asking.
 async function chatNotify(stand, to, me, body) {
+  if (stand === LEAD_GROUP) {
+    const tag = chatParseStandTag(body), txt = tag ? tag.text : body, short = txt.length > 130 ? txt.slice(0, 127) + '…' : txt;
+    const g = await chatGroupPeople(stand).catch(()=>({group:[]}));
+    const ids = new Set(g.group.filter(x => x.on).map(x => x.id)); ids.delete(String(me.id)); ids.delete('');
+    ids.forEach(id => sendPushTo(id, '👔 Supervisors & Managers' + (tag ? ' · ' + tag.stand : ''), chatNice(me.name) + ' (' + me.role + '): ' + short));
+    return;
+  }
   if (chatIsGroup(stand)) {
     const food = stand === FOOD_GROUP, label = food ? '🍽️ Food Team' : '🏭 Warehouse Team';
     const tag = chatParseStandTag(body), txt = tag ? tag.text : body, short = txt.length > 130 ? txt.slice(0, 127) + '…' : txt;
@@ -23337,7 +23372,15 @@ function itStandChanged() {
   checkITCategoryHold();
 }
 
+// 10/15 DFA: one problem was saved 14 times in the same second — the button
+// only locked after the checks below, so every tap in between got through.
 async function submitITIssue() {
+  if (state._itSending) return;
+  state._itSending = true;
+  const b = evtBtn(); if (b) b.disabled = true;
+  try { await submitITIssueInner(); } finally { state._itSending = false; if (b) b.disabled = false; }
+}
+async function submitITIssueInner() {
   if (!state.itCategory) return toast('Pick an issue category', 'error');
   const details = document.getElementById('it-details').value.trim();
   if (details.replace(/\s+/g,' ').length < 10) return toast('Write what the issue is (a short sentence) so IT knows what to bring', 'error', 6000);
