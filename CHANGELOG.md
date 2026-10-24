@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-24-fix-97
+- **Admin → Access search finds names in any order.** Names are stored "Last, First", so searching "Anup Madake" found nothing; now every typed word just has to appear ("Anup Madake", "madake", "8816…" all find Madake, Anup).
+
 ## 2026-10-24-fix-96
 - **One floating button.** 💬 Chat now holds both chat and calling: inside chat, the **📞 Call · emergency numbers** tab opens the call list. The separate floating 📞 no longer shows next to it (it only appears on the few screens where the Chat button is hidden, e.g. golf cart). People without chat get one 📞 Contacts button, as before.
 

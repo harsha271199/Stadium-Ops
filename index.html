@@ -4751,7 +4751,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-96';
+const BUILD_TAG = '2026-10-24-fix-97';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -18285,7 +18285,9 @@ function adminAccessRender(){
   adminAccessStats();
   const q=String((document.getElementById('admin-access-search')||{value:''}).value||'').trim().toLowerCase();
   const rf=(document.getElementById('admin-access-role-filter')||{value:''}).value||'';
-  let rows=_adminAccessRows.filter(r=>!rf||r.role===rf).filter(r=>!q||(String(r.name||'')+' '+String(r.employee_id||'')).toLowerCase().includes(q));
+  // Every word must match, in any order — names are stored "Last, First", so "Anup Madake" finds "Madake, Anup".
+  const qw=q.split(/[\s,]+/).filter(Boolean);
+  let rows=_adminAccessRows.filter(r=>!rf||r.role===rf).filter(r=>{const h=(String(r.name||'')+' '+String(r.employee_id||'')).toLowerCase();return qw.every(w=>h.includes(w));});
   rows.sort((a,b)=>(a.is_active===false)-(b.is_active===false)||String(a.name||'').localeCompare(String(b.name||'')));
   if(!rows.length){
     const hasFilter=!!q||!!rf;
