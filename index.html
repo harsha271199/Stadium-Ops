@@ -4762,7 +4762,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-24-fix-107';
+const BUILD_TAG = '2026-10-26-fix-108';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -7204,10 +7204,15 @@ async function api(action, data) {
       const roleMap = {}; (sched._err ? [] : sched).forEach(r => { if (r.role) roleMap[r.employee_id] = r.role; });
       const typeMap = {}; (standsTbl._err ? [] : standsTbl).forEach(r => { typeMap[(r.stand_name || '').toLowerCase().trim()] = (r.stand_type || '').toLowerCase(); });
 
+      // One line per person, under the stand they ended the day at. Keyed by
+      // stand+person before, so a worker moved 220B → 203P → 220B left an open
+      // "still on" line at 203P (10/24: 203P showed 3 bartenders, not 2).
       const map = {};
       att.forEach(r => {
-        const k = r.stand + '||' + r.employee_id;
-        const e = (map[k] = map[k] || { stand:r.stand, empId:r.employee_id, name:r.worker_name, timeIn:null, timeOut:null, breaks:[], _openBreak:null, breakMins:0, lastSeen:null, lastStatus:null });
+        const k = String(r.employee_id);
+        const e = (map[k] = map[k] || { stand:r.stand, stands:[], empId:r.employee_id, name:r.worker_name, timeIn:null, timeOut:null, breaks:[], _openBreak:null, breakMins:0, lastSeen:null, lastStatus:null });
+        if (r.stand && e.stands[e.stands.length-1] !== r.stand) e.stands.push(r.stand);
+        if (r.stand) e.stand = r.stand;
         const t = new Date(r.updated_at);
         e.lastSeen = t;
         e.lastStatus = r.status; // real fix: track this so a later correction to absent overrides an earlier working/ended entry
@@ -7240,7 +7245,8 @@ async function api(action, data) {
           stand: e.stand, standType: isNpo ? 'NPO' : 'Employee',
           name: e.name, empId: e.empId, role: roleMap[e.empId] || '',
           timeIn: e.timeIn, breakIns: e.breaks.map(b => b.in), breakOuts: e.breaks.filter(b => b.out).map(b => b.out),
-          timeOut: end, stillWorking: !end, breakMins: e.breakMins, hours: Math.round(mins / 6) / 10
+          timeOut: end, stillWorking: !end, breakMins: e.breakMins, hours: Math.round(mins / 6) / 10,
+          note: e.stands.length > 1 ? 'Moved: ' + e.stands.join(' → ') : ''
         };
       });
 
@@ -16196,7 +16202,7 @@ async function loadTimesheet() {
       h += '<thead><tr style="background:var(--bg-elevated);text-align:left"><th style="padding:5px">Name</th><th style="padding:5px">ID</th><th style="padding:5px">Role</th><th style="padding:5px">Time-In</th><th style="padding:5px">Break In</th><th style="padding:5px">Break Out</th><th style="padding:5px">Time-Out</th><th style="padding:5px;text-align:right">Hrs</th></tr></thead><tbody>';
       st.workers.forEach(w => {
         h += '<tr style="border-bottom:1px solid var(--border)">';
-        h += '<td data-label="Name" style="padding:5px;font-weight:600">' + escapeHtml(w.name || '') + '</td>';
+        h += '<td data-label="Name" style="padding:5px;font-weight:600">' + escapeHtml(w.name || '') + (w.note ? '<div style="font-weight:400;font-size:10px;color:var(--text-2)">' + escapeHtml(w.note) + '</div>' : '') + '</td>';
         h += '<td data-label="ID" style="padding:5px">' + escapeHtml(w.empId) + '</td>';
         h += '<td data-label="Role" style="padding:5px">' + escapeHtml(w.role || '') + '</td>';
         h += '<td data-label="Time-In" style="padding:5px">' + tsFmt(w.timeIn) + '</td>';
@@ -16221,7 +16227,7 @@ function exportTimesheetCSV() {
   const esc = v => { const t = String(v == null ? '' : v); return (t.indexOf(',') >= 0 || t.indexOf('"') >= 0) ? '"' + t.replace(/"/g,'""') + '"' : t; };
   data.stands.forEach(st => {
     st.workers.forEach(w => {
-      csv += [st.stand, st.standType, w.name, w.empId, w.role, tsFmt(w.timeIn), tsFmtList(w.breakIns), tsFmtList(w.breakOuts), (w.stillWorking ? 'STILL ON' : tsFmt(w.timeOut)), w.breakMins, w.hours, ''].map(esc).join(',') + '\n';
+      csv += [st.stand, st.standType, w.name, w.empId, w.role, tsFmt(w.timeIn), tsFmtList(w.breakIns), tsFmtList(w.breakOuts), (w.stillWorking ? 'STILL ON' : tsFmt(w.timeOut)), w.breakMins, w.hours, w.note || ''].map(esc).join(',') + '\n';
     });
     csv += [st.stand, st.standType, 'STAND TOTAL', '', '', '', '', '', '', '', st.totalHours, ''].map(esc).join(',') + '\n';
   });
@@ -16244,7 +16250,7 @@ function printTimesheet() {
     html += '<h2>STAND LOCATION: ' + st.stand + '<span class="tp">' + (st.standType === 'NPO' ? 'NPO STAND' : 'EMPLOYEE STAND') + ' · ' + st.totalHours + ' HRS</span></h2>';
     html += '<table><thead><tr><th>EMPLOYEE NAME</th><th>EMPLOYEE ID</th><th>ROLE</th><th>TIME - IN STAND</th><th>BREAK IN</th><th>BREAK OUT</th><th>TIME - OUT STAND</th><th>HRS</th><th>NOTES</th></tr></thead><tbody>';
     st.workers.forEach(x => {
-      html += '<tr><td>' + (x.name||'') + '</td><td>' + x.empId + '</td><td>' + (x.role||'') + '</td><td>' + tsFmt(x.timeIn) + '</td><td>' + tsFmtList(x.breakIns) + '</td><td>' + tsFmtList(x.breakOuts) + '</td><td>' + (x.stillWorking ? 'STILL ON' : tsFmt(x.timeOut)) + '</td><td>' + x.hours + '</td><td></td></tr>';
+      html += '<tr><td>' + (x.name||'') + '</td><td>' + x.empId + '</td><td>' + (x.role||'') + '</td><td>' + tsFmt(x.timeIn) + '</td><td>' + tsFmtList(x.breakIns) + '</td><td>' + tsFmtList(x.breakOuts) + '</td><td>' + (x.stillWorking ? 'STILL ON' : tsFmt(x.timeOut)) + '</td><td>' + x.hours + '</td><td>' + escapeHtml(x.note || '') + '</td></tr>';
     });
     html += '<tr class="tot"><td colspan="7">STAND TOTAL</td><td>' + st.totalHours + '</td><td></td></tr>';
     html += '</tbody></table>';

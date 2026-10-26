@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-26-fix-108
+- **Time sheet: one line per person.** A worker moved between stands is listed once, under the stand they ended at, with full hours, and Notes shows "Moved: 220B Draft House → 203P Beer Portable → 220B Draft House". Before, each stand they passed through kept its own "still on" line: on 10/24 Ali McFadden (moved 220B → 203P at 9:52 by Harshavardhan, back to 220B at 10:43 by Yadzia) showed as a 3rd bartender at 203P.
+
 ## 2026-10-26 data only (no new build)
 - **DFA FY27 P1 INVENTORY (10/26).** New DFA stands from the Yellow Dog sheet: DFA Market split into **MKT Game Day Burger**, **MKT Fan Favs** and **MKT Loaded**, plus **DFA 161**. Their item lists and expected numbers come from Yellow Dog because they have no app history. DFA Market turned off (venue "Desert Financial Arena - Inactive"); its data is kept.
 - BEV MKT, DFA 111/143/191, DFA Chic Fil A 1/2 and Venezia: expected Count In set to their last Count Out (10/15), per the Count Out to expected Count In rule. The Yellow Dog numbers did not match (negatives such as Topo Chico -38 show that the 10/15 counts never reached Yellow Dog). Backup: `stand_sheets_backup_dfa_20261026`.
