@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-26 data only (no new build)
+- **DFA FY27 P1 INVENTORY (10/26).** New DFA stands from the Yellow Dog sheet: DFA Market split into **MKT Game Day Burger**, **MKT Fan Favs** and **MKT Loaded**, plus **DFA 161**. Their item lists and expected numbers come from Yellow Dog because they have no app history. DFA Market turned off (venue "Desert Financial Arena - Inactive"); its data is kept.
+- BEV MKT, DFA 111/143/191, DFA Chic Fil A 1/2 and Venezia: expected Count In set to their last Count Out (10/15), per the Count Out to expected Count In rule. The Yellow Dog numbers did not match (negatives such as Topo Chico -38 show that the 10/15 counts never reached Yellow Dog). Backup: `stand_sheets_backup_dfa_20261026`.
+- Steven Skinner's (32282630) 10/26 schedule row was renamed to "DFA FY27 P1 INVENTORY", and all 11 DFA stands were added to his assignment.
+
 ## 2026-10-24-fix-107
 - **Auto-update.** An open app checks the site every 2 minutes (and whenever it comes back on screen); when a newer version is up it reloads by itself and shows "✅ App updated". If the person is typing, has a popup open, or is on a count sheet / stock / food / IT / refund form, it shows "🔄 New version — tap to update" instead and tries again every 20 seconds.
 - sw.js CACHE_VERSION v3 — a changed worker makes apps still running an older build reload once. **Deploy the full zip** (index.html + sw.js + manifest + icons + _headers + _redirects), not only index.html.
