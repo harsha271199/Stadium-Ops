@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-30-fix-109
+- **Transfers update the expected count.** When the receiving stand confirms a Give Stock transfer, the qty is added to that stand's Exp Start / On-Hand and taken off the sending stand's, so the next Count In expects it. Before, only Count Out changed these, so stock moved between games (Steven's 10/26–10/29 DFA and Soccer transfers) was missing from the next expected count. Warehouse lists aren't counted, so only the receiving side moves for a warehouse send. A transfer during a game is replaced by that stand's Count Out, as before. If the item isn't on the receiving stand's sheet, it is added.
+- **Give Stock searches every item.** The search box covers the stand's own items plus every item on any stand sheet, and tolerates typos ("chese" finds CUP CHEESE DIP). If nothing matches, "➕ Add new item" lets you type it with a unit. An item sent from the catalog, or newly added, is saved to the sending stand's list, so next time it's already there. MAS/DFA Warehouse only had 23 items.
+- Data: "POPCORN - BAG ASU 85OZ" on the warehouse lists, and in the 10/28–10/29 transfers and ledger, renamed to the Yellow Dog name "POPCORN - BAG ASU 850Z". Steven's 87 confirmed transfers since 10/26 applied to expected counts; DFA 161, MKT Fan Favs and MKT Loaded start from his 10/26 Count In. Backups: `stand_sheets_backup_xfer_20261030`, `stand_transfers_backup_20261030`.
+
 ## 2026-10-26-fix-108
 - **Time sheet: one line per person.** A worker moved between stands is listed once, under the stand they ended at, with full hours, and Notes shows "Moved: 220B Draft House → 203P Beer Portable → 220B Draft House". Before, each stand they passed through kept its own "still on" line: on 10/24 Ali McFadden (moved 220B → 203P at 9:52 by Harshavardhan, back to 220B at 10:43 by Yadzia) showed as a 3rd bartender at 203P.
 
