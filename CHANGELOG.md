@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-30-fix-110
+- **"Counted in cases?" check on Count In / Count Out.** Some items are counted by the CASE in Yellow Dog (pretzel bags 400/case, employee water 40/case). When a big number goes on such a line (20+ and at least a quarter of a case's worth), a yellow note shows under it, e.g. "counted in CASES (400 per case). 200 singles = 0.5 cases [Use 0.5]". Submit asks once more: Convert to cases / Keep my numbers. On 10/15 DFA 111 entered 200 pretzel bags as cases; it rolled into the next expected count, and 438 then expected 465 cases.
+- Data: pretzel-bag expected counts converted to cases at 438 Huss Hideout (465 → 1.16), 334 San Tan (80 → 0.2), DFA 161 (200 → 0.5) and DFA 111 (200 → 0.5).
+
 ## 2026-10-30-fix-109
 - **Transfers update the expected count.** When the receiving stand confirms a Give Stock transfer, the qty is added to that stand's Exp Start / On-Hand and taken off the sending stand's, so the next Count In expects it. Before, only Count Out changed these, so stock moved between games (Steven's 10/26–10/29 DFA and Soccer transfers) was missing from the next expected count. Warehouse lists aren't counted, so only the receiving side moves for a warehouse send. A transfer during a game is replaced by that stand's Count Out, as before. If the item isn't on the receiving stand's sheet, it is added.
 - **Give Stock searches every item.** The search box covers the stand's own items plus every item on any stand sheet, and tolerates typos ("chese" finds CUP CHEESE DIP). If nothing matches, "➕ Add new item" lets you type it with a unit. An item sent from the catalog, or newly added, is saved to the sending stand's list, so next time it's already there. MAS/DFA Warehouse only had 23 items.

@@ -4762,7 +4762,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-30-fix-109';
+const BUILD_TAG = '2026-10-30-fix-110';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -21478,6 +21478,38 @@ function invDraftRestore(stand, phase) {
 function invDraftClear(stand, phase) {
   try { localStorage.removeItem(invDraftKey(stand, phase)); } catch (e) {}
 }
+// Items Yellow Dog counts by the CASE get single units typed in: 10/15 DFA 111
+// pretzel bags "200" (400/case = 0.5 case) rolled into the next game's
+// expected count, and 438 expected 465 cases. A big number on a CASE line
+// gets a one-tap "convert to cases" hint, and Submit asks again.
+function invCasePerUnit(item) {
+  const pack = String((item && item.pack) || '').toUpperCase();
+  const m = pack.match(/(\d+)\s*(?:CT)?\s*\/\s*CASE/) || pack.match(/CASE\s*\/\s*(\d+)/);
+  return m ? Number(m[1]) : 0;
+}
+function invCaseCheck(item, value) {
+  if (!item || String(item.unit || '').trim().toUpperCase() !== 'CASE') return null;
+  const v = Number(value);
+  if (!(v >= 20)) return null;
+  const per = invCasePerUnit(item);
+  if (per >= 12 && v >= per / 4) return { per: per, cases: Math.round(v / per * 100) / 100 };
+  if (!per && v >= 50) return { per: 0, cases: null };
+  return null;
+}
+function invCaseHint(inp) {
+  const field = inp.dataset.field;
+  if (field !== 'countIn' && field !== 'countOut') return;
+  const row = inp.closest('.inv-row'); if (!row) return;
+  let el = row.querySelector('.inv-case-hint');
+  const chk = invCaseCheck(state.invItems[parseInt(inp.dataset.invIdx)], inp.value);
+  if (!chk) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.className = 'inv-case-hint'; el.style.cssText = 'margin-top:6px;padding:7px 9px;border-radius:8px;background:rgba(245,158,11,0.12);border:1px solid #F59E0B;font-size:12px;font-weight:700;color:#92400E'; row.appendChild(el); }
+  el.innerHTML = '⚠️ This item is counted in <b>CASES</b>' + (chk.per ? ' (' + chk.per + ' per case). ' + escapeHtml(inp.value) + ' singles = <b>' + chk.cases + ' case' + (chk.cases === 1 ? '' : 's') + '</b>. <button class="btn btn-ghost" style="width:auto;margin:4px 0 0;padding:4px 10px;font-size:12px" onclick="invCaseConvert(' + inp.dataset.invIdx + ',\'' + field + '\',' + chk.cases + ')">Use ' + chk.cases + '</button>' : '. Did you count single units? Type the number of cases.');
+}
+function invCaseConvert(idx, field, cases) {
+  const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + idx + '"][data-field="' + field + '"]'); if (!inp) return;
+  inp.value = cases; inp.dispatchEvent(new Event('input', { bubbles: true }));
+}
 // One delegated listener covers every input, present or future — no
 // need to wire this up separately every time renderInvItems rebuilds
 // the list. Lightly debounced so fast typing doesn't hammer localStorage.
@@ -21485,6 +21517,7 @@ function invDraftClear(stand, phase) {
   let saveTimer = null;
   document.addEventListener('input', function(e) {
     if (!(e.target && e.target.matches && e.target.matches('#inv-items-list input[data-inv-idx]'))) return;
+    invCaseHint(e.target);
     invUpdateProgress();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(invDraftSave, 400);
@@ -21608,6 +21641,25 @@ async function submitInventory() {
       missing.forEach(function(m) { m.inp.style.outline = '3px solid #DC2626'; });
       try { missing[0].inp.scrollIntoView({behavior:'smooth', block:'center'}); missing[0].inp.focus(); } catch (e) {}
       return toast(missing.length + ' item' + (missing.length === 1 ? '' : 's') + ' still blank or not a valid number — type the real count for every item (type 0 only if there are none). First one: ' + missing[0].it.itemName, 'error', 9000);
+    }
+  }
+
+  // CASE items with a single-unit-sized number: convert or keep, before saving.
+  if (state.invPhase === 'Count In' || state.invPhase === 'Count Out') {
+    const reqField = state.invPhase === 'Count In' ? 'countIn' : 'countOut';
+    const big = [];
+    (state.invItems || []).forEach(function(it, i) {
+      const inp = document.querySelector('#inv-items-list input[data-inv-idx="' + i + '"][data-field="' + reqField + '"]'); if (!inp) return;
+      const chk = invCaseCheck(it, inp.value);
+      if (chk && chk.cases != null) big.push({ it: it, inp: inp, cases: chk.cases, per: chk.per });
+    });
+    if (big.length) {
+      const list = big.slice(0, 6).map(b => '• ' + b.it.itemName + ': ' + b.inp.value + ' → ' + b.cases + ' case' + (b.cases === 1 ? '' : 's') + ' (' + b.per + '/case)').join('\n');
+      const conv = await confirmAction('These items are counted in CASES, but the numbers look like single units:\n\n' + list + (big.length > 6 ? '\n…and ' + (big.length - 6) + ' more' : '') + '\n\nConvert them to cases?', { title: '📦 Counted in cases?', confirmLabel: 'Convert to cases', cancelLabel: 'Keep my numbers' });
+      if (conv) big.forEach(function(b) {
+        b.inp.value = b.cases; b.inp.dispatchEvent(new Event('input', { bubbles: true }));
+        const e = entries.find(x => x.itemName === b.it.itemName); if (e) e[reqField] = String(b.cases);
+      });
     }
   }
 
