@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-10-31-fix-111
+- **Warehouse deliveries after Count Out go onto the next expected count.** A warehouse delivery or QR restock logged after the stand has saved today's Count Out now adds to its Exp Start / On-Hand, and removing one subtracts. Before Count Out nothing changes, because Count Out already counts it. A retried log isn't counted twice. On 10/30, DFA 143 and 191 were restocked at 9:23/9:34 PM, after counting out, and that stock was missing from the next game's expected count.
+- Data: those two 10/30 restocks applied (DFA 143: 11 items, e.g. Coors Light 8 → 28; DFA 191: Coors Light, Life Water, Devils Halo Amber). Schedules loaded for 10/31 Wrestling (DFA 143) and 11/01 Volleyball (DFA 111, 143, 191, BEV MKT).
+
 ## 2026-10-30-fix-110
 - **"Counted in cases?" check on Count In / Count Out.** Some items are counted by the CASE in Yellow Dog (pretzel bags 400/case, employee water 40/case). When a big number goes on such a line (20+ and at least a quarter of a case's worth), a yellow note shows under it, e.g. "counted in CASES (400 per case). 200 singles = 0.5 cases [Use 0.5]". Submit asks once more: Convert to cases / Keep my numbers. On 10/15 DFA 111 entered 200 pretzel bags as cases; it rolled into the next expected count, and 438 then expected 465 cases.
 - Data: pretzel-bag expected counts converted to cases at 438 Huss Hideout (465 → 1.16), 334 San Tan (80 → 0.2), DFA 161 (200 → 0.5) and DFA 111 (200 → 0.5).

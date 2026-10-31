@@ -4762,7 +4762,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-30-fix-110';
+const BUILD_TAG = '2026-10-31-fix-111';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5354,12 +5354,20 @@ async function logMovement(mv) {
     ref_id: mv.refId ? String(mv.refId) : '',
     note: mv.note || ''
   };
+  // Warehouse deliveries logged AFTER the stand's Count Out (10/30: DFA 143
+  // and 191 restocked at 9:23/9:34 PM, after counting out) go straight onto
+  // the next game's expected count. Before Count Out they are already in it.
+  const afterCount = /^(transfer_in|force_stock|force_stock_undo)$/.test(mv.type || '');
   // Prefer:resolution=ignore-duplicates makes retries safe (unique client_uuid)
   const r = await sb('stock_ledger?on_conflict=client_uuid', {
     method:'POST',
-    headers:{ Prefer:'resolution=ignore-duplicates,return=minimal' },
+    headers:{ Prefer:'resolution=ignore-duplicates,return=' + (afterCount ? 'representation' : 'minimal') },
     body: JSON.stringify(row)
   });
+  if (afterCount && Array.isArray(r) && r.length && Number(mv.qty) > 0) {
+    const done = await sb('inventory_entries?stand=eq.' + encodeURIComponent(mv.stand) + '&phase=eq.' + encodeURIComponent('Count Out') + '&entry_date=eq.' + row.game_date + '&select=id&limit=1').catch(() => ({ _err: true }));
+    if (Array.isArray(done) && done.length) await invAdjustExpected(mv.stand, mv.item, mv.direction === 'out' ? -Number(mv.qty) : Number(mv.qty)).catch(() => {});
+  }
   return r;
 }
 
@@ -9493,33 +9501,34 @@ async function goIncomingTransfers() {
 // changed them, and 10/26–10/29 DFA/Soccer transfers between games were lost.
 // A transfer during a game is overwritten by that stand's Count Out anyway.
 // Warehouse lists are not counted here, so only the receiving side moves.
-async function invApplyTransferToExpected(r) {
-  const qty = Number(r.qty), item = r.item_name;
-  if (!(qty > 0) || !item) return;
+async function invAdjustExpected(stand, item, delta) {
+  if (!stand || !item || !delta) return;
   const enc = encodeURIComponent;
-  const candidates = stand => standDbCandidateNames2026(stand).concat([stand]).filter((v, i, a) => v && a.indexOf(v) === i);
-  const adjust = async (stand, delta) => {
-    for (const n of candidates(stand)) {
-      const rows = await sb('stand_sheets?stand=eq.' + enc(n) + '&item_name=eq.' + enc(item) + '&select=id,exp_start,on_hand&limit=1').catch(() => ({ _err: true }));
-      if (Array.isArray(rows) && rows.length) {
-        const x = rows[0];
-        await sb('stand_sheets?id=eq.' + x.id, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ exp_start: Math.max(0, Number(x.exp_start || 0) + delta), on_hand: Math.max(0, Number(x.on_hand || 0) + delta) }) }).catch(() => {});
-        return;
-      }
+  const candidates = standDbCandidateNames2026(stand).concat([stand]).filter((v, i, a) => v && a.indexOf(v) === i);
+  for (const n of candidates) {
+    const rows = await sb('stand_sheets?stand=eq.' + enc(n) + '&item_name=eq.' + enc(item) + '&select=id,exp_start,on_hand&limit=1').catch(() => ({ _err: true }));
+    if (Array.isArray(rows) && rows.length) {
+      const x = rows[0];
+      await sb('stand_sheets?id=eq.' + x.id, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ exp_start: Math.max(0, Number(x.exp_start || 0) + delta), on_hand: Math.max(0, Number(x.on_hand || 0) + delta) }) }).catch(() => {});
+      return;
     }
-    if (delta <= 0) return;
-    // Not on the receiving stand's sheet yet — add it so the next count shows it.
-    let target = stand, sort = 0;
-    for (const n of candidates(stand)) {
-      const last = await sb('stand_sheets?stand=eq.' + enc(n) + '&order=sort_order.desc.nullslast&limit=1&select=sort_order').catch(() => ({ _err: true }));
-      if (Array.isArray(last) && last.length) { target = n; sort = Number(last[0].sort_order || 0); break; }
-    }
-    const tpl = await sb('stand_sheets?item_name=eq.' + enc(item) + '&limit=1&select=unit,pack,chargeable,category').catch(() => ({ _err: true }));
-    const t = (Array.isArray(tpl) && tpl[0]) || {};
-    await sb('stand_sheets', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ stand: target, item_name: item, unit: t.unit || '', pack: t.pack || '', on_hand: delta, restock: 0, exp_start: delta, chargeable: t.chargeable || 'Chargeable', category: t.category || 'CHARGEABLE', vendor: '', sku: '', is_addon: true, sort_order: sort + 1 }) }).catch(() => {});
-  };
-  await adjust(r.to_stand, qty);
-  if (!/warehouse/i.test(r.from_stand || '')) await adjust(r.from_stand, -qty);
+  }
+  if (delta <= 0) return;
+  // Not on the stand's sheet yet — add it so the next count shows it.
+  let target = stand, sort = 0;
+  for (const n of candidates) {
+    const last = await sb('stand_sheets?stand=eq.' + enc(n) + '&order=sort_order.desc.nullslast&limit=1&select=sort_order').catch(() => ({ _err: true }));
+    if (Array.isArray(last) && last.length) { target = n; sort = Number(last[0].sort_order || 0); break; }
+  }
+  const tpl = await sb('stand_sheets?item_name=eq.' + enc(item) + '&limit=1&select=unit,pack,chargeable,category').catch(() => ({ _err: true }));
+  const t = (Array.isArray(tpl) && tpl[0]) || {};
+  await sb('stand_sheets', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ stand: target, item_name: item, unit: t.unit || '', pack: t.pack || '', on_hand: delta, restock: 0, exp_start: delta, chargeable: t.chargeable || 'Chargeable', category: t.category || 'CHARGEABLE', vendor: '', sku: '', is_addon: true, sort_order: sort + 1 }) }).catch(() => {});
+}
+async function invApplyTransferToExpected(r) {
+  const qty = Number(r.qty);
+  if (!(qty > 0) || !r.item_name) return;
+  await invAdjustExpected(r.to_stand, r.item_name, qty);
+  if (!/warehouse/i.test(r.from_stand || '')) await invAdjustExpected(r.from_stand, r.item_name, -qty);
 }
 
 // Unconfirmed transfers stay visible for 3 game days instead of vanishing at 6 AM.
