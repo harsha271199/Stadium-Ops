@@ -11,7 +11,7 @@
 // Bump CACHE_VERSION any time you want to force every installed device to
 // drop its old cache — e.g. after a major update where you want to be
 // extra sure nobody's stuck on stale cached assets.
-const CACHE_VERSION = 'stadium-ops-v2';
+const CACHE_VERSION = 'stadium-ops-v3'; // v3 (10/24): a changed worker makes open apps reload once
 
 self.addEventListener('install', (event) => {
   self.skipWaiting(); // activate the new service worker immediately, don't wait for old tabs to close
