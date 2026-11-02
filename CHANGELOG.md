@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-02-fix-112
+- **⭐ Premium in the manager Team tab.** Next to All stands / Workers / NPO, managers on app_settings `premium_team_access` (plus Admin) see today's Premium staff by location with Check in / Absent / Undo, the same check-in Nestor and Natasha use. No separate Premium login needed. Turned on for Harshavardhan (00890000) and Yadzia (00190000).
+- Data (11/2 Basketball): schedule loaded for DFA 111/143/191, Market (Grill = MKT Game Day Burger, Loaded, Fan Favs, BEV MKT; Maharshi leads all Market stands as one crew), Beerport split one person each to 104P and 113P Beer Portable. New premium stands DFA Courtside and DFA Club Chill (Aramark, item list from DFA Club 116 Bar). Their staff are on the normal schedule, so they sign in with last name + ID like everyone else and do inventory and requests at their stand. They are also on Premium check-in. Extra premium_manager logins 370000/470000 made earlier were turned off.
+
 ## 2026-10-31-fix-111
 - **Warehouse deliveries after Count Out go onto the next expected count.** A warehouse delivery or QR restock logged after the stand has saved today's Count Out now adds to its Exp Start / On-Hand, and removing one subtracts. Before Count Out nothing changes, because Count Out already counts it. A retried log isn't counted twice. On 10/30, DFA 143 and 191 were restocked at 9:23/9:34 PM, after counting out, and that stock was missing from the next game's expected count.
 - Data: those two 10/30 restocks applied (DFA 143: 11 items, e.g. Coors Light 8 → 28; DFA 191: Coors Light, Life Water, Devils Halo Amber). Schedules loaded for 10/31 Wrestling (DFA 143) and 11/01 Volleyball (DFA 111, 143, 191, BEV MKT).

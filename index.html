@@ -3353,6 +3353,7 @@
         <button class="mgr-v10-team-filter active" data-team-mode="all" onclick="mgrTeamView('all')">▦ All stands</button>
         <button class="mgr-v10-team-filter" data-team-mode="workers" onclick="mgrTeamView('workers')">👥 Workers</button>
         <button class="mgr-v10-team-filter" data-team-mode="npo" onclick="mgrTeamView('npo')">🤝 NPO</button>
+        <button class="mgr-v10-team-filter" data-team-mode="premium" id="mgr-team-prem-btn" onclick="mgrTeamView('premium')" style="display:none">⭐ Premium</button>
       </div>
       <div class="leadership-team-toolbar" style="margin-bottom:10px">
         <button class="btn btn-primary" onclick="leadershipOpenWalkin()">＋ Add walk-in</button>
@@ -4762,7 +4763,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-10-31-fix-111';
+const BUILD_TAG = '2026-11-02-fix-112';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -13653,15 +13654,49 @@ function mgrTab(el, tab) {
 
 
 function mgrTeamView(mode){
-  // Three options only: All stands · Workers · NPO. (Old "Working stand" /
-  // "Live now" modes are gone — every worker row has the same actions now.)
-  if(!['all','workers','npo'].includes(mode))mode='all';
+  // All stands · Workers · NPO, plus Premium for the managers on the
+  // premium_team_access list. (Old "Working stand" / "Live now" modes are gone.)
+  if(!['all','workers','npo','premium'].includes(mode)||(mode==='premium'&&!premiumTeamAllowed()))mode='all';
   state.mgrV10TeamMode=mode;
   document.querySelectorAll('.mgr-v10-team-filter').forEach(b=>b.classList.toggle('active',b.dataset.teamMode===mode));
   const all=document.getElementById('mgr-team-all'),live=document.getElementById('mgr-team-live-inline');
-  if(all)all.style.display='';
-  if(live)live.style.display='none';
+  if(all)all.style.display=mode==='premium'?'none':'';
+  if(live)live.style.display=mode==='premium'?'':'none';
+  if(mode==='premium')return mgrPremiumRender();
   loadMgrRoster();
+}
+
+// ⭐ Premium in the manager Team tab: Premium check-in (premium_schedule) without
+// signing in again as a Premium Manager. Admin always; managers whose employee
+// ID is in app_settings premium_team_access (11/2: Harshavardhan, Yadzia).
+function premiumTeamAllowed(){
+  const a=state.staffAccount;if(!a)return false;
+  if(isAdminSession())return true;
+  return a.group==='manager'&&!!(state._premTeamIds&&state._premTeamIds.has(String(a.empId||'')));
+}
+async function premiumTeamLoadAccess(){
+  const rows=await sb('app_settings?key=eq.premium_team_access&select=value').catch(()=>({_err:true}));
+  state._premTeamIds=new Set(Array.isArray(rows)&&rows[0]?String(rows[0].value||'').split(/[,\s]+/).filter(Boolean):[]);
+  const b=document.getElementById('mgr-team-prem-btn');if(b)b.style.display=premiumTeamAllowed()?'':'none';
+}
+async function mgrPremiumRender(){
+  const el=document.getElementById('mgr-team-live-list');if(!el)return;
+  el.innerHTML='<div class="loading"><div class="spinner"></div>Loading Premium…</div>';
+  const rows=await sb('premium_schedule?event_date=eq.'+localISODate()+'&order=location_name.asc,worker_name.asc&select=*').catch(()=>({_err:true}));
+  if(!Array.isArray(rows)){el.innerHTML='<div class="notice" style="color:#DC2626">Could not load Premium — try again</div>';return;}
+  state._mgrPremRows=rows;
+  if(!rows.length){el.innerHTML='<div class="empty" style="padding:24px"><p style="color:var(--text-2)">No Premium staff scheduled today.</p></div>';return;}
+  const by={};rows.forEach(r=>{(by[r.location_name||'—']=by[r.location_name||'—']||[]).push(r);});
+  const badge=st=>st==='present'?'<span style="color:#16A34A;font-weight:800">✅ In</span>':st==='absent'?'<span style="color:#DC2626;font-weight:800">❌ Absent</span>':'<span style="color:var(--text-2)">Scheduled</span>';
+  const inN=rows.filter(r=>r.status==='present').length;
+  el.innerHTML='<div style="font-size:12px;color:var(--text-2);margin-bottom:8px">⭐ Premium today: <b>'+inN+'</b> of '+rows.length+' checked in</div>'+Object.keys(by).map(loc=>'<div class="card" style="padding:10px 12px;margin-bottom:10px"><div style="font-weight:800;font-size:13px;margin-bottom:6px">'+escapeHtml(loc)+' <span style="font-weight:600;color:var(--text-2)">· '+by[loc].filter(r=>r.status==='present').length+'/'+by[loc].length+'</span></div>'+by[loc].map(r=>'<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);flex-wrap:wrap"><div style="flex:1;min-width:150px"><div style="font-weight:700;font-size:13px">'+escapeHtml(r.worker_name||'')+'</div><div style="font-size:11px;color:var(--text-2)">'+escapeHtml((r.role_title||'')+' · '+(r.start_time||'')+'–'+(r.end_time||''))+'</div></div><div style="font-size:12px">'+badge(r.status)+'</div>'+(r.status==='present'?'':'<button class="btn btn-primary" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="mgrPremiumSet('+r.id+',\'present\')">Check in</button>')+(r.status==='absent'?'':'<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="mgrPremiumSet('+r.id+',\'absent\')">Absent</button>')+(r.status!=='scheduled'?'<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="mgrPremiumSet('+r.id+',\'scheduled\')">Undo</button>':'')+'</div>').join('')+'</div>').join('');
+}
+async function mgrPremiumSet(id,status){
+  if(!premiumTeamAllowed())return toast('Premium check-in is not on for this account','error');
+  const res=await api('setPremiumCheckin',{id,status});
+  if(!res.ok)return toast(res.error||'Could not update — try again','error');
+  toast(status==='present'?'✅ Checked in':status==='absent'?'Marked absent':'Back to scheduled');
+  mgrPremiumRender();
 }
 
 function loadBedCheck() {
@@ -13671,6 +13706,7 @@ function loadBedCheck() {
 }
 
 function loadMgrRoster() {
+  premiumTeamLoadAccess().catch(() => {});
   state.bedCheckLoading = true;
   if (!state._bcAllStands) {
     api('getStandsList', {}).then(res => { state._bcAllStands = (res.ok && res.stands) ? res.stands.map(s => s.stand_name).filter(Boolean).sort(standSort) : []; }).catch(() => { state._bcAllStands = []; });
