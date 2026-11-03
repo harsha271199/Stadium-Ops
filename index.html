@@ -3142,11 +3142,7 @@
         </button>
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="showScLogins()">
           <span class="icon">🏪</span>
-          <span class="text"><div>Sign-in help &amp; QR</div><div class="sub">App QR code · what each subcontractor stand types to sign in</div></span>
-        </button>
-        <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="showAppQr()">
-          <span class="icon">📱</span>
-          <span class="text"><div>App QR code</div><div class="sub">Show it so NPO, subcontractors or new staff can open the app and sign in</div></span>
+          <span class="text"><div>Sign-in help &amp; QR</div><div class="sub">App QR · what each subcontractor stand types to sign in</div></span>
         </button>
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAllStandsLive()">
           <span class="icon">📊</span>
@@ -4767,7 +4763,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-03-fix-115';
+const BUILD_TAG = '2026-11-03-fix-116';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -16723,33 +16719,13 @@ function showScLoginQr(stand) {
 // Built into the app (no outside QR service), so it shows even on a slow or
 // blocked connection. Encodes STAND_QR_APP_URL + '/'.
 const APP_QR_SVG = '<svg style="width:100%;height:100%;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 33 33"><path fill="#fff" d="M0 0h33v33h-33z"/><path stroke="#000" d="M2 2.5h7m5 0h4m2 0h1m1 0h1m1 0h7m-29 1h1m5 0h1m4 0h1m2 0h3m2 0h1m2 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m1 0h2m3 0h2m2 0h2m3 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m2 0h4m2 0h2m2 0h2m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h1m3 0h1m1 0h2m1 0h2m3 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m1 0h1m4 0h1m3 0h1m1 0h1m2 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-20 1h3m2 0h1m1 0h2m1 0h1m-19 1h1m2 0h1m1 0h1m1 0h2m2 0h2m2 0h2m1 0h1m1 0h1m1 0h2m1 0h1m-25 1h4m1 0h1m1 0h3m1 0h2m2 0h2m2 0h8m-29 1h1m3 0h1m1 0h1m1 0h1m2 0h2m3 0h3m2 0h1m4 0h1m1 0h1m-29 1h6m2 0h2m3 0h2m1 0h6m3 0h1m1 0h2m-28 1h1m1 0h1m1 0h4m2 0h4m2 0h1m1 0h1m3 0h1m1 0h1m2 0h1m-29 1h1m1 0h2m1 0h1m1 0h2m2 0h3m2 0h1m1 0h1m3 0h1m1 0h1m1 0h3m-29 1h1m2 0h4m1 0h3m1 0h2m1 0h3m2 0h1m1 0h1m1 0h1m3 0h1m-28 1h1m1 0h3m1 0h2m2 0h1m1 0h3m1 0h2m2 0h3m1 0h1m2 0h1m-29 1h1m3 0h3m1 0h1m1 0h1m2 0h3m1 0h1m1 0h3m-22 1h2m5 0h2m1 0h1m2 0h1m8 0h4m2 0h1m-27 1h3m1 0h2m1 0h5m1 0h1m1 0h1m2 0h1m2 0h4m1 0h1m-27 1h1m1 0h1m3 0h3m2 0h2m2 0h2m5 0h1m2 0h2m-29 1h4m2 0h2m2 0h1m3 0h2m1 0h1m2 0h6m-18 1h1m3 0h5m2 0h2m3 0h1m1 0h1m1 0h1m-29 1h7m2 0h1m1 0h2m1 0h2m1 0h1m1 0h2m1 0h1m1 0h1m3 0h1m-29 1h1m5 0h1m2 0h3m1 0h1m1 0h3m1 0h2m3 0h2m2 0h1m-29 1h1m1 0h3m1 0h1m1 0h6m3 0h1m1 0h6m2 0h2m-29 1h1m1 0h3m1 0h1m3 0h1m2 0h1m1 0h1m7 0h1m4 0h1m-29 1h1m1 0h3m1 0h1m2 0h1m1 0h1m2 0h3m2 0h3m4 0h3m-29 1h1m5 0h1m1 0h1m2 0h1m2 0h4m2 0h1m2 0h1m1 0h1m1 0h2m-29 1h7m2 0h1m2 0h3m2 0h1m2 0h1m3 0h2m1 0h1"/></svg>';
-function appQrSignInHelp() {
-  return 'Employees: last 5 digits of ID + last name.<br>NPO: tap 🤝 NPO Group Sign-in (group name + PIN).<br>Subcontractors: ID 50000 + stand login word.';
-}
-// Reference card shown inside 🏪 Subcontractor logins: the QR is right there,
-// not behind a button. Tap the QR to show it full size.
+// Shown inside 🏪 Sign-in help: just the QR and the link, so a lead or
+// manager can hold up their phone instead of sharing the link.
 function appQrBlockHtml(open) {
   if (!scLoginsAllowed()) return '';
-  return '<details' + (open ? ' open' : '') + ' style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px"><summary style="font-size:13px;font-weight:800;cursor:pointer">📱 App QR — scan to open Stadium Ops</summary>' +
-    '<div style="display:flex;gap:12px;align-items:center;margin-top:8px">' +
-    '<div onclick="showAppQr()" title="Tap to enlarge" style="flex-shrink:0;width:132px;height:132px;cursor:pointer;background:#fff;border-radius:8px;padding:4px">' + APP_QR_SVG + '</div>' +
-    '<div style="min-width:0;font-size:11px;color:var(--text-2);line-height:1.45"><div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">' + escapeHtml(STAND_QR_APP_URL.replace(/^https?:\/\//, '')) + '</div>' +
-    'Scan with the phone camera, then sign in.<br>' + appQrSignInHelp() + '<div style="margin-top:4px;font-weight:700;color:var(--text)">Tap the QR to make it bigger.</div></div></div></details>';
-}
-function showAppQr() {
-  if (!scLoginsAllowed()) return toast('Stand Leads, Supervisors and Managers only', 'error');
-  const url = STAND_QR_APP_URL + '/';
-  const old = document.getElementById('app-qr-overlay'); if (old) old.remove();
-  const el = document.createElement('div');
-  el.id = 'app-qr-overlay'; el.className = 'contact-popup-overlay'; el.style.zIndex = '10001';
-  el.innerHTML = '<div class="contact-popup" style="text-align:center"><div style="font-size:18px;font-weight:800">📱 Stadium Ops</div>' +
-    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 10px">Scan with your phone camera to open the app, then sign in.</div>' +
-    '<div role="img" aria-label="QR code for the Stadium Ops app" style="width:260px;height:260px;max-width:80vw;max-height:80vw;margin:0 auto;background:#fff;border-radius:10px;padding:6px">' + APP_QR_SVG + '</div>' +
-    '<div style="font-size:13px;font-weight:800;margin-top:10px">' + escapeHtml(url.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</div>' +
-    '<div style="font-size:11px;color:var(--text-2);margin-top:6px;text-align:left">' + appQrSignInHelp() + '</div>' +
-    '<button class="btn btn-ghost" onclick="document.getElementById(\'app-qr-overlay\').remove()" style="width:100%;margin-top:12px">Close</button></div>';
-  el.addEventListener('click', e => { if (e.target === el) el.remove(); });
-  document.body.appendChild(el);
+  return '<details' + (open ? ' open' : '') + ' style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px"><summary style="font-size:13px;font-weight:800;cursor:pointer">📱 App QR</summary>' +
+    '<div style="text-align:center;margin-top:8px"><div role="img" aria-label="QR code for the Stadium Ops app" style="width:240px;height:240px;max-width:72vw;max-height:72vw;margin:0 auto;background:#fff;border-radius:10px;padding:6px">' + APP_QR_SVG + '</div>' +
+    '<div style="font-size:13px;font-weight:800;margin-top:6px">' + escapeHtml(STAND_QR_APP_URL.replace(/^https?:\/\//, '')) + '</div></div></details>';
 }
 function showScLogins() {
   const html = scLoginsHtml(true);

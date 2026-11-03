@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-03-fix-116
+- **App QR is just the QR now.** In 🏪 Sign-in help & QR, the 📱 App QR shows a big QR with the link under it, so a lead or manager can hold up their phone instead of sharing the link. The extra popup, the sign-in instructions and the separate "App QR code" tile are removed. It still decodes to https://asu-aramark.netlify.app/ and is visible to the same people as before.
+
 ## 2026-11-03-fix-115
 - **The App QR now sits right in the app as a reference.** It sits at the top of 🏪 **Sign-in help & QR** (formerly "Subcontractor logins"), next to the subcontractor login list, with the link and how each group signs in. Tap it to show it full size. The QR picture is built into the app instead of coming from an outside QR website, so it shows even on a slow or blocked connection. It was test-scanned and decodes to https://asu-aramark.netlify.app/. Same people as fix-114: Stand Leads, NPO Leads, Supervisors, Support Managers, Managers and Admin. In the contacts popup it starts folded so it doesn't take over the call list.
 
