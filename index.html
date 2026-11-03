@@ -3142,7 +3142,7 @@
         </button>
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="showScLogins()">
           <span class="icon">🏪</span>
-          <span class="text"><div>Subcontractor logins</div><div class="sub">What each subcontractor stand types to sign in</div></span>
+          <span class="text"><div>Sign-in help &amp; QR</div><div class="sub">App QR code · what each subcontractor stand types to sign in</div></span>
         </button>
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="showAppQr()">
           <span class="icon">📱</span>
@@ -4150,7 +4150,7 @@
     <div class="chat-tabs">
       <button class="chip selected" id="chat-tab-chat" onclick="chatShowTab('chat')">💬 Chat</button>
       <button class="chip" id="chat-tab-contacts" onclick="showContactPopup()">📞 Call · emergency numbers</button>
-      <button class="chip" id="chat-tab-sclogins" style="display:none" onclick="showScLogins()">🏪 Subcontractor logins</button>
+      <button class="chip" id="chat-tab-sclogins" style="display:none" onclick="showScLogins()">🏪 Sign-in help &amp; QR</button>
     </div>
     <div id="chat-inbox"></div>
     <div id="chat-thread-wrap" style="display:none">
@@ -4767,7 +4767,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-03-fix-114';
+const BUILD_TAG = '2026-11-03-fix-115';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -16689,10 +16689,10 @@ function callContact(phone, name) {
 function scLoginsAllowed() { return ['sup','mgr','lead'].includes(chatLevel()) || isAdminSession() || isSupervisorSession() || isManagerOpsSession(); }
 function scLoginsHtml(open) {
   if (!scLoginsAllowed()) return '';
-  const qrBtn = '<button class="btn btn-ghost" style="width:100%;margin:12px 0 0" onclick="showAppQr()">📱 App QR — scan to open Stadium Ops</button>';
+  const qrBlock = appQrBlockHtml(open);
   const list = scStandList();
-  if (!list.length) return qrBtn;
-  return qrBtn + '<details' + (open ? ' open' : '') + ' style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px"><summary style="font-size:13px;font-weight:800;cursor:pointer">🏪 Subcontractor logins (' + list.length + ')</summary>' +
+  if (!list.length) return qrBlock;
+  return qrBlock + '<details' + (open ? ' open' : '') + ' style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px"><summary style="font-size:13px;font-weight:800;cursor:pointer">🏪 Subcontractor logins (' + list.length + ')</summary>' +
     '<div style="font-size:11px;color:var(--text-2);margin:6px 0">Sign in with <b>Employee ID 50000</b>, then type the stand number or login word below in the second box. No PIN needed.</div>' +
     list.map(st => { const l = scLoginText(st); return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--border);font-size:12px"><span style="min-width:0">' + escapeHtml(st) + '</span><span style="flex-shrink:0;font-weight:800;display:flex;align-items:center;gap:6px">' + (l.ok ? '50000 + ' + escapeHtml(l.text) + (scQrAllowed() ? ' <button class="btn btn-ghost" style="width:auto;margin:0;padding:3px 8px;font-size:11px" onclick="showScLoginQr(\'' + escapeAttr(st) + '\')">📱 QR</button>' : '') : '<span style="color:#B45309">ask Admin</span>') + '</span></div>'; }).join('') + '</details>';
 }
@@ -16720,6 +16720,22 @@ function showScLoginQr(stand) {
 // Managers, Managers, Admin): anyone — NPO members, subcontractors, a new
 // worker — scans it with the phone camera, the app opens on the sign-in
 // screen and they log in as usual. No account is pre-filled.
+// Built into the app (no outside QR service), so it shows even on a slow or
+// blocked connection. Encodes STAND_QR_APP_URL + '/'.
+const APP_QR_SVG = '<svg style="width:100%;height:100%;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 33 33"><path fill="#fff" d="M0 0h33v33h-33z"/><path stroke="#000" d="M2 2.5h7m5 0h4m2 0h1m1 0h1m1 0h7m-29 1h1m5 0h1m4 0h1m2 0h3m2 0h1m2 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m1 0h2m3 0h2m2 0h2m3 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m2 0h4m2 0h2m2 0h2m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h1m3 0h1m1 0h2m1 0h2m3 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m1 0h1m4 0h1m3 0h1m1 0h1m2 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-20 1h3m2 0h1m1 0h2m1 0h1m-19 1h1m2 0h1m1 0h1m1 0h2m2 0h2m2 0h2m1 0h1m1 0h1m1 0h2m1 0h1m-25 1h4m1 0h1m1 0h3m1 0h2m2 0h2m2 0h8m-29 1h1m3 0h1m1 0h1m1 0h1m2 0h2m3 0h3m2 0h1m4 0h1m1 0h1m-29 1h6m2 0h2m3 0h2m1 0h6m3 0h1m1 0h2m-28 1h1m1 0h1m1 0h4m2 0h4m2 0h1m1 0h1m3 0h1m1 0h1m2 0h1m-29 1h1m1 0h2m1 0h1m1 0h2m2 0h3m2 0h1m1 0h1m3 0h1m1 0h1m1 0h3m-29 1h1m2 0h4m1 0h3m1 0h2m1 0h3m2 0h1m1 0h1m1 0h1m3 0h1m-28 1h1m1 0h3m1 0h2m2 0h1m1 0h3m1 0h2m2 0h3m1 0h1m2 0h1m-29 1h1m3 0h3m1 0h1m1 0h1m2 0h3m1 0h1m1 0h3m-22 1h2m5 0h2m1 0h1m2 0h1m8 0h4m2 0h1m-27 1h3m1 0h2m1 0h5m1 0h1m1 0h1m2 0h1m2 0h4m1 0h1m-27 1h1m1 0h1m3 0h3m2 0h2m2 0h2m5 0h1m2 0h2m-29 1h4m2 0h2m2 0h1m3 0h2m1 0h1m2 0h6m-18 1h1m3 0h5m2 0h2m3 0h1m1 0h1m1 0h1m-29 1h7m2 0h1m1 0h2m1 0h2m1 0h1m1 0h2m1 0h1m1 0h1m3 0h1m-29 1h1m5 0h1m2 0h3m1 0h1m1 0h3m1 0h2m3 0h2m2 0h1m-29 1h1m1 0h3m1 0h1m1 0h6m3 0h1m1 0h6m2 0h2m-29 1h1m1 0h3m1 0h1m3 0h1m2 0h1m1 0h1m7 0h1m4 0h1m-29 1h1m1 0h3m1 0h1m2 0h1m1 0h1m2 0h3m2 0h3m4 0h3m-29 1h1m5 0h1m1 0h1m2 0h1m2 0h4m2 0h1m2 0h1m1 0h1m1 0h2m-29 1h7m2 0h1m2 0h3m2 0h1m2 0h1m3 0h2m1 0h1"/></svg>';
+function appQrSignInHelp() {
+  return 'Employees: last 5 digits of ID + last name.<br>NPO: tap 🤝 NPO Group Sign-in (group name + PIN).<br>Subcontractors: ID 50000 + stand login word.';
+}
+// Reference card shown inside 🏪 Subcontractor logins: the QR is right there,
+// not behind a button. Tap the QR to show it full size.
+function appQrBlockHtml(open) {
+  if (!scLoginsAllowed()) return '';
+  return '<details' + (open ? ' open' : '') + ' style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px"><summary style="font-size:13px;font-weight:800;cursor:pointer">📱 App QR — scan to open Stadium Ops</summary>' +
+    '<div style="display:flex;gap:12px;align-items:center;margin-top:8px">' +
+    '<div onclick="showAppQr()" title="Tap to enlarge" style="flex-shrink:0;width:132px;height:132px;cursor:pointer;background:#fff;border-radius:8px;padding:4px">' + APP_QR_SVG + '</div>' +
+    '<div style="min-width:0;font-size:11px;color:var(--text-2);line-height:1.45"><div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">' + escapeHtml(STAND_QR_APP_URL.replace(/^https?:\/\//, '')) + '</div>' +
+    'Scan with the phone camera, then sign in.<br>' + appQrSignInHelp() + '<div style="margin-top:4px;font-weight:700;color:var(--text)">Tap the QR to make it bigger.</div></div></div></details>';
+}
 function showAppQr() {
   if (!scLoginsAllowed()) return toast('Stand Leads, Supervisors and Managers only', 'error');
   const url = STAND_QR_APP_URL + '/';
@@ -16728,9 +16744,9 @@ function showAppQr() {
   el.id = 'app-qr-overlay'; el.className = 'contact-popup-overlay'; el.style.zIndex = '10001';
   el.innerHTML = '<div class="contact-popup" style="text-align:center"><div style="font-size:18px;font-weight:800">📱 Stadium Ops</div>' +
     '<div style="font-size:12px;color:var(--text-2);margin:4px 0 10px">Scan with your phone camera to open the app, then sign in.</div>' +
-    '<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=' + encodeURIComponent(url) + '" alt="QR code for the Stadium Ops app" style="width:260px;height:260px;max-width:80vw;max-height:80vw;background:#fff;border-radius:10px">' +
+    '<div role="img" aria-label="QR code for the Stadium Ops app" style="width:260px;height:260px;max-width:80vw;max-height:80vw;margin:0 auto;background:#fff;border-radius:10px;padding:6px">' + APP_QR_SVG + '</div>' +
     '<div style="font-size:13px;font-weight:800;margin-top:10px">' + escapeHtml(url.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</div>' +
-    '<div style="font-size:11px;color:var(--text-2);margin-top:6px;text-align:left">Employees: last 5 digits of ID + last name.<br>NPO: tap 🤝 NPO Group Sign-in (group name + PIN).<br>Subcontractors: ID 50000 + stand login word.</div>' +
+    '<div style="font-size:11px;color:var(--text-2);margin-top:6px;text-align:left">' + appQrSignInHelp() + '</div>' +
     '<button class="btn btn-ghost" onclick="document.getElementById(\'app-qr-overlay\').remove()" style="width:100%;margin-top:12px">Close</button></div>';
   el.addEventListener('click', e => { if (e.target === el) el.remove(); });
   document.body.appendChild(el);
@@ -16741,7 +16757,7 @@ function showScLogins() {
   const old = document.getElementById('sc-logins-overlay'); if (old) old.remove();
   const el = document.createElement('div');
   el.id = 'sc-logins-overlay'; el.className = 'contact-popup-overlay';
-  el.innerHTML = '<div class="contact-popup"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:18px;font-weight:800">🏪 Subcontractor logins</div><button onclick="document.getElementById(\'sc-logins-overlay\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-2)">×</button></div>' + html + '<button class="btn btn-ghost" onclick="document.getElementById(\'sc-logins-overlay\').remove()" style="width:100%;margin-top:12px">Close</button></div>';
+  el.innerHTML = '<div class="contact-popup"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:18px;font-weight:800">🏪 Sign-in help</div><button onclick="document.getElementById(\'sc-logins-overlay\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-2)">×</button></div>' + html + '<button class="btn btn-ghost" onclick="document.getElementById(\'sc-logins-overlay\').remove()" style="width:100%;margin-top:12px">Close</button></div>';
   el.addEventListener('click', e => { if (e.target === el) el.remove(); });
   document.body.appendChild(el);
 }
