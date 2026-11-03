@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-03 data only
+- **Club Chill and DFA Club 116 Bar are one bar, so it's one inventory now.** The Club Chill crew (Amy Larson, Saideep Karode, Ayushmann Sinha, Desiray Kobel, Adam Felicetta) is scheduled at **DFA Club 116 Bar**, and Premium check-in uses the same name. The stand is labelled "Premium · Club Chill". The extra "DFA Club Chill" stand is turned off (venue "Desert Financial Arena - Inactive") but not deleted. It had no counts, transfers, waste or moves. Backups: schedule_backup_clubchill_20261103, premium_schedule_backup_clubchill_20261103, stands_backup_clubchill_20261103. Amy signs in with 48921 + Larson as Supervisor.
+
 ## 2026-11-03-fix-113
 - **Subcontractor sign-in QR.** In 🏪 Subcontractor logins, Supervisors, Managers and Admin get a **📱 QR** button next to each stand. It shows a big QR for that stand; the crew scans it with the phone camera and the app opens already signed in to their stand (the same as ID 50000 + login word). The popup also shows the typed login as a fallback. A phone already signed in as staff or an employee isn't switched over; it asks them to sign out first. Stand Leads still see the list but not the QR.
 
