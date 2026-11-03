@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-03-fix-113
+- **Subcontractor sign-in QR.** In 🏪 Subcontractor logins, Supervisors, Managers and Admin get a **📱 QR** button next to each stand. It shows a big QR for that stand; the crew scans it with the phone camera and the app opens already signed in to their stand (the same as ID 50000 + login word). The popup also shows the typed login as a fallback. A phone already signed in as staff or an employee isn't switched over; it asks them to sign out first. Stand Leads still see the list but not the QR.
+
 ## 2026-11-02-fix-112
 - **⭐ Premium in the manager Team tab.** Next to All stands / Workers / NPO, managers on app_settings `premium_team_access` (plus Admin) see today's Premium staff by location with Check in / Absent / Undo, the same check-in Nestor and Natasha use. No separate Premium login needed. Turned on for Harshavardhan (00890000) and Yadzia (00190000).
 - Data (11/2 Basketball): schedule loaded for DFA 111/143/191, Market (Grill = MKT Game Day Burger, Loaded, Fan Favs, BEV MKT; Maharshi leads all Market stands as one crew), Beerport split one person each to 104P and 113P Beer Portable. New premium stands DFA Courtside and DFA Club Chill (Aramark, item list from DFA Club 116 Bar). Their staff are on the normal schedule, so they sign in with last name + ID like everyone else and do inventory and requests at their stand. They are also on Premium check-in. Extra premium_manager logins 370000/470000 made earlier were turned off.

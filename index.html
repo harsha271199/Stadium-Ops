@@ -4763,7 +4763,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-02-fix-112';
+const BUILD_TAG = '2026-11-03-fix-113';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -16689,7 +16689,27 @@ function scLoginsHtml(open) {
   if (!list.length) return '';
   return '<details' + (open ? ' open' : '') + ' style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px"><summary style="font-size:13px;font-weight:800;cursor:pointer">🏪 Subcontractor logins (' + list.length + ')</summary>' +
     '<div style="font-size:11px;color:var(--text-2);margin:6px 0">Sign in with <b>Employee ID 50000</b>, then type the stand number or login word below in the second box. No PIN needed.</div>' +
-    list.map(st => { const l = scLoginText(st); return '<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--border);font-size:12px"><span style="min-width:0">' + escapeHtml(st) + '</span><span style="flex-shrink:0;font-weight:800">' + (l.ok ? '50000 + ' + escapeHtml(l.text) : '<span style="color:#B45309">ask Admin</span>') + '</span></div>'; }).join('') + '</details>';
+    list.map(st => { const l = scLoginText(st); return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--border);font-size:12px"><span style="min-width:0">' + escapeHtml(st) + '</span><span style="flex-shrink:0;font-weight:800;display:flex;align-items:center;gap:6px">' + (l.ok ? '50000 + ' + escapeHtml(l.text) + (scQrAllowed() ? ' <button class="btn btn-ghost" style="width:auto;margin:0;padding:3px 8px;font-size:11px" onclick="showScLoginQr(\'' + escapeAttr(st) + '\')">📱 QR</button>' : '') : '<span style="color:#B45309">ask Admin</span>') + '</span></div>'; }).join('') + '</details>';
+}
+// Subcontractor sign-in QR (Supervisors / Managers / Admin): the crew scans it
+// with the phone camera and lands signed in to their stand — same as typing
+// ID 50000 + the login word, nothing to type.
+function scQrAllowed() { return isAdminSession() || isSupervisorSession() || isManagerOpsSession() || ['sup','mgr'].includes(chatLevel()); }
+function showScLoginQr(stand) {
+  if (!scQrAllowed()) return toast('Supervisors, Managers and Admin only', 'error');
+  const l = scLoginText(stand);
+  if (!l.ok) return toast('This stand needs a login word first — ask Admin', 'error');
+  const url = STAND_QR_APP_URL + '/?sclogin=' + encodeURIComponent(l.text);
+  const old = document.getElementById('sc-qr-overlay'); if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'sc-qr-overlay'; el.className = 'contact-popup-overlay'; el.style.zIndex = '10001';
+  el.innerHTML = '<div class="contact-popup" style="text-align:center"><div style="font-size:18px;font-weight:800">🏪 ' + escapeHtml(stand) + '</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 10px">Subcontractor crew: scan with your phone camera to sign in to this stand.</div>' +
+    '<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=' + encodeURIComponent(url) + '" alt="Sign-in QR for ' + escapeAttr(stand) + '" style="width:260px;height:260px;max-width:80vw;max-height:80vw;background:#fff;border-radius:10px">' +
+    '<div style="font-size:12px;margin-top:10px">No camera? Sign in with ID <b>50000</b> + <b>' + escapeHtml(l.text) + '</b></div>' +
+    '<button class="btn btn-ghost" onclick="document.getElementById(\'sc-qr-overlay\').remove()" style="width:100%;margin-top:12px">Close</button></div>';
+  el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+  document.body.appendChild(el);
 }
 function showScLogins() {
   const html = scLoginsHtml(true);
@@ -28000,6 +28020,23 @@ async function init() {
   // Pending QR intent is session-only now, so reopening the app normally can
   // never resurrect an old Force Restock screen.
   try{localStorage.removeItem('stadium_pending_qr_restock');}catch(e){}
+
+  // Subcontractor sign-in QR (?sclogin=<login word>): fills ID 50000 + the word
+  // and signs in. A phone already signed in as staff/an employee is left alone.
+  try {
+    const su = new URL(location.href), scw = su.searchParams.get('sclogin');
+    if (scw) {
+      su.searchParams.delete('sclogin'); history.replaceState(null, '', su.pathname + su.search + su.hash);
+      if (state.staffAccount || (state.user && !state.user.isSubcontractor)) {
+        toast('This phone is already signed in — sign out first, then scan the stand QR again', 'error', 7000);
+      } else {
+        state.user = null; try { localStorage.removeItem('stadium_user'); } catch (e) {}
+        showScreen('screen-login');
+        const idEl = document.getElementById('login-empid'), wEl = document.getElementById('login-lastname');
+        if (idEl && wEl) { idEl.value = '50000'; scLoginLabel(); wEl.value = scw; await doLogin(); return; }
+      }
+    }
+  } catch (e) {}
 
   // ── QR CODE SCAN ROUTING ──
   // Supports the ACTUAL printed stickers (?standId=<id>) plus newer
