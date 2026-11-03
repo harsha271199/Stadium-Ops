@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-03-fix-114
+- **📱 App QR code.** Stand Leads, NPO Leads, Supervisors, Support Managers, Managers and Admin get one QR that opens the app (asu-aramark.netlify.app) on the sign-in screen. Show it to NPO members, subcontractor crews or new staff, they scan it with the phone camera, and then they sign in as usual. It's under 🏪 Subcontractor logins (manager tiles, the contacts popup and the chat chip), and Supervisor — All Stands has its own **App QR code** tile. The popup lists how each group signs in. Workers and NPO members don't see it. The per-stand subcontractor QR from fix-113 is unchanged.
+
 ## 2026-11-03 data only
 - **Club Chill and DFA Club 116 Bar are one bar, so it's one inventory now.** The Club Chill crew (Amy Larson, Saideep Karode, Ayushmann Sinha, Desiray Kobel, Adam Felicetta) is scheduled at **DFA Club 116 Bar**, and Premium check-in uses the same name. The stand is labelled "Premium · Club Chill". The extra "DFA Club Chill" stand is turned off (venue "Desert Financial Arena - Inactive") but not deleted. It had no counts, transfers, waste or moves. Backups: schedule_backup_clubchill_20261103, premium_schedule_backup_clubchill_20261103, stands_backup_clubchill_20261103. Amy signs in with 48921 + Larson as Supervisor.
 
