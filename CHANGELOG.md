@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-04-fix-118
+- **Stand QR stickers work at Desert Financial Arena.** Scanning a sticker (`?standId=<id>` or `?scan=<name>`) used to look up only Mountain America Stadium stands, so a DFA sticker opened nothing. It now matches active stands at both venues. Stand names are unique across the two; turned-off stands ("… - Inactive") still don't open. Force Restock, Quick Drop and the delivery scan-confirm all use the same lookup. Laminated sheets for the 16 DFA stands were printed in the same 3.375 × 2.125 in layout as the stadium stickers, horizontal and vertical. DFA Warehouse has no sticker.
+
 ## 2026-11-04-fix-117
 - **Items added at a stand stay on its list for every game after, Yellow Dog or not.** Before this, "＋ Add this item to today's count" added the item to that day's count only, so it was gone next game.
   - **Added while counting:** saving the count now also puts the item on the stand's list. After Count Out, its count becomes next game's expected, like every other item.

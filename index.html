@@ -4763,7 +4763,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-04-fix-117';
+const BUILD_TAG = '2026-11-04-fix-118';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9676,11 +9676,14 @@ function normalizeQrStand(raw){
   // resolveQrStandLive(), after QR aliases have been applied.
   return qrAliasLookup(canonicalStandName2026(String(raw||'').trim()));
 }
+// Stand QR stickers work at the stadium and at Desert Financial Arena.
+// Stand names are unique across both, and stands turned off ("… - Inactive")
+// are not matched.
+const QR_VENUES_Q='in.('+['Mountain America Stadium','Desert Financial Arena'].map(v=>'"'+encodeURIComponent(v)+'"').join(',')+')';
 let _qrLiveStandCache=null,_qrLiveStandCacheAt=0;
 async function getQrLiveStandNames(){
   if(_qrLiveStandCache&&Date.now()-_qrLiveStandCacheAt<5*60*1000)return _qrLiveStandCache.slice();
-  const venueQ=encodeURIComponent('Mountain America Stadium');
-  const rows=await sb('stands?venue=eq.'+venueQ+'&select=stand_name&order=stand_name.asc').catch(()=>({_err:true}));
+  const rows=await sb('stands?venue='+QR_VENUES_Q+'&select=stand_name&order=stand_name.asc').catch(()=>({_err:true}));
   if(rows._err||!Array.isArray(rows))return null;
   _qrLiveStandCache=rows.map(r=>String(r.stand_name||'').trim()).filter(Boolean);
   _qrLiveStandCacheAt=Date.now();
@@ -9734,11 +9737,10 @@ async function resolveQrTargetLive(target){
   target=target||{};
   const standId=String(target.standId||'').trim();
   if(standId){
-    // Old physical sticker path: resolve numeric ID directly against the LIVE
-    // Mountain America Stadium row. Inactive/historical IDs intentionally fail
-    // until operations supplies an explicit destination mapping.
-    const venueQ=encodeURIComponent('Mountain America Stadium');
-    const rows=await sb('stands?id=eq.'+encodeURIComponent(standId)+'&venue=eq.'+venueQ+'&select=id,stand_name&limit=1').catch(()=>({_err:true}));
+    // Sticker path: resolve the numeric ID directly against the LIVE stand
+    // row (stadium or DFA). Inactive/historical IDs intentionally fail until
+    // operations supplies an explicit destination mapping.
+    const rows=await sb('stands?id=eq.'+encodeURIComponent(standId)+'&venue='+QR_VENUES_Q+'&select=id,stand_name&limit=1').catch(()=>({_err:true}));
     if(!rows._err&&Array.isArray(rows)&&rows.length){
       const n=String(rows[0].stand_name||'').trim();
       if(n)return n;
@@ -9808,7 +9810,7 @@ function qrFieldStandAllowed(stand,user){
 }
 async function openQrForceRestock(stand){
   stand=await resolveQrStandLive(stand);
-  if(!stand)return toast('This QR is not an active Mountain America Stadium stand','error');
+  if(!stand)return toast('This QR is not an active stand','error');
 
   if(state.staffAccount&&state.staffAccount.group==='warehouse'){
     state.activeStand=stand;
