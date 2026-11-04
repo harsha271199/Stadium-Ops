@@ -4763,7 +4763,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-03-fix-116';
+const BUILD_TAG = '2026-11-04-fix-117';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15723,16 +15723,49 @@ async function populateRollStandSelect(){
 // A saved Count Out becomes the stand's Exp Start / On-Hand for its next
 // game, so next Count In "expected" = last Count Out. Before this only the
 // admin Roll button or a Yellow Dog PDF changed it — 10/22 soccer showed the
-// 9/18 Count Out as expected. A Yellow Dog PDF uploaded later still wins.
+// 9/18 Count Out as expected. A later Yellow Dog PDF keeps these numbers.
 async function invRollForwardFromCountOut(stand, counts) {
   const names = standDbCandidateNames2026(stand).concat([stand]).filter((v, i, a) => v && a.indexOf(v) === i);
   const inList = 'stand=in.(' + names.map(n => '"' + encodeURIComponent(n.replace(/"/g, '')) + '"').join(',') + ')';
+  const missing = [];
   for (const itemName of Object.keys(counts || {})) {
     const co = counts[itemName] && counts[itemName].countOut;
     if (co === undefined || co === null || String(co).trim() === '') continue;
     const val = Number(co); if (!Number.isFinite(val)) continue;
-    await sb('stand_sheets?' + inList + '&item_name=eq.' + encodeURIComponent(itemName), { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ on_hand: val, exp_start: val }) }).catch(() => {});
+    const r = await sb('stand_sheets?' + inList + '&item_name=eq.' + encodeURIComponent(itemName), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ on_hand: val, exp_start: val }) }).catch(() => ({ _err: true }));
+    // Counted but not on the stand's list (added while counting): put it on
+    // the list so it shows next game with this Count Out as its expected.
+    if (Array.isArray(r) && !r.length) missing.push(Object.assign({}, counts[itemName], { itemName: itemName, qty: val }));
   }
+  if (missing.length) await invEnsureOnSheet(stand, missing);
+}
+// Items added at a stand stay on that stand's list for every game after,
+// whether or not Yellow Dog lists them (is_addon = added in the app). Free-
+// text "Other: …" notes and retired items are not list items.
+async function invEnsureOnSheet(stand, items) {
+  const todo = (items || []).filter(x => x && x.itemName && !/^other\s*:/i.test(x.itemName) && !isRetiredItem(x.itemName));
+  if (!stand || !todo.length) return 0;
+  // Save under the name the stand's list is stored as (the counting screen
+  // reads these names in this order).
+  let cur = null;
+  for (const n of standDbCandidateNames2026(stand).concat([stand]).filter((v, i, a) => v && a.indexOf(v) === i)) {
+    const r = await sb('stand_sheets?stand=eq.' + encodeURIComponent(n) + '&select=item_name,sort_order').catch(() => ({ _err: true }));
+    if (!Array.isArray(r)) return 0;
+    if (r.length) { stand = n; cur = r; break; }
+  }
+  if (!cur) cur = [];
+  const have = new Set(cur.map(r => String(r.item_name || '').trim().toLowerCase()));
+  let sort = cur.reduce((m, r) => Math.max(m, Number(r.sort_order) || 0), 0);
+  const rows = [];
+  todo.forEach(x => {
+    const k = String(x.itemName).trim().toLowerCase(); if (have.has(k)) return; have.add(k);
+    const q = Number.isFinite(Number(x.qty)) ? Number(x.qty) : 0;
+    const ch = /suppl/i.test(x.category || '') ? 'Supplies' : /non/i.test(x.category || '') ? 'Non-Chargeable' : 'Chargeable';
+    rows.push({ stand: stand, item_name: String(x.itemName).trim(), unit: x.unit || '', pack: x.pack || '', on_hand: q, restock: 0, exp_start: q, chargeable: ch, category: ch.toUpperCase(), vendor: '', sku: '', is_addon: true, sort_order: ++sort });
+  });
+  if (!rows.length) return 0;
+  const r = await sb('stand_sheets', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(rows) }).catch(() => ({ _err: true }));
+  return r && r._err ? 0 : rows.length;
 }
 async function adminRollCountOut(){
   const st=document.getElementById('roll-status');
@@ -15782,7 +15815,8 @@ async function adminRollCountOut(){
 // Reads the Yellow Dog "Stand Sheet Pre-Event (All Items)" PDF and replaces
 // each chosen stand's stand_sheets list with the PDF's rows, numbered 1..N
 // in the PDF's order (sort_order). Items people added in the app
-// (is_addon) that the PDF doesn't have are kept after the sheet.
+// and items from earlier sheets that the PDF doesn't have are kept after
+// the sheet; app expected counts win over the PDF's once a stand counted out.
 // Pass 1 = same name / same number + same kind; pass 2 = same kind one
 // number away (Yellow Dog "202P Beer Portable" = app "203P Beer Portable").
 // Names staff actually counted under recently win ties.
@@ -15894,7 +15928,7 @@ async function admYdPdfSave() {
   const counted = await sb('inventory_entries?entry_date=eq.' + stadiumDay() + '&phase=eq.Count%20In&stand=in.(' + plan.map(p => '"' + String(p.app).replace(/"/g, '') + '"').join(',') + ')&select=stand').catch(() => ({ _err: true }));
   const already = Array.isArray(counted) ? [...new Set(counted.map(r => r.stand))] : [];
   const warn = already.length ? '\n\n⚠️ ' + already.length + ' of these already did Count In today (' + already.slice(0, 6).join(', ') + (already.length > 6 ? '…' : '') + '). Items new to their list will have no Count In. Untick those stands (pick "— skip —") unless you mean to change them.' : '';
-  if (!(await confirmAction('Replace the item list of ' + plan.length + ' stands with the Yellow Dog PDF (' + total + ' items), in the PDF\'s exact order? Do this before Count In starts — items renamed mid-event won\'t line up with counts already entered.' + warn, { title: 'Replace stand item lists?', confirmLabel: 'Replace lists', danger: already.length > 0 }))) return;
+  if (!(await confirmAction('Update the item list of ' + plan.length + ' stands from the Yellow Dog PDF (' + total + ' items), in the PDF\'s exact order? Items already on a stand that the PDF doesn\'t list are kept at the end, and stands that counted out in the app keep the app\'s expected counts. Do this before Count In starts — items renamed mid-event won\'t line up with counts already entered.' + warn, { title: 'Replace stand item lists?', confirmLabel: 'Replace lists', danger: already.length > 0 }))) return;
   const numOrNull = v => { const t = String(v == null ? '' : v).replace(/[, ]/g, ''); if (!t) return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
   let done = 0; const failed = [];
   for (const p of plan) {
@@ -15904,10 +15938,19 @@ async function admYdPdfSave() {
     if (old._err) { failed.push(p.app); continue; }
     const items = u.stands[p.yd];
     const have = new Set(items.map(x => ydItemKey(x.item)));
-    const rows = items.map((x, i) => ({ stand: p.app, item_name: x.item, unit: x.unit || '', pack: x.pack || '', on_hand: numOrNull(x.onHand), restock: numOrNull(x.restock), exp_start: numOrNull(x.expStart),
-      chargeable: x.type || 'Chargeable', category: String(x.type || 'Chargeable').toUpperCase(), is_addon: false, sort_order: i + 1 }));
-    // Keep items people added in the app that Yellow Dog doesn't list (e.g. Sno Blast), after the sheet.
-    (old || []).filter(o => o.is_addon && !have.has(ydItemKey(o.item_name))).forEach((o, j) => rows.push({ stand: p.app, item_name: o.item_name, unit: o.unit || '', pack: o.pack || '', on_hand: o.on_hand, restock: o.restock, exp_start: o.exp_start,
+    // App data wins: an item already on the list keeps its expected count
+    // (last Count Out + restocks/transfers since) once the stand has counted
+    // out in the app. Yellow Dog numbers only fill new items and new stands.
+    const co = await sb('inventory_entries?stand=eq.' + enc + '&phase=eq.Count%20Out&select=id&limit=1').catch(() => ({ _err: true }));
+    const appCounts = Array.isArray(co) && co.length > 0;
+    const oldBy = {}; (old || []).forEach(o => { oldBy[ydItemKey(o.item_name)] = o; });
+    const rows = items.map((x, i) => { const o = appCounts && oldBy[ydItemKey(x.item)];
+      return { stand: p.app, item_name: x.item, unit: x.unit || '', pack: x.pack || '', on_hand: o ? o.on_hand : numOrNull(x.onHand), restock: numOrNull(x.restock), exp_start: o ? o.exp_start : numOrNull(x.expStart),
+      chargeable: x.type || 'Chargeable', category: String(x.type || 'Chargeable').toUpperCase(), is_addon: false, sort_order: i + 1 }; });
+    // Every item already on the stand's list that this PDF doesn't have
+    // (added in the app, or from an earlier sheet) stays, after the sheet,
+    // with its counts — so it still shows next game.
+    (old || []).filter(o => !have.has(ydItemKey(o.item_name)) && !isRetiredItem(o.item_name)).forEach((o, j) => rows.push({ stand: p.app, item_name: o.item_name, unit: o.unit || '', pack: o.pack || '', on_hand: o.on_hand, restock: o.restock, exp_start: o.exp_start,
       chargeable: o.chargeable || 'Chargeable', category: o.category || null, is_addon: true, sort_order: 1000 + j }));
     const del = await sb('stand_sheets?stand=eq.' + enc, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
     if (del && del._err) { failed.push(p.app); continue; }
@@ -21300,12 +21343,12 @@ function searchWiderItemCatalog(q, visibleCount){
           '<br><span style="color:var(--text-2)">At '+info.stands.length+' other stand'+(info.stands.length===1?'':'s')+', e.g. '+escapeHtml(info.stands.slice(0,2).join(', '))+'</span>'+
           '<button class="btn btn-ghost" style="margin-top:6px;padding:6px 10px;font-size:11px" onclick="invAddMissingItem(\''+safeName+'\',\''+safeUnit+'\',\''+safePack+'\')">＋ Add this item to today\'s count</button></div>';
       }).join('')+
-      '<div style="margin-top:8px">Adding it here counts it for today and flags it for your Manager to add permanently.</div></div>';
+      '<div style="margin-top:8px">Adding it here counts it today and keeps it on this stand\'s list for next game.</div></div>';
   }, 350);
 }
-// Adds a real, catalog-matched item to today's count only — it does NOT
-// permanently alter this stand's official sheet (that stays a Manager
-// decision). Because the name/unit/pack come from the real catalog
+// Adds a real, catalog-matched item to today's count. When the count is
+// saved the item is also put on this stand's list (invEnsureOnSheet), so it
+// shows next game even if Yellow Dog doesn't list it. Because the name/unit/pack come from the real catalog
 // rather than free text, it matches the official product exactly, so it
 // reconciles cleanly instead of creating a near-duplicate that has to be
 // untangled later. Every manual addition is recorded in the submission
@@ -21841,7 +21884,10 @@ async function submitInventory() {
     });
     if (res.ok) {
       toast('✅ Saved ' + entries.length + ' items (' + state.invPhase + ')');
+      // Added while counting -> stays on this stand's list for next game.
+      // Count Out also carries their count as next game's expected.
       if (state.invPhase === 'Count Out') invRollForwardFromCountOut(stand, counts);
+      else if (manualAdds.length) invEnsureOnSheet(stand, manualAdds.map(n => Object.assign({}, counts[n], { itemName: n, qty: 0 })));
       invDraftClear(stand, state.invPhase);
       state._invManuallyAdded = [];
       state._invEditingEntryId = null;

@@ -4,6 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-04-fix-117
+- **Items added at a stand stay on its list for every game after, Yellow Dog or not.** Before this, "＋ Add this item to today's count" added the item to that day's count only, so it was gone next game.
+  - **Added while counting:** saving the count now also puts the item on the stand's list. After Count Out, its count becomes next game's expected, like every other item.
+  - **Missed by the automatic roll-forward:** a Count Out item that isn't on the list is now added to the list, not skipped.
+  - **Yellow Dog PDF upload:** every item already on a stand that the PDF doesn't list is kept at the end of the list with its counts. Before, only items flagged as added in the app were kept.
+  - **App counts win:** for a stand that has counted out in the app, items in both the PDF and the app keep the app's expected count (last Count Out + restocks and transfers since). Yellow Dog's numbers are used only for new items and new stands. Free-text "Other: …" notes and retired items are never added.
+- Data: 20 items that were counted at a stand's last Count Out but had dropped off its list are back, with that Count Out as expected (e.g. 207 Sno Blast 12, 221P Pepsi Zero/Starry BIB and Diet Mtn Dew, Devil's Halo IPA at 207P/217P/219/229P, Venezia Devils Halo Amber 44, MKT Game Day Burger Mike & Ike 14, 113P Peanuts 7, ICE - BAG at 204P/212P/215B/216M/220B). Backup: stand_sheets_backup_addons_20261104.
+
 ## 2026-11-03-fix-116
 - **App QR is just the QR now.** In 🏪 Sign-in help & QR, the 📱 App QR shows a big QR with the link under it, so a lead or manager can hold up their phone instead of sharing the link. The extra popup, the sign-in instructions and the separate "App QR code" tile are removed. It still decodes to https://asu-aramark.netlify.app/ and is visible to the same people as before.
 
