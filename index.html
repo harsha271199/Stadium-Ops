@@ -4763,7 +4763,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-04-fix-118';
+const BUILD_TAG = '2026-11-05-fix-119';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5358,6 +5358,9 @@ async function logMovement(mv) {
   // Warehouse deliveries logged AFTER the stand's Count Out (10/30: DFA 143
   // and 191 restocked at 9:23/9:34 PM, after counting out) go straight onto
   // the next game's expected count. Before Count Out they are already in it.
+  // "After Count Out" = the stand's latest count is a Count Out, on any day:
+  // stadium restocks on the Tuesday/Wednesday between games (11/3-11/4) were
+  // missed when this only looked at the same day.
   const afterCount = /^(transfer_in|force_stock|force_stock_undo)$/.test(mv.type || '');
   // Prefer:resolution=ignore-duplicates makes retries safe (unique client_uuid)
   const r = await sb('stock_ledger?on_conflict=client_uuid', {
@@ -5366,8 +5369,8 @@ async function logMovement(mv) {
     body: JSON.stringify(row)
   });
   if (afterCount && Array.isArray(r) && r.length && Number(mv.qty) > 0) {
-    const done = await sb('inventory_entries?stand=eq.' + encodeURIComponent(mv.stand) + '&phase=eq.' + encodeURIComponent('Count Out') + '&entry_date=eq.' + row.game_date + '&select=id&limit=1').catch(() => ({ _err: true }));
-    if (Array.isArray(done) && done.length) await invAdjustExpected(mv.stand, mv.item, mv.direction === 'out' ? -Number(mv.qty) : Number(mv.qty)).catch(() => {});
+    const last = await sb('inventory_entries?stand=eq.' + encodeURIComponent(mv.stand) + '&phase=in.(' + encodeURIComponent('"Count In","Count Out"') + ')&order=created_at.desc&select=phase&limit=1').catch(() => ({ _err: true }));
+    if (Array.isArray(last) && last.length && last[0].phase === 'Count Out') await invAdjustExpected(mv.stand, mv.item, mv.direction === 'out' ? -Number(mv.qty) : Number(mv.qty), { knownOnly: true }).catch(() => {});
   }
   return r;
 }
@@ -9502,8 +9505,9 @@ async function goIncomingTransfers() {
 // changed them, and 10/26–10/29 DFA/Soccer transfers between games were lost.
 // A transfer during a game is overwritten by that stand's Count Out anyway.
 // Warehouse lists are not counted here, so only the receiving side moves.
-async function invAdjustExpected(stand, item, delta) {
+async function invAdjustExpected(stand, item, delta, opts) {
   if (!stand || !item || !delta) return;
+  opts = opts || {};
   const enc = encodeURIComponent;
   const candidates = standDbCandidateNames2026(stand).concat([stand]).filter((v, i, a) => v && a.indexOf(v) === i);
   for (const n of candidates) {
@@ -9523,6 +9527,9 @@ async function invAdjustExpected(stand, item, delta) {
   }
   const tpl = await sb('stand_sheets?item_name=eq.' + enc(item) + '&limit=1&select=unit,pack,chargeable,category').catch(() => ({ _err: true }));
   const t = (Array.isArray(tpl) && tpl[0]) || {};
+  // A typed restock name ("napkin rill") that isn't a real item anywhere is
+  // not added to the stand's list — it would never match a count.
+  if (opts.knownOnly && !(Array.isArray(tpl) && tpl.length)) return;
   await sb('stand_sheets', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ stand: target, item_name: item, unit: t.unit || '', pack: t.pack || '', on_hand: delta, restock: 0, exp_start: delta, chargeable: t.chargeable || 'Chargeable', category: t.category || 'CHARGEABLE', vendor: '', sku: '', is_addon: true, sort_order: sort + 1 }) }).catch(() => {});
 }
 async function invApplyTransferToExpected(r) {
