@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-05-fix-125
+- **🍾 Liquor bottles: ⚙️ Setup tab (Premium managers, the Premium-team managers and Admin).**
+  - **Bottle list, set up once:** add a bottle by hand, or upload a CSV (one bottle per row, first column; a header row is skipped). Names are saved in capitals and duplicates are skipped ("3 new · 1 already on the list"). Download the list as CSV; Remove takes a bottle off the list but keeps bottles already tagged with it. Stored in app_settings `liquor_items`.
+  - **Tag** has a **bottle drop-down** from that list, plus "➕ Other — type a name".
+  - **🖨️ Print barcode labels (Dymo):** pick the label size (Dymo 30336 1"×2-1/8", 30334 2-1/4"×1-1/4", 30252 1-1/8"×3-1/2") and how many. One label per page: a Code 39 barcode, the number in large print, and "ARAMARK PREMIUM". Numbers come from a shared counter (app_settings `liquor_label_next`, starting at 3000001), which is re-read right before reserving, so a number is never printed twice; each print is written to the bottle history. "Reprint" redoes jammed labels from numbers already used. Printed labels count as a **Printed** roll, so typing the last 3 digits works for them too.
+  - Tested against a fake database: adding and CSV upload, the drop-down, printing 3 labels (counter moved 3000001 → 3000004), the app's scanner reading the printed label back as 3000001, and typing "002" on the Printed roll saving 3000002.
+
 ## 2026-11-05-fix-124
 - **Yellow Dog PDF upload keeps transferred stock.** A stand's own expected counts (app data) now win over the PDF when the stand has done a Count Out **or** had any stock moved in through the app (stand-to-stand transfer, delivery or restock). Before, only a Count Out counted, so 11/5 Softball Stadium, stocked by Steven's Soccer → Softball transfer with no Count Out yet, would have had its numbers replaced by Yellow Dog's. A brand-new stand with no app history still takes the PDF's numbers.
 

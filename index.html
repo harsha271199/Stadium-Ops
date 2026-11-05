@@ -4771,7 +4771,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-05-fix-124';
+const BUILD_TAG = '2026-11-05-fix-125';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -24767,7 +24767,9 @@ function btAllowed() {
 }
 function btWho() { return (state.staffAccount && state.staffAccount.name) || (state.user && state.user.name) || 'Manager'; }
 function btUid(p) { return p + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); }
-function btRollOf(no) { const n = Number(no); return (_bt.rolls || []).find(r => n >= Number(r.from) && n <= Number(r.to)) || null; }
+// Pre-printed rolls + the labels this app has printed (3000001 up to the counter).
+function btAllRolls() { const r = (_bt.rolls || []).slice(); if ((_bt.labelNext || 0) > 3000001) r.push({ from: 3000001, to: _bt.labelNext - 1, color: 'Printed', roll: 'app' }); return r; }
+function btRollOf(no) { const n = Number(no); return btAllRolls().find(r => n >= Number(r.from) && n <= Number(r.to)) || null; }
 function btCleanCode(v) { return String(v || '').trim().replace(/\s+/g, '').toUpperCase(); }
 // "345" / "2345" / full 7 digits -> sticker numbers on our pre-printed rolls.
 function btCandidates(raw) {
@@ -24775,7 +24777,7 @@ function btCandidates(raw) {
   if (!d) return [];
   if (d.length >= 7) return [d.slice(-7)];
   const p = Math.pow(10, d.length), t = Number(d), out = new Set();
-  (_bt.rolls || []).forEach(r => {
+  btAllRolls().forEach(r => {
     for (let base = Math.floor(Number(r.from) / p) * p; base <= Number(r.to); base += p) {
       const n = base + t; if (n >= Number(r.from) && n <= Number(r.to)) out.add(String(n));
     }
@@ -24888,7 +24890,15 @@ async function btLoadBasics() {
   try { if (Array.isArray(rolls) && rolls[0]) { const v = JSON.parse(rolls[0].value); if (Array.isArray(v) && v.length) _bt.rolls = v; } } catch (e) {}
   const L = Array.isArray(locs) ? locs.map(r => r.name).filter(n => n && !/^(runner|warehouse|premium supervisors|premium runners|dfa)$/i.test(n)) : [];
   _bt.locs = [...new Set(BT_LOCS_EXTRA.concat(L))];
-  _bt.items = Array.isArray(items) ? [...new Set(items.map(r => String(r.item_name || '').trim()).filter(Boolean))].sort() : _bt.items;
+  const hist = Array.isArray(items) ? [...new Set(items.map(r => String(r.item_name || '').trim()).filter(Boolean))] : [];
+  const cat = await btReq('app_settings?key=in.(liquor_items,liquor_label_next)&select=key,value');
+  _bt.catalog = []; _bt.labelNext = 3000001;
+  if (Array.isArray(cat)) cat.forEach(r => {
+    try { if (r.key === 'liquor_items') { const v = JSON.parse(r.value); if (Array.isArray(v)) _bt.catalog = v.map(x => String(x || '').trim().toUpperCase()).filter(Boolean); } } catch (e) {}
+    if (r.key === 'liquor_label_next' && Number(r.value) > 0) _bt.labelNext = Number(r.value);
+  });
+  // The managers' bottle list comes first; names used before stay pickable too.
+  _bt.items = [...new Set(_bt.catalog.concat(hist))].sort();
   _bt.tableMissing = !!(items && items._err && !items.net);
   _bt.offline = !!(items && items.net);
 }
@@ -24902,7 +24912,7 @@ async function openLiquorBottles(tab) {
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px"><div style="font-size:19px;font-weight:900">🍾 Liquor bottles</div><button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 14px" onclick="closeLiquorBottles()">Close</button></div>' +
     '<div id="bt-outbox"></div>' +
     '<div style="display:flex;gap:6px;margin-bottom:12px" id="bt-tabs">' +
-      ['tag:🏷️ Tag', 'empty:🍾 Empty', 'list:📋 Bottles', 'look:🔎 Look up'].map(x => { const [k, l] = x.split(':'); return '<button class="chip" data-bt-tab="' + k + '" onclick="btTab(\'' + k + '\')" style="flex:1;padding:10px 2px;font-size:12px;font-weight:800">' + l + '</button>'; }).join('') +
+      ['tag:🏷️ Tag', 'empty:🍾 Empty', 'list:📋 Bottles', 'look:🔎 Look up', 'setup:⚙️ Setup'].map(x => { const [k, l] = x.split(':'); return '<button class="chip" data-bt-tab="' + k + '" onclick="btTab(\'' + k + '\')" style="flex:1;padding:10px 1px;font-size:11px;font-weight:800">' + l + '</button>'; }).join('') +
     '</div><div id="bt-body"><div class="loading"><div class="spinner"></div>Loading…</div></div></div>';
   document.body.appendChild(el);
   btRenderOutbox();
@@ -24916,24 +24926,38 @@ function btTab(t) {
   document.querySelectorAll('#bt-tabs [data-bt-tab]').forEach(b => b.classList.toggle('selected', b.dataset.btTab === t));
   const body = document.getElementById('bt-body'); if (!body) return;
   if (_bt.tableMissing) { body.innerHTML = '<div class="notice" style="color:#DC2626">The liquor_bottles table is not set up yet — ask Admin.</div>'; return; }
-  if (t === 'tag') btRenderTag(); else if (t === 'empty') btRenderEmpty(); else if (t === 'look') btRenderLook(); else btRenderList();
+  if (t === 'tag') btRenderTag(); else if (t === 'empty') btRenderEmpty(); else if (t === 'look') btRenderLook(); else if (t === 'setup') btRenderSetup(); else btRenderList();
 }
 function btNumberBox(action, label) {
-  const cols = [...new Set((_bt.rolls || []).map(r => r.color).filter(Boolean))];
-  const chips = cols.length > 1 ? '<div style="display:flex;gap:6px;align-items:center;margin:4px 0 6px;font-size:12px">Old roll: ' + cols.concat(['Any']).map(c => '<button class="chip' + ((_bt.color || 'Any') === c ? ' selected' : '') + '" style="padding:6px 12px;font-weight:800' + (c === 'Pink' ? ';border-color:#F9A8D4' : c === 'Green' ? ';border-color:#10B981' : '') + '" onclick="_bt.color=\'' + c + '\';document.querySelectorAll(\'#bt-rollchips .chip\').forEach(b=>b.classList.toggle(\'selected\',b===this))">' + c + '</button>').join('') + '</div>' : '';
+  const cols = [...new Set(btAllRolls().map(r => r.color).filter(Boolean))];
+  const chips = cols.length > 1 ? '<div style="display:flex;gap:6px;align-items:center;margin:4px 0 6px;font-size:12px;flex-wrap:wrap">Roll: ' + cols.concat(['Any']).map(c => '<button class="chip' + ((_bt.color || 'Any') === c ? ' selected' : '') + '" style="padding:6px 12px;font-weight:800' + (c === 'Pink' ? ';border-color:#F9A8D4' : c === 'Green' ? ';border-color:#10B981' : '') + '" onclick="_bt.color=\'' + c + '\';document.querySelectorAll(\'#bt-rollchips .chip\').forEach(b=>b.classList.toggle(\'selected\',b===this))">' + c + '</button>').join('') + '</div>' : '';
   return '<button class="btn btn-primary" style="margin:6px 0 10px;font-size:16px;padding:14px" onclick="btScan(\'' + action + '\')">📷 Scan barcode stickers</button>' +
-    '<label class="form-label" style="margin-top:0">Old number stickers (no barcode): type the number — last 3 digits is enough</label><div id="bt-rollchips">' + chips + '</div>' +
+    '<label class="form-label" style="margin-top:0">…or type the sticker number — last 3 digits is enough (pick the roll)</label><div id="bt-rollchips">' + chips + '</div>' +
     '<div style="display:flex;gap:6px"><input class="form-input" id="bt-no" inputmode="numeric" autocomplete="off" placeholder="Number on the sticker" style="flex:1;margin:0;font-size:18px;font-weight:800;letter-spacing:1px" onkeydown="if(event.key===\'Enter\')' + action + '()">' +
     '<button class="btn btn-ghost" style="width:auto;margin:0;padding:0 14px;font-weight:800" onclick="' + action + '()">' + label + '</button></div>' +
     '<div id="bt-pick" style="margin-top:6px"></div><div id="bt-msg" style="margin-top:10px"></div>';
+}
+// Bottle: pick from the managers' list (⚙️ Setup). "Other" types a new
+// name — it is remembered for next time.
+function btBottlePicker() {
+  const list = _bt.items || [];
+  if (!list.length) return '<label class="form-label">Bottle</label><input class="form-input" id="bt-item" placeholder="e.g. TITO\'S VODKA 1L" value="' + escapeHtml(_bt.item) + '" oninput="_bt.item=this.value" autocomplete="off"><div style="font-size:11px;color:var(--text-2);margin-top:4px">Tip: add your bottle list once in ⚙️ Setup, then just pick it here.</div>';
+  const other = _bt.item && !list.includes(_bt.item);
+  return '<label class="form-label">Bottle</label><select class="form-input" id="bt-item-pick" onchange="btPickBottle(this.value)"><option value="">Pick bottle… (' + list.length + ')</option>' +
+    list.map(i => '<option' + (i === _bt.item ? ' selected' : '') + '>' + escapeHtml(i) + '</option>').join('') + '<option value="__other"' + (other ? ' selected' : '') + '>➕ Other — type a name</option></select>' +
+    '<input class="form-input" id="bt-item" style="margin-top:6px;' + (other ? '' : 'display:none') + '" placeholder="Type the bottle name" value="' + escapeHtml(_bt.item) + '" oninput="_bt.item=this.value" autocomplete="off">';
+}
+function btPickBottle(v) {
+  const inp = document.getElementById('bt-item');
+  if (v === '__other') { _bt.item = ''; if (inp) { inp.value = ''; inp.style.display = ''; inp.focus(); } return; }
+  _bt.item = v; if (inp) { inp.value = v; inp.style.display = 'none'; }
 }
 function btRenderTag() {
   const body = document.getElementById('bt-body');
   body.innerHTML = '<div class="notice info" style="font-size:12px;margin-bottom:10px">1) Pick where the bottles go and which bottle. 2) Stick the labels on. 3) Scan them one after another — each beep is saved.</div>' +
     '<label class="form-label" style="margin-top:0">Location</label><select class="form-input" id="bt-loc" onchange="_bt.loc=this.value"><option value="">Pick location…</option>' +
       _bt.locs.map(l => '<option' + (l === _bt.loc ? ' selected' : '') + '>' + escapeHtml(l) + '</option>').join('') + '</select>' +
-    '<label class="form-label">Bottle</label><input class="form-input" id="bt-item" list="bt-items" placeholder="e.g. TITO\'S VODKA 1L" value="' + escapeHtml(_bt.item) + '" oninput="_bt.item=this.value" autocomplete="off">' +
-    '<datalist id="bt-items">' + _bt.items.map(i => '<option value="' + escapeHtml(i) + '">').join('') + '</datalist>' +
+    btBottlePicker() +
     btNumberBox('btSaveTag', 'Save') +
     '<div id="bt-session" style="margin-top:14px"></div>';
   btRenderSession();
@@ -24975,7 +24999,7 @@ async function btSaveTag(code) {
   const no = typeof code === 'string' ? btCleanCode(code) : btResolve('btSaveTag'); if (!no) return { fail: '' };
   if (_bt.session.some(r => r.kind === 'tag' && r.sticker_no === no && !r.undone)) { const m = no + ' was just tagged on this phone'; btMsg(m, 'amber'); return { dup: true, fail: m }; }
   const roll = btRollOf(no);
-  const row = { sticker_no: no, roll_color: roll ? roll.color : (/^\d+$/.test(no) && no.length === 7 ? '' : 'Printed'), item_name: item, location: loc, status: 'open', event_date: localISODate(), issued_by: btWho(), client_uuid: btUid('bt') };
+  const row = { sticker_no: no, roll_color: roll ? roll.color : 'Other', item_name: item, location: loc, status: 'open', event_date: localISODate(), issued_by: btWho(), client_uuid: btUid('bt') };
   const op = { id: row.client_uuid, k: 'tag', row, at: new Date().toISOString() };
   _bt.loc = loc; _bt.item = item; if (!_bt.items.includes(item)) { _bt.items.push(item); _bt.items.sort(); }
   const res = await btSubmit(op);
@@ -25014,6 +25038,110 @@ async function btUndo(id, kind) {
   if (!Array.isArray(r) || !r.length) return toast(r && r.net ? 'No signal — try Undo again' : 'Could not undo — it changed already', 'error');
   await btLog({ bottle_id: id, sticker_no: rec.sticker_no, action: kind === 'tag' ? 'undo_tag' : 'undo_empty', item_name: rec.item_name, location: rec.location, client_uuid: btUid('btu') });
   rec.undone = true; btRenderSession(); toast('↩️ Undone');
+}
+async function btSetting(key, value) {
+  return btReq('app_settings?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ key, value: String(value), updated_by: btWho(), updated_at: new Date().toISOString() }) });
+}
+async function btSaveCatalog(list) {
+  const clean = [...new Set(list.map(x => String(x || '').trim().toUpperCase()).filter(Boolean))].sort();
+  const r = await btSetting('liquor_items', JSON.stringify(clean));
+  if (r && r._err) { toast(r.net ? 'No signal — not saved' : 'Could not save the list', 'error'); return false; }
+  _bt.catalog = clean; _bt.items = [...new Set(clean.concat(_bt.items || []))].sort(); return true;
+}
+function btRenderSetup() {
+  const body = document.getElementById('bt-body'), cat = _bt.catalog || [];
+  body.innerHTML =
+    '<div class="card" style="padding:12px;margin-bottom:12px"><div style="font-weight:900;font-size:15px">🍾 Bottle list (<span id="bt-cat-count">' + cat.length + '</span>)</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Set up once — then everyone just picks the bottle when tagging.</div>' +
+    '<div style="display:flex;gap:6px"><input class="form-input" id="bt-cat-new" placeholder="New bottle, e.g. TITO\'S VODKA 1L" style="margin:0;flex:1" onkeydown="if(event.key===\'Enter\')btCatAdd()"><button class="btn btn-primary" style="width:auto;margin:0;padding:0 14px" onclick="btCatAdd()">Add</button></div>' +
+    '<label class="form-label">Upload a list (CSV — one bottle per row, first column)</label><input type="file" id="bt-cat-file" accept=".csv,text/csv,.txt" class="form-input" onchange="btCatUpload(this)">' +
+    '<div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-ghost" style="margin:0" onclick="btCatDownload()">⬇️ Download list (CSV)</button></div>' +
+    '<div id="bt-cat-msg" style="margin-top:8px"></div>' +
+    '<input class="form-input" placeholder="🔍 Search the list" style="margin:10px 0 4px" oninput="btCatFilter(this.value)">' +
+    '<div id="bt-cat-list" style="max-height:320px;overflow:auto"></div></div>' +
+    '<div class="card" style="padding:12px"><div style="font-weight:900;font-size:15px">🖨️ Print barcode labels (Dymo)</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Each label gets the next number with its barcode — no number is ever printed twice. Pick the Dymo label size, then print to the Dymo printer.</div>' +
+    '<label class="form-label" style="margin-top:0">Label size</label><select class="form-input" id="bt-lab-size">' +
+      [['2.125x1', 'Dymo 30336 — 1" × 2-1/8" (small, multi-purpose)'], ['2.25x1.25', 'Dymo 30334 — 2-1/4" × 1-1/4"'], ['3.5x1.125', 'Dymo 30252 — 1-1/8" × 3-1/2" (address)']].map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('') + '</select>' +
+    '<label class="form-label">How many labels</label><input class="form-input" id="bt-lab-n" type="number" min="1" max="500" value="24">' +
+    '<div style="font-size:12px;margin-top:6px">Next number: <b id="bt-lab-next">' + _bt.labelNext + '</b></div>' +
+    '<button class="btn btn-primary" style="margin-top:10px" onclick="btPrintLabels()">🖨️ Print labels</button>' +
+    '<details style="margin-top:10px"><summary style="font-size:12px;cursor:pointer">Reprint labels that got jammed or torn</summary><div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="bt-rep-from" type="number" placeholder="From #" style="margin:0"><input class="form-input" id="bt-rep-to" type="number" placeholder="To #" style="margin:0"><button class="btn btn-ghost" style="width:auto;margin:0;padding:0 12px" onclick="btReprint()">Reprint</button></div><div style="font-size:11px;color:var(--text-2);margin-top:4px">Only reprint numbers that were never stuck on a bottle.</div></details>' +
+    '</div>';
+  btCatFilter('');
+}
+function btCatFilter(q) {
+  const el = document.getElementById('bt-cat-list'); if (!el) return;
+  const k = String(q || '').trim().toUpperCase(), list = (_bt.catalog || []).filter(x => !k || x.includes(k));
+  const cc = document.getElementById('bt-cat-count'); if (cc) cc.textContent = (_bt.catalog || []).length;
+  el.innerHTML = list.length ? list.map(x => '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:13px"><span>' + escapeHtml(x) + '</span><button class="btn btn-ghost" style="width:auto;margin:0;padding:3px 10px;font-size:11px" onclick="btCatRemove(\'' + escapeAttr(x) + '\')">Remove</button></div>').join('') : '<div style="font-size:12px;color:var(--text-2);padding:8px 0">' + (k ? 'Nothing matches.' : 'No bottles yet — add them above or upload a CSV.') + '</div>';
+}
+async function btCatAdd() {
+  if (!btAllowed()) return;
+  const inp = document.getElementById('bt-cat-new'), v = String(inp.value || '').trim().toUpperCase();
+  if (!v) return;
+  if ((_bt.catalog || []).includes(v)) { toast('Already on the list'); return; }
+  if (await btSaveCatalog((_bt.catalog || []).concat([v]))) { inp.value = ''; toast('✅ Added ' + v); btCatFilter(''); }
+}
+async function btCatRemove(v) {
+  if (!btAllowed()) return;
+  if (!(await confirmAction('Remove ' + v + ' from the bottle list? Bottles already tagged keep their name.', { title: 'Remove bottle?', confirmLabel: 'Remove' }))) return;
+  if (await btSaveCatalog((_bt.catalog || []).filter(x => x !== v))) { toast('Removed'); btCatFilter(''); }
+}
+async function btCatUpload(inp) {
+  if (!btAllowed()) return;
+  const f = inp.files && inp.files[0]; if (!f) return;
+  const rows = parseCSV(await f.text()), msg = document.getElementById('bt-cat-msg');
+  const names = rows.map(r => String((r && r[0]) || '').replace(/\u00A0/g, ' ').trim()).filter(Boolean)
+    .filter((n, i) => !(i === 0 && /^(bottle|item|name|product|description)s?\b/i.test(n)));
+  if (!names.length) { if (msg) msg.innerHTML = '<div class="notice" style="color:#DC2626;font-size:12px">No bottle names found — put one bottle per row in the first column.</div>'; return; }
+  const before = new Set(_bt.catalog || []), up = names.map(n => n.toUpperCase());
+  const added = [...new Set(up.filter(n => !before.has(n)))];
+  if (await btSaveCatalog((_bt.catalog || []).concat(up))) {
+    if (msg) msg.innerHTML = '<div class="notice" style="font-size:12px">✅ ' + added.length + ' new bottle' + (added.length === 1 ? '' : 's') + ' added · ' + (up.length - added.length) + ' already on the list · ' + (_bt.catalog || []).length + ' total</div>';
+    btCatFilter(''); inp.value = '';
+  }
+}
+function btCatDownload() {
+  const csv = 'Bottle\n' + (_bt.catalog || []).map(x => /[",\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x).join('\n') + '\n';
+  downloadCSV(csv, 'premium_bottle_list_' + localISODate() + '.csv');
+}
+// Labels: one label per page at the Dymo label size, Code 39 barcode (read
+// 7/7 in tests, tilted/blurred/small) with the number printed under it.
+function btLabelHtml(nums, size) {
+  const [w, h] = String(size || '2.125x1').split('x').map(Number);
+  const css = '@page{size:' + w + 'in ' + h + 'in;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{margin:0;padding:0;background:#fff}' +
+    '.lab{width:' + w + 'in;height:' + h + 'in;padding:0.06in 0.1in;display:flex;flex-direction:column;align-items:center;justify-content:center;page-break-after:always;overflow:hidden;font-family:Arial,Helvetica,sans-serif}' +
+    '.lab svg{width:100%;height:' + (h * 0.58) + 'in}.n{font-size:' + Math.max(11, Math.round(h * 17)) + 'pt;font-weight:900;letter-spacing:2px;line-height:1}.t{font-size:6pt;color:#333;margin-top:1px}';
+  return '<!doctype html><html><head><meta charset="utf-8"><title>Bottle labels ' + nums[0] + '–' + nums[nums.length - 1] + '</title><style>' + css + '</style>' +
+    '</head><body>' +
+    nums.map(n => '<div class="lab"><svg class="bc" jsbarcode-format="CODE39" jsbarcode-value="' + n + '" jsbarcode-displayvalue="false" jsbarcode-margin="8" jsbarcode-width="2" jsbarcode-height="60"></svg><div class="n">' + n + '</div><div class="t">ARAMARK PREMIUM</div></div>').join('') +
+    '<script>function go(){try{JsBarcode(".bc").init();}catch(e){document.body.insertAdjacentHTML("afterbegin","<p style=\\"font:14px Arial;color:#b91c1c\\">Barcode tool did not load — check signal and try again.</p>");return;}setTimeout(function(){window.print();},300);}<\/script>' +
+    '<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js" onload="go()" onerror="go()"><\/script></body></html>';
+}
+async function btPrintLabels() {
+  if (!btAllowed()) return;
+  const n = Math.max(1, Math.min(500, parseInt((document.getElementById('bt-lab-n') || {}).value, 10) || 0));
+  const size = (document.getElementById('bt-lab-size') || {}).value;
+  // Re-read the counter right before reserving, so two managers can't print the same numbers.
+  const cur = await btReq('app_settings?key=eq.liquor_label_next&select=value');
+  if (cur && cur.net) return toast('No signal — try again', 'error');
+  const start = Math.max(Number(Array.isArray(cur) && cur[0] && cur[0].value) || 0, _bt.labelNext || 3000001);
+  const w = window.open('', '_blank'); if (!w) return toast('⚠️ Allow pop-ups for this site and try again', 'error');
+  const r = await btSetting('liquor_label_next', start + n);
+  if (r && r._err) { w.close(); return toast('Could not reserve the numbers — try again', 'error'); }
+  _bt.labelNext = start + n; const nx = document.getElementById('bt-lab-next'); if (nx) nx.textContent = _bt.labelNext;
+  await btLog({ sticker_no: String(start), action: 'labels_printed', note: n + ' labels ' + start + '–' + (start + n - 1) + ' (' + size + ')', client_uuid: btUid('btp') });
+  const nums = []; for (let i = 0; i < n; i++) nums.push(start + i);
+  w.document.open(); w.document.write(btLabelHtml(nums, size)); w.document.close();
+}
+function btReprint() {
+  const a = parseInt((document.getElementById('bt-rep-from') || {}).value, 10), b = parseInt((document.getElementById('bt-rep-to') || {}).value, 10) || a;
+  if (!a || b < a || b - a > 200) return toast('Type a range of up to 200 numbers', 'error');
+  if (b >= (_bt.labelNext || 3000001)) return toast('Those numbers were never printed — use Print labels', 'error');
+  const w = window.open('', '_blank'); if (!w) return toast('⚠️ Allow pop-ups for this site and try again', 'error');
+  const nums = []; for (let i = a; i <= b; i++) nums.push(i);
+  w.document.open(); w.document.write(btLabelHtml(nums, (document.getElementById('bt-lab-size') || {}).value)); w.document.close();
 }
 async function btRenderList() {
   const body = document.getElementById('bt-body');
