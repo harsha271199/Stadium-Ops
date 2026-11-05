@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-05-fix-121
+- **🍾 Liquor bottles (Premium).** Replaces the paper sticker list. Only Premium managers (Nestor, Natasha), the premium_team_access managers (Harshavardhan, Yadzia) and Admin can use it. It opens from the Premium screen, from manager home, and from the ⭐ Premium team view.
+  - **🏷️ Tag:** pick the location and the bottle, then scan or type the sticker number. Location and bottle stay picked for the next sticker. Bottle names are remembered, and Undo is right there.
+  - **🍾 Empty:** scan or type the number on the empty bottle. It shows which bottle and where from, marks it empty, says to peel the sticker, and has Undo. Already-empty and never-tagged numbers are flagged.
+  - **📋 Bottles:** open and emptied-today counts by location and bottle, bottles still open from earlier events in orange, Void with a reason, and a CSV download.
+  - **Typing:** the stickers have no barcode, only a 7-digit number, so typing the last 3–4 digits is enough. With the **Pink / Green** roll switch, "345" means 1592345. The rolls are pink #48 (1592001–1593000) and green #075 (2037001–2038000), kept in app_settings `liquor_sticker_rolls`. A number off those rolls is warned.
+  - **📷 Camera:** reads the printed number with a digits-only reader. The clean-up (brightest colour channel plus a local threshold, a few tilt angles, the number line only) was tuned on photos of the real pink and green stickers. A number counts only when read the same twice and on a known roll. It is never saved straight from the camera: the manager checks it and taps Save.
+  - One sticker can't be on two open bottles at once. Table: liquor_bottles.sql.
+
 ## 2026-11-05-fix-120
 - **ReadyOn schedule upload understands DFA names.** When Site is DFA, ReadyOn names are matched to the app's stands; sport words are ignored:
   - "DFA 111 Womans Basketball" → DFA 111, and the same for 143/161/191

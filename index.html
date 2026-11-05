@@ -3144,6 +3144,10 @@
           <span class="icon">🏪</span>
           <span class="text"><div>Sign-in help &amp; QR</div><div class="sub">App QR · what each subcontractor stand types to sign in</div></span>
         </button>
+        <button class="big-action" id="mgr-bottles-btn" style="border-left:4px solid var(--asu-maroon);display:none" onclick="openLiquorBottles()">
+          <span class="icon">🍾</span>
+          <span class="text"><div>Liquor bottles (Premium)</div><div class="sub">Sticker-tagged bottles · empties · open by location</div></span>
+        </button>
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAllStandsLive()">
           <span class="icon">📊</span>
           <span class="text"><div>All Stands Live</div><div class="sub">Who's working at every stand</div></span>
@@ -4459,6 +4463,10 @@
     <!-- Premium Manager only: today's roster/check-ins — present/absent,
          move, add walk-in. This is the actual daily tool, so it's the
          very first thing on the page. -->
+    <button class="big-action" id="prem-bottles-btn" style="border-left:4px solid var(--asu-maroon);display:none;margin-bottom:12px" onclick="openLiquorBottles()">
+      <span class="icon">🍾</span>
+      <span class="text"><div>Liquor bottles</div><div class="sub">Tag bottles with the sticker · scan empties back · open by location</div></span>
+    </button>
     <div class="card prem-checkin-card" id="prem-checkin-card" style="padding:14px 14px 6px;margin-bottom:12px;display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
         <div style="font-weight:800;font-size:15px">✅ Check-ins</div>
@@ -4763,7 +4771,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-05-fix-120';
+const BUILD_TAG = '2026-11-05-fix-121';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -13690,6 +13698,7 @@ async function premiumTeamLoadAccess(){
   const rows=await sb('app_settings?key=eq.premium_team_access&select=value').catch(()=>({_err:true}));
   state._premTeamIds=new Set(Array.isArray(rows)&&rows[0]?String(rows[0].value||'').split(/[,\s]+/).filter(Boolean):[]);
   const b=document.getElementById('mgr-team-prem-btn');if(b)b.style.display=premiumTeamAllowed()?'':'none';
+  const bb=document.getElementById('mgr-bottles-btn');if(bb)bb.style.display=premiumTeamAllowed()?'':'none';
 }
 async function mgrPremiumRender(){
   const el=document.getElementById('mgr-team-live-list');if(!el)return;
@@ -13697,11 +13706,12 @@ async function mgrPremiumRender(){
   const rows=await sb('premium_schedule?event_date=eq.'+localISODate()+'&order=location_name.asc,worker_name.asc&select=*').catch(()=>({_err:true}));
   if(!Array.isArray(rows)){el.innerHTML='<div class="notice" style="color:#DC2626">Could not load Premium — try again</div>';return;}
   state._mgrPremRows=rows;
-  if(!rows.length){el.innerHTML='<div class="empty" style="padding:24px"><p style="color:var(--text-2)">No Premium staff scheduled today.</p></div>';return;}
+  const btTop=btAllowed()?'<button class="btn btn-ghost" style="margin:0 0 10px" onclick="openLiquorBottles()">🍾 Liquor bottles</button>':'';
+  if(!rows.length){el.innerHTML=btTop+'<div class="empty" style="padding:24px"><p style="color:var(--text-2)">No Premium staff scheduled today.</p></div>';return;}
   const by={};rows.forEach(r=>{(by[r.location_name||'—']=by[r.location_name||'—']||[]).push(r);});
   const badge=st=>st==='present'?'<span style="color:#16A34A;font-weight:800">✅ In</span>':st==='absent'?'<span style="color:#DC2626;font-weight:800">❌ Absent</span>':'<span style="color:var(--text-2)">Scheduled</span>';
   const inN=rows.filter(r=>r.status==='present').length;
-  el.innerHTML='<div style="font-size:12px;color:var(--text-2);margin-bottom:8px">⭐ Premium today: <b>'+inN+'</b> of '+rows.length+' checked in</div>'+Object.keys(by).map(loc=>'<div class="card" style="padding:10px 12px;margin-bottom:10px"><div style="font-weight:800;font-size:13px;margin-bottom:6px">'+escapeHtml(loc)+' <span style="font-weight:600;color:var(--text-2)">· '+by[loc].filter(r=>r.status==='present').length+'/'+by[loc].length+'</span></div>'+by[loc].map(r=>'<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);flex-wrap:wrap"><div style="flex:1;min-width:150px"><div style="font-weight:700;font-size:13px">'+escapeHtml(r.worker_name||'')+'</div><div style="font-size:11px;color:var(--text-2)">'+escapeHtml((r.role_title||'')+' · '+(r.start_time||'')+'–'+(r.end_time||''))+'</div></div><div style="font-size:12px">'+badge(r.status)+'</div>'+(r.status==='present'?'':'<button class="btn btn-primary" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="mgrPremiumSet('+r.id+',\'present\')">Check in</button>')+(r.status==='absent'?'':'<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="mgrPremiumSet('+r.id+',\'absent\')">Absent</button>')+(r.status!=='scheduled'?'<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="mgrPremiumSet('+r.id+',\'scheduled\')">Undo</button>':'')+'</div>').join('')+'</div>').join('');
+  el.innerHTML=btTop+'<div style="font-size:12px;color:var(--text-2);margin-bottom:8px">⭐ Premium today: <b>'+inN+'</b> of '+rows.length+' checked in</div>'+Object.keys(by).map(loc=>'<div class="card" style="padding:10px 12px;margin-bottom:10px"><div style="font-weight:800;font-size:13px;margin-bottom:6px">'+escapeHtml(loc)+' <span style="font-weight:600;color:var(--text-2)">· '+by[loc].filter(r=>r.status==='present').length+'/'+by[loc].length+'</span></div>'+by[loc].map(r=>'<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);flex-wrap:wrap"><div style="flex:1;min-width:150px"><div style="font-weight:700;font-size:13px">'+escapeHtml(r.worker_name||'')+'</div><div style="font-size:11px;color:var(--text-2)">'+escapeHtml((r.role_title||'')+' · '+(r.start_time||'')+'–'+(r.end_time||''))+'</div></div><div style="font-size:12px">'+badge(r.status)+'</div>'+(r.status==='present'?'':'<button class="btn btn-primary" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="mgrPremiumSet('+r.id+',\'present\')">Check in</button>')+(r.status==='absent'?'':'<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="mgrPremiumSet('+r.id+',\'absent\')">Absent</button>')+(r.status!=='scheduled'?'<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="mgrPremiumSet('+r.id+',\'scheduled\')">Undo</button>':'')+'</div>').join('')+'</div>').join('');
 }
 async function mgrPremiumSet(id,status){
   if(!premiumTeamAllowed())return toast('Premium check-in is not on for this account','error');
@@ -24727,6 +24737,328 @@ async function whConfirmCartReturn(keyNum, employeeName) {
 // direct_stands onto the same row as area assignment instead of a second,
 // disconnected table with no working UI.
 
+// ── 🍾 LIQUOR BOTTLES (Premium) ──
+// Premium managers put a numbered Aramark sticker on every liquor bottle,
+// note the bottle and where it goes, and when the empty comes back they
+// note the number and peel the sticker. This replaces the paper list.
+// The stickers have NO barcode — only a printed 7-digit number — so the
+// camera reads the digits (Tesseract, digits only, same number twice in a
+// row before it counts); typing the last 3-4 digits always works too.
+const BT_DEFAULT_ROLLS = [{ from: 1592001, to: 1593000, color: 'Pink', roll: '48' }, { from: 2037001, to: 2038000, color: 'Green', roll: '075' }];
+const BT_LOCS_EXTRA = ['DFA Club 116 Bar', 'DFA Courtside'];
+let _bt = { tab: 'tag', rolls: BT_DEFAULT_ROLLS, items: [], locs: [], loc: '', item: '', session: [], undo: null };
+function btAllowed() {
+  return isAdminSession() || isPremiumManagerSession() || (typeof premiumTeamAllowed === 'function' && premiumTeamAllowed());
+}
+function btWho() { return (state.staffAccount && state.staffAccount.name) || (state.user && state.user.name) || 'Manager'; }
+function btRollOf(no) { const n = Number(no); return (_bt.rolls || []).find(r => n >= Number(r.from) && n <= Number(r.to)) || null; }
+// "345" / "2345" / full 7 digits -> list of real sticker numbers on our rolls.
+function btCandidates(raw) {
+  const d = String(raw || '').replace(/\D/g, '');
+  if (!d) return [];
+  if (d.length >= 7) return [d.slice(-7)];
+  const p = Math.pow(10, d.length), t = Number(d), out = new Set();
+  (_bt.rolls || []).forEach(r => {
+    for (let base = Math.floor(Number(r.from) / p) * p; base <= Number(r.to); base += p) {
+      const n = base + t; if (n >= Number(r.from) && n <= Number(r.to)) out.add(String(n));
+    }
+  });
+  return [...out];
+}
+async function btLoadBasics() {
+  const [rolls, locs, items] = await Promise.all([
+    sb('app_settings?key=eq.liquor_sticker_rolls&select=value').catch(() => ({ _err: true })),
+    sb('premium_locations?is_active=eq.true&order=name.asc&select=name').catch(() => ({ _err: true })),
+    sb('liquor_bottles?select=item_name&order=issued_at.desc&limit=2000').catch(() => ({ _err: true }))
+  ]);
+  try { if (Array.isArray(rolls) && rolls[0]) { const v = JSON.parse(rolls[0].value); if (Array.isArray(v) && v.length) _bt.rolls = v; } } catch (e) {}
+  const L = Array.isArray(locs) ? locs.map(r => r.name).filter(n => n && !/^(runner|warehouse|premium supervisors|premium runners|dfa)$/i.test(n)) : [];
+  _bt.locs = [...new Set(BT_LOCS_EXTRA.concat(L))];
+  _bt.items = Array.isArray(items) ? [...new Set(items.map(r => String(r.item_name || '').trim()).filter(Boolean))].sort() : [];
+  _bt.tableMissing = !!(items && items._err);
+}
+async function openLiquorBottles(tab) {
+  if (!btAllowed()) return toast('Liquor bottles are for Premium managers', 'error');
+  const old = document.getElementById('bt-overlay'); if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'bt-overlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:9000;background:var(--bg,#fff);overflow:auto;-webkit-overflow-scrolling:touch';
+  el.innerHTML = '<div style="max-width:560px;margin:0 auto;padding:12px 14px 40px">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px"><div style="font-size:19px;font-weight:900">🍾 Liquor bottles</div><button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 14px" onclick="closeLiquorBottles()">Close</button></div>' +
+    '<div style="display:flex;gap:6px;margin-bottom:12px" id="bt-tabs">' +
+      ['tag:🏷️ Tag', 'empty:🍾 Empty', 'list:📋 Bottles'].map(x => { const [k, l] = x.split(':'); return '<button class="chip" data-bt-tab="' + k + '" onclick="btTab(\'' + k + '\')" style="flex:1;padding:10px 4px;font-size:13px;font-weight:800">' + l + '</button>'; }).join('') +
+    '</div><div id="bt-body"><div class="loading"><div class="spinner"></div>Loading…</div></div></div>';
+  document.body.appendChild(el);
+  await btLoadBasics();
+  btTab(tab || _bt.tab || 'tag');
+}
+function closeLiquorBottles() { btStopScan(); const el = document.getElementById('bt-overlay'); if (el) el.remove(); }
+function btTab(t) {
+  _bt.tab = t;
+  document.querySelectorAll('#bt-tabs [data-bt-tab]').forEach(b => b.classList.toggle('selected', b.dataset.btTab === t));
+  const body = document.getElementById('bt-body'); if (!body) return;
+  if (_bt.tableMissing) { body.innerHTML = '<div class="notice" style="color:#DC2626">The liquor_bottles table is not set up yet — ask Admin.</div>'; return; }
+  if (t === 'tag') btRenderTag(); else if (t === 'empty') btRenderEmpty(); else btRenderList();
+}
+function btNumberBox(action) {
+  const cols = [...new Set((_bt.rolls || []).map(r => r.color).filter(Boolean))];
+  const chips = cols.length > 1 ? '<div style="display:flex;gap:6px;align-items:center;margin:4px 0 6px;font-size:12px">Roll: ' + cols.concat(['Any']).map(c => '<button class="chip' + ((_bt.color || 'Any') === c ? ' selected' : '') + '" style="padding:6px 12px;font-weight:800' + (c === 'Pink' ? ';border-color:#F9A8D4' : c === 'Green' ? ';border-color:#10B981' : '') + '" onclick="_bt.color=\'' + c + '\';document.querySelectorAll(\'#bt-rollchips .chip\').forEach(b=>b.classList.toggle(\'selected\',b===this))">' + c + '</button>').join('') + '</div>' : '';
+  return '<label class="form-label">Sticker number</label><div id="bt-rollchips">' + chips + '</div>' +
+    '<div style="display:flex;gap:6px"><input class="form-input" id="bt-no" inputmode="numeric" autocomplete="off" placeholder="Last 3–4 digits or full number" style="flex:1;margin:0;font-size:18px;font-weight:800;letter-spacing:1px" onkeydown="if(event.key===\'Enter\')' + action + '()">' +
+    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:0 14px;font-size:20px" title="Scan with camera" onclick="btScan(\'' + action + '\')">📷</button></div>' +
+    '<div id="bt-pick" style="margin-top:6px"></div>' +
+    '<button class="btn btn-primary" style="margin-top:10px" onclick="' + action + '()">' + (action === 'btSaveTag' ? '🏷️ Save bottle' : '🍾 Mark empty') + '</button>' +
+    '<div id="bt-msg" style="margin-top:10px"></div>';
+}
+function btRenderTag() {
+  const body = document.getElementById('bt-body');
+  body.innerHTML = '<div class="notice info" style="font-size:12px;margin-bottom:10px">Stick the label on the bottle, then scan or type its number. The location and bottle stay picked, so you can do a whole case in a row.</div>' +
+    '<label class="form-label" style="margin-top:0">Location</label><select class="form-input" id="bt-loc" onchange="_bt.loc=this.value"><option value="">Pick location…</option>' +
+      _bt.locs.map(l => '<option' + (l === _bt.loc ? ' selected' : '') + '>' + escapeHtml(l) + '</option>').join('') + '</select>' +
+    '<label class="form-label">Bottle</label><input class="form-input" id="bt-item" list="bt-items" placeholder="e.g. TITO\'S VODKA 1L" value="' + escapeHtml(_bt.item) + '" oninput="_bt.item=this.value" autocomplete="off">' +
+    '<datalist id="bt-items">' + _bt.items.map(i => '<option value="' + escapeHtml(i) + '">').join('') + '</datalist>' +
+    btNumberBox('btSaveTag') +
+    '<div id="bt-session" style="margin-top:14px"></div>';
+  btRenderSession();
+}
+function btRenderSession() {
+  const el = document.getElementById('bt-session'); if (!el) return;
+  if (!_bt.session.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="font-size:12px;font-weight:800;margin-bottom:4px">Tagged just now (' + _bt.session.length + ')</div>' +
+    _bt.session.slice(0, 30).map(r => '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12px"><span><b>' + escapeHtml(r.sticker_no) + '</b> · ' + escapeHtml(r.item_name) + '<br><span style="color:var(--text-2)">' + escapeHtml(r.location) + (r.roll_color ? ' · ' + escapeHtml(r.roll_color) : '') + '</span></span>' +
+      '<button class="btn btn-ghost" style="width:auto;margin:0;padding:4px 10px;font-size:11px" onclick="btUndoTag(' + r.id + ')">Undo</button></div>').join('');
+}
+function btMsg(html, color) { const m = document.getElementById('bt-msg'); if (m) m.innerHTML = '<div style="padding:10px 12px;border-radius:10px;font-size:13px;font-weight:700;background:' + (color === 'red' ? 'rgba(220,38,38,.1);color:#B91C1C' : color === 'amber' ? 'rgba(245,158,11,.12);color:#92400E' : 'rgba(22,163,74,.12);color:#166534') + '">' + html + '</div>'; }
+// Resolve what was typed/scanned to ONE sticker number; ask when ambiguous.
+function btResolve(action) {
+  const inp = document.getElementById('bt-no'); const raw = inp ? inp.value : '';
+  const c = btCandidates(raw), pick = document.getElementById('bt-pick');
+  if (pick) pick.innerHTML = '';
+  if (!String(raw).replace(/\D/g, '')) { btMsg('Type or scan the sticker number', 'red'); return null; }
+  const digits = String(raw).replace(/\D/g, '');
+  if (!c.length) {
+    if (digits.length === 7) return digits; // not on a known roll — allowed, warned on save
+    btMsg('No sticker ending in ' + escapeHtml(digits) + ' on our rolls — type the full 7-digit number', 'red'); return null;
+  }
+  if (c.length > 1 && _bt.color && _bt.color !== 'Any') {
+    const f = c.filter(n => ((btRollOf(n) || {}).color || '') === _bt.color);
+    if (f.length === 1) return f[0];
+  }
+  if (c.length > 1) {
+    if (pick) pick.innerHTML = '<div style="font-size:12px;margin-bottom:4px">Which one?</div>' + c.map(n => '<button class="chip" style="margin:0 6px 6px 0;font-size:14px;font-weight:800" onclick="document.getElementById(\'bt-no\').value=\'' + n + '\';' + action + '()">' + n + ' <small>' + escapeHtml((btRollOf(n) || {}).color || '') + '</small></button>').join('');
+    return null;
+  }
+  return c[0];
+}
+async function btSaveTag() {
+  if (!btAllowed()) return;
+  const loc = (document.getElementById('bt-loc') || {}).value || _bt.loc, item = String((document.getElementById('bt-item') || {}).value || _bt.item || '').trim().toUpperCase();
+  if (!loc) return btMsg('Pick the location first', 'red');
+  if (!item) return btMsg('Type the bottle name first', 'red');
+  const no = btResolve('btSaveTag'); if (!no) return;
+  const roll = btRollOf(no);
+  const row = { sticker_no: no, roll_color: roll ? roll.color : '', item_name: item, location: loc, status: 'open', event_date: localISODate(), issued_by: btWho(), client_uuid: 'bt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) };
+  const r = await sb('liquor_bottles', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) }).catch(() => ({ _err: true }));
+  if (!Array.isArray(r) || !r.length) {
+    const ex = await sb('liquor_bottles?sticker_no=eq.' + no + '&status=eq.open&select=item_name,location,issued_at').catch(() => ({ _err: true }));
+    if (Array.isArray(ex) && ex[0]) return btMsg('⚠️ Sticker ' + no + ' is already on an open bottle: <b>' + escapeHtml(ex[0].item_name) + '</b> at ' + escapeHtml(ex[0].location) + '. Mark that one empty first, or use a new sticker.', 'red');
+    return btMsg('Could not save — check the connection and try again', 'red');
+  }
+  _bt.loc = loc; _bt.item = item; if (!_bt.items.includes(item)) { _bt.items.push(item); _bt.items.sort(); }
+  _bt.session.unshift(r[0]);
+  document.getElementById('bt-no').value = ''; document.getElementById('bt-no').style.outline = '';
+  btMsg('✅ ' + no + ' · ' + escapeHtml(item) + ' → ' + escapeHtml(loc) + (roll ? '' : '<br>⚠️ This number is not on a known roll — check it'), roll ? 'green' : 'amber');
+  try { navigator.vibrate && navigator.vibrate(60); } catch (e) {}
+  btRenderSession(); document.getElementById('bt-no').focus();
+}
+async function btUndoTag(id) {
+  const r = await sb('liquor_bottles?id=eq.' + id + '&status=eq.open', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'void', void_reason: 'Undo right after tagging', updated_at: new Date().toISOString() }) }).catch(() => ({ _err: true }));
+  if (!Array.isArray(r) || !r.length) return toast('Could not undo', 'error');
+  _bt.session = _bt.session.filter(x => x.id !== id); btRenderSession(); toast('Removed');
+}
+function btRenderEmpty() {
+  document.getElementById('bt-body').innerHTML = '<div class="notice info" style="font-size:12px;margin-bottom:10px">An empty bottle came back? Scan or type its sticker number, then peel the sticker off.</div>' + btNumberBox('btMarkEmpty') + '<div id="bt-empty-today" style="margin-top:14px"></div>';
+  btRenderEmptyToday();
+}
+async function btRenderEmptyToday() {
+  const el = document.getElementById('bt-empty-today'); if (!el) return;
+  const since = localISODate() + 'T00:00:00';
+  const rows = await sb('liquor_bottles?status=eq.empty&emptied_at=gte.' + encodeURIComponent(new Date(since).toISOString()) + '&order=emptied_at.desc&limit=100&select=*').catch(() => ({ _err: true }));
+  if (!Array.isArray(rows) || !rows.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="font-size:12px;font-weight:800;margin-bottom:4px">Emptied today (' + rows.length + ')</div>' + rows.map(r => '<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px"><b>' + escapeHtml(r.sticker_no) + '</b> · ' + escapeHtml(r.item_name) + ' <span style="color:var(--text-2)">· ' + escapeHtml(r.location) + ' · ' + new Date(r.emptied_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '</span></div>').join('');
+}
+async function btMarkEmpty() {
+  if (!btAllowed()) return;
+  const no = btResolve('btMarkEmpty'); if (!no) return;
+  const open = await sb('liquor_bottles?sticker_no=eq.' + no + '&status=eq.open&select=*').catch(() => ({ _err: true }));
+  if (!Array.isArray(open)) return btMsg('Could not check — try again', 'red');
+  if (!open.length) {
+    const last = await sb('liquor_bottles?sticker_no=eq.' + no + '&order=issued_at.desc&limit=1&select=*').catch(() => ({ _err: true }));
+    const l = Array.isArray(last) && last[0];
+    return btMsg(l ? '⚠️ ' + no + ' (' + escapeHtml(l.item_name) + ') was already ' + (l.status === 'empty' ? 'marked empty' + (l.emptied_at ? ' ' + new Date(l.emptied_at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '') + (l.emptied_by ? ' by ' + escapeHtml(l.emptied_by) : '') : 'removed') : '⚠️ Sticker ' + no + ' was never tagged in the app — check the number', 'red');
+  }
+  const b = open[0];
+  const r = await sb('liquor_bottles?id=eq.' + b.id + '&status=eq.open', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'empty', emptied_at: new Date().toISOString(), emptied_by: btWho(), updated_at: new Date().toISOString() }) }).catch(() => ({ _err: true }));
+  if (!Array.isArray(r) || !r.length) return btMsg('Could not save — try again', 'red');
+  document.getElementById('bt-no').value = ''; document.getElementById('bt-no').style.outline = '';
+  btMsg('✅ ' + no + ' · <b>' + escapeHtml(b.item_name) + '</b> from ' + escapeHtml(b.location) + ' marked EMPTY — peel the sticker off.<br><button class="btn btn-ghost" style="width:auto;margin:6px 0 0;padding:4px 12px;font-size:12px" onclick="btUndoEmpty(' + b.id + ')">Undo</button>');
+  try { navigator.vibrate && navigator.vibrate(60); } catch (e) {}
+  btRenderEmptyToday(); document.getElementById('bt-no').focus();
+}
+async function btUndoEmpty(id) {
+  const r = await sb('liquor_bottles?id=eq.' + id + '&status=eq.empty', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'open', emptied_at: null, emptied_by: null, updated_at: new Date().toISOString() }) }).catch(() => ({ _err: true }));
+  if (!Array.isArray(r) || !r.length) return toast('Could not undo — the sticker may be on a new bottle already', 'error');
+  btMsg('↩️ Back to open'); btRenderEmptyToday();
+}
+async function btRenderList() {
+  const body = document.getElementById('bt-body');
+  body.innerHTML = '<div class="loading"><div class="spinner"></div>Loading bottles…</div>';
+  const today = localISODate();
+  const [open, emptied] = await Promise.all([
+    sb('liquor_bottles?status=eq.open&order=location.asc,item_name.asc,sticker_no.asc&limit=3000&select=*').catch(() => ({ _err: true })),
+    sb('liquor_bottles?status=eq.empty&emptied_at=gte.' + encodeURIComponent(new Date(today + 'T00:00:00').toISOString()) + '&limit=3000&select=*').catch(() => ({ _err: true }))
+  ]);
+  if (!Array.isArray(open) || !Array.isArray(emptied)) { body.innerHTML = '<div class="notice" style="color:#DC2626">Could not load — try again</div>'; return; }
+  _bt.listOpen = open;
+  const locs = [...new Set(open.map(r => r.location).concat(emptied.map(r => r.location)))].sort();
+  const old = open.filter(r => r.event_date && r.event_date < today);
+  let h = '<div style="display:flex;gap:8px;margin-bottom:10px"><div class="status-summary-card" style="flex:1"><div class="n">' + open.length + '</div><div class="t">Open bottles</div></div><div class="status-summary-card" style="flex:1"><div class="n">' + emptied.length + '</div><div class="t">Emptied today</div></div><div class="status-summary-card" style="flex:1"><div class="n" style="color:' + (old.length ? '#B45309' : 'inherit') + '">' + old.length + '</div><div class="t">Open from earlier events</div></div></div>' +
+    '<button class="btn btn-ghost" style="margin:0 0 10px" onclick="btExportCSV()">⬇️ Download open + emptied (CSV)</button>';
+  if (!locs.length) h += '<div class="empty" style="padding:20px"><p style="color:var(--text-2)">No bottles tagged yet.</p></div>';
+  locs.forEach(loc => {
+    const o = open.filter(r => r.location === loc), e = emptied.filter(r => r.location === loc);
+    const items = [...new Set(o.map(r => r.item_name).concat(e.map(r => r.item_name)))].sort();
+    h += '<details open style="border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:8px"><summary style="font-weight:800;cursor:pointer">' + escapeHtml(loc) + ' · ' + o.length + ' open · ' + e.length + ' emptied today</summary>' +
+      items.map(it => { const oo = o.filter(r => r.item_name === it), ee = e.filter(r => r.item_name === it);
+        return '<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + escapeHtml(it) + '</b><span>' + oo.length + ' open · ' + ee.length + ' empty</span></div>' +
+          (oo.length ? '<div style="color:var(--text-2);margin-top:3px;line-height:1.7">' + oo.map(r => '<span style="display:inline-block;margin-right:6px;' + (r.event_date && r.event_date < today ? 'color:#B45309;font-weight:700' : '') + '">' + escapeHtml(r.sticker_no) + ' <a href="#" onclick="btVoid(' + r.id + ');return false" style="color:var(--text-3);font-size:10px">void</a></span>').join('') + '</div>' : '') + '</div>'; }).join('') + '</details>';
+  });
+  if (old.length) h += '<div style="font-size:11px;color:#B45309;margin-top:4px">Orange numbers are still open from an earlier event — find the bottle, or void it if it is gone.</div>';
+  body.innerHTML = h;
+}
+async function btVoid(id) {
+  if (!btAllowed()) return;
+  const b = (_bt.listOpen || []).find(r => r.id === id);
+  const why = prompt('Void sticker ' + (b ? b.sticker_no + ' (' + b.item_name + ')' : '') + '? Type the reason (wrong number, broken bottle, lost…):');
+  if (!why || !why.trim()) return;
+  const r = await sb('liquor_bottles?id=eq.' + id + '&status=eq.open', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'void', void_reason: why.trim() + ' — ' + btWho(), updated_at: new Date().toISOString() }) }).catch(() => ({ _err: true }));
+  if (!Array.isArray(r) || !r.length) return toast('Could not void', 'error');
+  toast('Voided'); btRenderList();
+}
+async function btExportCSV() {
+  const since = new Date(Date.now() - 30 * 864e5).toISOString();
+  const rows = await sb('liquor_bottles?or=(status.eq.open,emptied_at.gte.' + encodeURIComponent(since) + ')&order=location.asc,item_name.asc,sticker_no.asc&limit=5000&select=*').catch(() => ({ _err: true }));
+  if (!Array.isArray(rows)) return toast('Could not load', 'error');
+  const esc = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  const t = v => v ? new Date(v).toLocaleString() : '';
+  let csv = 'Sticker #,Roll,Bottle,Location,Status,Tagged,Tagged by,Emptied,Emptied by\n';
+  rows.forEach(r => { csv += [r.sticker_no, r.roll_color, r.item_name, r.location, r.status, t(r.issued_at), r.issued_by, t(r.emptied_at), r.emptied_by].map(esc).join(',') + '\n'; });
+  downloadCSV(csv, 'liquor_bottles_' + localISODate() + '.csv');
+}
+// ── Camera: read the printed sticker number ──
+let _btScan = null;
+function btLoadTesseract() {
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  if (btLoadTesseract._p) return btLoadTesseract._p;
+  btLoadTesseract._p = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'; s.onload = () => res(window.Tesseract); s.onerror = () => { btLoadTesseract._p = null; rej(new Error('load')); }; document.head.appendChild(s); });
+  return btLoadTesseract._p;
+}
+// Pull a sticker number out of OCR text. A 7-digit run on one of our rolls
+// wins; with the box holding one sticker, a split read ("2 037781") is
+// joined but only accepted when it lands on a known roll.
+function btPickNumber(text) {
+  const t = String(text || '').replace(/[oO]/g, '0').replace(/[lI|]/g, '1');
+  const runs = t.match(/\d{7}/g) || [];
+  const hit = runs.find(n => btRollOf(n)); if (hit) return hit;
+  const joined = (t.replace(/\s+/g, '').match(/\d{7}/g) || []).find(n => btRollOf(n));
+  return joined || '';
+}
+// Clean a camera crop for the digit reader (tested on the real pink and
+// green Aramark stickers): brightest colour channel, so pink, green and the
+// white backing all go light and the black digits stay dark; then a LOCAL
+// threshold (each pixel against its neighbourhood), because one global cut
+// split the white backing from the green label instead of digits from label.
+function btBinarize(src, out, angle) {
+  const w = src.width, h = src.height, sx = src.getContext('2d', { willReadFrequently: true });
+  const d = sx.getImageData(0, 0, w, h).data, g = new Uint8Array(w * h);
+  for (let i = 0, j = 0; i < d.length; i += 4, j++) g[j] = Math.max(d[i], d[i + 1], d[i + 2]);
+  const I = new Float64Array((w + 1) * (h + 1));
+  for (let y = 1; y <= h; y++) { let row = 0; for (let x = 1; x <= w; x++) { row += g[(y - 1) * w + x - 1]; I[y * (w + 1) + x] = I[(y - 1) * (w + 1) + x] + row; } }
+  const r = Math.max(4, Math.floor(w / 16)), C = 20, b = sx.createImageData(w, h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const x0 = Math.max(0, x - r), y0 = Math.max(0, y - r), x1 = Math.min(w, x + r + 1), y1 = Math.min(h, y + r + 1);
+    const sum = I[y1 * (w + 1) + x1] - I[y0 * (w + 1) + x1] - I[y1 * (w + 1) + x0] + I[y0 * (w + 1) + x0];
+    const v = g[y * w + x] > sum / ((x1 - x0) * (y1 - y0)) - C ? 255 : 0, k = (y * w + x) * 4;
+    b.data[k] = b.data[k + 1] = b.data[k + 2] = v; b.data[k + 3] = 255;
+  }
+  sx.putImageData(b, 0, 0);
+  out.width = w; out.height = h; const ox = out.getContext('2d');
+  ox.fillStyle = '#fff'; ox.fillRect(0, 0, w, h);
+  ox.save(); ox.translate(w / 2, h / 2); ox.rotate(angle * Math.PI / 180); ox.drawImage(src, -w / 2, -h / 2); ox.restore();
+}
+async function btScan(action) {
+  btStopScan();
+  const ov = document.createElement('div');
+  ov.id = 'bt-scan';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9500;background:#000;display:flex;flex-direction:column';
+  ov.innerHTML = '<div style="position:relative;flex:1;overflow:hidden"><video id="bt-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover"></video>' +
+    '<div style="position:absolute;left:15%;right:15%;top:45%;height:10%;border:3px solid #22C55E;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>' +
+    '<div id="bt-scan-st" style="position:absolute;left:0;right:0;top:12%;text-align:center;color:#fff;font-size:15px;font-weight:800;text-shadow:0 1px 3px #000">Starting camera…</div></div>' +
+    '<div style="padding:12px;display:flex;gap:8px;background:#111"><button class="btn btn-ghost" style="margin:0;background:#fff" onclick="btStopScan()">Cancel — type instead</button></div>';
+  document.body.appendChild(ov);
+  const st = m => { const e = document.getElementById('bt-scan-st'); if (e) e.textContent = m; };
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); }
+  catch (e) { st('Camera not available — type the number'); setTimeout(btStopScan, 1500); return; }
+  const v = document.getElementById('bt-video'); v.srcObject = stream;
+  _btScan = { stream, stop: false, last: '', worker: null };
+  st('Loading number reader…');
+  let worker;
+  try {
+    const T = await btLoadTesseract();
+    worker = await T.createWorker('eng', 1);
+    await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '11' });
+    if (!_btScan) { try { worker.terminate(); } catch (e) {} return; }
+    _btScan.worker = worker;
+  } catch (e) { st('Number reader could not load (no signal?) — type the number'); return; }
+  st('Put just the NUMBER of one sticker in the green box');
+  const c = document.createElement('canvas'), x = c.getContext('2d', { willReadFrequently: true }), c2 = document.createElement('canvas');
+  const ANG = [0, -6, 6, -12, 12]; let ai = 0;
+  while (_btScan && !_btScan.stop) {
+    if (v.readyState >= 2 && v.videoWidth) {
+      // Crop the guide box (matches the on-screen frame for object-fit:cover).
+      const vw = v.videoWidth, vh = v.videoHeight, ew = v.clientWidth, eh = v.clientHeight;
+      const sc = Math.max(ew / vw, eh / vh), ox = (vw * sc - ew) / 2, oy = (vh * sc - eh) / 2;
+      const sx = (ew * 0.15 + ox) / sc, sy = (eh * 0.45 + oy) / sc, sw = (ew * 0.70) / sc, sh = (eh * 0.10) / sc;
+      const k = 480 / sw; c.width = 480; c.height = Math.max(20, Math.round(sh * k));
+      x.drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
+      btBinarize(c, c2, ANG[ai++ % ANG.length]);
+      try {
+        const { data } = await worker.recognize(c2);
+        const n = btPickNumber(data && data.text);
+        if (n) {
+          if (n === _btScan.last) {
+            try { navigator.vibrate && navigator.vibrate(80); } catch (e) {}
+            btStopScan();
+            const inp = document.getElementById('bt-no'); if (inp) { inp.value = n; inp.style.outline = '3px solid #22C55E'; }
+            // Never save straight from the camera: the reader can misread a
+            // digit, so the manager checks the number against the sticker.
+            btMsg('📷 Read <b style="font-size:20px;letter-spacing:1px">' + n + '</b> (' + escapeHtml((btRollOf(n) || {}).color || '') + ') — check it matches the sticker, then tap ' + (action === 'btSaveTag' ? '🏷️ Save bottle' : '🍾 Mark empty'), 'amber');
+            return;
+          }
+          _btScan.last = n; st('Reading ' + n + '… hold still');
+        }
+      } catch (e) {}
+    }
+    await new Promise(r => setTimeout(r, 250));
+  }
+}
+function btStopScan() {
+  const s = _btScan; _btScan = null;
+  if (s) { s.stop = true; try { s.stream.getTracks().forEach(t => t.stop()); } catch (e) {} try { s.worker && s.worker.terminate(); } catch (e) {} }
+  const ov = document.getElementById('bt-scan'); if (ov) ov.remove();
+}
+
 // ── PREMIUM DEPARTMENT ──
 let _premLocations = [];
 
@@ -24772,6 +25104,8 @@ async function renderPremiumForRole() {
 
   const checkinCard = document.getElementById('prem-checkin-card');
   if (checkinCard) checkinCard.style.display = isMgr ? 'block' : 'none';
+  const btBtn = document.getElementById('prem-bottles-btn');
+  if (btBtn) btBtn.style.display = isMgr ? '' : 'none';
 
   if (isMgr) {
     await premiumLoadLocations();
