@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-05-fix-120
+- **ReadyOn schedule upload understands DFA names.** When Site is DFA, ReadyOn names are matched to the app's stands; sport words are ignored:
+  - "DFA 111 Womans Basketball" → DFA 111, and the same for 143/161/191
+  - "DFA GRILL" or "DFA Market" → MKT Game Day Burger
+  - "DFA Fan Fav" → MKT Fan Favs; "DFA Loaded" → MKT Loaded; "DFA BEV MKT …" → BEV MKT
+  - "Venezia's Pizza" → Venezia; "DFA Club Chill" / "Club 116" → DFA Club 116 Bar
+  - Courtside, Beverage Portable, the 104P/113P Beer Portables and Chick-fil-A 1/2 also match.
+  Before, these went in as new locations that matched no stand, so nobody could sign in to a real stand. The four Market stands (Grill, Fan Favs, Loaded, BEV MKT) share the crew name "DFA Market", so the Market leads see the whole Market crew in My Team. Stadium uploads are unchanged.
+- Data: today's (11/5) 32-person schedule was moved onto the real stands. Deonte Lang and KrishJigar Shah (DFA Market leads) are at MKT Game Day Burger with the Market crew. Backup: schedule_backup_20261105.
+
 ## 2026-11-05-fix-119
 - **Only DFA restocks update the next game's expected count.** DFA plays game after game, so a warehouse delivery or QR restock at a DFA stand on any day after its latest Count Out now goes onto the next game's expected count. Before, it had to be the same day. During a game (after Count In) nothing changes, because the Count Out includes it. Football and other venues never change expected counts from a restock; their restocks are only listed. A typed restock name that isn't a real item anywhere ("napkin rill") is never added to a stand's list.
 - Data: the 11/3–11/4 football restocks at 140, 142 and 442 (Ebony) were added on the first pass of this fix, then put back to their Count Out numbers. Football counts stay as counted.

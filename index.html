@@ -4763,7 +4763,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-05-fix-119';
+const BUILD_TAG = '2026-11-05-fix-120';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15541,11 +15541,37 @@ async function adminUploadSchedule() {
       // history across many names and breaking Inventory/Checks/Stock for
       // everyone working there.
       const siteCode = cleanCell(site).toUpperCase();
+      if (isDfaSite(site)) { const d = dfaStandFromReadyOn(s); if (d) return d; }
       const numMatch = s.match(/^(\d{1,4})\b/);
       if (siteCode === 'DFA' && numMatch) return 'DFA ' + numMatch[1];
 
       return s;
     };
+    // DFA ReadyOn names -> app stands (11/5 "DFA GRILL", "DFA Fan Fav",
+    // "Venezia's Pizza", "DFA 111 Womans Basketball" all landed as new
+    // locations nobody could sign in to). Sport words are ignored.
+    const isDfaSite = (site) => /^dfa$|desert financial/i.test(cleanCell(site));
+    const dfaStandFromReadyOn = (raw) => {
+      const t = cleanCell(raw).replace(/^Concession\s+/i, '').replace(/^DFA\s+/i, '').trim();
+      if (!t) return '';
+      if (/club\s*chill|club\s*116|116\s*bar/i.test(t)) return 'DFA Club 116 Bar';
+      if (/courtside/i.test(t)) return 'DFA Courtside';
+      if (/chic?k?[\s-]*fil/i.test(t)) { const n = t.match(/\b([12])\b/); return n ? 'DFA Chic Fil A ' + n[1] : ''; }
+      if (/venezia/i.test(t)) return 'Venezia';
+      if (/bev(erage)?\s*portable/i.test(t)) return 'DFA Beverage Portable';
+      const m = t.match(/^(\d{3})(P)?\b/i);
+      if (m && m[2]) return /beer/i.test(t) ? m[1] + 'P Beer Portable' : '';
+      if (m) return 'DFA ' + m[1];
+      if (/bev(erage)?\s*(mkt|market)/i.test(t)) return 'BEV MKT';
+      if (/fan\s*fav/i.test(t)) return 'MKT Fan Favs';
+      if (/grill|game\s*day\s*burger/i.test(t)) return 'MKT Game Day Burger';
+      if (/loaded/i.test(t)) return 'MKT Loaded';
+      if (/^(market|mkt)\b/i.test(t)) return 'MKT Game Day Burger';
+      return '';
+    };
+    // The DFA Market stands (Grill, Fan Favs, Loaded, BEV MKT) work as one
+    // crew under their Market leads, so they share one crew name.
+    const DFA_MARKET_STANDS = new Set(['MKT Game Day Burger', 'MKT Fan Favs', 'MKT Loaded', 'BEV MKT']);
 
     // Real bug fixed here: this used to check every uploaded Area against
     // mountainAmericaStandNames2026() — a hardcoded, football-only list.
@@ -15584,6 +15610,10 @@ async function adminUploadSchedule() {
 
       if (rawArea) {
         scheduleLocation = canonicalStandName2026(rawArea);
+        if (!currentStandSet.has(scheduleLocation) && isDfaSite(get(r, col.site))) {
+          const d = dfaStandFromReadyOn(rawArea);
+          if (d && currentStandSet.has(d)) scheduleLocation = d;
+        }
 
         // Area is the authoritative ReadyOn stand field. Do not silently
         // replace it with Event Name/Site when it contains an unknown value.
@@ -15598,8 +15628,9 @@ async function adminUploadSchedule() {
 
       if (!scheduleLocation) continue;
 
+      const dfaMarket = isDfaSite(get(r, col.site)) && DFA_MARKET_STANDS.has(scheduleLocation);
       out.push({
-        event_name: eventName || scheduleLocation,
+        event_name: dfaMarket ? 'DFA Market' : (eventName || scheduleLocation),
         event_date: cleanDate(get(r, col.event_date)),
         site: cleanCell(get(r, col.site)) || 'Mountain America Stadium',
         start_time: clean24h(get(r, col.start_time)),
