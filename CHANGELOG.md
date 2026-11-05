@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-05-fix-122
+- **🍾 Liquor bottles: barcode stickers, nothing lost, nothing changed.**
+  - **Continuous barcode scan:** with Nestor's printed labels (number + barcode), 📷 Scan reads the barcode exactly and saves right away with a beep, and the camera stays open for the next bottle. Tag uses the picked bottle and location; Empty marks it empty. The phone's own barcode reader is used when it has one (Android Chrome), otherwise ZXing (iPhone). In tests on generated labels: QR 7/7, EAN-8 7/7, Code 39 6/7, numbers-only Code 128 7/14. **QR is the recommended label.** A fake-camera test saved a QR and a Code 128 label in about 5 seconds.
+  - **Old number-only rolls (pink/green):** type the last 3–4 digits, or let the camera read the printed digits. A digit read is never saved without the manager checking it.
+  - **Nothing changes after the fact:** a tag or empty can be undone only within 5 minutes, from the same phone. After that, a mistake is a Void with a reason. The database allows no deletes on bottles.
+  - **Full history:** every tag, empty, undo, void and rejected scan is written to `liquor_bottle_events`, which can only be added to. 🔎 Look up shows a sticker's whole history.
+  - **Never lost:** each scan is first saved on the phone (bottle outbox), then sent. With no signal it waits and retries every 20 seconds and when signal returns, with a banner showing how many are waiting. Client ids (`client_uuid`, `empty_uuid`) mean a retry or a lost reply is counted once. A rejected scan, like a sticker already on an open bottle from another phone, stays as "needs attention" until a manager checks it.
+  - Tests against a fake Supabase passed all of these: normal scans, the same sticker twice, a second phone, no signal then send, a lost reply, undo, a never-tagged sticker, and look-up.
+- Table setup: sql/liquor_bottles.sql (adds `empty_uuid` and the history table).
+
 ## 2026-11-05-fix-121
 - **🍾 Liquor bottles (Premium).** Replaces the paper sticker list. Only Premium managers (Nestor, Natasha), the premium_team_access managers (Harshavardhan, Yadzia) and Admin can use it. It opens from the Premium screen, from manager home, and from the ⭐ Premium team view.
   - **🏷️ Tag:** pick the location and the bottle, then scan or type the sticker number. Location and bottle stay picked for the next sticker. Bottle names are remembered, and Undo is right there.
