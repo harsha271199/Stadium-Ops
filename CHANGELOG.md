@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-05-fix-124
+- **Yellow Dog PDF upload keeps transferred stock.** A stand's own expected counts (app data) now win over the PDF when the stand has done a Count Out **or** had any stock moved in through the app (stand-to-stand transfer, delivery or restock). Before, only a Count Out counted, so 11/5 Softball Stadium, stocked by Steven's Soccer → Softball transfer with no Count Out yet, would have had its numbers replaced by Yellow Dog's. A brand-new stand with no app history still takes the PDF's numbers.
+
 ## 2026-11-05-fix-123
 - **🍾 Liquor bottles: Dymo barcodes read reliably; the camera no longer reads printed numbers.**
   - **Barcode reading:** the reader now also tries tighter crops around the green box. An all-number Code 128 (the Dymo default) went from 7/14 to 13/14 reads on test labels, and Code 39 reads 7/7. A miss means "didn't read yet", never a wrong number. Dymo labels must keep their white margins.

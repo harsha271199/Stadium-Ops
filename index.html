@@ -4771,7 +4771,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-05-fix-123';
+const BUILD_TAG = '2026-11-05-fix-124';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15995,7 +15995,11 @@ async function admYdPdfSave() {
     // (last Count Out + restocks/transfers since) once the stand has counted
     // out in the app. Yellow Dog numbers only fill new items and new stands.
     const co = await sb('inventory_entries?stand=eq.' + enc + '&phase=eq.Count%20Out&select=id&limit=1').catch(() => ({ _err: true }));
-    const appCounts = Array.isArray(co) && co.length > 0;
+    // Stock moved in through the app (stand-to-stand transfer, delivery,
+    // restock) is app data too: 11/5 Softball Stadium had no Count Out yet,
+    // but its expected counts came from Steven's Soccer -> Softball transfer.
+    const mv = (Array.isArray(co) && co.length) ? [1] : await sb('stock_ledger?stand=eq.' + enc + '&select=id&limit=1').catch(() => ({ _err: true }));
+    const appCounts = Array.isArray(mv) && mv.length > 0;
     const oldBy = {}; (old || []).forEach(o => { oldBy[ydItemKey(o.item_name)] = o; });
     const rows = items.map((x, i) => { const o = appCounts && oldBy[ydItemKey(x.item)];
       return { stand: p.app, item_name: x.item, unit: x.unit || '', pack: x.pack || '', on_hand: o ? o.on_hand : numOrNull(x.onHand), restock: numOrNull(x.restock), exp_start: o ? o.exp_start : numOrNull(x.expStart),
