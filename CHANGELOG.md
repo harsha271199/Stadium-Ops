@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-05-fix-123
+- **🍾 Liquor bottles: Dymo barcodes read reliably; the camera no longer reads printed numbers.**
+  - **Barcode reading:** the reader now also tries tighter crops around the green box. An all-number Code 128 (the Dymo default) went from 7/14 to 13/14 reads on test labels, and Code 39 reads 7/7. A miss means "didn't read yet", never a wrong number. Dymo labels must keep their white margins.
+  - **Printed digits removed:** reading the printed number on the old pink/green stickers was removed from the camera. On the real stickers it read 1592345 as **1592342** and **1592349**. The second happened with the whole number in view and after every safety check: two-angle and two-frame agreement, digit-edge and digit-width checks. Per-digit confidence on the wrong digit was 95–96. A camera misread can't be made safe, so only exact sources can write a sticker number: a barcode, or the typed number. Old stickers: pick Pink/Green and type the last 3 digits.
+  - Re-tested: the save logic (no duplicates, nothing lost), barcode labels through the camera (saved in about 5 seconds), and number-only stickers through the camera (nothing saved).
+
 ## 2026-11-05-fix-122
 - **🍾 Liquor bottles: barcode stickers, nothing lost, nothing changed.**
   - **Continuous barcode scan:** with Nestor's printed labels (number + barcode), 📷 Scan reads the barcode exactly and saves right away with a beep, and the camera stays open for the next bottle. Tag uses the picked bottle and location; Empty marks it empty. The phone's own barcode reader is used when it has one (Android Chrome), otherwise ZXing (iPhone). In tests on generated labels: QR 7/7, EAN-8 7/7, Code 39 6/7, numbers-only Code 128 7/14. **QR is the recommended label.** A fake-camera test saved a QR and a Code 128 label in about 5 seconds.
