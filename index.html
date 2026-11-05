@@ -5358,9 +5358,10 @@ async function logMovement(mv) {
   // Warehouse deliveries logged AFTER the stand's Count Out (10/30: DFA 143
   // and 191 restocked at 9:23/9:34 PM, after counting out) go straight onto
   // the next game's expected count. Before Count Out they are already in it.
-  // "After Count Out" = the stand's latest count is a Count Out, on any day:
-  // stadium restocks on the Tuesday/Wednesday between games (11/3-11/4) were
-  // missed when this only looked at the same day.
+  // DFA only: DFA plays game after game, so a restock on ANY day after the
+  // stand's latest Count Out counts toward the next game. Football and other
+  // venues never change expected counts from a restock — their restocks are
+  // only listed (who / which stand / what).
   const afterCount = /^(transfer_in|force_stock|force_stock_undo)$/.test(mv.type || '');
   // Prefer:resolution=ignore-duplicates makes retries safe (unique client_uuid)
   const r = await sb('stock_ledger?on_conflict=client_uuid', {
@@ -5369,7 +5370,9 @@ async function logMovement(mv) {
     body: JSON.stringify(row)
   });
   if (afterCount && Array.isArray(r) && r.length && Number(mv.qty) > 0) {
-    const last = await sb('inventory_entries?stand=eq.' + encodeURIComponent(mv.stand) + '&phase=in.(' + encodeURIComponent('"Count In","Count Out"') + ')&order=created_at.desc&select=phase&limit=1').catch(() => ({ _err: true }));
+    const ven = await sb('stands?stand_name=eq.' + encodeURIComponent(mv.stand) + '&select=venue&limit=1').catch(() => ({ _err: true }));
+    const isDfa = Array.isArray(ven) && ven.length && /^desert financial arena$/i.test(String(ven[0].venue || '').trim());
+    const last = isDfa ? await sb('inventory_entries?stand=eq.' + encodeURIComponent(mv.stand) + '&phase=in.(' + encodeURIComponent('"Count In","Count Out"') + ')&order=created_at.desc&select=phase&limit=1').catch(() => ({ _err: true })) : null;
     if (Array.isArray(last) && last.length && last[0].phase === 'Count Out') await invAdjustExpected(mv.stand, mv.item, mv.direction === 'out' ? -Number(mv.qty) : Number(mv.qty), { knownOnly: true }).catch(() => {});
   }
   return r;
