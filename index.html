@@ -4771,7 +4771,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-130';
+const BUILD_TAG = '2026-11-06-fix-131';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -24775,6 +24775,13 @@ function btUid(p) { return p + '-' + Date.now().toString(36) + '-' + Math.random
 function btAllRolls() { const r = (_bt.rolls || []).slice(); if ((_bt.labelNext || 0) > 3000001) r.push({ from: 3000001, to: _bt.labelNext - 1, color: 'Printed', roll: 'app' }); return r; }
 function btRollOf(no) { const n = Number(no); return btAllRolls().find(r => n >= Number(r.from) && n <= Number(r.to)) || null; }
 function btCleanCode(v) { return String(v || '').trim().replace(/\s+/g, '').toUpperCase(); }
+// Only OUR sticker numbers: 7 digits on a pink/green roll or an app-printed
+// label. Blocks the bottle's own UPC/EAN barcode and typos like 1529345.
+function btBadNo(no) {
+  if (!/^\d{7}$/.test(no)) return /^\d{8,14}$/.test(no) ? no + ' is not one of our stickers — that looks like the bottle\'s own barcode. Scan the Dymo label.' : '"' + no + '" is not a sticker number — sticker numbers have 7 digits.';
+  if (!btRollOf(no)) return no + ' is not on the pink (1592001–1593000) or green (2037001–2038000) roll — check the number.';
+  return '';
+}
 // "345" / "2345" / full 7 digits -> sticker numbers on our pre-printed rolls.
 function btCandidates(raw) {
   const d = String(raw || '').replace(/\D/g, '');
@@ -24853,7 +24860,12 @@ async function btSubmit(op) {
   const res = await btRun(op);
   const q2 = btOutbox(), i = q2.findIndex(x => x.id === op.id);
   if (res.ok) { if (i >= 0) q2.splice(i, 1); }
-  else if (res.fail) { if (i >= 0) { q2[i].failed = res.fail; } }
+  else if (res.fail && i >= 0) {
+    // Refused while the manager is looking at the screen: they see the red
+    // message now, and it is written to the history — no need to park it.
+    q2.splice(i, 1);
+    btLog({ sticker_no: op.k === 'tag' ? op.row.sticker_no : op.sticker, action: 'rejected_' + op.k, item_name: op.k === 'tag' ? op.row.item_name : null, location: op.k === 'tag' ? op.row.location : null, note: res.fail, client_uuid: op.id + '-rej' });
+  }
   btOutboxSave(q2);
   return res;
 }
@@ -24878,7 +24890,13 @@ function btRenderOutbox() {
   const q = btOutbox(), wait = q.filter(o => !o.failed), bad = q.filter(o => o.failed);
   if (!q.length) { el.innerHTML = ''; return; }
   el.innerHTML = (wait.length ? '<div style="padding:8px 10px;border-radius:10px;background:rgba(245,158,11,.12);color:#92400E;font-size:12px;font-weight:700;margin-bottom:6px">⏳ ' + wait.length + ' scan' + (wait.length === 1 ? '' : 's') + ' saved on this phone, waiting for signal — keep the app open. <a href="#" onclick="btFlushOutbox();return false">Send now</a></div>' : '') +
-    (bad.length ? '<div style="padding:8px 10px;border-radius:10px;background:rgba(220,38,38,.1);color:#B91C1C;font-size:12px;margin-bottom:6px"><b>⚠️ ' + bad.length + ' need attention</b>' + bad.map(o => '<div style="margin-top:4px;border-top:1px solid rgba(220,38,38,.2);padding-top:4px">' + escapeHtml(o.failed) + ' <a href="#" onclick="btDismissFailed(\'' + o.id + '\');return false">OK, checked</a></div>').join('') + '</div>' : '');
+    (bad.length ? '<div style="padding:8px 10px;border-radius:10px;background:rgba(220,38,38,.1);color:#B91C1C;font-size:12px;margin-bottom:6px"><b>⚠️ ' + bad.length + ' need attention</b>' + bad.map(o => '<div style="margin-top:4px;border-top:1px solid rgba(220,38,38,.2);padding-top:4px">' + escapeHtml(o.failed) + ' <a href="#" onclick="btRetryFailed(\'' + o.id + '\');return false">🔁 Try again</a> · <a href="#" onclick="btDismissFailed(\'' + o.id + '\');return false">OK, checked</a></div>').join('') + '</div>' : '');
+}
+async function btRetryFailed(id) {
+  const q = btOutbox(), o = q.find(x => x.id === id); if (!o) return;
+  delete o.failed; btOutboxSave(q); await btFlushOutbox();
+  const o2 = btOutbox().find(x => x.id === id);
+  toast(!o2 ? '✅ Sent' : o2.failed ? '⚠️ Still refused: ' + o2.failed : '⏳ Waiting for signal', o2 && o2.failed ? 'error' : undefined);
 }
 async function btDismissFailed(id) {
   const q = btOutbox(), o = q.find(x => x.id === id); if (!o) return;
@@ -25003,6 +25021,7 @@ async function btSaveTag(code, opt) {
   if (!loc) { btMsg('Pick the location first', 'red'); btBeep(false); return { fail: 'Pick the location first' }; }
   if (!item) { btMsg('Type the bottle name first', 'red'); btBeep(false); return { fail: 'Type the bottle name first' }; }
   const no = typeof code === 'string' ? btCleanCode(code) : btResolve('btSaveTag'); if (!no) return { fail: '' };
+  const bad = btBadNo(no); if (bad) { btMsg('⚠️ ' + escapeHtml(bad), 'red'); btBeep(false); return { fail: bad, invalid: true }; }
   if (_bt.session.some(r => r.kind === 'tag' && r.sticker_no === no && !r.undone)) { const m = no + ' was just tagged on this phone'; btMsg(m, 'amber'); return { dup: true, fail: m }; }
   const roll = btRollOf(no);
   const row = { sticker_no: no, roll_color: roll ? roll.color : 'Other', item_name: item, location: loc, status: 'open', event_date: localISODate(), issued_by: btWho(), client_uuid: btUid('bt') };
@@ -25025,11 +25044,16 @@ function btRenderEmpty() {
 async function btMarkEmpty(code) {
   if (!btAllowed()) return { fail: 'Not allowed' };
   const no = typeof code === 'string' ? btCleanCode(code) : btResolve('btMarkEmpty'); if (!no) return { fail: '' };
+  const bad = btBadNo(no); if (bad) { btMsg('⚠️ ' + escapeHtml(bad), 'red'); btBeep(false); return { fail: bad, invalid: true }; }
   if (_bt.session.some(r => r.kind === 'empty' && r.sticker_no === no && !r.undone)) { const m = no + ' was just marked empty on this phone'; btMsg(m, 'amber'); return { dup: true, fail: m }; }
   const op = { id: btUid('bte'), k: 'empty', uuid: '', sticker: no, who: btWho(), at: new Date().toISOString() }; op.uuid = op.id;
   const res = await btSubmit(op);
   const inp = document.getElementById('bt-no'); if (inp) inp.value = '';
-  if (res.fail) { btMsg('⚠️ ' + escapeHtml(res.fail), 'red'); btBeep(false); return res; }
+  if (res.fail) {
+    btMsg('⚠️ ' + escapeHtml(res.fail), 'red'); btBeep(false);
+    if (/never tagged/.test(res.fail)) btOfferPaperEmpty(no);
+    return res;
+  }
   const b = res.row || {};
   _bt.session.unshift({ kind: 'empty', id: b.id, sticker_no: no, item_name: b.item_name, location: b.location, t: Date.now(), pending: !!res.net });
   btRenderSession();
@@ -25037,10 +25061,30 @@ async function btMarkEmpty(code) {
   btMsg(escapeHtml(txt), res.net ? 'amber' : 'green'); btBeep(true);
   return { ok: true, text: txt };
 }
+// A bottle that went out on the PAPER list (before the app) comes back empty:
+// record it — bottle + location picked by the manager — as tagged-and-emptied.
+function btOfferPaperEmpty(no) {
+  const m = document.getElementById('bt-msg'); if (!m) return;
+  m.insertAdjacentHTML('beforeend', '<div class="card" style="padding:10px;margin-top:8px;font-size:12px"><b>Went out on the paper list, before the app?</b> Record ' + escapeHtml(no) + ' as emptied:' +
+    '<select class="form-input" id="bt-pe-item" style="margin:6px 0 0"><option value="">Which bottle…</option>' + (_bt.items || []).map(i => '<option>' + escapeHtml(i) + '</option>').join('') + '</select>' +
+    '<select class="form-input" id="bt-pe-loc" style="margin:6px 0 0"><option value="">Which location…</option>' + (_bt.locs || []).map(l => '<option>' + escapeHtml(l) + '</option>').join('') + '</select>' +
+    '<button class="btn btn-primary" style="margin:8px 0 0" onclick="btPaperEmpty(\'' + no + '\')">➕ Record as emptied</button></div>');
+}
+async function btPaperEmpty(no) {
+  const item = (document.getElementById('bt-pe-item') || {}).value, loc = (document.getElementById('bt-pe-loc') || {}).value;
+  if (!item || !loc) return toast('Pick the bottle and the location', 'error');
+  const now = new Date().toISOString(), uid = btUid('btpe'), roll = btRollOf(no);
+  const row = { sticker_no: no, roll_color: roll ? roll.color : 'Other', item_name: item, location: loc, status: 'empty', event_date: localISODate(), issued_by: btWho(), client_uuid: uid, emptied_at: now, emptied_by: btWho(), empty_uuid: uid + '-e', note: 'Went out on the paper list before the app — recorded when it came back empty' };
+  const r = await btReq('liquor_bottles?on_conflict=client_uuid', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=representation' }, body: JSON.stringify(row) });
+  if (!Array.isArray(r) || !r[0]) return toast(r && r.net ? 'No signal — try again' : 'Could not save', 'error');
+  await btLog({ bottle_id: r[0].id, sticker_no: no, action: 'empty', item_name: item, location: loc, note: row.note, client_uuid: uid + '-ev' });
+  _bt.session.unshift({ kind: 'empty', id: r[0].id, sticker_no: no, item_name: item, location: loc, t: Date.now(), paper: true }); btRenderSession();
+  btMsg('✅ ' + escapeHtml(no + ' · ' + item + ' from ' + loc) + ' — recorded as EMPTY (paper-list bottle). Peel the sticker off.', 'green'); btBeep(true);
+}
 async function btUndo(id, kind) {
   const rec = _bt.session.find(r => r.id === id && r.kind === kind);
   if (!rec || Date.now() - rec.t > BT_UNDO_MS) return toast('Undo is only for 5 minutes — use Void in Bottles', 'error');
-  const body = kind === 'tag' ? { status: 'void', void_reason: 'Undo right after tagging — ' + btWho(), updated_at: new Date().toISOString() } : { status: 'open', emptied_at: null, emptied_by: null, empty_uuid: null, updated_at: new Date().toISOString() };
+  const body = kind === 'tag' || rec.paper ? { status: 'void', void_reason: (rec.paper ? 'Undo right after recording a paper-list empty — ' : 'Undo right after tagging — ') + btWho(), updated_at: new Date().toISOString() } : { status: 'open', emptied_at: null, emptied_by: null, empty_uuid: null, updated_at: new Date().toISOString() };
   const r = await btReq('liquor_bottles?id=eq.' + id + '&status=eq.' + (kind === 'tag' ? 'open' : 'empty'), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(body) });
   if (!Array.isArray(r) || !r.length) return toast(r && r.net ? 'No signal — try Undo again' : 'Could not undo — it changed already', 'error');
   await btLog({ bottle_id: id, sticker_no: rec.sticker_no, action: kind === 'tag' ? 'undo_tag' : 'undo_empty', item_name: rec.item_name, location: rec.location, client_uuid: btUid('btu') });
