@@ -4,6 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-07-fix-143
+- **⚡ Restock access for the day.** The Warehouse Manager, Warehouse Supervisors and Stand Supervisors (supervisors and multi-stand leads; managers and Admin too) can let a **regular worker or runner scheduled today** do **Force Restock**. Before, that was only for leads, supervisors, warehouse and managers.
+  - **Where:** the Warehouse Manager / Supervisor home screen has a **⚡ Give restock access** button at the top ("2 people have restock access today"), plus a Manager-tools tile. Supervisors have it in the Requests menu; Admin / managers in 🧰 Manager Tools.
+  - **How:** search today's schedule by name, ID or stand → **⚡ Give — <their stand>** or **All stands**. A multi-stand lead can only pick their own stands ("All my stands"). The "Has access today" list has **Remove**.
+  - **For the worker:** a **⚡ Force Restock** button shows in the Requests menu ("Access today for DFA 111 · given by …"), and the stand QR sticker works, for the stands they were given. Each restock is saved with their name (Done By in the warehouse downloads).
+  - **Today only:** stored per game day in app_settings `restock_access:YYYY-MM-DD`, so access ends by itself after the game day. Removed access stays in the list with who removed it, as a record. The list is re-read before every save, so two people giving access at once don't overwrite each other. Subcontractor logins can't be given access.
+  - Tested: worker blocked before → Warehouse Manager gives DFA 111 → worker can restock DFA 111 but not DFA 143. Another worker and a subcontractor login stay blocked. "All stands" works on any stand. Remove → blocked again, record kept ("removed by Van Gampler, Matthew"). Next day → blocked. A supervisor can give access; a worker can't. The button shows for the Warehouse Manager and Supervisor, not for warehouse employees.
+
 ## 2026-11-07-fix-142
 - **Warehouse downloads show who did each transfer.** Matt's "warehouse transfers" CSV had a blank "Initiated By" on force restocks, e.g. #380 DFA 111 after the 11/2 game. The blank is on purpose: the app uses an empty initiated_by to tell force restocks and self-serve deliveries apart from a manager's planned request. The person is stored in `delivered_by`, which the download didn't show. Now:
   - **Warehouse transfers CSV:** new **Type** column (Force restock / Manager request / Delivery (stock request / self-serve)) and **Done By** column (delivered_by, else assigned/confirmed/initiated). "Initiated By (manager)" is kept for planned requests.

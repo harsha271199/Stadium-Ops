@@ -2307,6 +2307,14 @@
       <div><div class="smb-label">Refund Assistance</div><div class="smb-sub">Notify a Supervisor to come help</div></div>
     </button>
 
+    <button class="sub-menu-btn" id="rs-granted-btn" style="display:none;border-left:4px solid #F59E0B;background:#FFFBEB" onclick="goAddStockMyself()">
+      <span class="smb-icon">⚡</span>
+      <div><div class="smb-label">Force Restock</div><div class="smb-sub" id="rs-granted-sub">You have restock access today</div></div>
+    </button>
+    <button class="sub-menu-btn" id="rs-give-btn" style="display:none;border-left:4px solid #F59E0B" onclick="openRestockAccess()">
+      <span class="smb-icon">⚡</span>
+      <div><div class="smb-label">Give restock access</div><div class="smb-sub">Let a scheduled worker do Force Restock today</div></div>
+    </button>
     <details class="request-more" id="stand-request-more">
       <summary><span>••• More request tools</span><span style="color:var(--text-3)">Add stock · Maintenance</span></summary>
       <div class="request-more-body">
@@ -4295,6 +4303,10 @@
       <div class="role-action-row" id="wh-role-actions" style="display:none"></div>
     </div>
 
+    <button class="big-action" id="wh-rs-give-btn" style="display:none;border-left:4px solid #F59E0B;margin-bottom:10px" onclick="openRestockAccess()">
+      <span class="icon">⚡</span>
+      <span class="text"><div>Give restock access</div><div class="sub" id="wh-rs-give-sub">Let scheduled workers do Force Restock today</div></span>
+    </button>
     <div class="first-game-help" id="wh-first-game-help" style="position:relative;padding-right:32px">
       <span id="wh-first-game-help-text">Tap the next job and follow the screen. You can always go back if you open the wrong stand.</span>
       <span onclick="dismissWhFirstGameHelp()" role="button" tabindex="0" aria-label="Dismiss" style="position:absolute;top:8px;right:10px;cursor:pointer;font-weight:800;color:var(--text-2);font-size:14px;line-height:1;padding:4px">✕</span>
@@ -4767,7 +4779,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-07-fix-142';
+const BUILD_TAG = '2026-11-07-fix-143';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -9820,9 +9832,12 @@ function qrFieldStandAllowed(stand,user){
   if(isLimitedAreaLead()){
     return (user.supervisorStands||[]).map(canonicalStandName2026).includes(stand);
   }
-  return canonicalStandName2026(user.stand)===stand;
+  if(canonicalStandName2026(user.stand)===stand)return true;
+  const g=!canForceStockUserBase(user)&&restockGrantFor(user);
+  return !!(g&&restockGrantStandOk(g,stand));
 }
 async function openQrForceRestock(stand){
+  if(state.user)await restockGrantsLoad(true);
   stand=await resolveQrStandLive(stand);
   if(!stand)return toast('This QR is not an active stand','error');
 
@@ -12154,6 +12169,7 @@ function renderSupervisorStyleExtraAccess(role){
   state._mgrToolsRole=role;
   let items=SUPERVISOR_STYLE_EXTRA_ACCESS[role]||[];
   // Bottle Tracker: Admin + the Premium-team managers (premium_team_access).
+  if(typeof canGrantRestock==='function'&&canGrantRestock())items=items.concat([{key:'rsaccess',icon:'⚡',title:'Restock access',sub:'Let scheduled workers do Force Restock today',action:'openRestockAccess()'}]);
   if(typeof btAllowed==='function'&&btAllowed())items=[{key:'bottles',icon:'🍾',title:'Bottle Tracker',sub:'Premium liquor · tag · scan empties · what\'s open where',action:'openLiquorBottles()'}].concat(items);
   if(!items.length){wrap.style.display='none';list.innerHTML='';return;}
   wrap.style.display='';
@@ -12354,6 +12370,8 @@ function prepareRequestHub(){
     if(sub)sub.textContent=leadership?'Stock · Food · IT across all stands':(state.user&&state.user.role==='supervisor'?'Stock · Food · IT · pick any stand or all':'Stock · Food · IT · see what is coming');
   }
   { const ab=document.getElementById('addstock-btn'); if(ab)ab.style.display=canForceStock()?'':'none'; }
+  rsRefreshHubButtons();
+  if(state.user)restockGrantsLoad().then(rsRefreshHubButtons).catch(()=>{});
   { const ob=document.getElementById('req-hub-order-btn'); if(ob)ob.style.display=''; const tg=document.getElementById('req-hub-order-tag'); if(tg)tg.textContent=orderTestMode()?'TEST MODE':'STOCK · FOOD · IT'; }
   // One screen does Stock + Food + IT now. The old single forms stay only for
   // Supervisors (and managers), who order for other stands.
@@ -24186,6 +24204,7 @@ function renderWarehouseForRole() {
   const existingQuick = document.getElementById('wh-quick-actions');
   if (existingQuick) existingQuick.remove();
 
+  { const rb = document.getElementById('wh-rs-give-btn'); if (rb) rb.style.display = (isWhMgr || isWhSup) ? '' : 'none'; if (isWhMgr || isWhSup) rsUpdateGiveSub(); }
   // Warehouse Supervisor has the Manager's full access, so both use the
   // same home screen below.
   if (!isWhMgr && !isWhSup) return;
@@ -24220,6 +24239,7 @@ function renderWarehouseForRole() {
       (reqOnly ? '' : tool("showScreen('screen-wh-create-transfer')", '🚚', 'Create Transfer') +
         tool("whMgrOpenPane('transfers')", '✍️', 'All Transfers', '', 'wh-sup-tile-transfers-sub')) +
       tool("whScanToOpen()", '📷', 'Force Stock') +
+      tool("openRestockAccess()", '⚡', 'Restock access') +
       tool("showScreen('screen-wh-team')", '🗺️', 'Assign & Team') +
       tool("whMgrOpenPane('roster')", '👥', 'My Team', '', 'wh-tile-roster-sub') +
       tool("whMgrOpenPane('cart')", '<svg width="26" height="24"><use href="#gc-icon"/></svg>', 'Golf Cart', 'wh-tile-cart', 'wh-tile-cart-sub') +
@@ -27138,27 +27158,164 @@ async function tsBack() {
 // Manager / Admin), Supervisors, real Stand Leads and NPO Leads (their own
 // stand). NOT regular workers, NPO members, staff who only got portable
 // "lead access for all", or subcontractor stand logins.
-function canForceStockUser(u){
+function canForceStockUserBase(u){
   if(!u||u.isSubcontractor)return false;
   if(u.role==='supervisor'||isLimitedAreaLead())return true;
   if(u.isNpo)return !!u.npoIsLead;
   return u.role==='lead'&&(!u.leadAccessGranted||!!u.tempLeadAccess);
+}
+// + people given restock access for TODAY by a Warehouse Manager/Supervisor
+// or a Supervisor (⚡ Give restock access).
+function canForceStockUser(u){
+  if(!u||u.isSubcontractor)return false;
+  return canForceStockUserBase(u)||!!restockGrantFor(u);
+}
+// ── ⚡ Restock access for the day ──
+// Stored per game day in app_settings `restock_access:YYYY-MM-DD` as a list
+// of {empId,name,stands:['*'|stand…],by,at,removed?}. A new day = a new key,
+// so access ends by itself after the game day. Removed grants stay in the
+// list (removed:{by,at}) so there is a record of who gave and took access.
+function restockKey(d){ return 'restock_access:' + (d || stadiumDay()); }
+async function restockGrantsLoad(force){
+  const d = stadiumDay();
+  if (!force && state._rsDay === d && state._rsAt && Date.now() - state._rsAt < 60000) return state._restockAll || [];
+  const r = await sb('app_settings?key=eq.' + encodeURIComponent(restockKey(d)) + '&select=value').catch(() => ({ _err: true }));
+  if (r && !r._err && Array.isArray(r)) {
+    let g = []; try { g = JSON.parse((r[0] || {}).value || '[]'); } catch (e) {}
+    state._restockAll = Array.isArray(g) ? g : []; state._restockGrants = state._restockAll.filter(x => !x.removed);
+    state._rsDay = d; state._rsAt = Date.now();
+  }
+  return state._restockAll || [];
+}
+function rsIdMatch(a, b){ a = String(a || '').replace(/\D/g, ''); b = String(b || '').replace(/\D/g, ''); if (!a || !b) return false; return a === b || (a.length >= 5 && b.length >= 5 && a.slice(-5) === b.slice(-5)); }
+function restockGrantFor(u){
+  if (!u || u.isSubcontractor || state._rsDay !== stadiumDay()) return null;
+  return (state._restockGrants || []).find(g => rsIdMatch(g.empId, u.empId)) || null;
+}
+function restockGrantStandOk(g, stand){ if (!g) return false; const st = canonicalStandName2026(stand); return (g.stands || []).some(x => x === '*' || canonicalStandName2026(x) === st); }
+function canGrantRestock(){
+  if (isWhLeaderSession()) return true;
+  if (state.staffAccount && state.staffAccount.group === 'manager' && ['support_manager', 'manager', 'admin'].includes(state.staffAccount.role)) return true;
+  return !!(state.user && (state.user.role === 'supervisor' || isLimitedAreaLead()));
 }
 function canForceStock(){
   if(state.user)return canForceStockUser(state.user);
   if(state.staffAccount&&state.staffAccount.group==='warehouse')return true;
   return !!(state.staffAccount&&state.staffAccount.group==='manager'&&['support_manager','manager','admin'].includes(state.staffAccount.role));
 }
-function goAddStockMyself(targetStand) {
-  if (!canForceStock()) return toast('Force Stock is available to Stand Lead, Supervisor, Support Manager, Manager and Admin','error');
+async function goAddStockMyself(targetStand) {
+  if (state.user) await restockGrantsLoad(true);
+  if (!canForceStock()) return toast('Force Stock is available to Stand Lead, Supervisor, Support Manager, Manager and Admin — or ask the Warehouse Manager / a Supervisor for restock access today','error');
   const actor=getRequesterIdentity();
-  const stand = targetStand || getOperationalStand(actor) || (state.user&&state.user.stand) || state.activeStand || '';
+  let stand = targetStand || getOperationalStand(actor) || (state.user&&state.user.stand) || state.activeStand || '';
+  const g = state.user && !canForceStockUserBase(state.user) && restockGrantFor(state.user);
+  if (g && !restockGrantStandOk(g, stand)) {
+    const opts = (g.stands || []).filter(x => x !== '*');
+    if (opts.length === 1) stand = opts[0];
+    else if (opts.length > 1) { const pick = prompt('Which stand are you restocking?\n' + opts.map((x, i) => (i + 1) + ') ' + x).join('\n'), '1'); const i = parseInt(pick, 10) - 1; if (!(i >= 0 && opts[i])) return; stand = opts[i]; }
+  }
   if (!stand) return toast('Choose a working stand first','error');
   state.activeStand=stand;
   state.standTaskReturnScreen=isManagerOpsSession()?'screen-bedcheck':'screen-home';
   openTransferStand(stand, 'self');
 }
 
+
+
+function rsRefreshHubButtons(){
+  const u = state.user;
+  const g = u && !canForceStockUserBase(u) && restockGrantFor(u);
+  const gb = document.getElementById('rs-granted-btn');
+  if (gb) { gb.style.display = g ? '' : 'none'; const sub = document.getElementById('rs-granted-sub'); if (sub && g) sub.textContent = 'Access today for ' + ((g.stands || []).includes('*') ? 'all stands' : (g.stands || []).join(', ')) + ' · given by ' + (g.by || ''); }
+  const ab = document.getElementById('addstock-btn'); if (ab) ab.style.display = canForceStock() ? '' : 'none';
+  const give = document.getElementById('rs-give-btn'); if (give) give.style.display = (state.user && canGrantRestock()) ? '' : 'none';
+}
+async function rsUpdateGiveSub(){
+  const el = document.getElementById('wh-rs-give-sub'); if (!el) return;
+  await restockGrantsLoad(); const n = (state._restockGrants || []).length;
+  el.textContent = n ? n + ' ' + (n === 1 ? 'person has' : 'people have') + ' restock access today — tap to see or change' : 'Let scheduled workers do Force Restock today';
+}
+function rsMe(){ return (getFieldOpsActor && getFieldOpsActor().name) || (state.staffAccount && state.staffAccount.name) || 'Manager'; }
+// Stands this person may give access for: all, or a multi-stand lead's own stands.
+function rsMyStands(){ if (state.user && isLimitedAreaLead()) return (state.user.supervisorStands || []).slice(); return null; }
+async function openRestockAccess(){
+  if (!canGrantRestock()) return toast('Only the Warehouse Manager, Warehouse Supervisors, Supervisors and Managers can give restock access', 'error');
+  let ov = document.getElementById('rs-ov'); if (ov) ov.remove();
+  ov = document.createElement('div'); ov.id = 'rs-ov';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9000;background:var(--bg,#f5f5f5);overflow:auto';
+  ov.innerHTML = '<div style="max-width:640px;margin:0 auto;padding:14px 14px 40px">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px"><div style="font-size:19px;font-weight:900">⚡ Restock access — today</div><button class="btn btn-ghost" style="width:auto;margin:0;padding:8px 14px" onclick="document.getElementById(\'rs-ov\').remove();if(typeof rsUpdateGiveSub===\'function\')rsUpdateGiveSub()">Close</button></div>' +
+    '<div class="notice info" style="font-size:12px;margin-bottom:10px">Pick a person who is <b>scheduled today</b> and tap <b>Give</b>. They can then use <b>⚡ Force Restock</b> (Requests menu or the stand QR) for that stand <b>today only</b> — it turns off by itself after the game day. Every restock shows who did it.</div>' +
+    '<div style="font-weight:800;font-size:14px;margin:6px 0">Has access today</div><div id="rs-list"><div class="loading"><div class="spinner"></div></div></div>' +
+    '<div style="font-weight:800;font-size:14px;margin:14px 0 6px">Give access</div>' +
+    '<input class="form-input" id="rs-q" placeholder="🔍 Name, ID or stand" oninput="rsRenderPeople()" autocomplete="off">' +
+    '<div id="rs-people" style="margin-top:6px"><div class="loading"><div class="spinner"></div></div></div></div>';
+  document.body.appendChild(ov);
+  const d = stadiumDay();
+  const [sch] = await Promise.all([
+    sb('schedule?event_date=eq.' + d + '&is_test=neq.true&select=worker_name,employee_id,location,role,event_name&limit=3000').catch(() => ({ _err: true })),
+    restockGrantsLoad(true)
+  ]);
+  const mine = rsMyStands(), mineSet = mine && new Set(mine.map(canonicalStandName2026));
+  const seen = {};
+  (Array.isArray(sch) ? sch : []).forEach(r => {
+    const id = String(r.employee_id || '').trim(); if (!id || !r.worker_name) return;
+    if (mineSet && !mineSet.has(canonicalStandName2026(r.location || ''))) return;
+    const k = id.replace(/\D/g, '').slice(-5) || id;
+    if (!seen[k]) seen[k] = { empId: id, name: r.worker_name, stands: [], roles: [] };
+    if (r.location && !seen[k].stands.includes(r.location)) seen[k].stands.push(r.location);
+    if (r.role && !seen[k].roles.includes(r.role)) seen[k].roles.push(r.role);
+  });
+  state._rsPeople = Object.values(seen).sort((a, b) => a.name.localeCompare(b.name));
+  if (!Array.isArray(sch)) document.getElementById('rs-people').innerHTML = '<div class="notice" style="color:#DC2626">Could not load today\'s schedule — check signal</div>';
+  rsRenderList(); rsRenderPeople();
+}
+function rsRenderList(){
+  const el = document.getElementById('rs-list'); if (!el) return;
+  const g = state._restockGrants || [];
+  el.innerHTML = g.length ? g.map(x => '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;margin-bottom:6px;background:var(--surface,#fff)"><span style="font-size:13px"><b>' + escapeHtml(x.name) + '</b> · ' + escapeHtml((x.stands || []).includes('*') ? 'All stands' : (x.stands || []).join(', ')) + '<br><span style="font-size:11px;color:var(--text-2)">given by ' + escapeHtml(x.by || '') + ' · ' + new Date(x.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '</span></span><button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12px" onclick="rsRemove(\'' + escapeHtml(x.empId) + '\')">Remove</button></div>').join('')
+    : '<div style="font-size:12px;color:var(--text-2)">Nobody yet.</div>';
+}
+function rsRenderPeople(){
+  const el = document.getElementById('rs-people'); if (!el || !state._rsPeople) return;
+  const q = String((document.getElementById('rs-q') || {}).value || '').trim().toLowerCase();
+  const has = new Set((state._restockGrants || []).map(x => String(x.empId).replace(/\D/g, '').slice(-5)));
+  const list = state._rsPeople.filter(p => !q || (p.name + ' ' + p.empId + ' ' + p.stands.join(' ')).toLowerCase().includes(q)).slice(0, 60);
+  const all = !rsMyStands();
+  el.innerHTML = list.length ? list.map((p, i) => {
+    const k = String(p.empId).replace(/\D/g, '').slice(-5), idx = state._rsPeople.indexOf(p);
+    return '<div style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;margin-bottom:6px;background:var(--surface,#fff)"><div style="font-size:13px"><b>' + escapeHtml(p.name) + '</b> <span style="color:var(--text-3);font-size:11px">…' + escapeHtml(k) + '</span><br><span style="font-size:12px;color:var(--text-2)">' + escapeHtml(p.stands.join(', ') || 'no stand') + (p.roles.length ? ' · ' + escapeHtml(p.roles.join(', ')) : '') + '</span></div>' +
+      (has.has(k) ? '<div style="font-size:12px;color:#166534;font-weight:700;margin-top:4px">✅ Has access today</div>'
+        : '<div style="display:flex;gap:6px;margin-top:6px">' + (p.stands.length ? '<button class="btn btn-primary" style="margin:0;padding:8px;font-size:12px" onclick="rsGive(' + idx + ',0)">⚡ Give — ' + escapeHtml(p.stands.length === 1 ? p.stands[0] : 'their stands') + '</button>' : '') +
+          (all ? '<button class="btn btn-ghost" style="margin:0;padding:8px;font-size:12px" onclick="rsGive(' + idx + ',1)">All stands</button>' : (rsMyStands().length > 1 ? '<button class="btn btn-ghost" style="margin:0;padding:8px;font-size:12px" onclick="rsGive(' + idx + ',2)">All my stands</button>' : '')) + '</div>') + '</div>';
+  }).join('') : '<div style="font-size:12px;color:var(--text-2)">' + (q ? 'Nobody scheduled today matches "' + escapeHtml(q) + '".' : 'Nobody scheduled today.') + '</div>';
+}
+async function rsSave(mutate, okMsg){
+  const d = stadiumDay();
+  await restockGrantsLoad(true); // re-read so two people giving access at once don't overwrite each other
+  const all = (state._restockAll || []).slice();
+  mutate(all);
+  const r = await sb('app_settings?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ key: restockKey(d), value: JSON.stringify(all) }) }).catch(() => ({ _err: true }));
+  if (r && r._err) { toast('Could not save — check signal and try again', 'error'); return false; }
+  state._restockAll = all; state._restockGrants = all.filter(x => !x.removed); state._rsAt = Date.now();
+  rsRenderList(); rsRenderPeople(); toast(okMsg); return true;
+}
+async function rsGive(idx, mode){
+  const p = (state._rsPeople || [])[idx]; if (!p) return;
+  const stands = mode === 1 ? ['*'] : mode === 2 ? rsMyStands() : p.stands.slice();
+  if (!stands.length) return toast('No stand to give access for', 'error');
+  const k = String(p.empId).replace(/\D/g, '').slice(-5);
+  await rsSave(all => {
+    all.forEach(x => { if (!x.removed && String(x.empId).replace(/\D/g, '').slice(-5) === k) x.removed = { by: rsMe(), at: new Date().toISOString(), why: 'replaced' }; });
+    all.push({ empId: p.empId, name: p.name, stands, by: rsMe(), at: new Date().toISOString() });
+  }, '⚡ ' + p.name + ' can do Force Restock today');
+}
+async function rsRemove(empId){
+  const k = String(empId).replace(/\D/g, '').slice(-5);
+  const x = (state._restockGrants || []).find(g => String(g.empId).replace(/\D/g, '').slice(-5) === k);
+  if (!x || !(await confirmAction('Remove restock access for ' + x.name + ' today?', { title: 'Remove access?', confirmLabel: 'Remove' }))) return;
+  await rsSave(all => { all.forEach(g => { if (!g.removed && String(g.empId).replace(/\D/g, '').slice(-5) === k) g.removed = { by: rsMe(), at: new Date().toISOString() }; }); }, 'Access removed');
+}
 
 function isFieldForceStockSource(source){return source==='self'||source==='fieldqr'||source==='qrforce'||source==='camera_restock';}
 
