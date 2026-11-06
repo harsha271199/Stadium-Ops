@@ -4767,7 +4767,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-07-fix-141';
+const BUILD_TAG = '2026-11-07-fix-142';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -14548,7 +14548,7 @@ async function printTransferPicklist(transferId) {
       '<div class="hdr-row">' +
         '<div class="hdr-cell"><span class="lbl">From</span>Warehouse</div>' +
         '<div class="hdr-cell"><span class="lbl">Assigned to</span>' + escapeHtml(t.assigned_to_name || '(unassigned — self-serve)') + '</div>' +
-        '<div class="hdr-cell"><span class="lbl">Initiated by</span>' + escapeHtml(t.initiated_by || '') + '</div>' +
+        '<div class="hdr-cell"><span class="lbl">' + (String(t.initiated_by || '').trim() ? 'Initiated by' : 'Done by') + '</span>' + escapeHtml(String(t.initiated_by || '').trim() ? t.initiated_by : (whTransferDoneBy(t) || '—') + ' · ' + whTransferKind(t)) + '</div>' +
       '</div>' +
     '</div>' +
     '<div class="grid">' + cols.map(col => col.length
@@ -14560,6 +14560,16 @@ async function printTransferPicklist(transferId) {
   w.document.close();
 }
 
+// What kind of transfer, and who actually did it. initiated_by stays blank on
+// force restocks and self-serve deliveries on purpose (the app uses the blank
+// to tell them apart from a manager's planned request), so the person is in
+// delivered_by — show that as "Done by" (11/7: Matt couldn't see Jori did #380).
+function whTransferKind(t) {
+  if (/force restock/i.test(String(t.note || ''))) return 'Force restock';
+  if (String(t.initiated_by || '').trim()) return 'Manager request';
+  return 'Delivery (stock request / self-serve)';
+}
+function whTransferDoneBy(t) { return t.delivered_by || t.assigned_to_name || t.confirmed_by || t.initiated_by || ''; }
 async function exportWhTransfersCSV() {
   const rows = await sb('transfers?order=created_at.desc&limit=300&select=*').catch(()=>({_err:true}));
   if (rows._err) return toast('Could not load transfers', 'error');
@@ -14569,11 +14579,11 @@ async function exportWhTransfersCSV() {
   const itemsByTransfer = {};
   if (!items._err && Array.isArray(items)) items.forEach(it => { (itemsByTransfer[it.transfer_id] = itemsByTransfer[it.transfer_id] || []).push(it); });
   const esc = v => { const t = String(v == null ? '' : v); return (t.indexOf(',') >= 0 || t.indexOf('"') >= 0) ? '"' + t.replace(/"/g, '""') + '"' : t; };
-  let csv = 'Transfer ID,Stand,Status,Created,Initiated By,Assigned To,Item Name,Qty Requested,Qty Delivered\n';
+  let csv = 'Transfer ID,Type,Stand,Status,Created,Done By,Initiated By (manager),Assigned To,Item Name,Qty Requested,Qty Delivered\n';
   rows.forEach(t => {
     const its = itemsByTransfer[t.id] && itemsByTransfer[t.id].length ? itemsByTransfer[t.id] : [{}];
     its.forEach(it => {
-      csv += [t.id, t.stand, (TRANSFER_STATUS[t.status] || {}).label || t.status, t.created_at, t.initiated_by || '', t.assigned_to_name || '', it.item_name || '', it.qty_requested != null ? it.qty_requested : '', it.qty_delivered != null ? it.qty_delivered : ''].map(esc).join(',') + '\n';
+      csv += [t.id, whTransferKind(t), t.stand, (TRANSFER_STATUS[t.status] || {}).label || t.status, t.created_at, whTransferDoneBy(t), t.initiated_by || '', t.assigned_to_name || '', it.item_name || '', it.qty_requested != null ? it.qty_requested : '', it.qty_delivered != null ? it.qty_delivered : ''].map(esc).join(',') + '\n';
     });
   });
   downloadCSV(csv, 'warehouse_transfers_' + localISODate() + '.csv');
@@ -14737,7 +14747,7 @@ async function exportStandTransferReportCSV() {
     s.transfers.forEach(t => {
       const items = t.items.length ? t.items : [{}];
       items.forEach(it => {
-        csv += [s.stand, 'Transfer', it.item_name || '', it.qty_delivered != null ? it.qty_delivered : (it.qty_requested != null ? it.qty_requested : ''), (TRANSFER_STATUS[t.status] || {}).label || t.status, t.delivered_by || t.assigned_to_name || '', t.created_at || ''].map(esc).join(',') + '\n';
+        csv += [s.stand, whTransferKind(t), it.item_name || '', it.qty_delivered != null ? it.qty_delivered : (it.qty_requested != null ? it.qty_requested : ''), (TRANSFER_STATUS[t.status] || {}).label || t.status, whTransferDoneBy(t), t.created_at || ''].map(esc).join(',') + '\n';
       });
     });
     s.waste.forEach(w => {

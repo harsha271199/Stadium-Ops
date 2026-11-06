@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-07-fix-142
+- **Warehouse downloads show who did each transfer.** Matt's "warehouse transfers" CSV had a blank "Initiated By" on force restocks, e.g. #380 DFA 111 after the 11/2 game. The blank is on purpose: the app uses an empty initiated_by to tell force restocks and self-serve deliveries apart from a manager's planned request. The person is stored in `delivered_by`, which the download didn't show. Now:
+  - **Warehouse transfers CSV:** new **Type** column (Force restock / Manager request / Delivery (stock request / self-serve)) and **Done By** column (delivered_by, else assigned/confirmed/initiated). "Initiated By (manager)" is kept for planned requests.
+  - **Stand transfer report CSV:** Type shows Force restock / Manager request / Delivery instead of "Transfer"; By uses the same Done By.
+  - **Printed transfer sheet:** shows "Done by: Mason, Jori · Force restock" when there is no manager.
+  - Tested with copies of the live rows: #380 → Force restock, Done By Mason, Jori; #381 (DFA 191) → Force restock, Done By **Mason, Gary**; #379 → Manager request, Van Gampler, Matthew; #371 → Delivery, Rodriquez, Robert. No data changed; every force restock already had the name in delivered_by.
+
 ## 2026-11-07-fix-141
 - **Yellow Dog copy-paste / "Download all stands (Yellow Dog order)": an out-of-date Yellow Dog PDF saved on the device is no longer used.** Harsha's 11/5 download didn't follow the new Yellow Dog order and still listed old items, e.g. **BEEF - PITCHFORK DOG 5/1 at DFA 111**, which isn't on the new Yellow Dog. Checked: DFA 111's list in the app (84 rows) has no Pitchfork (it is in `zz-archived 2026-11-05 / DFA 111` since the 11/5 Yellow Dog update), and the 11/5 Count In / Count Out at 111 don't have it either. The cause: this download prefers a Yellow Dog PDF **saved on that phone/computer** the last time one was loaded in the app. The new 11/5 lists were applied directly to the stand lists, so the device still had the older PDF, with the old order and the dropped items as empty rows.
   - Now: if the saved PDF and the stand's current list differ by more than a couple of items (more than 2 or 5%), the stand's current list is used (it follows the latest Yellow Dog). A warning shows: "The Yellow Dog PDF saved on this device (loaded …) doesn't match DFA 111's current list: 18 item(s) no longer on the list… Load this event's PDF to match it exactly." A PDF that matches is still used as before.
