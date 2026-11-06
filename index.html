@@ -4767,7 +4767,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-133';
+const BUILD_TAG = '2026-11-06-fix-134';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -25083,6 +25083,10 @@ async function btPaperEmpty(no) {
 async function btUndo(id, kind) {
   const rec = _bt.session.find(r => r.id === id && r.kind === kind);
   if (!rec || Date.now() - rec.t > BT_UNDO_MS) return toast('Undo is only for 5 minutes — use Void in Bottles', 'error');
+  const what = kind === 'tag' && !rec.paper ? 'Undo the tag on ' + rec.sticker_no + ' (' + (rec.item_name || '') + ' → ' + (rec.location || '') + ')? The bottle will not be counted as out.'
+    : rec.paper ? 'Undo recording ' + rec.sticker_no + ' as emptied?'
+    : 'Undo EMPTY on ' + rec.sticker_no + ' (' + (rec.item_name || '') + ')? The bottle goes back to OPEN at ' + (rec.location || 'its location') + '.';
+  if (!(await confirmAction(what, { title: 'Undo ' + rec.sticker_no + '?', confirmLabel: 'Yes, undo', cancelLabel: 'No, keep it' }))) return;
   const body = kind === 'tag' || rec.paper ? { status: 'void', void_reason: (rec.paper ? 'Undo right after recording a paper-list empty — ' : 'Undo right after tagging — ') + btWho(), updated_at: new Date().toISOString() } : { status: 'open', emptied_at: null, emptied_by: null, empty_uuid: null, updated_at: new Date().toISOString() };
   const r = await btReq('liquor_bottles?id=eq.' + id + '&status=eq.' + (kind === 'tag' ? 'open' : 'empty'), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(body) });
   if (!Array.isArray(r) || !r.length) return toast(r && r.net ? 'No signal — try Undo again' : 'Could not undo — it changed already', 'error');
@@ -25405,7 +25409,7 @@ async function btScan(action) {
   const what = action === 'btSaveTag' ? 'Tagging: ' + escapeHtml((_bt.item || '(no bottle picked)') + ' → ' + (_bt.loc || '(no location)')) : action === 'btMarkEmpty' ? 'Marking EMPTY' : 'Look up';
   ov.innerHTML = '<div style="padding:10px 12px;background:#111;color:#fff;font-size:13px;font-weight:800">' + what + '</div>' +
     '<div style="position:relative;flex:1;overflow:hidden"><video id="bt-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover"></video>' +
-    '<div style="position:absolute;left:5%;right:5%;top:40%;height:20%;border:3px solid #22C55E;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.4)"></div>' +
+    '<div style="position:absolute;left:5%;right:5%;top:36%;height:28%;border:3px solid #22C55E;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.4)"></div>' +
     '<div id="bt-scan-st" style="position:absolute;left:0;right:0;top:12%;text-align:center;color:#fff;font-size:15px;font-weight:800;text-shadow:0 1px 3px #000;padding:0 12px">Starting camera…</div>' +
     '<div id="bt-scan-last" style="position:absolute;left:10px;right:10px;bottom:12px"></div></div>' +
     '<div style="padding:10px 12px;background:#111;color:#fff;font-size:13px" id="bt-scan-count"></div>' +
@@ -25425,16 +25429,22 @@ async function btScan(action) {
   while (_btScan === S && !S.stop) {
     if (v.readyState >= 2 && v.videoWidth && !S.paused) {
       frame++;
-      const vw = v.videoWidth, vh = v.videoHeight, k = Math.min(1, 960 / vw);
-      full.width = Math.round(vw * k); full.height = Math.round(vh * k);
-      full.getContext('2d', { willReadFrequently: true }).drawImage(v, 0, 0, full.width, full.height);
+      // Read ONLY what is inside the green box (+ a small margin): another
+      // label or the bottle's own barcode elsewhere in view is ignored.
+      const vw = v.videoWidth, vh = v.videoHeight, ew = v.clientWidth, eh = v.clientHeight, sc = Math.max(ew / vw, eh / vh), ox = (vw * sc - ew) / 2, oy = (vh * sc - eh) / 2;
+      const bx = (ew * 0.03 + ox) / sc, by = (eh * 0.33 + oy) / sc, bw = (ew * 0.94) / sc, bh = (eh * 0.34) / sc;
+      const k = Math.min(2, 960 / bw);
+      full.width = Math.round(bw * k); full.height = Math.round(bh * k);
+      full.getContext('2d', { willReadFrequently: true }).drawImage(v, bx, by, bw, bh, 0, 0, full.width, full.height);
       let code = readBar ? btCleanCode(await readBar(full).catch(() => '')) : '';
       if (code && _btScan === S) {
         const now = Date.now();
-        if (!(S.seen[code] && now - S.seen[code] < 4000)) {
+        // Same label still in the box: ignore quietly (no repeat warning).
+        if (S.seen[code] && S.done && S.done[code] && now - S.seen[code] < 20000) { S.seen[code] = now; }
+        else if (!(S.seen[code] && now - S.seen[code] < 4000)) {
           S.seen[code] = now;
           const res = await window[action](code);
-          if (res && res.ok) { S.n++; last(escapeHtml(res.text || ('✅ ' + code)), true); }
+          if (res && res.ok) { S.n++; (S.done = S.done || {})[code] = 1; last(escapeHtml(res.text || ('✅ ' + code)), true); }
           else if (res && res.fail) last('⚠️ ' + escapeHtml(res.fail), false);
           const c = document.getElementById('bt-scan-count'); if (c) c.textContent = S.n + ' saved in this scan · scan the next one or tap Done';
           if (action === 'btLookup') { btStopScan(); return; }
@@ -25474,7 +25484,7 @@ function btBinarize(src, out, angle) {
   ox.fillStyle = '#fff'; ox.fillRect(0, 0, w, h);
   ox.save(); ox.translate(w / 2, h / 2); ox.rotate(angle * Math.PI / 180); ox.drawImage(src, -w / 2, -h / 2); ox.restore();
 }
-const BT_OCR_AGREE = 3;
+const BT_OCR_AGREE = 3, BT_OCR_MIN_CONF = 80;
 async function btReadNumber(action) {
   btStopScan();
   if (action === 'btSaveTag') {
@@ -25507,7 +25517,7 @@ async function btReadNumber(action) {
   if (_btScan !== S) { try { S.worker.terminate(); } catch (e) {} return; }
   st('Put the NUMBER in the pink box');
   const band = document.createElement('canvas'), bin = document.createElement('canvas');
-  const ANG = [0, -6, 6, -12, 12, -9, 9, -16, 16]; let ai = 0, cand = '', hits = 0;
+  const ANG = [0, -6, 6, -12, 12, -9, 9, -16, 16]; let ai = 0, cand = '', hits = 0; const t0 = Date.now(); let hinted = false;
   while (_btScan === S && !S.stop) {
     if (v.readyState >= 2 && v.videoWidth) {
       try {
@@ -25515,10 +25525,14 @@ async function btReadNumber(action) {
         const sx = (ew * 0.12 + ox) / sc, sy = (eh * 0.40 + oy) / sc, sw = (ew * 0.76) / sc, sh = (eh * 0.20) / sc;
         band.width = 720; band.height = Math.max(20, Math.round(sh * 720 / sw));
         band.getContext('2d', { willReadFrequently: true }).drawImage(v, sx, sy, sw, sh, 0, 0, band.width, band.height);
+        if (!hinted && !hits && Date.now() - t0 > 10000) { hinted = true; st('Can\'t read this one (dark green stickers are hard). Tap Cancel and type the last 3 digits.'); }
         btBinarize(band, bin, ANG[ai++ % ANG.length]);
         const { data } = await S.worker.recognize(bin);
-        const n = btPickNumber(data && data.text);
-        if (window._btOcrDbg) window._btOcrDbg.push((data && data.text || '').replace(/\s+/g, ' ') + ' => ' + n);
+        // Only a confident read counts: the word holding the number must be
+        // >= 80% sure (a wrong green read in tests was 52%; right reads 88-96%).
+        let n = btPickNumber(data && data.text);
+        if (n) { const wd = ((data && data.words) || []).find(x => String(x.text || '').replace(/\D/g, '').includes(n)); if (!wd || wd.confidence < BT_OCR_MIN_CONF) n = ''; }
+        if (window._btOcrDbg) window._btOcrDbg.push((data && data.text || '').replace(/\s+/g, ' ') + ' c' + Math.round(data && data.confidence || 0) + ' [' + ((data && data.words) || []).map(w => w.text + ':' + Math.round(w.confidence)).join(' ') + '] => ' + n);
         if (n && _btScan === S) {
           if (n === cand) hits++; else { cand = n; hits = 1; }
           st('Reading… ' + '●'.repeat(hits) + '○'.repeat(Math.max(0, BT_OCR_AGREE - hits)));

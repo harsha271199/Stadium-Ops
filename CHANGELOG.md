@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-06-fix-134
+- **🍾 Bottle Tracker: fixes from Harsha's live test.**
+  - **Barcode scan reads only the label inside the green box.** With the test sheet, Tag → Scan saw the pink label ③ (refused: "already on an open bottle… mark that one empty first") and then the green label ④ next to it, which it saved by itself 4 s later (live history 23:11:12 → 23:11:16). Nothing was marked empty. The reader now looks only inside the green box, which is a bit taller. Tested: two labels in view saves only the one in the box (both ways round), and a label outside the box saves nothing. A label that stays in the box after saving is ignored quietly instead of showing a red "just tagged" warning.
+  - **🔢 Read number: a read must be ≥ 80% sure.** On a darker, blurrier green sticker (like a phone camera pointed at a screen) the reader got 2037781 as **2037777** three times at 52% confidence. Correct reads were 82–96%. Unsure reads are now ignored, so a dark green sticker isn't read at all rather than read wrong. After 10 s without a read it says "Can't read this one — type the last 3 digits". Clear green (2037781) and pink (1592345) still read. A contrast boost was tried and dropped: it stopped pink from reading.
+  - **Undo asks first:** "Undo EMPTY on 1592345 (…)? The bottle goes back to OPEN at …" with **No, keep it / Yes, undo** (same for tags and paper-list empties).
+
 ## 2026-11-06-fix-133
 - **🍾 Bottle Tracker moved into 🧰 Manager Tools** (first item), instead of a separate button on manager home. Shown to Admin and to the Premium-team managers (Harshavardhan, Yadzia). Other managers don't see it. The list refreshes once Premium-team access has loaded. Premium managers (Nestor, Natasha) still open it from the Premium screen. Tested: admin and a Premium-team manager see it, another manager doesn't, and tapping it opens the tracker.
 
