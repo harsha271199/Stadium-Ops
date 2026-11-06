@@ -25542,7 +25542,9 @@ async function btScan(action) {
 // 2037787 at 84% and is no longer used).
 function btLoadPaddle() {
   if (window.BtPaddle) return window.BtPaddle.load(BT_OCR_DET);
-  return import(new URL('/ocr/paddle.mjs', location.href).href).then(() => window.BtPaddle.load(BT_OCR_DET));
+  // ?v= changes whenever paddle.mjs changes, so phones that cached an older
+  // copy fetch the new one (the big model files keep their cached copy).
+  return import(new URL('/ocr/paddle.mjs?v=2', location.href).href).then(() => window.BtPaddle.load(BT_OCR_DET));
 }
 // Bottle Tracker opened: if the reader is already on this phone (downloaded
 // once before), start it in the background so 🔢 Read number is instant.

@@ -18,4 +18,4 @@ npx esbuild entry.js --bundle --format=esm --minify --platform=browser --outfile
   --alias:onnxruntime-web=./node_modules/onnxruntime-web/dist/ort.wasm.min.mjs
 ```
 
-If any file in `ocr/` changes, bump `OCR_CACHE` in `sw.js` so phones fetch the new copy.
+If `paddle.mjs` changes, bump `?v=` in `btLoadPaddle()` (index.html). If the model/wasm files change, bump `OCR_CACHE` in `sw.js` so phones fetch the new copies.
