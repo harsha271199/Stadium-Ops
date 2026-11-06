@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-06-fix-139
+- **🍾 Bottle Tracker: 🔢 Read number is about 3× faster.** Harsha: "working but taking too much time". Measured with the browser's CPU slowed 4× to act like a phone, 50 test images:
+  - **Library default** (finds text on a 960 px image; we sent 720): **1.1 s a read**, 38 right / 0 wrong.
+  - **Now** (320 px search on a 360 px box image): **0.4 s a read**, 40 right / **0 wrong**.
+  - **2 matching reads instead of 3:** the new reader gave 0 wrong numbers in every test; the roll check, open-bottle check and the manager's Yes stay.
+  - **Background warm-up:** opening Bottle Tracker starts the reader in the background, but only if it's already on the phone (it never starts the first download by itself). Tested: not loaded on the very first visit; already loaded after it was downloaded once.
+  - **Result** (phone-speed CPU, camera start included): about **2 s from tapping Read number to the check screen** once warm; **5–6 s the first time after opening the app**. Tested on pink 1592345, green 2037781, dark green and a tilted pink 1592357.
+- Nothing is installed on the phone and nothing runs on a server: the reader downloads from the app's own site once (cached), and the reading runs on the phone.
+
 ## 2026-11-06-fix-138
 - **🍾 Bottle Tracker: 🔢 Read number now uses PaddleOCR instead of Tesseract.** Harsha's test: Tesseract only read pink when very close and never read green. On the same 48 test images of the real stickers (pink and green; close to far; sharp and blurred; dark green):
   - **Tesseract:** almost nothing right, and **wrong numbers at high confidence** (2037781 → 2037787 at 84%).

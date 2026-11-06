@@ -4767,7 +4767,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-138';
+const BUILD_TAG = '2026-11-06-fix-139';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -24938,6 +24938,7 @@ async function btLoadBasics() {
 }
 async function openLiquorBottles(tab) {
   if (!btAllowed()) return toast('Bottle Tracker is for Premium managers', 'error');
+  setTimeout(btWarmPaddle, 1200);
   const old = document.getElementById('bt-overlay'); if (old) old.remove();
   const el = document.createElement('div');
   el.id = 'bt-overlay';
@@ -25540,8 +25541,18 @@ async function btScan(action) {
 // real sticker photos: 41/48 right, 0 wrong (Tesseract misread 2037781 as
 // 2037787 at 84% and is no longer used).
 function btLoadPaddle() {
-  if (window.BtPaddle) return window.BtPaddle.load();
-  return import(new URL('/ocr/paddle.mjs', location.href).href).then(() => window.BtPaddle.load());
+  if (window.BtPaddle) return window.BtPaddle.load(BT_OCR_DET);
+  return import(new URL('/ocr/paddle.mjs', location.href).href).then(() => window.BtPaddle.load(BT_OCR_DET));
+}
+// Bottle Tracker opened: if the reader is already on this phone (downloaded
+// once before), start it in the background so 🔢 Read number is instant.
+// Never starts the first ~25 MB download by itself.
+function btWarmPaddle() {
+  try {
+    if (window.BtPaddle && window.BtPaddle.ready()) return;
+    if (!('caches' in window)) return;
+    caches.open('stadium-ops-ocr-v1').then(c => c.match(new URL('/ocr/rec.onnx', location.href).href)).then(hit => { if (hit) btLoadPaddle().catch(() => {}); }).catch(() => {});
+  } catch (e) {}
 }
 function btPickNumber(text) {
   const t = String(text || '').replace(/[oO]/g, '0').replace(/[lI|]/g, '1');
@@ -25553,7 +25564,11 @@ function btPickNumber(text) {
   }
   return '';
 }
-const BT_OCR_AGREE = 3, BT_OCR_MIN_CONF = 0.80;
+// Speed (tested with the CPU slowed 4x like a phone): detection at 320 px on
+// a 360 px box image = ~0.4 s a read vs 1.1 s at the library default (960),
+// with 40/50 right, 0 wrong. 2 matching reads (was 3): 0 wrong in every test,
+// and the roll check, open-bottle check and the manager's Yes still apply.
+const BT_OCR_AGREE = 2, BT_OCR_MIN_CONF = 0.80, BT_OCR_DET = 320, BT_OCR_BAND = 360;
 async function btReadNumber(action) {
   btStopScan();
   if (action === 'btSaveTag') {
@@ -25591,10 +25606,10 @@ async function btReadNumber(action) {
       try {
         const vw = v.videoWidth, vh = v.videoHeight, ew = v.clientWidth, eh = v.clientHeight, sc = Math.max(ew / vw, eh / vh), ox = (vw * sc - ew) / 2, oy = (vh * sc - eh) / 2;
         const sx = (ew * 0.08 + ox) / sc, sy = (eh * 0.36 + oy) / sc, sw = (ew * 0.84) / sc, sh = (eh * 0.28) / sc;
-        band.width = Math.min(720, Math.round(sw * 1.5)); band.height = Math.max(20, Math.round(sh * band.width / sw));
+        band.width = BT_OCR_BAND; band.height = Math.max(20, Math.round(sh * band.width / sw));
         band.getContext('2d', { willReadFrequently: true }).drawImage(v, sx, sy, sw, sh, 0, 0, band.width, band.height);
         if (!hinted && !hits && Date.now() - t0 > 10000) { hinted = true; st('Can\'t read this one yet — hold the number inside the box, or tap Cancel and type the last 3 digits.'); }
-        const r = await window.BtPaddle.read(band);
+        const r = await window.BtPaddle.read(band, BT_OCR_DET);
         // Every sticker number in view (on a roll, confidence >= 80%). Two
         // different numbers in one frame = ambiguous, ignored.
         const found = new Map();
