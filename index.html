@@ -4767,7 +4767,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-137';
+const BUILD_TAG = '2026-11-06-fix-138';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -25535,7 +25535,14 @@ async function btScan(action) {
 // ── 🔢 Read the printed number on number-only stickers ──
 // A camera read is only a suggestion: 3 matching reads, must be on a
 // sticker roll, open-bottle check, then the manager confirms.
-function btLoadTesseract() { return btLoadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js', 'Tesseract'); }
+// PaddleOCR (PP-OCRv4) shipped with the app under /ocr/ — loaded only when
+// 🔢 Read number is first used, then cached by the phone. In tests on the
+// real sticker photos: 41/48 right, 0 wrong (Tesseract misread 2037781 as
+// 2037787 at 84% and is no longer used).
+function btLoadPaddle() {
+  if (window.BtPaddle) return window.BtPaddle.load();
+  return import(new URL('/ocr/paddle.mjs', location.href).href).then(() => window.BtPaddle.load());
+}
 function btPickNumber(text) {
   const t = String(text || '').replace(/[oO]/g, '0').replace(/[lI|]/g, '1');
   const ok = n => !!btTapeRollOf(n);
@@ -25546,27 +25553,7 @@ function btPickNumber(text) {
   }
   return '';
 }
-// Digit clean-up tested on the real pink and green stickers: brightest colour
-// channel, a LOCAL threshold, then the given tilt.
-function btBinarize(src, out, angle) {
-  const w = src.width, h = src.height, sx = src.getContext('2d', { willReadFrequently: true });
-  const d = sx.getImageData(0, 0, w, h).data, g = new Uint8Array(w * h);
-  for (let i = 0, j = 0; i < d.length; i += 4, j++) g[j] = Math.max(d[i], d[i + 1], d[i + 2]);
-  const I = new Float64Array((w + 1) * (h + 1));
-  for (let y = 1; y <= h; y++) { let row = 0; for (let x = 1; x <= w; x++) { row += g[(y - 1) * w + x - 1]; I[y * (w + 1) + x] = I[(y - 1) * (w + 1) + x] + row; } }
-  const r = Math.max(4, Math.floor(w / 16)), C = 20, b = sx.createImageData(w, h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const x0 = Math.max(0, x - r), y0 = Math.max(0, y - r), x1 = Math.min(w, x + r + 1), y1 = Math.min(h, y + r + 1);
-    const sum = I[y1 * (w + 1) + x1] - I[y0 * (w + 1) + x1] - I[y1 * (w + 1) + x0] + I[y0 * (w + 1) + x0];
-    const v = g[y * w + x] > sum / ((x1 - x0) * (y1 - y0)) - C ? 255 : 0, k = (y * w + x) * 4;
-    b.data[k] = b.data[k + 1] = b.data[k + 2] = v; b.data[k + 3] = 255;
-  }
-  sx.putImageData(b, 0, 0);
-  out.width = w; out.height = h; const ox = out.getContext('2d');
-  ox.fillStyle = '#fff'; ox.fillRect(0, 0, w, h);
-  ox.save(); ox.translate(w / 2, h / 2); ox.rotate(angle * Math.PI / 180); ox.drawImage(src, -w / 2, -h / 2); ox.restore();
-}
-const BT_OCR_AGREE = 3, BT_OCR_MIN_CONF = 65;
+const BT_OCR_AGREE = 3, BT_OCR_MIN_CONF = 0.80;
 async function btReadNumber(action) {
   btStopScan();
   if (action === 'btSaveTag') {
@@ -25580,7 +25567,7 @@ async function btReadNumber(action) {
   const what = action === 'btSaveTag' ? 'Read number · Tagging: ' + escapeHtml(_bt.item + ' → ' + _bt.loc) : action === 'btMarkEmpty' ? 'Read number · Marking EMPTY' : 'Read number · Look up';
   ov.innerHTML = '<div style="padding:10px 12px;background:#111;color:#fff;font-size:13px;font-weight:800">' + what + '</div>' +
     '<div style="position:relative;flex:1;overflow:hidden"><video id="bt-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover"></video>' +
-    '<div style="position:absolute;left:12%;right:12%;top:40%;height:20%;border:3px solid #F472B6;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.4)"></div>' +
+    '<div style="position:absolute;left:10%;right:10%;top:38%;height:24%;border:3px solid #F472B6;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.4)"></div>' +
     '<div id="bt-scan-st" style="position:absolute;left:0;right:0;top:12%;text-align:center;color:#fff;font-size:15px;font-weight:800;text-shadow:0 1px 3px #000;padding:0 12px">Starting camera…</div></div>' +
     '<div style="padding:10px 12px;background:#111;color:#ddd;font-size:12px">Fill the pink box with the whole sticker number, hold still. You will check it before anything is saved.</div>' +
     '<div style="padding:12px;display:flex;gap:8px;background:#111"><button class="btn btn-primary" style="margin:0" onclick="btStopScan()">Cancel</button></div>';
@@ -25590,32 +25577,31 @@ async function btReadNumber(action) {
   try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); }
   catch (e) { st('Camera not available — type the number'); setTimeout(btStopScan, 1500); return; }
   const v = document.getElementById('bt-video'); v.srcObject = stream;
-  const S = _btScan = { stream, stop: false, worker: null, action };
+  const S = _btScan = { stream, stop: false, action };
   try {
-    st('Loading the number reader…');
-    const T = await btLoadTesseract(); S.worker = await T.createWorker('eng', 1);
-    await S.worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '11' });
-  } catch (e) { st('Number reader could not load (no signal?) — type the last 3 digits'); setTimeout(btStopScan, 2500); return; }
-  if (_btScan !== S) { try { S.worker.terminate(); } catch (e) {} return; }
+    st(window.BtPaddle && window.BtPaddle.ready() ? 'Starting…' : 'Loading the number reader (first time only, ~25 MB — then it is saved on this phone)…');
+    await btLoadPaddle();
+  } catch (e) { st('Number reader could not load (no signal?) — tap Cancel and type the last 3 digits'); return; }
+  if (_btScan !== S) return;
   st('Put the NUMBER in the pink box');
-  const band = document.createElement('canvas'), bin = document.createElement('canvas');
-  const ANG = [0, -6, 6, -12, 12, -9, 9, -16, 16]; let ai = 0, cand = '', hits = 0; const t0 = Date.now(); let hinted = false;
+  const band = document.createElement('canvas');
+  let cand = '', hits = 0; const t0 = Date.now(); let hinted = false;
   while (_btScan === S && !S.stop) {
     if (v.readyState >= 2 && v.videoWidth) {
       try {
         const vw = v.videoWidth, vh = v.videoHeight, ew = v.clientWidth, eh = v.clientHeight, sc = Math.max(ew / vw, eh / vh), ox = (vw * sc - ew) / 2, oy = (vh * sc - eh) / 2;
-        const sx = (ew * 0.12 + ox) / sc, sy = (eh * 0.40 + oy) / sc, sw = (ew * 0.76) / sc, sh = (eh * 0.20) / sc;
-        band.width = 720; band.height = Math.max(20, Math.round(sh * 720 / sw));
+        const sx = (ew * 0.08 + ox) / sc, sy = (eh * 0.36 + oy) / sc, sw = (ew * 0.84) / sc, sh = (eh * 0.28) / sc;
+        band.width = Math.min(720, Math.round(sw * 1.5)); band.height = Math.max(20, Math.round(sh * band.width / sw));
         band.getContext('2d', { willReadFrequently: true }).drawImage(v, sx, sy, sw, sh, 0, 0, band.width, band.height);
-        if (!hinted && !hits && Date.now() - t0 > 10000) { hinted = true; st('Can\'t read this one (dark stickers are hard). Tap Cancel and type the last 3 digits.'); }
-        btBinarize(band, bin, ANG[ai++ % ANG.length]);
-        const { data } = await S.worker.recognize(bin);
-        // Only a confident read counts: the word holding the number must be
-        // >= 80% sure (a wrong green read in tests was 52%; right reads 88-96%).
-        let n = btPickNumber(data && data.text);
-        let conf = 0;
-        if (n) { const wd = ((data && data.words) || []).find(x => String(x.text || '').replace(/\D/g, '').includes(n)); conf = wd ? wd.confidence : 0; if (conf < BT_OCR_MIN_CONF) { st('Seeing ' + n.slice(0, 4) + '… — not sure yet. Hold closer and steady.'); n = ''; } }
-        if (window._btOcrDbg) window._btOcrDbg.push((data && data.text || '').replace(/\s+/g, ' ') + ' c' + Math.round(data && data.confidence || 0) + ' [' + ((data && data.words) || []).map(w => w.text + ':' + Math.round(w.confidence)).join(' ') + '] => ' + n);
+        if (!hinted && !hits && Date.now() - t0 > 10000) { hinted = true; st('Can\'t read this one yet — hold the number inside the box, or tap Cancel and type the last 3 digits.'); }
+        const r = await window.BtPaddle.read(band);
+        // Every sticker number in view (on a roll, confidence >= 80%). Two
+        // different numbers in one frame = ambiguous, ignored.
+        const found = new Map();
+        (r.items || []).forEach(it => { for (const L of btNumLens()) { (String(it.text).replace(/\D+/g, ' ').match(new RegExp('\\d{' + L + '}', 'g')) || []).forEach(d => { if (btTapeRollOf(d) && it.conf >= BT_OCR_MIN_CONF) found.set(d, Math.max(found.get(d) || 0, it.conf)); }); } });
+        let n = found.size === 1 ? [...found.keys()][0] : '';
+        if (found.size > 1) st('More than one number in the box — show just one sticker');
+        if (window._btOcrDbg) window._btOcrDbg.push(r.text.replace(/\s+/g, ' ') + ' [' + (r.items || []).map(i => i.text + ':' + Math.round(i.conf * 100)).join(' ') + '] => ' + n);
         if (n && _btScan === S) {
           if (n === cand) hits++; else { cand = n; hits = 1; }
           st('Reading ' + n + '  ' + '●'.repeat(hits) + '○'.repeat(Math.max(0, BT_OCR_AGREE - hits)) + '  hold still');
@@ -25623,7 +25609,7 @@ async function btReadNumber(action) {
         }
       } catch (e) {}
     }
-    await new Promise(r => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, 80));
   }
 }
 // Big check screen: nothing is saved until the manager taps Yes.

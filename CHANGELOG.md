@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-06-fix-138
+- **🍾 Bottle Tracker: 🔢 Read number now uses PaddleOCR instead of Tesseract.** Harsha's test: Tesseract only read pink when very close and never read green. On the same 48 test images of the real stickers (pink and green; close to far; sharp and blurred; dark green):
+  - **Tesseract:** almost nothing right, and **wrong numbers at high confidence** (2037781 → 2037787 at 84%).
+  - **PaddleOCR (PP-OCRv4): 41 right, 0 wrong, 7 no-read** (only the farthest or blurriest).
+  - **Harsha's own phone frames:** the green sticker read 2037781 at 100%; the half-out-of-box pink read only "592" and was ignored (no guess).
+  - **In the app with a fake camera:** pink 1592345, tilted half-cut pink 1592357, green 2037781 and dark green all read in about 3 s. Empty on an open bottle → "Is this the TITO'S VODKA 1L from Suite 120?" → Yes → emptied. A number that isn't an open bottle has no Yes button.
+  - **Safety unchanged:** 3 matching reads at ≥ 80% confidence, on a sticker roll, only one number in the box (two different numbers in view are ignored), open-bottle check, manager's Yes.
+- **Speed and size:** the reader ships inside the app (`/ocr/`, ~30 MB: PP-OCRv4 det/rec models from `@gutenye/ocr-models`, onnxruntime-web wasm, a 100 KB bundle of `ppu-paddle-ocr`; sources in `tools/ocr-build/`). It is **not loaded until 🔢 Read number is tapped** (tested: opening the app and Bottle Tracker downloaded 0 reader files). The first time it downloads once (~25 MB, a few seconds on Wi-Fi). The service worker keeps it on the phone (cache `stadium-ops-ocr-v1`, tested: one download, then served from the phone). Starts in ~1–2 s, ~0.1–0.7 s per read on a laptop (phones slower). `_headers`: long cache + correct types for `/ocr/`. Nothing else in the app changes speed.
+
 ## 2026-11-06-fix-137
 - **🍾 Bottle Tracker: colour check removed — only the number counts** (Harsha's call). A camera read still needs 3 matching reads at ≥ 65% confidence on a known roll, the open-bottle check and the manager's Yes. Look up now names the "♻️ Restored to open" and "🎞️ Sticker rolls changed" entries.
 - **Live data:** Nestor's Grey Goose **3000027** (DFA Courtside), voided by mistake during testing on 11/6 at 00:43 (reason "tt"), is **open** again. A `restored` entry with the reason was added to its history.

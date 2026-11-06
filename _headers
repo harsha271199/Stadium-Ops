@@ -4,3 +4,11 @@
   Cache-Control: no-cache, no-store, must-revalidate
 /*
   X-Content-Type-Options: nosniff
+/ocr/*
+  Cache-Control: public, max-age=31536000, immutable
+/ocr/paddle.mjs
+  Content-Type: text/javascript
+/ocr/ort-wasm-simd-threaded.mjs
+  Content-Type: text/javascript
+/ocr/ort-wasm-simd-threaded.wasm
+  Content-Type: application/wasm
