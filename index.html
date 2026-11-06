@@ -4771,7 +4771,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-129';
+const BUILD_TAG = '2026-11-06-fix-130';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -24895,11 +24895,12 @@ async function btLoadBasics() {
   const L = Array.isArray(locs) ? locs.map(r => r.name).filter(n => n && !/^(runner|warehouse|premium supervisors|premium runners|dfa)$/i.test(n)) : [];
   _bt.locs = [...new Set(BT_LOCS_EXTRA.concat(L))];
   const hist = Array.isArray(items) ? [...new Set(items.map(r => String(r.item_name || '').trim()).filter(Boolean))] : [];
-  const cat = await btReq('app_settings?key=in.(liquor_items,liquor_label_next)&select=key,value');
+  const cat = await btReq('app_settings?key=in.(liquor_items,liquor_label_next,liquor_roll_printed)&select=key,value');
   _bt.catalog = []; _bt.labelNext = 3000001;
   if (Array.isArray(cat)) cat.forEach(r => {
     try { if (r.key === 'liquor_items') { const v = JSON.parse(r.value); if (Array.isArray(v)) _bt.catalog = v.map(x => String(x || '').trim().toUpperCase()).filter(Boolean); } } catch (e) {}
     if (r.key === 'liquor_label_next' && Number(r.value) > 0) _bt.labelNext = Number(r.value);
+    if (r.key === 'liquor_roll_printed') { try { _bt.rollPrinted = JSON.parse(r.value) || {}; } catch (e) {} }
   });
   // The managers' bottle list comes first; names used before stay pickable too.
   _bt.items = [...new Set(_bt.catalog.concat(hist))].sort();
@@ -25055,6 +25056,7 @@ async function btSaveCatalog(list) {
   _bt.catalog = clean; _bt.items = [...new Set(clean.concat(_bt.items || []))].sort(); return true;
 }
 // Same bottle written differently? "TITO'S VODKA 1L" = "TITOS VODKA 1 L" = "Tito's Vodka 1 Liter".
+function btCleanName(v) { return String(v || '').replace(/\u00A0/g, ' ').replace(/[\u2018\u2019\u02BC`´]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[\u00AE\u2122\uFFFD]/g, '').replace(/\s+/g, ' ').trim().toUpperCase(); }
 function btBottleKey(v) {
   return String(v || '').toUpperCase().replace(/\bLITERS?\b|\bLTR\b/g, 'L').replace(/\bMILLILITERS?\b/g, 'ML').replace(/[^A-Z0-9]/g, '');
 }
@@ -25065,9 +25067,9 @@ function btRenderSetup() {
   body.innerHTML =
     '<div class="card" style="padding:12px;margin-bottom:12px"><div style="font-weight:900;font-size:15px;margin-bottom:4px">Set up in 3 steps</div>' +
       step(1, '<b>Bottle list</b> — add your bottles once (below)', cat.length > 0) +
-      step(2, '<b>Print labels</b> on the Dymo (below) — or use the pink/green rolls', (_bt.labelNext || 3000001) > 3000001) +
+      step(2, '<b>Print Dymo barcode labels</b> with your pink/green sticker numbers (below)', !!_bt.rollPrinted && Object.keys(_bt.rollPrinted).length > 0) +
       step(3, 'Go to <b>🏷️ Tag</b>: pick location + bottle, stick labels, scan', false) +
-      '<div style="font-size:12px;color:var(--text-2);margin-top:6px;border-top:1px solid var(--border);padding-top:6px">Bottles that already have a <b>pink/green</b> sticker: print a barcode label with the <b>same number</b> (③ below) to scan them, or use <b>🔢 Read number</b> / type the last 3 digits.</div></div>' +
+      '<div style="font-size:12px;color:var(--text-2);margin-top:6px;border-top:1px solid var(--border);padding-top:6px">No Dymo label on a bottle yet? Use <b>🔢 Read number</b> or type the last 3 digits of the pink/green sticker.</div></div>' +
     '<div class="card" style="padding:12px;margin-bottom:12px"><div style="font-weight:900;font-size:15px">① 🍾 Bottle list (<span id="bt-cat-count">' + cat.length + '</span>)</div>' +
     '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Write each bottle the same way every time: <b>BRAND + KIND + SIZE</b>, e.g. <b>TITO\'S VODKA 1L</b>, <b>JACK DANIELS 750ML</b>. Everyone then just picks it when tagging.</div>' +
     '<div style="display:flex;gap:6px"><input class="form-input" id="bt-cat-new" placeholder="New bottle, e.g. TITO\'S VODKA 1L" style="margin:0;flex:1" onkeydown="if(event.key===\'Enter\')btCatAdd()"><button class="btn btn-primary" style="width:auto;margin:0;padding:0 14px" onclick="btCatAdd()">Add</button></div>' +
@@ -25076,22 +25078,21 @@ function btRenderSetup() {
     '<div id="bt-cat-msg" style="margin-top:8px"></div>' +
     '<input class="form-input" placeholder="🔍 Search the list" style="margin:10px 0 4px" oninput="btCatFilter(this.value)">' +
     '<div id="bt-cat-list" style="max-height:320px;overflow:auto"></div></div>' +
-    '<div class="card" style="padding:12px"><div style="font-weight:900;font-size:15px">② 🖨️ Print barcode labels (Dymo)</div>' +
-    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Each label gets the next number with its barcode — no number is ever printed twice. Pick the Dymo label size, then print to the Dymo printer.</div>' +
+    '<div class="card" style="padding:12px"><div style="font-weight:900;font-size:15px">② 🖨️ Dymo barcode labels — same numbers as your pink/green stickers</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Each Dymo label = a barcode + the <b>same number</b> as a pink or green sticker. Stick it on the bottle <b>next to the sticker with that number</b> — from then on just scan it.</div>' +
     '<label class="form-label" style="margin-top:0">Label size</label><select class="form-input" id="bt-lab-size" onchange="try{localStorage.setItem(\'bt_label_size\',this.value)}catch(e){}">' +
       [['2.125x1', 'Dymo 30336 — 1" × 2-1/8" (small, multi-purpose)'], ['2.25x1.25', 'Dymo 30334 — 2-1/4" × 1-1/4"'], ['3.5x1.125', 'Dymo 30252 — 1-1/8" × 3-1/2" (address)']].map(([v, l]) => '<option value="' + v + '"' + (v === btSavedLabelSize() ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
-    '<label class="form-label">How many labels</label><input class="form-input" id="bt-lab-n" type="number" min="1" max="500" value="24">' +
-    '<div style="font-size:12px;margin-top:6px">Next number: <b id="bt-lab-next">' + _bt.labelNext + '</b></div>' +
-    '<div style="margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--text-2);margin-bottom:4px">Each label looks like this:</div><div style="display:inline-block;background:#fff;color:#000;border:1px solid #ccc;border-radius:4px;padding:6px 14px"><div style="font:10px monospace;letter-spacing:-1px">▌║▌▌║▌║║▌▌║▌║▌▌║▌║║▌</div><div style="font-size:18px;font-weight:900;letter-spacing:2px">' + (_bt.labelNext || 3000001) + '</div><div style="font-size:7px">ARAMARK PREMIUM</div></div></div>' +
-    '<div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-ghost" style="margin:0;flex:1" onclick="btPrintLabels(1)">Test 1 label</button><button class="btn btn-primary" style="margin:0;flex:2" onclick="btPrintLabels()">🖨️ Print labels</button></div>' +
-    '<div style="font-size:11px;color:var(--text-2);margin-top:6px">In the print window pick the <b>Dymo</b> printer and the same label size. Do a <b>test label</b> first and scan it in 🔎 Look up — it should show the number.</div>' +
-    '<details style="margin-top:10px"><summary style="font-size:12px;cursor:pointer">Reprint labels that got jammed or torn</summary><div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="bt-rep-from" type="number" placeholder="From #" style="margin:0"><input class="form-input" id="bt-rep-to" type="number" placeholder="To #" style="margin:0"><button class="btn btn-ghost" style="width:auto;margin:0;padding:0 12px" onclick="btReprint()">Reprint</button></div><div style="font-size:11px;color:var(--text-2);margin-top:4px">Only reprint numbers that were never stuck on a bottle.</div></details>' +
-    '</div><div class="card" style="padding:12px;margin-top:12px"><div style="font-weight:900;font-size:15px">③ 🩷💚 Barcode labels for old pink/green stickers</div>' +
-    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Prints a Dymo barcode with the <b>same number</b> as the pink/green sticker. Stick it next to the old sticker — the bottle keeps its number and scans from now on. Uses the label size picked in ②.</div>' +
-    '<button class="btn btn-ghost" style="margin:0 0 6px" onclick="btOldFillOpen()">📋 Fill in all open bottles on pink/green stickers</button>' +
-    '<textarea class="form-input" id="bt-old-nums" rows="3" placeholder="Numbers or ranges, e.g. 1592345, 1592350-1592360, 2037781" style="font-size:15px" oninput="btOldCheck()"></textarea>' +
+    '<label class="form-label">Which numbers?</label>' +
+    '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><span id="bt-lr-chips">' + ['Pink', 'Green'].map(c => '<button class="chip' + ((_bt.lblRoll || 'Pink') === c ? ' selected' : '') + '" style="padding:6px 12px;font-weight:800;border-color:' + (c === 'Pink' ? '#F9A8D4' : '#10B981') + '" onclick="_bt.lblRoll=\'' + c + '\';document.querySelectorAll(\'#bt-lr-chips .chip\').forEach(b=>b.classList.toggle(\'selected\',b===this))">' + (c === 'Pink' ? 'Pink #48' : 'Green #075') + '</button>').join(' ') + '</span>' +
+      '<input class="form-input" id="bt-lab-n" type="number" min="1" max="200" value="24" style="width:70px;margin:0">' +
+      '<button class="btn btn-ghost" style="width:auto;margin:0;padding:8px 10px;font-size:12px" onclick="btOldFillNext()">Next unused</button></div>' +
+    '<button class="btn btn-ghost" style="margin:0 0 6px;font-size:12px" onclick="btOldFillOpen()">📋 All bottles already out on pink/green stickers</button>' +
+    '<textarea class="form-input" id="bt-old-nums" rows="3" placeholder="Or type the sticker numbers / ranges, e.g. 1592345, 1592350-1592360, 2037781" style="font-size:15px" oninput="btOldCheck()"></textarea>' +
     '<div id="bt-old-msg" style="font-size:12px;margin-top:6px"></div>' +
-    '<button class="btn btn-primary" style="margin:8px 0 0" onclick="btOldPrint()">🖨️ Print these old-number labels</button>' +
+    '<div style="margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--text-2);margin-bottom:4px">Each label looks like this:</div><div style="display:inline-block;background:#fff;color:#000;border:1px solid #ccc;border-radius:4px;padding:6px 14px"><div style="font:10px monospace;letter-spacing:-1px">▌║▌▌║▌║║▌▌║▌║▌▌║▌║║▌</div><div style="font-size:18px;font-weight:900;letter-spacing:2px">1592345</div><div style="font-size:7px">ARAMARK PREMIUM · PINK</div></div></div>' +
+    '<div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-ghost" style="margin:0;flex:1" onclick="btOldPrint(true)">Test 1 label</button><button class="btn btn-primary" style="margin:0;flex:2" onclick="btOldPrint()">🖨️ Print labels</button></div>' +
+    '<div style="font-size:11px;color:var(--text-2);margin-top:6px">In the print window pick the <b>Dymo</b> printer and the same label size. Print a <b>test label</b> first and scan it in 🔎 Look up — it should show the number. A label jammed? Just print that number again.</div>' +
+    ((_bt.labelNext || 3000001) > 3000001 ? '<div style="font-size:11px;color:var(--text-2);margin-top:8px;border-top:1px solid var(--border);padding-top:6px">Labels already printed with 3000001–' + (_bt.labelNext - 1) + ' still work — scan them as usual (roll "Printed").</div>' : '') +
     '</div>';
   btCatFilter('');
 }
@@ -25103,7 +25104,7 @@ function btCatFilter(q) {
 }
 async function btCatAdd() {
   if (!btAllowed()) return;
-  const inp = document.getElementById('bt-cat-new'), v = String(inp.value || '').replace(/\s+/g, ' ').trim().toUpperCase();
+  const inp = document.getElementById('bt-cat-new'), v = btCleanName(inp.value);
   if (!v) return;
   const sim = btSimilar(v);
   if (sim === v) { toast('Already on the list'); return; }
@@ -25118,8 +25119,12 @@ async function btCatRemove(v) {
 async function btCatUpload(inp) {
   if (!btAllowed()) return;
   const f = inp.files && inp.files[0]; if (!f) return;
-  const rows = parseCSV(await f.text()), msg = document.getElementById('bt-cat-msg');
-  const names = rows.map(r => String((r && r[0]) || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase()).filter(Boolean)
+  // Excel often saves CSV in Windows-1252: read as UTF-8, else fall back so
+  // TITO’S / ROSÉ don't turn into "TITO�S".
+  const buf = await f.arrayBuffer(); let txt;
+  try { txt = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { txt = new TextDecoder('windows-1252').decode(buf); }
+  const rows = parseCSV(txt.replace(/^\uFEFF/, '')), msg = document.getElementById('bt-cat-msg');
+  const names = rows.map(r => btCleanName((r && r[0]) || '')).filter(Boolean)
     .filter((n, i) => !(i === 0 && /^(BOTTLE|ITEM|NAME|PRODUCT|DESCRIPTION)S?\b/.test(n)));
   inp.value = '';
   if (!names.length) { if (msg) msg.innerHTML = '<div class="notice" style="color:#DC2626;font-size:12px">No bottle names found — put one bottle per row in the first column.</div>'; return; }
@@ -25222,14 +25227,34 @@ async function btOldFillOpen() {
   btOldCheck();
   if (!nums.length) toast('No open bottles on pink/green stickers yet');
 }
-async function btOldPrint() {
+// Next unused numbers on a roll: after the highest number tagged or printed.
+async function btOldFillNext() {
+  const color = _bt.lblRoll || 'Pink', roll = (_bt.rolls || []).find(r => r.color === color); if (!roll) return;
+  const n = Math.max(1, Math.min(200, parseInt((document.getElementById('bt-lab-n') || {}).value, 10) || 24));
+  const [used, st] = await Promise.all([btReq('liquor_bottles?roll_color=eq.' + color + '&select=sticker_no&limit=5000'), btReq('app_settings?key=eq.liquor_roll_printed&select=value')]);
+  if (!Array.isArray(used) || !Array.isArray(st)) return toast('No signal — try again', 'error');
+  try { _bt.rollPrinted = st[0] ? JSON.parse(st[0].value) || {} : {}; } catch (e) {}
+  const usedSet = new Set(used.map(u => Number(u.sticker_no)));
+  let start = Math.max(Number(roll.from) - 1, Number((_bt.rollPrinted || {})[color]) || 0, ...[...usedSet].filter(x => x >= roll.from && x <= roll.to)) + 1;
+  const nums = []; for (let x = start; x <= Number(roll.to) && nums.length < n; x++) if (!usedSet.has(x)) nums.push(x);
+  if (!nums.length) return toast('No unused numbers left on the ' + color + ' roll', 'error');
+  const ta = document.getElementById('bt-old-nums'); if (ta) ta.value = nums[0] + (nums.length > 1 ? '-' + nums[nums.length - 1] : '');
+  btOldCheck();
+}
+async function btOldPrint(test) {
   if (!btAllowed()) return;
-  const r = btOldCheck(); if (!r || !r.nums.length) return toast('Type the pink/green sticker numbers first', 'error');
+  let r = btOldCheck(); if (!r || !r.nums.length) return toast('Pick the pink/green numbers first', 'error');
+  if (test) r = { nums: r.nums.slice(0, 1), bad: [] };
   if (r.nums.length > 200) return toast('Up to 200 labels at a time', 'error');
   const w = window.open('', '_blank'); if (!w) return toast('⚠️ Allow pop-ups for this site and try again', 'error');
   const size = (document.getElementById('bt-lab-size') || {}).value;
-  btLog({ sticker_no: String(r.nums[0]), action: 'old_labels_printed', note: r.nums.length + ' barcode label' + (r.nums.length === 1 ? '' : 's') + ' for old pink/green numbers: ' + r.nums.slice(0, 40).join(', ') + (r.nums.length > 40 ? ' …' : '') + ' (' + size + ')', client_uuid: btUid('btop') });
+  btLog({ sticker_no: String(r.nums[0]), action: 'old_labels_printed', note: (test ? 'Test label' : r.nums.length + ' barcode label' + (r.nums.length === 1 ? '' : 's')) + ' for pink/green numbers: ' + r.nums.slice(0, 40).join(', ') + (r.nums.length > 40 ? ' …' : '') + ' (' + size + ')', client_uuid: btUid('btop') });
   w.document.open(); w.document.write(btLabelHtml(r.nums, size, n => 'ARAMARK PREMIUM · ' + String((btRollOf(n) || {}).color || '').toUpperCase())); w.document.close();
+  if (!test) {
+    const rp = Object.assign({}, _bt.rollPrinted || {});
+    r.nums.forEach(n => { const c = (btRollOf(n) || {}).color; if (c && n > (Number(rp[c]) || 0)) rp[c] = n; });
+    _bt.rollPrinted = rp; btSetting('liquor_roll_printed', JSON.stringify(rp));
+  }
   toast('🖨️ ' + r.nums.length + ' old-number label' + (r.nums.length === 1 ? '' : 's') + ' ready to print');
 }
 async function btRenderList() {

@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-06-fix-130
+- **🍾 Liquor bottles: Dymo labels now use the pink/green sticker numbers.** Setup ② prints a Dymo barcode carrying the **same number** as a pink (1592001–1593000) or green (2037001–2038000) sticker, so the bottle can be scanned; no new 3000xxx numbers. Pick Pink #48 / Green #075 + how many + **Next unused** (fills the next numbers after the highest one tagged or printed; the last printed number per roll is kept in app_settings `liquor_roll_printed`), or "All bottles already out on pink/green stickers", or type numbers/ranges. Test 1 label prints only the first number. The 3000001–3000027 labels already printed by Natasha and Nestor (3000027 is on a Grey Goose at DFA Courtside) keep working as the "Printed" roll.
+- **CSV bottle upload reads Excel files correctly.** Excel's Windows encoding turned ’ and É into "�" (e.g. "TITO�S HANDMADE VODKA"). The upload now falls back to Windows-1252 when the file isn't UTF-8, and names are cleaned (curly ’ → ', ®/™ removed). **Live data:** the 8 garbled names on the bottle list were repaired (ANGEL'S ENVY, CHARLES & CHARLES ROSÉ, CRUZAN COCONUT RUM, HENDRICK'S, JACK DANIEL'S, MAKER'S MARK, TITO'S, LA CREMA). The old list is backed up as app_settings `liquor_items_backup_20261106`. No tagged bottle used those names.
+
 ## 2026-11-06-fix-129
 - **🍾 Liquor bottles, small fixes:** 🔎 Look up now shows plain names for "📷 Number read by camera — confirmed", "🖨️ Barcode label printed for old sticker" and "🖨️ Labels printed" (they showed raw codes). "Reprint labels that got jammed or torn" is back under ② Print labels (fix-128 had moved it under ③).
 
