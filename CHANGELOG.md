@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-07-fix-141
+- **Yellow Dog copy-paste / "Download all stands (Yellow Dog order)": an out-of-date Yellow Dog PDF saved on the device is no longer used.** Harsha's 11/5 download didn't follow the new Yellow Dog order and still listed old items, e.g. **BEEF - PITCHFORK DOG 5/1 at DFA 111**, which isn't on the new Yellow Dog. Checked: DFA 111's list in the app (84 rows) has no Pitchfork (it is in `zz-archived 2026-11-05 / DFA 111` since the 11/5 Yellow Dog update), and the 11/5 Count In / Count Out at 111 don't have it either. The cause: this download prefers a Yellow Dog PDF **saved on that phone/computer** the last time one was loaded in the app. The new 11/5 lists were applied directly to the stand lists, so the device still had the older PDF, with the old order and the dropped items as empty rows.
+  - Now: if the saved PDF and the stand's current list differ by more than a couple of items (more than 2 or 5%), the stand's current list is used (it follows the latest Yellow Dog). A warning shows: "The Yellow Dog PDF saved on this device (loaded …) doesn't match DFA 111's current list: 18 item(s) no longer on the list… Load this event's PDF to match it exactly." A PDF that matches is still used as before.
+  - Tested with a stand shaped like DFA 111 (63 sheet rows + 21 add-ons, 18 archived items incl. Pitchfork): the old PDF was detected (18 items not on the list) → current order, no Pitchfork. A matching PDF was still used.
+
 ## 2026-11-07-fix-140
 - **🍾 Bottle Tracker: camera going black on iPhone (Nestor, 11/6–11/7).** On his iPhone the first barcode scan saved, then the camera went black and wouldn't scan another tag; the next day it was black straight away. Two causes the code allowed:
   1. **The beep:** after each scan the app played a short sound through the browser's audio, and on iPhones playing sound while the camera is running can pause the camera. On iPhone/iPad the sound is now replaced by a **green/red flash of the scan box** (and vibration where supported).

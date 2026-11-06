@@ -4767,7 +4767,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-07-fix-140';
+const BUILD_TAG = '2026-11-07-fix-141';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15058,6 +15058,17 @@ function ydSplit(s) {
     if (counted.length >= 5 && counted.filter(it => pdfKeys.has(ydItemKey(it.itemName))).length / counted.length < 0.8) {
       delete lists.charge; delete lists.nonch; g.source = 'app'; g.pdfMismatch = ys; g.ydStand = '';
     }
+    // 11/7: a PDF saved on this device from an EARLIER event (old order, items
+    // since dropped — e.g. BEEF - PITCHFORK DOG still on DFA 111) is older than
+    // the stand's list, which follows the latest Yellow Dog. If the PDF and the
+    // stand's list differ by more than a couple of items, follow the list.
+    if (lists.charge && Array.isArray(s.sheetRows) && s.sheetRows.length) {
+      const appKeys = new Set(s.sheetRows.filter(r => !r.isAddon).map(r => ydItemKey(r.name)));
+      const notOnList = [...pdfKeys].filter(k => !appKeys.has(k)).length, notOnPdf = [...appKeys].filter(k => !pdfKeys.has(k)).length;
+      if (notOnList + notOnPdf > Math.max(2, Math.round(appKeys.size * 0.05))) {
+        delete lists.charge; delete lists.nonch; g.source = 'app'; g.pdfStale = { ys, notOnList, notOnPdf, at: sh.at || '' }; g.ydStand = '';
+      }
+    }
   }
   ['charge', 'nonch'].forEach(tab => { const ord = ydGetOrder(s.stand, tab); if (ord) { lists[tab] = ord; g.custom[tab] = true; } });
   const used = new Set();
@@ -15135,7 +15146,8 @@ function ydSheetHtml(s, g) {
     '<div style="font-size:11px;color:var(--text-2)">Yellow Dog sheet: <b>' + escapeHtml(sh.event || sh.file || '') + '</b> · ' + names.length + ' stands</div>' +
     '<label class="form-label" style="margin:6px 0 2px">Yellow Dog stand for ' + escapeHtml(s.stand) + '</label>' +
     '<select class="form-input" style="margin:0" onchange="ydMapSet(this.value)">' + opts + '</select>' +
-    (cur ? '' : '<div style="font-size:11px;color:#DC2626;margin-top:4px">No Yellow Dog stand picked — rows follow the app sheet and may not line up.</div>') +
+    (g.pdfStale ? '<div style="font-size:12px;color:#B45309;margin-top:6px;font-weight:700">⚠️ The Yellow Dog PDF saved on this device' + (g.pdfStale.at ? ' (loaded ' + new Date(g.pdfStale.at).toLocaleDateString() + ')' : '') + ' doesn\'t match ' + escapeHtml(s.stand) + '\'s current list: ' + g.pdfStale.notOnList + ' item(s) no longer on the list, ' + g.pdfStale.notOnPdf + ' not on the PDF. Using the stand\'s current list (it follows the latest Yellow Dog). Load this event\'s PDF to match it exactly.</div>'
+      : cur ? '' : '<div style="font-size:11px;color:#DC2626;margin-top:4px">No Yellow Dog stand picked — rows follow the app sheet and may not line up.</div>') +
     '<div id="yd-pdf-status" style="font-size:11px;color:var(--text-3);margin-top:4px"></div>' +
     '<div style="display:flex;gap:6px">' + pick.replace('display:block;text-align:center', 'display:block;text-align:center;font-size:12px;padding:8px') + '<button class="btn btn-ghost" style="margin:6px 0 0;width:auto;font-size:12px;padding:8px" onclick="ydSheetClear()">Remove</button></div></div>';
 }
