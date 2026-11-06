@@ -4767,7 +4767,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-135';
+const BUILD_TAG = '2026-11-06-fix-136';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -25000,9 +25000,11 @@ function btRenderTag() {
 }
 function btRenderSession() {
   const el = document.getElementById('bt-session'); if (!el) return;
-  if (!_bt.session.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div style="font-size:12px;font-weight:800;margin-bottom:4px">Done on this phone (' + _bt.session.length + ')</div>' +
-    _bt.session.slice(0, 40).map(r => '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12px"><span>' + (r.kind === 'empty' ? '🍾' : '🏷️') + ' <b>' + escapeHtml(r.sticker_no) + '</b> · ' + escapeHtml(r.item_name || '…') + '<br><span style="color:var(--text-2)">' + escapeHtml(r.location || '') + (r.pending ? ' · ⏳ waiting for signal' : '') + '</span></span>' +
+  // Each tab lists only its own work: Tag shows tags, Empty shows empties.
+  const kind = _bt.tab === 'empty' ? 'empty' : 'tag', list = _bt.session.filter(r => r.kind === kind);
+  if (!list.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="font-size:12px;font-weight:800;margin-bottom:4px">' + (kind === 'empty' ? 'Marked empty' : 'Tagged') + ' on this phone (' + list.length + ')</div>' +
+    list.slice(0, 40).map(r => '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12px"><span>' + (r.kind === 'empty' ? '🍾' : '🏷️') + ' <b>' + escapeHtml(r.sticker_no) + '</b> · ' + escapeHtml(r.item_name || '…') + '<br><span style="color:var(--text-2)">' + escapeHtml(r.location || '') + (r.pending ? ' · ⏳ waiting for signal' : '') + '</span></span>' +
       (r.id && !r.undone && Date.now() - r.t < BT_UNDO_MS ? '<button class="btn btn-ghost" style="width:auto;margin:0;padding:4px 10px;font-size:11px" onclick="btUndo(' + r.id + ',\'' + r.kind + '\')">Undo</button>' : (r.undone ? '<span style="font-size:11px;color:var(--text-3)">undone</span>' : '')) + '</div>').join('');
 }
 function btMsg(html, color) { const m = document.getElementById('bt-msg'); if (m) m.innerHTML = '<div style="padding:10px 12px;border-radius:10px;font-size:13px;font-weight:700;background:' + (color === 'red' ? 'rgba(220,38,38,.1);color:#B91C1C' : color === 'amber' ? 'rgba(245,158,11,.12);color:#92400E' : 'rgba(22,163,74,.12);color:#166534') + '">' + html + '</div>'; }
@@ -25401,8 +25403,10 @@ async function btRenderList() {
 async function btVoid(id) {
   if (!btAllowed()) return;
   const b = (_bt.listOpen || []).find(r => r.id === id);
+  if (b && b.issued_by && b.issued_by !== btWho() && !(await confirmAction('Sticker ' + b.sticker_no + ' (' + b.item_name + ' at ' + b.location + ') was tagged by ' + b.issued_by + '. Void it anyway? A voided bottle can\'t be reopened.', { title: 'Void someone else\'s bottle?', confirmLabel: 'Yes, void it', cancelLabel: 'No, keep it' }))) return;
   const why = prompt('Void sticker ' + (b ? b.sticker_no + ' (' + b.item_name + ' at ' + b.location + ')' : '') + '?\nThis is kept in the history. Type the reason (wrong bottle, broken, lost…):');
   if (!why || !why.trim()) return;
+  if (why.trim().length < 3) return toast('Type a real reason (e.g. broken, lost, wrong bottle)', 'error');
   const r = await btReq('liquor_bottles?id=eq.' + id + '&status=eq.open', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'void', void_reason: why.trim() + ' — ' + btWho(), updated_at: new Date().toISOString() }) });
   if (!Array.isArray(r) || !r.length) return toast('Could not void — check signal', 'error');
   await btLog({ bottle_id: id, sticker_no: r[0].sticker_no, action: 'void', item_name: r[0].item_name, location: r[0].location, note: why.trim(), client_uuid: btUid('btv') });
@@ -25442,10 +25446,13 @@ function btLoadScript(src, globalName) {
 // Barcode reader: the phone's own (Android Chrome) or ZXing (iPhone/others).
 async function btBarcodeReader() {
   if ('BarcodeDetector' in window) {
-    try { const fm = await window.BarcodeDetector.getSupportedFormats(); if (fm && fm.length) { const d = new window.BarcodeDetector({ formats: fm.filter(f => f !== 'unknown') }); return async (canvas) => { const r = await d.detect(canvas); return r && r[0] ? r[0].rawValue : ''; }; } } catch (e) {}
+    // Only the label formats we print (Dymo: Code 39 / Code 128). Other
+    // formats gave broken part-reads ("20", "20377") off the same label, and
+    // the bottle's own UPC/EAN is simply not looked for.
+    try { const fm = await window.BarcodeDetector.getSupportedFormats(); const want = (fm || []).filter(f => f === 'code_39' || f === 'code_128'); if (want.length) { const d = new window.BarcodeDetector({ formats: want }); return async (canvas) => { const r = await d.detect(canvas); return r && r[0] ? r[0].rawValue : ''; }; } } catch (e) {}
   }
   const Z = await btLoadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js', 'ZXing');
-  const hints = new Map(); hints.set(Z.DecodeHintType.TRY_HARDER, true);
+  const hints = new Map(); hints.set(Z.DecodeHintType.TRY_HARDER, true); hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.CODE_39, Z.BarcodeFormat.CODE_128]);
   const reader = new Z.MultiFormatReader(); reader.setHints(hints);
   const one = (cv, Bin) => { try { return reader.decode(new Z.BinaryBitmap(new Bin(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText(); } catch (e) { return ''; } };
   const crop = document.createElement('canvas');
@@ -25505,6 +25512,9 @@ async function btScan(action) {
       full.width = Math.round(bw * k); full.height = Math.round(bh * k);
       full.getContext('2d', { willReadFrequently: true }).drawImage(v, bx, by, bw, bh, 0, 0, full.width, full.height);
       let code = readBar ? btCleanCode(await readBar(full).catch(() => '')) : '';
+      // Act only when 2 frames in a row read the same code; a part-read
+      // shorter than our sticker numbers is ignored without a message.
+      if (code) { const same = code === S.prev; S.prev = code; if (!same || code.length < Math.min(...btNumLens())) code = ''; } else S.prev = '';
       if (code && _btScan === S) {
         const now = Date.now();
         // Same label still in the box: ignore quietly (no repeat warning).
@@ -25556,7 +25566,20 @@ function btBinarize(src, out, angle) {
   ox.fillStyle = '#fff'; ox.fillRect(0, 0, w, h);
   ox.save(); ox.translate(w / 2, h / 2); ox.rotate(angle * Math.PI / 180); ox.drawImage(src, -w / 2, -h / 2); ox.restore();
 }
-const BT_OCR_AGREE = 3, BT_OCR_MIN_CONF = 80;
+// Sticker colour from the read box: average of the lighter (background) pixels.
+function btStickerColour(cv) {
+  try {
+    const d = cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, cv.width, cv.height).data;
+    let R = 0, G = 0, B = 0, n = 0;
+    for (let i = 0; i < d.length; i += 16) { const l = d[i] + d[i + 1] + d[i + 2]; if (l > 150) { R += d[i]; G += d[i + 1]; B += d[i + 2]; n++; } }
+    if (n < 50) { for (let i = 0; i < d.length; i += 16) { R += d[i]; G += d[i + 1]; B += d[i + 2]; n++; } }
+    R /= n; G /= n; B /= n;
+    if (R > G + 25 && R > B) return 'pink';
+    if (G > R + 15 && G >= B - 10) return 'green';
+    return '';
+  } catch (e) { return ''; }
+}
+const BT_OCR_AGREE = 3, BT_OCR_MIN_CONF = 65;
 async function btReadNumber(action) {
   btStopScan();
   if (action === 'btSaveTag') {
@@ -25598,16 +25621,21 @@ async function btReadNumber(action) {
         band.width = 720; band.height = Math.max(20, Math.round(sh * 720 / sw));
         band.getContext('2d', { willReadFrequently: true }).drawImage(v, sx, sy, sw, sh, 0, 0, band.width, band.height);
         if (!hinted && !hits && Date.now() - t0 > 10000) { hinted = true; st('Can\'t read this one (dark stickers are hard). Tap Cancel and type the last 3 digits.'); }
+        const bandCol = btStickerColour(band); // before binarizing (it turns the band black/white)
         btBinarize(band, bin, ANG[ai++ % ANG.length]);
         const { data } = await S.worker.recognize(bin);
         // Only a confident read counts: the word holding the number must be
         // >= 80% sure (a wrong green read in tests was 52%; right reads 88-96%).
         let n = btPickNumber(data && data.text);
-        if (n) { const wd = ((data && data.words) || []).find(x => String(x.text || '').replace(/\D/g, '').includes(n)); if (!wd || wd.confidence < BT_OCR_MIN_CONF) n = ''; }
+        let conf = 0;
+        if (n) { const wd = ((data && data.words) || []).find(x => String(x.text || '').replace(/\D/g, '').includes(n)); conf = wd ? wd.confidence : 0; if (conf < BT_OCR_MIN_CONF) { st('Seeing ' + n.slice(0, 4) + '… — not sure yet. Hold closer and steady.'); n = ''; } }
+        // Colour check: a number on the pink roll must be on a pink sticker,
+        // green on green (rolls with other colours are not checked).
+        if (n) { const want = String((btTapeRollOf(n) || {}).color || '').toLowerCase(), got = bandCol; if ((want === 'pink' || want === 'green') && got && got !== want) { st('That reads as a ' + want + ' number but the sticker looks ' + got + ' — try again'); n = ''; } }
         if (window._btOcrDbg) window._btOcrDbg.push((data && data.text || '').replace(/\s+/g, ' ') + ' c' + Math.round(data && data.confidence || 0) + ' [' + ((data && data.words) || []).map(w => w.text + ':' + Math.round(w.confidence)).join(' ') + '] => ' + n);
         if (n && _btScan === S) {
           if (n === cand) hits++; else { cand = n; hits = 1; }
-          st('Reading… ' + '●'.repeat(hits) + '○'.repeat(Math.max(0, BT_OCR_AGREE - hits)));
+          st('Reading ' + n + '  ' + '●'.repeat(hits) + '○'.repeat(Math.max(0, BT_OCR_AGREE - hits)) + '  hold still');
           if (hits >= BT_OCR_AGREE) { btStopScan(); btConfirmRead(action, n); return; }
         }
       } catch (e) {}
