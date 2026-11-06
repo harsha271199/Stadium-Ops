@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-07-fix-140
+- **🍾 Bottle Tracker: camera going black on iPhone (Nestor, 11/6–11/7).** On his iPhone the first barcode scan saved, then the camera went black and wouldn't scan another tag; the next day it was black straight away. Two causes the code allowed:
+  1. **The beep:** after each scan the app played a short sound through the browser's audio, and on iPhones playing sound while the camera is running can pause the camera. On iPhone/iPad the sound is now replaced by a **green/red flash of the scan box** (and vibration where supported).
+  2. **No recovery:** once the camera was paused or dropped, nothing started it again. A **camera watchdog** now checks every second; if the picture hasn't moved for 2.5 s or the camera ended, it restarts the camera by itself (up to 3 times), then shows **🔄 Restart camera** with "If it stays black, close the app fully and open it again". The camera is also started with an explicit play() and fully released on Done/Cancel. Same for 🔢 Read number.
+  - Tested (Chromium, fake camera; not on a real iPhone): scanned → camera cut → restarted in ~3 s → scanning continued; a paused video resumed; after 3 failed restarts the button appeared and brought the camera back; Done closes cleanly. Barcode, Read number and the safety tests still pass.
+- **New location "Premium WH"** (first in the Location list) for bottles kept at the Premium warehouse, as Nestor asked.
+
 ## 2026-11-06-fix-139
 - **🍾 Bottle Tracker: 🔢 Read number is about 3× faster.** Harsha: "working but taking too much time". Measured with the browser's CPU slowed 4× to act like a phone, 50 test images:
   - **Library default** (finds text on a 960 px image; we sent 720): **1.1 s a read**, 38 right / 0 wrong.

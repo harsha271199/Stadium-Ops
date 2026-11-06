@@ -4767,7 +4767,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-139';
+const BUILD_TAG = '2026-11-07-fix-140';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -24761,7 +24761,7 @@ async function whConfirmCartReturn(keyNum, employeeName) {
 //    retried; client ids make a retry land once. A rejected action stays in
 //    the outbox as "needs attention" — never silently dropped.
 const BT_DEFAULT_ROLLS = [{ from: 1592001, to: 1593000, color: 'Pink', roll: '48' }, { from: 2037001, to: 2038000, color: 'Green', roll: '075' }];
-const BT_LOCS_EXTRA = ['DFA Club 116 Bar', 'DFA Courtside'];
+const BT_LOCS_EXTRA = ['Premium WH', 'DFA Club 116 Bar', 'DFA Courtside'];
 const BT_UNDO_MS = 5 * 60 * 1000;
 const BT_OUTBOX = 'bt_outbox_v1';
 let _bt = { tab: 'tag', rolls: BT_DEFAULT_ROLLS, items: [], locs: [], loc: '', item: '', session: [], color: '' };
@@ -25024,8 +25024,14 @@ function btResolve(action) {
   }
   return c[0];
 }
+function btIsIOS() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
 function btBeep(ok) {
   try { navigator.vibrate && navigator.vibrate(ok ? 70 : [120, 80, 120]); } catch (e) {}
+  // Flash the scan box green/red — on iPhone this replaces the sound: playing a
+  // sound while the camera runs can make iOS pause the camera (black screen
+  // after the first scan, Nestor 11/6).
+  try { const b = document.getElementById('bt-scan-box'); if (b) { b.style.background = ok ? 'rgba(34,197,94,.45)' : 'rgba(220,38,38,.4)'; setTimeout(() => { b.style.background = 'transparent'; }, 350); } } catch (e) {}
+  if (btIsIOS()) return;
   try { const A = window.AudioContext || window.webkitAudioContext; const a = _bt.audio || (_bt.audio = new A()); const o = a.createOscillator(), g = a.createGain(); o.frequency.value = ok ? 1250 : 300; g.gain.value = 0.15; o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + (ok ? 0.12 : 0.35)); } catch (e) {}
 }
 // Tag one bottle. `code` comes straight from a barcode; otherwise the typed box.
@@ -25444,6 +25450,36 @@ function btLoadScript(src, globalName) {
   if (btLoadScript._p[src]) return btLoadScript._p[src];
   return (btLoadScript._p[src] = new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = () => res(window[globalName]); s.onerror = () => { btLoadScript._p[src] = null; rej(new Error('load')); }; document.head.appendChild(s); }));
 }
+// Camera with a watchdog: iPhones can pause or drop the camera (black
+// screen). Every second: if the picture hasn't moved for 2.5 s or the camera
+// ended, start it again (up to 3 times), then offer "Restart camera".
+function btCamGet() { return navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); }
+async function btCamAttach(S, v, stream) {
+  S.stream = stream; v.setAttribute('playsinline', ''); v.setAttribute('muted', ''); v.muted = true; v.autoplay = true;
+  v.srcObject = stream; try { await v.play(); } catch (e) {}
+}
+function btCamWatch(S, v, st, okMsg) {
+  S.lastT = -1; S.lastMove = Date.now(); S.restarts = 0;
+  S.watch = setInterval(async () => {
+    if (_btScan !== S || S.stop) { clearInterval(S.watch); return; }
+    if (S.restarting) return;
+    if (v.paused) { try { await v.play(); } catch (e) {} }
+    const t = v.currentTime, tr = S.stream && S.stream.getVideoTracks()[0];
+    if (t !== S.lastT && tr && tr.readyState !== 'ended') { S.lastT = t; S.lastMove = Date.now(); return; }
+    if (Date.now() - S.lastMove < 2500 && tr && tr.readyState !== 'ended') return;
+    if (S.restarts >= 3) { st('Camera stopped. Tap “Restart camera”. If it stays black, close the app fully and open it again.'); const rb = document.getElementById('bt-cam-restart'); if (rb) rb.style.display = ''; return; }
+    await btCamRestart(S, v, st, okMsg);
+  }, 1000);
+}
+async function btCamRestart(S, v, st, okMsg) {
+  S = S || _btScan; v = v || document.getElementById('bt-video'); st = st || (m => { const e = document.getElementById('bt-scan-st'); if (e) e.textContent = m; });
+  if (!S || !v || S.restarting) return;
+  S.restarting = true; S.restarts = (S.restarts || 0) + 1; st('Restarting camera…');
+  try { S.stream && S.stream.getTracks().forEach(x => x.stop()); } catch (e) {}
+  try { await btCamAttach(S, v, await btCamGet()); st(okMsg || S.okMsg || ''); const rb = document.getElementById('bt-cam-restart'); if (rb) rb.style.display = 'none'; }
+  catch (e) { st('Camera not available — tap Done and type the number'); }
+  S.lastMove = Date.now(); S.lastT = -1; S.restarting = false;
+}
 // Barcode reader: the phone's own (Android Chrome) or ZXing (iPhone/others).
 async function btBarcodeReader() {
   if ('BarcodeDetector' in window) {
@@ -25485,22 +25521,24 @@ async function btScan(action) {
   const what = action === 'btSaveTag' ? 'Tagging: ' + escapeHtml((_bt.item || '(no bottle picked)') + ' → ' + (_bt.loc || '(no location)')) : action === 'btMarkEmpty' ? 'Marking EMPTY' : 'Look up';
   ov.innerHTML = '<div style="padding:10px 12px;background:#111;color:#fff;font-size:13px;font-weight:800">' + what + '</div>' +
     '<div style="position:relative;flex:1;overflow:hidden"><video id="bt-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover"></video>' +
-    '<div style="position:absolute;left:5%;right:5%;top:36%;height:28%;border:3px solid #22C55E;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.4)"></div>' +
+    '<div id="bt-scan-box" style="position:absolute;left:5%;right:5%;top:36%;height:28%;border:3px solid #22C55E;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.4);transition:background .15s"></div>' +
     '<div id="bt-scan-st" style="position:absolute;left:0;right:0;top:12%;text-align:center;color:#fff;font-size:15px;font-weight:800;text-shadow:0 1px 3px #000;padding:0 12px">Starting camera…</div>' +
     '<div id="bt-scan-last" style="position:absolute;left:10px;right:10px;bottom:12px"></div></div>' +
     '<div style="padding:10px 12px;background:#111;color:#fff;font-size:13px" id="bt-scan-count"></div>' +
-    '<div style="padding:12px;display:flex;gap:8px;background:#111"><button class="btn btn-primary" style="margin:0" onclick="btStopScan()">Done</button></div>';
+    '<div style="padding:12px;display:flex;gap:8px;background:#111"><button class="btn btn-ghost" id="bt-cam-restart" style="margin:0;display:none" onclick="btCamRestart()">🔄 Restart camera</button><button class="btn btn-primary" style="margin:0" onclick="btStopScan()">Done</button></div>';
   document.body.appendChild(ov);
   const st = m => { const e = document.getElementById('bt-scan-st'); if (e) e.textContent = m; };
   const last = (html, ok) => { const e = document.getElementById('bt-scan-last'); if (e) e.innerHTML = '<div style="padding:12px;border-radius:12px;font-size:15px;font-weight:800;background:' + (ok ? '#16A34A' : '#DC2626') + ';color:#fff">' + html + '</div>'; };
   let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); }
+  try { stream = await btCamGet(); }
   catch (e) { st('Camera not available — type the number'); setTimeout(btStopScan, 1500); return; }
-  const v = document.getElementById('bt-video'); v.srcObject = stream;
+  const v = document.getElementById('bt-video');
   const S = _btScan = { stream, stop: false, seen: {}, n: 0, paused: false, action };
+  await btCamAttach(S, v, stream);
   let readBar = null;
   try { readBar = await btBarcodeReader(); } catch (e) {}
-  st(readBar ? 'Put the barcode in the green box — it saves on the beep' : 'Barcode reader could not load (no signal?) — tap Done and type the number');
+  S.okMsg = readBar ? 'Put the barcode in the green box — it saves on the beep' : 'Barcode reader could not load (no signal?) — tap Done and type the number';
+  st(S.okMsg); btCamWatch(S, v, st);
   const full = document.createElement('canvas'); let frame = 0;
   while (_btScan === S && !S.stop) {
     if (v.readyState >= 2 && v.videoWidth && !S.paused) {
@@ -25587,14 +25625,15 @@ async function btReadNumber(action) {
     '<div style="position:absolute;left:10%;right:10%;top:38%;height:24%;border:3px solid #F472B6;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.4)"></div>' +
     '<div id="bt-scan-st" style="position:absolute;left:0;right:0;top:12%;text-align:center;color:#fff;font-size:15px;font-weight:800;text-shadow:0 1px 3px #000;padding:0 12px">Starting camera…</div></div>' +
     '<div style="padding:10px 12px;background:#111;color:#ddd;font-size:12px">Fill the pink box with the whole sticker number, hold still. You will check it before anything is saved.</div>' +
-    '<div style="padding:12px;display:flex;gap:8px;background:#111"><button class="btn btn-primary" style="margin:0" onclick="btStopScan()">Cancel</button></div>';
+    '<div style="padding:12px;display:flex;gap:8px;background:#111"><button class="btn btn-ghost" id="bt-cam-restart" style="margin:0;display:none" onclick="btCamRestart()">🔄 Restart camera</button><button class="btn btn-primary" style="margin:0" onclick="btStopScan()">Cancel</button></div>';
   document.body.appendChild(ov);
   const st = m => { const e = document.getElementById('bt-scan-st'); if (e) e.textContent = m; };
   let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); }
+  try { stream = await btCamGet(); }
   catch (e) { st('Camera not available — type the number'); setTimeout(btStopScan, 1500); return; }
-  const v = document.getElementById('bt-video'); v.srcObject = stream;
+  const v = document.getElementById('bt-video');
   const S = _btScan = { stream, stop: false, action };
+  await btCamAttach(S, v, stream); S.okMsg = 'Put the NUMBER in the pink box'; btCamWatch(S, v, st);
   try {
     st(window.BtPaddle && window.BtPaddle.ready() ? 'Starting…' : 'Loading the number reader (first time only, ~25 MB — then it is saved on this phone)…');
     await btLoadPaddle();
@@ -25671,7 +25710,8 @@ async function btConfirmRead(action, n) {
 }
 function btStopScan() {
   const s = _btScan; _btScan = null;
-  if (s) { s.stop = true; try { s.stream.getTracks().forEach(t => t.stop()); } catch (e) {} try { s.worker && s.worker.terminate(); } catch (e) {} }
+  if (s) { s.stop = true; try { clearInterval(s.watch); } catch (e) {} try { s.stream.getTracks().forEach(t => t.stop()); } catch (e) {} }
+  const vv = document.getElementById('bt-video'); if (vv) { try { vv.pause(); vv.srcObject = null; } catch (e) {} }
   const ov = document.getElementById('bt-scan'); if (ov) ov.remove();
   if (_bt.tab === 'tag' || _bt.tab === 'empty') btRenderSession();
 }
