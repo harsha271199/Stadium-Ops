@@ -4771,7 +4771,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-128';
+const BUILD_TAG = '2026-11-06-fix-129';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -25085,13 +25085,13 @@ function btRenderSetup() {
     '<div style="margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--text-2);margin-bottom:4px">Each label looks like this:</div><div style="display:inline-block;background:#fff;color:#000;border:1px solid #ccc;border-radius:4px;padding:6px 14px"><div style="font:10px monospace;letter-spacing:-1px">▌║▌▌║▌║║▌▌║▌║▌▌║▌║║▌</div><div style="font-size:18px;font-weight:900;letter-spacing:2px">' + (_bt.labelNext || 3000001) + '</div><div style="font-size:7px">ARAMARK PREMIUM</div></div></div>' +
     '<div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-ghost" style="margin:0;flex:1" onclick="btPrintLabels(1)">Test 1 label</button><button class="btn btn-primary" style="margin:0;flex:2" onclick="btPrintLabels()">🖨️ Print labels</button></div>' +
     '<div style="font-size:11px;color:var(--text-2);margin-top:6px">In the print window pick the <b>Dymo</b> printer and the same label size. Do a <b>test label</b> first and scan it in 🔎 Look up — it should show the number.</div>' +
+    '<details style="margin-top:10px"><summary style="font-size:12px;cursor:pointer">Reprint labels that got jammed or torn</summary><div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="bt-rep-from" type="number" placeholder="From #" style="margin:0"><input class="form-input" id="bt-rep-to" type="number" placeholder="To #" style="margin:0"><button class="btn btn-ghost" style="width:auto;margin:0;padding:0 12px" onclick="btReprint()">Reprint</button></div><div style="font-size:11px;color:var(--text-2);margin-top:4px">Only reprint numbers that were never stuck on a bottle.</div></details>' +
     '</div><div class="card" style="padding:12px;margin-top:12px"><div style="font-weight:900;font-size:15px">③ 🩷💚 Barcode labels for old pink/green stickers</div>' +
     '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Prints a Dymo barcode with the <b>same number</b> as the pink/green sticker. Stick it next to the old sticker — the bottle keeps its number and scans from now on. Uses the label size picked in ②.</div>' +
     '<button class="btn btn-ghost" style="margin:0 0 6px" onclick="btOldFillOpen()">📋 Fill in all open bottles on pink/green stickers</button>' +
     '<textarea class="form-input" id="bt-old-nums" rows="3" placeholder="Numbers or ranges, e.g. 1592345, 1592350-1592360, 2037781" style="font-size:15px" oninput="btOldCheck()"></textarea>' +
     '<div id="bt-old-msg" style="font-size:12px;margin-top:6px"></div>' +
     '<button class="btn btn-primary" style="margin:8px 0 0" onclick="btOldPrint()">🖨️ Print these old-number labels</button>' +
-    '<details style="margin-top:10px"><summary style="font-size:12px;cursor:pointer">Reprint labels that got jammed or torn</summary><div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="bt-rep-from" type="number" placeholder="From #" style="margin:0"><input class="form-input" id="bt-rep-to" type="number" placeholder="To #" style="margin:0"><button class="btn btn-ghost" style="width:auto;margin:0;padding:0 12px" onclick="btReprint()">Reprint</button></div><div style="font-size:11px;color:var(--text-2);margin-top:4px">Only reprint numbers that were never stuck on a bottle.</div></details>' +
     '</div>';
   btCatFilter('');
 }
@@ -25276,7 +25276,7 @@ async function btLookup(code) {
   const el = document.getElementById('bt-look'); if (el) el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   const ev = await btReq('liquor_bottle_events?sticker_no=eq.' + encodeURIComponent(no) + '&order=at.asc&select=*');
   if (!Array.isArray(ev)) { if (el) el.innerHTML = '<div class="notice" style="color:#DC2626">Could not load — check signal</div>'; return { fail: 'load' }; }
-  const lbl = { tag: '🏷️ Tagged', empty: '🍾 Emptied', undo_tag: '↩️ Tag undone', undo_empty: '↩️ Empty undone', void: '🚫 Voided', rejected_tag: '⚠️ Tag rejected', rejected_empty: '⚠️ Empty rejected' };
+  const lbl = { tag: '🏷️ Tagged', empty: '🍾 Emptied', undo_tag: '↩️ Tag undone', undo_empty: '↩️ Empty undone', void: '🚫 Voided', rejected_tag: '⚠️ Tag rejected', rejected_empty: '⚠️ Empty rejected', camera_read_confirmed: '📷 Number read by camera — confirmed', old_labels_printed: '🖨️ Barcode label printed for old sticker', labels_printed: '🖨️ Labels printed' };
   if (el) el.innerHTML = '<div style="font-weight:900;font-size:16px;margin-bottom:6px">' + escapeHtml(no) + '</div>' + (ev.length ? ev.map(e => '<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px"><b>' + (lbl[e.action] || escapeHtml(e.action)) + '</b> · ' + new Date(e.at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' · ' + escapeHtml(e.who || '') + '<br><span style="color:var(--text-2)">' + escapeHtml([e.item_name, e.location, e.note].filter(Boolean).join(' · ')) + '</span></div>').join('') : '<div style="font-size:12px;color:var(--text-2)">No history — this sticker was never used.</div>');
   btMsg('', 'green'); const m = document.getElementById('bt-msg'); if (m) m.innerHTML = '';
   return { ok: true, text: no + ': ' + ev.length + ' entries' };

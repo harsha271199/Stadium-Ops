@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-06-fix-129
+- **🍾 Liquor bottles, small fixes:** 🔎 Look up now shows plain names for "📷 Number read by camera — confirmed", "🖨️ Barcode label printed for old sticker" and "🖨️ Labels printed" (they showed raw codes). "Reprint labels that got jammed or torn" is back under ② Print labels (fix-128 had moved it under ③).
+
 ## 2026-11-06-fix-128
 - **🍾 Liquor bottles: old pink/green stickers can be scanned too — two ways.**
   - **⚙️ Setup ③ Barcode labels for old pink/green stickers:** prints a Dymo barcode label carrying the **same number** as the pink/green sticker (e.g. 1592345), to stick next to it. The bottle keeps its number and scans from then on. Type numbers or ranges (`1592345, 1592350-1592360`), or tap "Fill in all open bottles on pink/green stickers". Anything not on the pink (1592001–1593000) or green (2037001–2038000) roll is skipped and listed; up to 200 at a time; each print is written to the bottle history (`old_labels_printed`). Uses the label size from ②.
