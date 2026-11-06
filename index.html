@@ -4767,7 +4767,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-134';
+const BUILD_TAG = '2026-11-06-fix-135';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -24746,12 +24746,12 @@ async function whConfirmCartReturn(keyNum, employeeName) {
 // number and peel the sticker. This replaces that paper list.
 //  • Barcode stickers (Nestor's printer: number + barcode) are read exactly
 //    and saved straight away, camera staying open for the next bottle.
-//  • Old number-only rolls (pink #48 / green #075), three ways:
+//  • Number-only sticker rolls (pink #48, green #075, any roll added in Setup ③):
 //    1) type the last 3-4 digits; 2) print a Dymo barcode label carrying the
 //    SAME old number (⚙️ Setup ③) and scan it from then on; 3) "🔢 Read
 //    number" — the camera reads the printed digits, but in tests on the real
 //    stickers it misread 1592345 as 1592342 / 1592349, so a camera read is
-//    NEVER saved by itself: it must agree 3 times, be on a pink/green roll,
+//    NEVER saved by itself: it must agree 3 times (>= 80% sure), be on a roll,
 //    pass the open-bottle check (Empty: must be an open bottle; Tag: must not
 //    be), and the manager taps "Yes, the sticker says …" on a big preview.
 //  • Nothing is edited or deleted: a mistake is undone within 5 minutes by
@@ -24772,13 +24772,25 @@ function btWho() { return (state.staffAccount && state.staffAccount.name) || (st
 function btUid(p) { return p + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); }
 // Pre-printed rolls + the labels this app has printed (3000001 up to the counter).
 function btAllRolls() { const r = (_bt.rolls || []).slice(); if ((_bt.labelNext || 0) > 3000001) r.push({ from: 3000001, to: _bt.labelNext - 1, color: 'Printed', roll: 'app' }); return r; }
-function btRollOf(no) { const n = Number(no); return btAllRolls().find(r => n >= Number(r.from) && n <= Number(r.to)) || null; }
+function btRollOf(no) { const s = String(no); const n = Number(no); return btAllRolls().find(r => n >= Number(r.from) && n <= Number(r.to) && s.length === String(r.from).length) || null; }
+// Sticker TAPE rolls (pink, green, any new colour added in ⚙️ Setup) — the
+// number is what's tracked; the colour is only a label. "Printed" (app
+// counter labels) is not a tape roll.
+function btTapeRolls() { return (_bt.rolls || []).filter(r => r && r.from && r.to); }
+function btTapeRollOf(no) { const s = String(no), n = Number(no); return btTapeRolls().find(r => n >= Number(r.from) && n <= Number(r.to) && s.length === String(r.from).length) || null; }
+function btRollActive(r) { return !r || r.active !== false; }
+function btNumLens() { return [...new Set(btAllRolls().map(r => String(r.from).length))].sort((a, b) => b - a); }
+function btRollCss(c) { const k = String(c || '').toLowerCase(); return ({ pink: '#EC4899', green: '#10B981', blue: '#3B82F6', yellow: '#EAB308', orange: '#F97316', red: '#EF4444', purple: '#A855F7', white: '#9CA3AF', black: '#111827', printed: '#6B7280' })[k] || '#6B7280'; }
+function btRollLabel(r) { return r.color + (r.roll ? ' #' + r.roll : ''); }
+function btRollsText() { return btTapeRolls().map(r => r.color + ' ' + r.from + '–' + r.to).join(', '); }
 function btCleanCode(v) { return String(v || '').trim().replace(/\s+/g, '').toUpperCase(); }
-// Only OUR sticker numbers: 7 digits on a pink/green roll or an app-printed
+// Only OUR sticker numbers: on a sticker roll (⚙️ Setup ③) or an app-printed
 // label. Blocks the bottle's own UPC/EAN barcode and typos like 1529345.
 function btBadNo(no) {
-  if (!/^\d{7}$/.test(no)) return /^\d{8,14}$/.test(no) ? no + ' is not one of our stickers — that looks like the bottle\'s own barcode. Scan the Dymo label.' : '"' + no + '" is not a sticker number — sticker numbers have 7 digits.';
-  if (!btRollOf(no)) return no + ' is not on the pink (1592001–1593000) or green (2037001–2038000) roll — check the number.';
+  const max = Math.max(...btNumLens(), 7);
+  if (!/^\d+$/.test(no)) return '"' + no + '" is not a sticker number.';
+  if (no.length > max) return no + ' is not one of our stickers — that looks like the bottle\'s own barcode. Scan the Dymo label.';
+  if (!btRollOf(no)) return no + ' is not on any of your sticker rolls (' + btRollsText() + ') — check the number.';
   return '';
 }
 // "345" / "2345" / full 7 digits -> sticker numbers on our pre-printed rolls.
@@ -24951,10 +24963,11 @@ function btTab(t) {
   if (t === 'tag') btRenderTag(); else if (t === 'empty') btRenderEmpty(); else if (t === 'look') btRenderLook(); else if (t === 'setup') btRenderSetup(); else btRenderList();
 }
 function btNumberBox(action, label) {
-  const cols = [...new Set(btAllRolls().map(r => r.color).filter(Boolean))];
-  const chips = cols.length > 1 ? '<div style="display:flex;gap:6px;align-items:center;margin:4px 0 6px;font-size:12px;flex-wrap:wrap">Roll: ' + cols.concat(['Any']).map(c => '<button class="chip' + ((_bt.color || 'Any') === c ? ' selected' : '') + '" style="padding:6px 12px;font-weight:800' + (c === 'Pink' ? ';border-color:#F9A8D4' : c === 'Green' ? ';border-color:#10B981' : '') + '" onclick="_bt.color=\'' + c + '\';document.querySelectorAll(\'#bt-rollchips .chip\').forEach(b=>b.classList.toggle(\'selected\',b===this))">' + c + '</button>').join('') + '</div>' : '';
+  // Tag: rolls that are switched on. Empty / Look up: every roll (old bottles still come back).
+  const cols = [...new Set(btAllRolls().filter(r => action !== 'btSaveTag' || btRollActive(r)).map(r => r.color).filter(Boolean))];
+  const chips = cols.length > 1 ? '<div style="display:flex;gap:6px;align-items:center;margin:4px 0 6px;font-size:12px;flex-wrap:wrap">Roll: ' + cols.concat(['Any']).map(c => '<button class="chip' + ((_bt.color || 'Any') === c ? ' selected' : '') + '" style="padding:6px 12px;font-weight:800' + ';border-color:' + btRollCss(c) + '" onclick="_bt.color=\'' + c + '\';document.querySelectorAll(\'#bt-rollchips .chip\').forEach(b=>b.classList.toggle(\'selected\',b===this))">' + c + '</button>').join('') + '</div>' : '';
   return '<div style="display:flex;gap:6px;margin:6px 0 10px"><button class="btn btn-primary" style="margin:0;flex:3;font-size:16px;padding:14px" onclick="btScan(\'' + action + '\')">📷 Scan barcode</button>' +
-    '<button class="btn btn-ghost" style="margin:0;flex:2;font-size:13px;padding:10px 6px;font-weight:800;border-color:#F9A8D4" onclick="btReadNumber(\'' + action + '\')">🔢 Read number<br><span style=\'font-size:10px;font-weight:600\'>old pink/green</span></button></div>' +
+    '<button class="btn btn-ghost" style="margin:0;flex:2;font-size:13px;padding:10px 6px;font-weight:800;border-color:#F9A8D4" onclick="btReadNumber(\'' + action + '\')">🔢 Read number<br><span style=\'font-size:10px;font-weight:600\'>sticker, no barcode</span></button></div>' +
     '<label class="form-label" style="margin-top:0">…or type the sticker number — last 3 digits is enough (pick the roll)</label><div id="bt-rollchips">' + chips + '</div>' +
     '<div style="display:flex;gap:6px"><input class="form-input" id="bt-no" inputmode="numeric" autocomplete="off" placeholder="Number on the sticker" style="flex:1;margin:0;font-size:18px;font-weight:800;letter-spacing:1px" onkeydown="if(event.key===\'Enter\')' + action + '()">' +
     '<button class="btn btn-ghost" style="width:auto;margin:0;padding:0 14px;font-weight:800" onclick="' + action + '()">' + label + '</button></div>' +
@@ -25020,7 +25033,9 @@ async function btSaveTag(code, opt) {
   if (!loc) { btMsg('Pick the location first', 'red'); btBeep(false); return { fail: 'Pick the location first' }; }
   if (!item) { btMsg('Type the bottle name first', 'red'); btBeep(false); return { fail: 'Type the bottle name first' }; }
   const no = typeof code === 'string' ? btCleanCode(code) : btResolve('btSaveTag'); if (!no) return { fail: '' };
-  const bad = btBadNo(no); if (bad) { btMsg('⚠️ ' + escapeHtml(bad), 'red'); btBeep(false); return { fail: bad, invalid: true }; }
+  let bad = btBadNo(no);
+  const tr = btTapeRollOf(no); if (!bad && tr && !btRollActive(tr)) bad = 'The ' + btRollLabel(tr) + ' roll is switched off in ⚙️ Setup — switch it on to tag with it.';
+  if (bad) { btMsg('⚠️ ' + escapeHtml(bad), 'red'); btBeep(false); return { fail: bad, invalid: true }; }
   if (_bt.session.some(r => r.kind === 'tag' && r.sticker_no === no && !r.undone)) { const m = no + ' was just tagged on this phone'; btMsg(m, 'amber'); return { dup: true, fail: m }; }
   const roll = btRollOf(no);
   const row = { sticker_no: no, roll_color: roll ? roll.color : 'Other', item_name: item, location: loc, status: 'open', event_date: localISODate(), issued_by: btWho(), client_uuid: btUid('bt') };
@@ -25114,9 +25129,9 @@ function btRenderSetup() {
   body.innerHTML =
     '<div class="card" style="padding:12px;margin-bottom:12px"><div style="font-weight:900;font-size:15px;margin-bottom:4px">Set up in 3 steps</div>' +
       step(1, '<b>Bottle list</b> — add your bottles once (below)', cat.length > 0) +
-      step(2, '<b>Print Dymo barcode labels</b> with your pink/green sticker numbers (below)', !!_bt.rollPrinted && Object.keys(_bt.rollPrinted).length > 0) +
+      step(2, '<b>Print Dymo barcode labels</b> with your sticker numbers (below)', !!_bt.rollPrinted && Object.keys(_bt.rollPrinted).length > 0) +
       step(3, 'Go to <b>🏷️ Tag</b>: pick location + bottle, stick labels, scan', false) +
-      '<div style="font-size:12px;color:var(--text-2);margin-top:6px;border-top:1px solid var(--border);padding-top:6px">No Dymo label on a bottle yet? Use <b>🔢 Read number</b> or type the last 3 digits of the pink/green sticker.</div></div>' +
+      '<div style="font-size:12px;color:var(--text-2);margin-top:6px;border-top:1px solid var(--border);padding-top:6px">No Dymo label on a bottle yet? Use <b>🔢 Read number</b> or type the last 3 digits of the sticker. New sticker tape? Add it in <b>③ Sticker rolls</b>.</div></div>' +
     '<div class="card" style="padding:12px;margin-bottom:12px"><div style="font-weight:900;font-size:15px">① 🍾 Bottle list (<span id="bt-cat-count">' + cat.length + '</span>)</div>' +
     '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Write each bottle the same way every time: <b>BRAND + KIND + SIZE</b>, e.g. <b>TITO\'S VODKA 1L</b>, <b>JACK DANIELS 750ML</b>. Everyone then just picks it when tagging.</div>' +
     '<div style="display:flex;gap:6px"><input class="form-input" id="bt-cat-new" placeholder="New bottle, e.g. TITO\'S VODKA 1L" style="margin:0;flex:1" onkeydown="if(event.key===\'Enter\')btCatAdd()"><button class="btn btn-primary" style="width:auto;margin:0;padding:0 14px" onclick="btCatAdd()">Add</button></div>' +
@@ -25125,23 +25140,75 @@ function btRenderSetup() {
     '<div id="bt-cat-msg" style="margin-top:8px"></div>' +
     '<input class="form-input" placeholder="🔍 Search the list" style="margin:10px 0 4px" oninput="btCatFilter(this.value)">' +
     '<div id="bt-cat-list" style="max-height:320px;overflow:auto"></div></div>' +
-    '<div class="card" style="padding:12px"><div style="font-weight:900;font-size:15px">② 🖨️ Dymo barcode labels — same numbers as your pink/green stickers</div>' +
-    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Each Dymo label = a barcode + the <b>same number</b> as a pink or green sticker. Stick it on the bottle <b>next to the sticker with that number</b> — from then on just scan it.</div>' +
+    '<div class="card" style="padding:12px"><div style="font-weight:900;font-size:15px">② 🖨️ Dymo barcode labels — same numbers as your stickers</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Each Dymo label = a barcode + the <b>same number</b> as a sticker from your rolls. Stick it on the bottle <b>next to the sticker with that number</b> — from then on just scan it.</div>' +
     '<label class="form-label" style="margin-top:0">Label size</label><select class="form-input" id="bt-lab-size" onchange="try{localStorage.setItem(\'bt_label_size\',this.value)}catch(e){}">' +
       [['2.125x1', 'Dymo 30336 — 1" × 2-1/8" (small, multi-purpose)'], ['2.25x1.25', 'Dymo 30334 — 2-1/4" × 1-1/4"'], ['3.5x1.125', 'Dymo 30252 — 1-1/8" × 3-1/2" (address)']].map(([v, l]) => '<option value="' + v + '"' + (v === btSavedLabelSize() ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
     '<label class="form-label">Which numbers?</label>' +
-    '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><span id="bt-lr-chips">' + ['Pink', 'Green'].map(c => '<button class="chip' + ((_bt.lblRoll || 'Pink') === c ? ' selected' : '') + '" style="padding:6px 12px;font-weight:800;border-color:' + (c === 'Pink' ? '#F9A8D4' : '#10B981') + '" onclick="_bt.lblRoll=\'' + c + '\';document.querySelectorAll(\'#bt-lr-chips .chip\').forEach(b=>b.classList.toggle(\'selected\',b===this))">' + (c === 'Pink' ? 'Pink #48' : 'Green #075') + '</button>').join(' ') + '</span>' +
+    '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><span id="bt-lr-chips">' + btTapeRolls().filter(btRollActive).map((r, i) => '<button class="chip' + ((_bt.lblRoll ? _bt.lblRoll === r.color : i === 0) ? ' selected' : '') + '" style="padding:6px 12px;font-weight:800;border-color:' + btRollCss(r.color) + '" onclick="_bt.lblRoll=\'' + escapeHtml(r.color).replace(/'/g, '') + '\';document.querySelectorAll(\'#bt-lr-chips .chip\').forEach(b=>b.classList.toggle(\'selected\',b===this))">' + escapeHtml(btRollLabel(r)) + '</button>').join(' ') + '</span>' +
       '<input class="form-input" id="bt-lab-n" type="number" min="1" max="200" value="24" style="width:70px;margin:0">' +
       '<button class="btn btn-ghost" style="width:auto;margin:0;padding:8px 10px;font-size:12px" onclick="btOldFillNext()">Next unused</button></div>' +
-    '<button class="btn btn-ghost" style="margin:0 0 6px;font-size:12px" onclick="btOldFillOpen()">📋 All bottles already out on pink/green stickers</button>' +
+    '<button class="btn btn-ghost" style="margin:0 0 6px;font-size:12px" onclick="btOldFillOpen()">📋 All bottles already out on sticker numbers</button>' +
     '<textarea class="form-input" id="bt-old-nums" rows="3" placeholder="Or type the sticker numbers / ranges, e.g. 1592345, 1592350-1592360, 2037781" style="font-size:15px" oninput="btOldCheck()"></textarea>' +
     '<div id="bt-old-msg" style="font-size:12px;margin-top:6px"></div>' +
-    '<div style="margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--text-2);margin-bottom:4px">Each label looks like this:</div><div style="display:inline-block;background:#fff;color:#000;border:1px solid #ccc;border-radius:4px;padding:6px 14px"><div style="font:10px monospace;letter-spacing:-1px">▌║▌▌║▌║║▌▌║▌║▌▌║▌║║▌</div><div style="font-size:18px;font-weight:900;letter-spacing:2px">1592345</div><div style="font-size:7px">ARAMARK PREMIUM · PINK</div></div></div>' +
+    '<div style="margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--text-2);margin-bottom:4px">Each label looks like this:</div><div style="display:inline-block;background:#fff;color:#000;border:1px solid #ccc;border-radius:4px;padding:6px 14px"><div style="font:10px monospace;letter-spacing:-1px">▌║▌▌║▌║║▌▌║▌║▌▌║▌║║▌</div><div style="font-size:18px;font-weight:900;letter-spacing:2px">' + ((btTapeRolls()[0] || {}).from || 1592345) + '</div><div style="font-size:7px">ARAMARK PREMIUM · ' + escapeHtml(String((btTapeRolls()[0] || {}).color || '').toUpperCase()) + '</div></div></div>' +
     '<div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-ghost" style="margin:0;flex:1" onclick="btOldPrint(true)">Test 1 label</button><button class="btn btn-primary" style="margin:0;flex:2" onclick="btOldPrint()">🖨️ Print labels</button></div>' +
     '<div style="font-size:11px;color:var(--text-2);margin-top:6px">In the print window pick the <b>Dymo</b> printer and the same label size. Print a <b>test label</b> first and scan it in 🔎 Look up — it should show the number. A label jammed? Just print that number again.</div>' +
     ((_bt.labelNext || 3000001) > 3000001 ? '<div style="font-size:11px;color:var(--text-2);margin-top:8px;border-top:1px solid var(--border);padding-top:6px">Labels already printed with 3000001–' + (_bt.labelNext - 1) + ' still work — scan them as usual (roll "Printed").</div>' : '') +
+    '</div>' +
+    '<div class="card" style="padding:12px;margin-top:12px"><div style="font-weight:900;font-size:15px">③ 🎞️ Sticker rolls</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">The app tracks the <b>number</b> — the colour is just a name. Got a new sticker tape? Add its first and last number here and it works right away. Switch a roll <b>off</b> when it\'s used up: its bottles still go empty and show up, but no new tags.</div>' +
+    '<div id="bt-rolls-list"></div>' +
+    '<div style="font-weight:800;font-size:13px;margin-top:10px">➕ Add a new roll</div>' +
+    '<div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="bt-roll-color" placeholder="Colour, e.g. Blue" style="margin:0;flex:2"><input class="form-input" id="bt-roll-no" placeholder="Roll # (optional)" style="margin:0;flex:1.4"></div>' +
+    '<div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="bt-roll-from" inputmode="numeric" placeholder="First number" style="margin:0"><input class="form-input" id="bt-roll-to" inputmode="numeric" placeholder="Last number" style="margin:0"></div>' +
+    '<div style="font-size:11px;color:var(--text-2);margin-top:4px">Look at the first and the last sticker on the tape (or the box label).</div>' +
+    '<button class="btn btn-primary" style="margin:8px 0 0" onclick="btRollAdd()">➕ Add roll</button>' +
     '</div>';
   btCatFilter('');
+  btRenderRolls();
+}
+// ③ Sticker rolls: stored in app_settings liquor_sticker_rolls.
+function btRenderRolls() {
+  const el = document.getElementById('bt-rolls-list'); if (!el) return;
+  el.innerHTML = btTapeRolls().map((r, i) => '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border);font-size:13px;' + (btRollActive(r) ? '' : 'opacity:.55') + '">' +
+    '<span style="width:14px;height:14px;border-radius:50%;background:' + btRollCss(r.color) + ';flex:0 0 auto"></span>' +
+    '<span style="flex:1"><b>' + escapeHtml(btRollLabel(r)) + '</b><br><span style="font-size:12px;color:var(--text-2)">' + r.from + ' – ' + r.to + (btRollActive(r) ? '' : ' · switched off') + '</span></span>' +
+    '<button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="btRollToggle(' + i + ')">' + (btRollActive(r) ? 'Switch off' : 'Switch on') + '</button></div>').join('') ||
+    '<div style="font-size:12px;color:var(--text-2)">No rolls yet.</div>';
+}
+async function btSaveRolls(list, what) {
+  const r = await btSetting('liquor_sticker_rolls', JSON.stringify(list));
+  if (r && r._err) { toast(r.net ? 'No signal — try again' : 'Could not save', 'error'); return false; }
+  _bt.rolls = list;
+  btLog({ sticker_no: '-', action: 'rolls_changed', note: what + ' — rolls now: ' + list.map(x => x.color + (x.roll ? ' #' + x.roll : '') + ' ' + x.from + '–' + x.to + (x.active === false ? ' (off)' : '')).join('; '), client_uuid: btUid('btr') });
+  return true;
+}
+async function btRollAdd() {
+  if (!btAllowed()) return;
+  const g = id => String((document.getElementById(id) || {}).value || '').trim();
+  const color = g('bt-roll-color').replace(/\s+/g, ' ').replace(/^./, c => c.toUpperCase()), roll = g('bt-roll-no').replace(/^#/, ''), fromS = g('bt-roll-from').replace(/\s/g, ''), toS = g('bt-roll-to').replace(/\s/g, '');
+  if (!color) return toast('Type the colour (or a name) for the roll', 'error');
+  if (!/^\d{4,10}$/.test(fromS) || !/^\d{4,10}$/.test(toS)) return toast('First and last number: digits only (4–10 digits)', 'error');
+  if (fromS.length !== toS.length) return toast('First and last number must have the same number of digits', 'error');
+  const from = Number(fromS), to = Number(toS);
+  if (to < from) return toast('The last number must be bigger than the first', 'error');
+  if (to - from > 100000) return toast('That is more than 100,000 stickers — check the numbers', 'error');
+  const clash = btAllRolls().find(r => String(r.from).length === fromS.length && from <= Number(r.to) && to >= Number(r.from));
+  if (clash) return toast('Those numbers overlap the ' + btRollLabel(clash) + ' roll (' + clash.from + '–' + clash.to + ')', 'error');
+  if (btTapeRolls().some(r => r.color.toLowerCase() === color.toLowerCase() && String(r.roll || '') === roll)) return toast('There is already a ' + color + (roll ? ' #' + roll : '') + ' roll — add a roll # to tell them apart', 'error');
+  if (!(await confirmAction('Add the ' + color + (roll ? ' #' + roll : '') + ' roll: ' + fromS + ' – ' + toS + ' (' + (to - from + 1) + ' stickers)?', { title: 'Add sticker roll?', confirmLabel: 'Add roll' }))) return;
+  if (await btSaveRolls(btTapeRolls().concat([{ from, to, color, roll, active: true }]), 'Added ' + color + (roll ? ' #' + roll : '') + ' ' + fromS + '–' + toS)) {
+    toast('✅ ' + color + ' roll added'); btRenderSetup();
+  }
+}
+async function btRollToggle(i) {
+  if (!btAllowed()) return;
+  const list = btTapeRolls().map(r => Object.assign({}, r)), r = list[i]; if (!r) return;
+  const on = !btRollActive(r);
+  if (!on && !(await confirmAction('Switch off the ' + btRollLabel(r) + ' roll? Bottles already tagged with it still work (Empty, Look up) — it just can\'t be used for new tags.', { title: 'Switch off roll?', confirmLabel: 'Switch off' }))) return;
+  r.active = on;
+  if (await btSaveRolls(list, (on ? 'Switched on ' : 'Switched off ') + btRollLabel(r))) { toast(on ? '✅ Roll switched on' : 'Roll switched off'); btRenderSetup(); }
 }
 function btCatFilter(q) {
   const el = document.getElementById('bt-cat-list'); if (!el) return;
@@ -25245,43 +25312,44 @@ function btReprint() {
   const nums = []; for (let i = a; i <= b; i++) nums.push(i);
   w.document.open(); w.document.write(btLabelHtml(nums, (document.getElementById('bt-lab-size') || {}).value)); w.document.close();
 }
-// ③ Old pink/green numbers -> barcode labels with the SAME number.
+// Sticker-roll numbers -> Dymo barcode labels with the SAME number.
 function btOldParse(txt) {
   const nums = [], bad = [];
   String(txt || '').split(/[\s,;]+/).filter(Boolean).forEach(tok => {
-    const m = tok.match(/^(\d{7})(?:-(\d{7}))?$/);
+    const m = tok.match(/^(\d{4,10})(?:-(\d{4,10}))?$/);
     if (!m) { bad.push(tok); return; }
     const a = Number(m[1]), b = Number(m[2] || m[1]);
     if (b < a || b - a > 500) { bad.push(tok); return; }
-    for (let n = a; n <= b; n++) { const r = btRollOf(n); if (r && (r.color === 'Pink' || r.color === 'Green')) nums.push(n); else bad.push(String(n)); }
+    for (let n = a; n <= b; n++) { const r = btTapeRollOf(String(n).padStart(m[1].length, '0')); if (r) nums.push(n); else bad.push(String(n)); }
   });
   return { nums: [...new Set(nums)].sort((x, y) => x - y), bad };
 }
 function btOldCheck() {
   const el = document.getElementById('bt-old-msg'); if (!el) return null;
   const r = btOldParse((document.getElementById('bt-old-nums') || {}).value);
-  const pink = r.nums.filter(n => (btRollOf(n) || {}).color === 'Pink').length;
-  el.innerHTML = (r.nums.length ? '✅ <b>' + r.nums.length + '</b> label' + (r.nums.length === 1 ? '' : 's') + ' (' + pink + ' pink · ' + (r.nums.length - pink) + ' green)' : '') +
-    (r.bad.length ? '<div style="color:#B91C1C;margin-top:4px">⚠️ Not a pink/green sticker number — skipped: ' + escapeHtml(r.bad.slice(0, 8).join(', ')) + (r.bad.length > 8 ? ' …' : '') + '<br>Pink is 1592001–1593000, green is 2037001–2038000 (all 7 digits).</div>' : '') +
+  const by = {}; r.nums.forEach(n => { const c = (btTapeRollOf(n) || {}).color || '?'; by[c] = (by[c] || 0) + 1; });
+  el.innerHTML = (r.nums.length ? '✅ <b>' + r.nums.length + '</b> label' + (r.nums.length === 1 ? '' : 's') + ' (' + Object.keys(by).map(c => by[c] + ' ' + c.toLowerCase()).join(' · ') + ')' : '') +
+    (r.bad.length ? '<div style="color:#B91C1C;margin-top:4px">⚠️ Not on your sticker rolls — skipped: ' + escapeHtml(r.bad.slice(0, 8).join(', ')) + (r.bad.length > 8 ? ' …' : '') + '<br>Rolls: ' + escapeHtml(btRollsText()) + '.</div>' : '') +
     (r.nums.length > 200 ? '<div style="color:#B91C1C;margin-top:4px">Up to 200 at a time.</div>' : '');
   return r;
 }
 async function btOldFillOpen() {
   const r = await btReq('liquor_bottles?status=eq.open&select=sticker_no,roll_color&order=sticker_no.asc');
   if (!Array.isArray(r)) return toast(r && r.net ? 'No signal — try again' : 'Could not load the bottles', 'error');
-  const nums = r.map(x => x.sticker_no).filter(n => { const k = btRollOf(n); return k && (k.color === 'Pink' || k.color === 'Green'); });
+  const nums = r.map(x => x.sticker_no).filter(n => !!btTapeRollOf(n));
   const ta = document.getElementById('bt-old-nums'); if (ta) ta.value = nums.join(', ');
   btOldCheck();
-  if (!nums.length) toast('No open bottles on pink/green stickers yet');
+  if (!nums.length) toast('No open bottles on sticker-roll numbers yet');
 }
 // Next unused numbers on a roll: after the highest number tagged or printed.
 async function btOldFillNext() {
-  const color = _bt.lblRoll || 'Pink', roll = (_bt.rolls || []).find(r => r.color === color); if (!roll) return;
+  const act = btTapeRolls().filter(btRollActive), roll = act.find(r => r.color === _bt.lblRoll) || act[0]; if (!roll) return toast('No sticker roll switched on — see ⚙️ Setup ③', 'error');
+  const color = roll.color;
   const n = Math.max(1, Math.min(200, parseInt((document.getElementById('bt-lab-n') || {}).value, 10) || 24));
   const [used, st] = await Promise.all([btReq('liquor_bottles?roll_color=eq.' + color + '&select=sticker_no&limit=5000'), btReq('app_settings?key=eq.liquor_roll_printed&select=value')]);
   if (!Array.isArray(used) || !Array.isArray(st)) return toast('No signal — try again', 'error');
   try { _bt.rollPrinted = st[0] ? JSON.parse(st[0].value) || {} : {}; } catch (e) {}
-  const usedSet = new Set(used.map(u => Number(u.sticker_no)));
+  const usedSet = new Set(used.filter(u => btTapeRollOf(u.sticker_no) === roll).map(u => Number(u.sticker_no)));
   let start = Math.max(Number(roll.from) - 1, Number((_bt.rollPrinted || {})[color]) || 0, ...[...usedSet].filter(x => x >= roll.from && x <= roll.to)) + 1;
   const nums = []; for (let x = start; x <= Number(roll.to) && nums.length < n; x++) if (!usedSet.has(x)) nums.push(x);
   if (!nums.length) return toast('No unused numbers left on the ' + color + ' roll', 'error');
@@ -25290,16 +25358,16 @@ async function btOldFillNext() {
 }
 async function btOldPrint(test) {
   if (!btAllowed()) return;
-  let r = btOldCheck(); if (!r || !r.nums.length) return toast('Pick the pink/green numbers first', 'error');
+  let r = btOldCheck(); if (!r || !r.nums.length) return toast('Pick the sticker numbers first', 'error');
   if (test) r = { nums: r.nums.slice(0, 1), bad: [] };
   if (r.nums.length > 200) return toast('Up to 200 labels at a time', 'error');
   const w = window.open('', '_blank'); if (!w) return toast('⚠️ Allow pop-ups for this site and try again', 'error');
   const size = (document.getElementById('bt-lab-size') || {}).value;
-  btLog({ sticker_no: String(r.nums[0]), action: 'old_labels_printed', note: (test ? 'Test label' : r.nums.length + ' barcode label' + (r.nums.length === 1 ? '' : 's')) + ' for pink/green numbers: ' + r.nums.slice(0, 40).join(', ') + (r.nums.length > 40 ? ' …' : '') + ' (' + size + ')', client_uuid: btUid('btop') });
-  w.document.open(); w.document.write(btLabelHtml(r.nums, size, n => 'ARAMARK PREMIUM · ' + String((btRollOf(n) || {}).color || '').toUpperCase())); w.document.close();
+  btLog({ sticker_no: String(r.nums[0]), action: 'old_labels_printed', note: (test ? 'Test label' : r.nums.length + ' barcode label' + (r.nums.length === 1 ? '' : 's')) + ' for sticker numbers: ' + r.nums.slice(0, 40).join(', ') + (r.nums.length > 40 ? ' …' : '') + ' (' + size + ')', client_uuid: btUid('btop') });
+  w.document.open(); w.document.write(btLabelHtml(r.nums, size, n => 'ARAMARK PREMIUM · ' + String((btTapeRollOf(n) || {}).color || '').toUpperCase())); w.document.close();
   if (!test) {
     const rp = Object.assign({}, _bt.rollPrinted || {});
-    r.nums.forEach(n => { const c = (btRollOf(n) || {}).color; if (c && n > (Number(rp[c]) || 0)) rp[c] = n; });
+    r.nums.forEach(n => { const c = (btTapeRollOf(n) || {}).color; if (c && n > (Number(rp[c]) || 0)) rp[c] = n; });
     _bt.rollPrinted = rp; btSetting('liquor_roll_printed', JSON.stringify(rp));
   }
   toast('🖨️ ' + r.nums.length + ' old-number label' + (r.nums.length === 1 ? '' : 's') + ' ready to print');
@@ -25454,15 +25522,19 @@ async function btScan(action) {
     await new Promise(r => setTimeout(r, 120));
   }
 }
-// ── 🔢 Read the printed number on old pink/green stickers ──
+// ── 🔢 Read the printed number on number-only stickers ──
 // A camera read is only a suggestion: 3 matching reads, must be on a
-// pink/green roll, open-bottle check, then the manager confirms.
+// sticker roll, open-bottle check, then the manager confirms.
 function btLoadTesseract() { return btLoadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js', 'Tesseract'); }
 function btPickNumber(text) {
   const t = String(text || '').replace(/[oO]/g, '0').replace(/[lI|]/g, '1');
-  const ok = n => { const r = btRollOf(n); return r && (r.color === 'Pink' || r.color === 'Green'); };
-  const hit = (t.match(/\d{7}/g) || []).find(ok); if (hit) return hit;
-  return (t.replace(/\s+/g, '').match(/\d{7}/g) || []).find(ok) || '';
+  const ok = n => !!btTapeRollOf(n);
+  for (const L of btNumLens()) {
+    const re = new RegExp('\\d{' + L + '}', 'g');
+    const hit = (t.match(re) || []).find(ok) || (t.replace(/\s+/g, '').match(re) || []).find(ok);
+    if (hit) return hit;
+  }
+  return '';
 }
 // Digit clean-up tested on the real pink and green stickers: brightest colour
 // channel, a LOCAL threshold, then the given tilt.
@@ -25500,7 +25572,7 @@ async function btReadNumber(action) {
     '<div style="position:relative;flex:1;overflow:hidden"><video id="bt-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover"></video>' +
     '<div style="position:absolute;left:12%;right:12%;top:40%;height:20%;border:3px solid #F472B6;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.4)"></div>' +
     '<div id="bt-scan-st" style="position:absolute;left:0;right:0;top:12%;text-align:center;color:#fff;font-size:15px;font-weight:800;text-shadow:0 1px 3px #000;padding:0 12px">Starting camera…</div></div>' +
-    '<div style="padding:10px 12px;background:#111;color:#ddd;font-size:12px">Fill the pink box with the 7-digit number, hold still. You will check it before anything is saved.</div>' +
+    '<div style="padding:10px 12px;background:#111;color:#ddd;font-size:12px">Fill the pink box with the whole sticker number, hold still. You will check it before anything is saved.</div>' +
     '<div style="padding:12px;display:flex;gap:8px;background:#111"><button class="btn btn-primary" style="margin:0" onclick="btStopScan()">Cancel</button></div>';
   document.body.appendChild(ov);
   const st = m => { const e = document.getElementById('bt-scan-st'); if (e) e.textContent = m; };
@@ -25525,7 +25597,7 @@ async function btReadNumber(action) {
         const sx = (ew * 0.12 + ox) / sc, sy = (eh * 0.40 + oy) / sc, sw = (ew * 0.76) / sc, sh = (eh * 0.20) / sc;
         band.width = 720; band.height = Math.max(20, Math.round(sh * 720 / sw));
         band.getContext('2d', { willReadFrequently: true }).drawImage(v, sx, sy, sw, sh, 0, 0, band.width, band.height);
-        if (!hinted && !hits && Date.now() - t0 > 10000) { hinted = true; st('Can\'t read this one (dark green stickers are hard). Tap Cancel and type the last 3 digits.'); }
+        if (!hinted && !hits && Date.now() - t0 > 10000) { hinted = true; st('Can\'t read this one (dark stickers are hard). Tap Cancel and type the last 3 digits.'); }
         btBinarize(band, bin, ANG[ai++ % ANG.length]);
         const { data } = await S.worker.recognize(bin);
         // Only a confident read counts: the word holding the number must be
@@ -25545,7 +25617,7 @@ async function btReadNumber(action) {
 }
 // Big check screen: nothing is saved until the manager taps Yes.
 async function btConfirmRead(action, n) {
-  const roll = btRollOf(n) || {}, col = roll.color === 'Pink' ? '#EC4899' : '#10B981';
+  const roll = btRollOf(n) || {}, col = btRollCss(roll.color);
   const ov = document.createElement('div'); ov.id = 'bt-confirm';
   ov.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px';
   const big = '<div style="font-size:38px;font-weight:900;letter-spacing:3px;font-family:monospace">' + n.slice(0, 4) + '<span style="background:#FEF08A;color:#000;border-radius:6px;padding:0 4px">' + n.slice(4) + '</span></div>';
