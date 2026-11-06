@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-06-fix-133
+- **🍾 Bottle Tracker moved into 🧰 Manager Tools** (first item), instead of a separate button on manager home. Shown to Admin and to the Premium-team managers (Harshavardhan, Yadzia). Other managers don't see it. The list refreshes once Premium-team access has loaded. Premium managers (Nestor, Natasha) still open it from the Premium screen. Tested: admin and a Premium-team manager see it, another manager doesn't, and tapping it opens the tracker.
+
 ## 2026-11-06-fix-132
 - **🍾 "Liquor bottles" is now "Bottle Tracker",** and on manager home the button moved to the **top**, right under Game-Day Feedback. Before, it sat halfway down under "Supervisor — All Stands" and was easy to miss. Shown to Admin, the Premium managers and the Premium-team managers. Same name on the Premium screen and in the tool's title.
 

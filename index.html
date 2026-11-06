@@ -3108,10 +3108,6 @@
         <span class="sub">Compliment, concern, or issue ↗</span>
       </button>
 
-      <button class="big-action" id="mgr-bottles-btn" style="border-left:4px solid var(--asu-maroon);display:none;margin-top:10px" onclick="openLiquorBottles()">
-        <span class="icon">🍾</span>
-        <span class="text"><div>Bottle Tracker</div><div class="sub">Premium liquor · tag · scan empties · what's open where</div></span>
-      </button>
       <div id="mgr-simple-lead-actions">
         <div class="action-tiles">
           <div class="action-tile" onclick="mgrSimpleChecks()">
@@ -4771,7 +4767,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-132';
+const BUILD_TAG = '2026-11-06-fix-133';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -12155,7 +12151,10 @@ function renderSupervisorStyleExtraAccess(role){
   const wrap=document.getElementById('mgr-simple-extra-tools');
   const list=document.getElementById('mgr-simple-extra-tools-list');
   if(!wrap||!list)return;
-  const items=SUPERVISOR_STYLE_EXTRA_ACCESS[role]||[];
+  state._mgrToolsRole=role;
+  let items=SUPERVISOR_STYLE_EXTRA_ACCESS[role]||[];
+  // Bottle Tracker: Admin + the Premium-team managers (premium_team_access).
+  if(typeof btAllowed==='function'&&btAllowed())items=[{key:'bottles',icon:'🍾',title:'Bottle Tracker',sub:'Premium liquor · tag · scan empties · what\'s open where',action:'openLiquorBottles()'}].concat(items);
   if(!items.length){wrap.style.display='none';list.innerHTML='';return;}
   wrap.style.display='';
   // Tools stay collapsed under the "Manager Tools" button until tapped —
@@ -13698,7 +13697,7 @@ async function premiumTeamLoadAccess(){
   const rows=await sb('app_settings?key=eq.premium_team_access&select=value').catch(()=>({_err:true}));
   state._premTeamIds=new Set(Array.isArray(rows)&&rows[0]?String(rows[0].value||'').split(/[,\s]+/).filter(Boolean):[]);
   const b=document.getElementById('mgr-team-prem-btn');if(b)b.style.display=premiumTeamAllowed()?'':'none';
-  const bb=document.getElementById('mgr-bottles-btn');if(bb)bb.style.display=premiumTeamAllowed()?'':'none';
+  if(state._mgrToolsRole)renderSupervisorStyleExtraAccess(state._mgrToolsRole); // adds Bottle Tracker once access is known
 }
 async function mgrPremiumRender(){
   const el=document.getElementById('mgr-team-live-list');if(!el)return;
