@@ -3108,6 +3108,10 @@
         <span class="sub">Compliment, concern, or issue ↗</span>
       </button>
 
+      <button class="big-action" id="mgr-bottles-btn" style="border-left:4px solid var(--asu-maroon);display:none;margin-top:10px" onclick="openLiquorBottles()">
+        <span class="icon">🍾</span>
+        <span class="text"><div>Bottle Tracker</div><div class="sub">Premium liquor · tag · scan empties · what's open where</div></span>
+      </button>
       <div id="mgr-simple-lead-actions">
         <div class="action-tiles">
           <div class="action-tile" onclick="mgrSimpleChecks()">
@@ -3143,10 +3147,6 @@
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="showScLogins()">
           <span class="icon">🏪</span>
           <span class="text"><div>Sign-in help &amp; QR</div><div class="sub">App QR · what each subcontractor stand types to sign in</div></span>
-        </button>
-        <button class="big-action" id="mgr-bottles-btn" style="border-left:4px solid var(--asu-maroon);display:none" onclick="openLiquorBottles()">
-          <span class="icon">🍾</span>
-          <span class="text"><div>Liquor bottles (Premium)</div><div class="sub">Sticker-tagged bottles · empties · open by location</div></span>
         </button>
         <button class="big-action" style="border-left:4px solid var(--asu-maroon)" onclick="goAllStandsLive()">
           <span class="icon">📊</span>
@@ -4465,7 +4465,7 @@
          very first thing on the page. -->
     <button class="big-action" id="prem-bottles-btn" style="border-left:4px solid var(--asu-maroon);display:none;margin-bottom:12px" onclick="openLiquorBottles()">
       <span class="icon">🍾</span>
-      <span class="text"><div>Liquor bottles</div><div class="sub">Tag bottles with the sticker · scan empties back · open by location</div></span>
+      <span class="text"><div>Bottle Tracker</div><div class="sub">Premium liquor · tag · scan empties · what's open where</div></span>
     </button>
     <div class="card prem-checkin-card" id="prem-checkin-card" style="padding:14px 14px 6px;margin-bottom:12px;display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
@@ -4771,7 +4771,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-131';
+const BUILD_TAG = '2026-11-06-fix-132';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -13706,7 +13706,7 @@ async function mgrPremiumRender(){
   const rows=await sb('premium_schedule?event_date=eq.'+localISODate()+'&order=location_name.asc,worker_name.asc&select=*').catch(()=>({_err:true}));
   if(!Array.isArray(rows)){el.innerHTML='<div class="notice" style="color:#DC2626">Could not load Premium — try again</div>';return;}
   state._mgrPremRows=rows;
-  const btTop=btAllowed()?'<button class="btn btn-ghost" style="margin:0 0 10px" onclick="openLiquorBottles()">🍾 Liquor bottles</button>':'';
+  const btTop=btAllowed()?'<button class="btn btn-ghost" style="margin:0 0 10px" onclick="openLiquorBottles()">🍾 Bottle Tracker</button>':'';
   if(!rows.length){el.innerHTML=btTop+'<div class="empty" style="padding:24px"><p style="color:var(--text-2)">No Premium staff scheduled today.</p></div>';return;}
   const by={};rows.forEach(r=>{(by[r.location_name||'—']=by[r.location_name||'—']||[]).push(r);});
   const badge=st=>st==='present'?'<span style="color:#16A34A;font-weight:800">✅ In</span>':st==='absent'?'<span style="color:#DC2626;font-weight:800">❌ Absent</span>':'<span style="color:var(--text-2)">Scheduled</span>';
@@ -24926,13 +24926,13 @@ async function btLoadBasics() {
   _bt.offline = !!(items && items.net);
 }
 async function openLiquorBottles(tab) {
-  if (!btAllowed()) return toast('Liquor bottles are for Premium managers', 'error');
+  if (!btAllowed()) return toast('Bottle Tracker is for Premium managers', 'error');
   const old = document.getElementById('bt-overlay'); if (old) old.remove();
   const el = document.createElement('div');
   el.id = 'bt-overlay';
   el.style.cssText = 'position:fixed;inset:0;z-index:9000;background:var(--bg,#fff);overflow:auto;-webkit-overflow-scrolling:touch';
   el.innerHTML = '<div style="max-width:560px;margin:0 auto;padding:12px 14px 40px">' +
-    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px"><div style="font-size:19px;font-weight:900">🍾 Liquor bottles</div><button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 14px" onclick="closeLiquorBottles()">Close</button></div>' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px"><div style="font-size:19px;font-weight:900">🍾 Bottle Tracker</div><button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 14px" onclick="closeLiquorBottles()">Close</button></div>' +
     '<div id="bt-outbox"></div>' +
     '<div style="display:flex;gap:6px;margin-bottom:12px" id="bt-tabs">' +
       ['tag:🏷️ Tag', 'empty:🍾 Empty', 'list:📋 Bottles', 'look:🔎 Look up', 'setup:⚙️ Setup'].map(x => { const [k, l] = x.split(':'); return '<button class="chip" data-bt-tab="' + k + '" onclick="btTab(\'' + k + '\')" style="flex:1;padding:10px 1px;font-size:11px;font-weight:800">' + l + '</button>'; }).join('') +

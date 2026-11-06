@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-06-fix-132
+- **🍾 "Liquor bottles" is now "Bottle Tracker",** and on manager home the button moved to the **top**, right under Game-Day Feedback. Before, it sat halfway down under "Supervisor — All Stands" and was easy to miss. Shown to Admin, the Premium managers and the Premium-team managers. Same name on the Premium screen and in the tool's title.
+
 ## 2026-11-06-fix-131
 - **🍾 Liquor bottles: break-test fixes.** A fake database enforcing the real rules was used to try to break it. Four breaks were found and fixed:
   1. **The bottle's own barcode was saved as a sticker.** Scanning the UPC/EAN on the liquor bottle while tagging saved "080480280024" as a bottle. Now only our numbers are accepted: 7 digits on the pink, green or app-printed range. Anything else gets "not one of our stickers — that looks like the bottle's own barcode".
