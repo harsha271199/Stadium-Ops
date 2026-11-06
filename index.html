@@ -4771,7 +4771,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-126';
+const BUILD_TAG = '2026-11-06-fix-127';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -25071,8 +25071,8 @@ function btRenderSetup() {
     '<div id="bt-cat-list" style="max-height:320px;overflow:auto"></div></div>' +
     '<div class="card" style="padding:12px"><div style="font-weight:900;font-size:15px">② 🖨️ Print barcode labels (Dymo)</div>' +
     '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Each label gets the next number with its barcode — no number is ever printed twice. Pick the Dymo label size, then print to the Dymo printer.</div>' +
-    '<label class="form-label" style="margin-top:0">Label size</label><select class="form-input" id="bt-lab-size">' +
-      [['2.125x1', 'Dymo 30336 — 1" × 2-1/8" (small, multi-purpose)'], ['2.25x1.25', 'Dymo 30334 — 2-1/4" × 1-1/4"'], ['3.5x1.125', 'Dymo 30252 — 1-1/8" × 3-1/2" (address)']].map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('') + '</select>' +
+    '<label class="form-label" style="margin-top:0">Label size</label><select class="form-input" id="bt-lab-size" onchange="try{localStorage.setItem(\'bt_label_size\',this.value)}catch(e){}">' +
+      [['2.125x1', 'Dymo 30336 — 1" × 2-1/8" (small, multi-purpose)'], ['2.25x1.25', 'Dymo 30334 — 2-1/4" × 1-1/4"'], ['3.5x1.125', 'Dymo 30252 — 1-1/8" × 3-1/2" (address)']].map(([v, l]) => '<option value="' + v + '"' + (v === btSavedLabelSize() ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
     '<label class="form-label">How many labels</label><input class="form-input" id="bt-lab-n" type="number" min="1" max="500" value="24">' +
     '<div style="font-size:12px;margin-top:6px">Next number: <b id="bt-lab-next">' + _bt.labelNext + '</b></div>' +
     '<div style="margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--text-2);margin-bottom:4px">Each label looks like this:</div><div style="display:inline-block;background:#fff;color:#000;border:1px solid #ccc;border-radius:4px;padding:6px 14px"><div style="font:10px monospace;letter-spacing:-1px">▌║▌▌║▌║║▌▌║▌║▌▌║▌║║▌</div><div style="font-size:18px;font-weight:900;letter-spacing:2px">' + (_bt.labelNext || 3000001) + '</div><div style="font-size:7px">ARAMARK PREMIUM</div></div></div>' +
@@ -25150,6 +25150,7 @@ function btLabelHtml(nums, size) {
     '<script>function go(){try{JsBarcode(".bc").init();}catch(e){document.body.insertAdjacentHTML("afterbegin","<p style=\\"font:14px Arial;color:#b91c1c\\">Barcode tool did not load — check signal and try again.</p>");return;}setTimeout(function(){window.print();},300);}<\/script>' +
     '<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js" onload="go()" onerror="go()"><\/script></body></html>';
 }
+function btSavedLabelSize() { try { return localStorage.getItem('bt_label_size') || '2.125x1'; } catch (e) { return '2.125x1'; } }
 async function btPrintLabels(count) {
   if (!btAllowed()) return;
   const n = count || Math.max(1, Math.min(500, parseInt((document.getElementById('bt-lab-n') || {}).value, 10) || 0));

@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-06-fix-127
+- **🍾 Liquor bottles: the Dymo label size is remembered.** The size picked under ② Print labels (e.g. 30336) is saved on that computer, so it doesn't have to be picked again each time. Tested: picked 30252, reloaded, still 30252.
+
 ## 2026-11-06-fix-126
 - **🍾 Liquor bottles: ⚙️ Setup is easier and harder to get wrong.**
   - **"Set up in 3 steps"** at the top (① Bottle list → ② Print labels → ③ Test label), with a green tick as each step is done. The bottle count updates live.
