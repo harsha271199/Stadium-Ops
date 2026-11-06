@@ -4,6 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-06-fix-126
+- **🍾 Liquor bottles: ⚙️ Setup is easier and harder to get wrong.**
+  - **"Set up in 3 steps"** at the top (① Bottle list → ② Print labels → ③ Test label), with a green tick as each step is done. The bottle count updates live.
+  - **Near-duplicate check:** names are compared after normalizing sizes and punctuation (LITER/LTR → L, MILLILITER → ML, apostrophes and spaces ignored). Adding "TITOS VODKA 1 LITER" when "TITO'S VODKA 1L" exists asks "Same bottle?" first. Naming tip shown: BRAND + KIND + SIZE.
+  - **CSV upload previews before saving:** "✅ X new · Y already on the list · ⚠️ Z look like a bottle you already have". Nothing is saved until **Save** is tapped; look-alikes are skipped unless the box is ticked.
+  - **Labels:** a preview of the label, a **Test 1 label** button, and a confirm before printing more than 50. The print window opens right on the tap (no pop-up block), then reserves the numbers.
+  - Tested against a fake database: the CSV preview saved nothing before Save, the duplicate and look-alike rows were caught, the test label printed 3000001 and the batch printed 3000002–3000004, and the app's scanner read a printed label back.
+
 ## 2026-11-05-fix-125
 - **🍾 Liquor bottles: ⚙️ Setup tab (Premium managers, the Premium-team managers and Admin).**
   - **Bottle list, set up once:** add a bottle by hand, or upload a CSV (one bottle per row, first column; a header row is skipped). Names are saved in capitals and duplicates are skipped ("3 new · 1 already on the list"). Download the list as CSV; Remove takes a bottle off the list but keeps bottles already tagged with it. Stored in app_settings `liquor_items`.
