@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-06-fix-128
+- **🍾 Liquor bottles: old pink/green stickers can be scanned too — two ways.**
+  - **⚙️ Setup ③ Barcode labels for old pink/green stickers:** prints a Dymo barcode label carrying the **same number** as the pink/green sticker (e.g. 1592345), to stick next to it. The bottle keeps its number and scans from then on. Type numbers or ranges (`1592345, 1592350-1592360`), or tap "Fill in all open bottles on pink/green stickers". Anything not on the pink (1592001–1593000) or green (2037001–2038000) roll is skipped and listed; up to 200 at a time; each print is written to the bottle history (`old_labels_printed`). Uses the label size from ②.
+  - **🔢 Read number (Tag, Empty, Look up):** the camera reads the printed digits, but **a read is never saved by itself**. The camera can misread these stickers (tests: 1592345 read as 1592342 / 1592349 / 1502345), so a read must (1) come out the same 3 times in a row, (2) be on the pink or green roll, (3) pass the open-bottle check: on **Empty** it must be an open bottle, and the screen shows "Is this the TITO'S VODKA 1L from Suite 120?"; on **Tag** it must not already be on an open bottle. Then (4) the manager taps "✅ Yes, the sticker says 1592345" on a big preview with the last 3 digits highlighted. Otherwise: Read again / Type it instead. A camera-read tag is marked "Number read by camera, checked and confirmed by …", and a `camera_read_confirmed` event is logged.
+  - Tested with a fake camera playing the real sticker photos: pink 1592345 and green 2037781 read correctly and saved only after Yes. A wrong read (1502345, 1502343) was rejected as not on a roll. A read that wasn't an open bottle had no Yes button. A very tilted, half-cut sticker (1592357) didn't read at all; it never gave a wrong number, so type it. Old-number labels: 5 printed and all 5 scanned back as exactly the same number; 3000002 / 159234 / 1600000 were refused.
+
 ## 2026-11-06-fix-127
 - **🍾 Liquor bottles: the Dymo label size is remembered.** The size picked under ② Print labels (e.g. 30336) is saved on that computer, so it doesn't have to be picked again each time. Tested: picked 30252, reloaded, still 30252.
 
