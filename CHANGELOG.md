@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-06-fix-137
+- **🍾 Bottle Tracker: colour check removed — only the number counts** (Harsha's call). A camera read still needs 3 matching reads at ≥ 65% confidence on a known roll, the open-bottle check and the manager's Yes. Look up now names the "♻️ Restored to open" and "🎞️ Sticker rolls changed" entries.
+- **Live data:** Nestor's Grey Goose **3000027** (DFA Courtside), voided by mistake during testing on 11/6 at 00:43 (reason "tt"), is **open** again. A `restored` entry with the reason was added to its history.
+
 ## 2026-11-06-fix-136
 - **🍾 Bottle Tracker: fixes from Harsha's phone test (11/6, 00:43–00:45).**
   - **Barcode scan: no more "20377 is not on any of your sticker rolls".** 2037781 had saved fine (00:44:57). With the label still in the box, the phone's scanner then reported broken part-reads ("20", "20377") in other barcode formats. Now: (1) only the formats we print are looked for (Code 39 / Code 128 — the bottle's own UPC/EAN isn't looked for at all); (2) a code must come out the same in 2 frames in a row before anything happens; (3) a read shorter than our sticker numbers is ignored quietly.

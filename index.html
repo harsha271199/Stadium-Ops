@@ -4767,7 +4767,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-06-fix-136';
+const BUILD_TAG = '2026-11-06-fix-137';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -25420,7 +25420,7 @@ async function btLookup(code) {
   const el = document.getElementById('bt-look'); if (el) el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   const ev = await btReq('liquor_bottle_events?sticker_no=eq.' + encodeURIComponent(no) + '&order=at.asc&select=*');
   if (!Array.isArray(ev)) { if (el) el.innerHTML = '<div class="notice" style="color:#DC2626">Could not load — check signal</div>'; return { fail: 'load' }; }
-  const lbl = { tag: '🏷️ Tagged', empty: '🍾 Emptied', undo_tag: '↩️ Tag undone', undo_empty: '↩️ Empty undone', void: '🚫 Voided', rejected_tag: '⚠️ Tag rejected', rejected_empty: '⚠️ Empty rejected', camera_read_confirmed: '📷 Number read by camera — confirmed', old_labels_printed: '🖨️ Barcode label printed for old sticker', labels_printed: '🖨️ Labels printed' };
+  const lbl = { tag: '🏷️ Tagged', empty: '🍾 Emptied', undo_tag: '↩️ Tag undone', undo_empty: '↩️ Empty undone', void: '🚫 Voided', rejected_tag: '⚠️ Tag rejected', rejected_empty: '⚠️ Empty rejected', camera_read_confirmed: '📷 Number read by camera — confirmed', old_labels_printed: '🖨️ Barcode label printed for old sticker', restored: '♻️ Restored to open', rolls_changed: '🎞️ Sticker rolls changed', labels_printed: '🖨️ Labels printed' };
   if (el) el.innerHTML = '<div style="font-weight:900;font-size:16px;margin-bottom:6px">' + escapeHtml(no) + '</div>' + (ev.length ? ev.map(e => '<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px"><b>' + (lbl[e.action] || escapeHtml(e.action)) + '</b> · ' + new Date(e.at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' · ' + escapeHtml(e.who || '') + '<br><span style="color:var(--text-2)">' + escapeHtml([e.item_name, e.location, e.note].filter(Boolean).join(' · ')) + '</span></div>').join('') : '<div style="font-size:12px;color:var(--text-2)">No history — this sticker was never used.</div>');
   btMsg('', 'green'); const m = document.getElementById('bt-msg'); if (m) m.innerHTML = '';
   return { ok: true, text: no + ': ' + ev.length + ' entries' };
@@ -25566,19 +25566,6 @@ function btBinarize(src, out, angle) {
   ox.fillStyle = '#fff'; ox.fillRect(0, 0, w, h);
   ox.save(); ox.translate(w / 2, h / 2); ox.rotate(angle * Math.PI / 180); ox.drawImage(src, -w / 2, -h / 2); ox.restore();
 }
-// Sticker colour from the read box: average of the lighter (background) pixels.
-function btStickerColour(cv) {
-  try {
-    const d = cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, cv.width, cv.height).data;
-    let R = 0, G = 0, B = 0, n = 0;
-    for (let i = 0; i < d.length; i += 16) { const l = d[i] + d[i + 1] + d[i + 2]; if (l > 150) { R += d[i]; G += d[i + 1]; B += d[i + 2]; n++; } }
-    if (n < 50) { for (let i = 0; i < d.length; i += 16) { R += d[i]; G += d[i + 1]; B += d[i + 2]; n++; } }
-    R /= n; G /= n; B /= n;
-    if (R > G + 25 && R > B) return 'pink';
-    if (G > R + 15 && G >= B - 10) return 'green';
-    return '';
-  } catch (e) { return ''; }
-}
 const BT_OCR_AGREE = 3, BT_OCR_MIN_CONF = 65;
 async function btReadNumber(action) {
   btStopScan();
@@ -25621,7 +25608,6 @@ async function btReadNumber(action) {
         band.width = 720; band.height = Math.max(20, Math.round(sh * 720 / sw));
         band.getContext('2d', { willReadFrequently: true }).drawImage(v, sx, sy, sw, sh, 0, 0, band.width, band.height);
         if (!hinted && !hits && Date.now() - t0 > 10000) { hinted = true; st('Can\'t read this one (dark stickers are hard). Tap Cancel and type the last 3 digits.'); }
-        const bandCol = btStickerColour(band); // before binarizing (it turns the band black/white)
         btBinarize(band, bin, ANG[ai++ % ANG.length]);
         const { data } = await S.worker.recognize(bin);
         // Only a confident read counts: the word holding the number must be
@@ -25629,9 +25615,6 @@ async function btReadNumber(action) {
         let n = btPickNumber(data && data.text);
         let conf = 0;
         if (n) { const wd = ((data && data.words) || []).find(x => String(x.text || '').replace(/\D/g, '').includes(n)); conf = wd ? wd.confidence : 0; if (conf < BT_OCR_MIN_CONF) { st('Seeing ' + n.slice(0, 4) + '… — not sure yet. Hold closer and steady.'); n = ''; } }
-        // Colour check: a number on the pink roll must be on a pink sticker,
-        // green on green (rolls with other colours are not checked).
-        if (n) { const want = String((btTapeRollOf(n) || {}).color || '').toLowerCase(), got = bandCol; if ((want === 'pink' || want === 'green') && got && got !== want) { st('That reads as a ' + want + ' number but the sticker looks ' + got + ' — try again'); n = ''; } }
         if (window._btOcrDbg) window._btOcrDbg.push((data && data.text || '').replace(/\s+/g, ' ') + ' c' + Math.round(data && data.confidence || 0) + ' [' + ((data && data.words) || []).map(w => w.text + ':' + Math.round(w.confidence)).join(' ') + '] => ' + n);
         if (n && _btScan === S) {
           if (n === cand) hits++; else { cand = n; hits = 1; }
