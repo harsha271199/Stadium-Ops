@@ -24761,7 +24761,7 @@ async function whConfirmCartReturn(keyNum, employeeName) {
 //    retried; client ids make a retry land once. A rejected action stays in
 //    the outbox as "needs attention" — never silently dropped.
 const BT_DEFAULT_ROLLS = [{ from: 1592001, to: 1593000, color: 'Pink', roll: '48' }, { from: 2037001, to: 2038000, color: 'Green', roll: '075' }];
-const BT_LOCS_EXTRA = ['Premium WH', 'DFA Club 116 Bar', 'DFA Courtside'];
+const BT_LOCS_EXTRA = ['DFA Club 116 Bar', 'DFA Courtside'];
 const BT_UNDO_MS = 5 * 60 * 1000;
 const BT_OUTBOX = 'bt_outbox_v1';
 let _bt = { tab: 'tag', rolls: BT_DEFAULT_ROLLS, items: [], locs: [], loc: '', item: '', session: [], color: '' };
