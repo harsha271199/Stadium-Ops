@@ -3,7 +3,7 @@
 Game-day concessions operations for Aramark Sports + Entertainment at Arizona State University.
 
 **Live:** [asu-aramark.netlify.app](https://asu-aramark.netlify.app)
-**Current build:** `2026-09-20-food-runner-area-notify-1` (shown on the login screen footer — check it against the live site after every deploy)
+**Current build:** `2026-10-03-fix-10` (shown on the login screen footer — check it against the live site after every deploy)
 
 Replaces paper checklists, inventory count sheets, stock requests and break time sheets with a phone app that works in a stadium concourse on bad WiFi.
 
@@ -21,6 +21,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the build history.
 | **Warehouse** | Delivery queue, QR-scan-to-open, force restock, transfer sign-off chain |
 | **Checklists** | Opening / during-event / closing, food safety temps |
 | **NPO groups** | Separate login and roster for non-profit volunteer groups |
+| **Premium department** | Own logins, admin-defined location names, and a manager who sees only Premium's roster — fully separate from concession/warehouse/NPO |
 | **Records** | Break time sheet, tip-distribution CSV, feedback and food-safety history |
 
 ---
@@ -119,6 +120,9 @@ These are all real bugs that reached production:
 - Surface errors on screen. Nobody has devtools open on a concourse.
 - A menu that hides a button from the wrong role is not the same as blocking the action. The function the button calls needs its own role check too — otherwise it's still reachable directly (e.g. from the browser console) by anyone signed in, regardless of role.
 - `.catch(()=>({_err:true}))` on an `sb()` call is silent by design — great for not crashing the UI, but it also means a typo'd column name in a `select=` (PostgREST returns HTTP 400 for an unknown column) can make a whole feature quietly do nothing, forever, with zero visible error. If a check that should sometimes fire never seems to, verify the actual query against the live schema before assuming the logic is wrong.
+- A unique index used for `on_conflict` must be a plain unique constraint, never a partial index (`... WHERE x IS NOT NULL`). PostgREST can't match a partial index, so every upsert fails — plain unique constraints already allow many NULLs.
+- Never regex-test `r.msg` on a failed `sb()` call: it's the whole JSON body, so `/eta/` matches the key `"details"`. Use `sbErrText(r)`.
+- A table with row security ON and no policy refuses every read and write silently. Run Supabase's security advisor after any schema change.
 - `escapeHtml()` a field even when you're sure it's "just an internal note" — the risk isn't the person who typed it, it's that a *different role* reads it back on their own screen later.
 
 ---
@@ -142,6 +146,8 @@ Tables worth knowing:
 | `npo_groups` / `npo_members` | Volunteer groups. `npo_groups.stand` is comma-joined for multi-stand groups. |
 | `staff_accounts` | Manager/Warehouse/Food/Tech/Admin logins — `employee_id`, `pin`, `role`. Anyone with the app's own publishable key can read/write this directly; app-level role checks (not RLS) are the only thing stopping a lower-tier session from editing it. |
 | `zone_assignments` | Generic stand-assignment table, keyed by `role` (`warehouse`, `supervisor`). Powers each person's "My Stands" filter and routes push notifications to whoever's actually covering that stand. |
+| `stand_chat` | Stand Chat messages (one conversation per stand per game day). Auto-deleted after 14 days by the `stand_chat_cleanup_14d` pg_cron job — Managers can download a day's chat as CSV before then. |
+| `stand_sheet_stands` | View: distinct stands that have a stand sheet (= stands that must do inventory). |
 | `kitchen_runner_assignments` | Same idea as `zone_assignments`, specifically for Food Runner coverage areas (Food Manager → Runner Areas). Drives the "suggested runner" hint and the direct heads-up push when a request comes in for that runner's area. |
 
 Handy checks:
