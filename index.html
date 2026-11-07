@@ -4779,7 +4779,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-07-fix-143';
+const BUILD_TAG = '2026-11-07-fix-144';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15954,6 +15954,7 @@ async function admYdPdfRead() {
     // (10/23: lists landed on "207 Sun Devil Burger & Tenders", "210 Fan Fuel
     // Nachos", "205P Bar S Sausage" and the counting screens never saw them).
     await loadAdminStands(true).catch(() => {}); state._allVenueStands = null;
+    const venueOf = {}; (await allVenueStands()).forEach(x => { venueOf[canonicalStandName2026(x.name) || x.name] = x.venue || ''; });
     const appNames = [...new Set((await allVenueStands()).map(x => canonicalStandName2026(x.name) || x.name))]
       .filter(n => n && !isHiddenInactiveStand2026(n) && !/warehouse/i.test(n)).sort(standSort);
     // Stands people are scheduled at for the next game (today or later).
@@ -15966,7 +15967,7 @@ async function admYdPdfRead() {
     const taken = new Set(), plan = ydStands.map(y => ({ yd: y, app: '' }));
     const prio = new Set([...sched, ...active]);
     [1, 2].forEach(pass => plan.forEach(p => { if (p.app) return; const a = ydSuggestAppStand(p.yd, appNames, taken, pass, prio, sched); if (a) { p.app = a; taken.add(a); } }));
-    state._ydPdfUpload = { event: r.event, file: f.name, stands: r.stands, plan, appNames, active, sched: [...sched].sort(standSort), nextDay, extraPick: {} };
+    state._ydPdfUpload = { event: r.event, file: f.name, stands: r.stands, plan, appNames, active, sched: [...sched].sort(standSort), nextDay, extraPick: {}, venueOf, footballPdfCounts: true };
     admYdPdfRender();
   });
 }
@@ -16010,7 +16011,27 @@ function admYdPdfRender() {
   const n = u.plan.filter(p => p.app).length + nx, dups = Object.values(count).some(c => c > 1);
   st.innerHTML = '<div style="font-weight:800;margin:6px 0">' + escapeHtml(u.event || u.file) + ' · ' + u.plan.length + ' stands in PDF</div>' +
     '<div style="font-size:11px;color:var(--text-2);margin-bottom:6px">Yellow Dog stand → app stand. 📅 = people scheduled there for the next game · ★ = counted in the app in the last 60 days. Blue = different name (check it); orange = skipped. Stands that are turned off are not listed.</div>' + rows + extraRows +
+    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;margin:10px 0 4px"><input type="checkbox" style="width:16px;height:16px;margin-top:1px" ' + (u.footballPdfCounts ? 'checked ' : '') + 'onchange="state._ydPdfUpload.footballPdfCounts=this.checked"> <span><b>Football (Mountain America) stands: use this PDF\'s expected counts</b> — the warehouse updated the inventory. Other venues keep the app\'s counts (last Count Out + restocks).</span></label>' +
+    '<div style="font-size:11px;color:var(--text-2);margin-bottom:4px">Old items this PDF doesn\'t list are removed — except items the stand requested, got delivered/transferred in the app, or counted above 0. Those stay at the end of the list.</div>' +
     '<button class="btn btn-primary" style="margin-top:10px" ' + (dups || !n ? 'disabled' : 'onclick="admYdPdfSave()"') + '>✅ Save ' + n + ' stand' + (n === 1 ? '' : 's') + ' to inventory</button>';
+}
+// Item keys (ydItemKey) a stand really uses: asked for in a stock request,
+// moved in through the app (delivery / restock / transfer), or counted above 0.
+// If any of it can't be read, keep everything — never drop items blind.
+async function ydItemsStandUses(stand) {
+  const names = standDbCandidateNames2026(stand).concat([stand]).filter((v, i, a) => v && a.indexOf(v) === i);
+  const inList = 'stand=in.(' + names.map(n => '"' + encodeURIComponent(n.replace(/"/g, '')) + '"').join(',') + ')';
+  const [req, led, inv] = await Promise.all([
+    sb('stock_requests?' + inList + '&select=items_json&limit=3000').catch(() => ({ _err: true })),
+    sb('stock_ledger?' + inList + '&direction=eq.in&select=item_name&limit=5000').catch(() => ({ _err: true })),
+    sb('inventory_entries?' + inList + '&select=counts&limit=1000').catch(() => ({ _err: true }))]);
+  if (!Array.isArray(req) || !Array.isArray(led) || !Array.isArray(inv)) return { has: () => true };
+  const s = new Set();
+  req.forEach(r => ((r.items_json && r.items_json.items) || []).forEach(x => { if (x && x.itemName) s.add(ydItemKey(x.itemName)); }));
+  led.forEach(r => { if (r.item_name) s.add(ydItemKey(r.item_name)); });
+  inv.forEach(r => Object.keys(r.counts || {}).forEach(k => { const e = r.counts[k] || {};
+    if (['countIn', 'countOut'].some(f => Number(e[f]) > 0)) s.add(ydItemKey(k)); }));
+  return s;
 }
 async function admYdPdfSave() {
   const u = state._ydPdfUpload, st = document.getElementById('up-ydpdf-status'); if (!u) return;
@@ -16020,9 +16041,9 @@ async function admYdPdfSave() {
   const counted = await sb('inventory_entries?entry_date=eq.' + stadiumDay() + '&phase=eq.Count%20In&stand=in.(' + plan.map(p => '"' + String(p.app).replace(/"/g, '') + '"').join(',') + ')&select=stand').catch(() => ({ _err: true }));
   const already = Array.isArray(counted) ? [...new Set(counted.map(r => r.stand))] : [];
   const warn = already.length ? '\n\n⚠️ ' + already.length + ' of these already did Count In today (' + already.slice(0, 6).join(', ') + (already.length > 6 ? '…' : '') + '). Items new to their list will have no Count In. Untick those stands (pick "— skip —") unless you mean to change them.' : '';
-  if (!(await confirmAction('Update the item list of ' + plan.length + ' stands from the Yellow Dog PDF (' + total + ' items), in the PDF\'s exact order? Items already on a stand that the PDF doesn\'t list are kept at the end, and stands that counted out in the app keep the app\'s expected counts. Do this before Count In starts — items renamed mid-event won\'t line up with counts already entered.' + warn, { title: 'Replace stand item lists?', confirmLabel: 'Replace lists', danger: already.length > 0 }))) return;
+  if (!(await confirmAction('Update the item list of ' + plan.length + ' stands from the Yellow Dog PDF (' + total + ' items), in the PDF\'s exact order? Old items the PDF doesn\'t list are removed unless the stand requested, got delivered or counted them (those stay at the end). ' + (u.footballPdfCounts ? 'Football stands take this PDF\'s expected counts; other stands that counted out in the app keep the app\'s counts.' : 'Stands that counted out in the app keep the app\'s expected counts.') + ' Do this before Count In starts — items renamed mid-event won\'t line up with counts already entered.' + warn, { title: 'Replace stand item lists?', confirmLabel: 'Replace lists', danger: already.length > 0 }))) return;
   const numOrNull = v => { const t = String(v == null ? '' : v).replace(/[, ]/g, ''); if (!t) return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
-  let done = 0; const failed = [];
+  let done = 0, keptOld = 0, droppedOld = 0; const failed = [];
   for (const p of plan) {
     st.textContent = 'Saving ' + p.app + ' (' + (done + 1) + ' / ' + plan.length + ')…';
     const enc = encodeURIComponent(p.app);
@@ -16038,15 +16059,23 @@ async function admYdPdfSave() {
     // restock) is app data too: 11/5 Softball Stadium had no Count Out yet,
     // but its expected counts came from Steven's Soccer -> Softball transfer.
     const mv = (Array.isArray(co) && co.length) ? [1] : await sb('stock_ledger?stand=eq.' + enc + '&select=id&limit=1').catch(() => ({ _err: true }));
-    const appCounts = Array.isArray(mv) && mv.length > 0;
+    // 11/7: the warehouse updated football inventory in Yellow Dog, so for
+    // Mountain America stands (box ticked) the PDF's numbers win.
+    const pdfWins = u.footballPdfCounts && u.venueOf && u.venueOf[p.app] === 'Mountain America Stadium';
+    const appCounts = !pdfWins && Array.isArray(mv) && mv.length > 0;
     const oldBy = {}; (old || []).forEach(o => { oldBy[ydItemKey(o.item_name)] = o; });
     const rows = items.map((x, i) => { const o = appCounts && oldBy[ydItemKey(x.item)];
       return { stand: p.app, item_name: x.item, unit: x.unit || '', pack: x.pack || '', on_hand: o ? o.on_hand : numOrNull(x.onHand), restock: numOrNull(x.restock), exp_start: o ? o.exp_start : numOrNull(x.expStart),
       chargeable: x.type || 'Chargeable', category: String(x.type || 'Chargeable').toUpperCase(), is_addon: false, sort_order: i + 1 }; });
-    // Every item already on the stand's list that this PDF doesn't have
-    // (added in the app, or from an earlier sheet) stays, after the sheet,
-    // with its counts — so it still shows next game.
-    (old || []).filter(o => !have.has(ydItemKey(o.item_name)) && !isRetiredItem(o.item_name)).forEach((o, j) => rows.push({ stand: p.app, item_name: o.item_name, unit: o.unit || '', pack: o.pack || '', on_hand: o.on_hand, restock: o.restock, exp_start: o.exp_start,
+    // Items already on the stand's list that this PDF doesn't have: only the
+    // ones the stand actually uses stay (after the sheet, with their counts) —
+    // requested by the stand, delivered/transferred in through the app, or
+    // counted above 0. Leftovers from old sheets that nobody touched go
+    // (11/6: 68 old Coke-era 0 rows were still on the DFA lists).
+    const used = await ydItemsStandUses(p.app);
+    const gone = (old || []).filter(o => !have.has(ydItemKey(o.item_name)) && (isRetiredItem(o.item_name) || !used.has(ydItemKey(o.item_name))));
+    keptOld += (old || []).filter(o => !have.has(ydItemKey(o.item_name))).length - gone.length; droppedOld += gone.length;
+    (old || []).filter(o => !have.has(ydItemKey(o.item_name)) && !isRetiredItem(o.item_name) && used.has(ydItemKey(o.item_name))).forEach((o, j) => rows.push({ stand: p.app, item_name: o.item_name, unit: o.unit || '', pack: o.pack || '', on_hand: o.on_hand, restock: o.restock, exp_start: o.exp_start,
       chargeable: o.chargeable || 'Chargeable', category: o.category || null, is_addon: true, sort_order: 1000 + j }));
     const del = await sb('stand_sheets?stand=eq.' + enc, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
     if (del && del._err) { failed.push(p.app); continue; }
@@ -16059,7 +16088,8 @@ async function admYdPdfSave() {
     try { localStorage.setItem('ydMap:' + p.app, p.yd); } catch (e) {}
     done++;
   }
-  st.innerHTML = '<div style="color:' + (failed.length ? '#DC2626' : 'var(--success)') + ';font-weight:800">' + (failed.length ? '⚠️ ' : '✅ ') + done + ' stand' + (done === 1 ? '' : 's') + ' updated from the Yellow Dog PDF' + (failed.length ? ' · failed: ' + escapeHtml(failed.join(', ')) + ' (old list kept — try again)' : '') + '</div>';
+  st.innerHTML = '<div style="color:' + (failed.length ? '#DC2626' : 'var(--success)') + ';font-weight:800">' + (failed.length ? '⚠️ ' : '✅ ') + done + ' stand' + (done === 1 ? '' : 's') + ' updated from the Yellow Dog PDF' + (failed.length ? ' · failed: ' + escapeHtml(failed.join(', ')) + ' (old list kept — try again)' : '') + '</div>' +
+    '<div style="font-size:12px;color:var(--text-2);margin-top:4px">Old items not in the PDF: <b>' + droppedOld + '</b> removed · <b>' + keptOld + '</b> kept (requested, delivered in the app, or counted)</div>';
   toast(failed.length ? 'Some stands failed — see the list' : '✅ Inventory lists updated from Yellow Dog');
 }
 // ============ INVENTORY FILE → STANDS MATCHING ============

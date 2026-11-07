@@ -4,6 +4,14 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-07-fix-144
+- **Yellow Dog PDF upload for football: the warehouse's new counts win, and old items are cleaned off.** The warehouse manager updated football inventory in Yellow Dog. Before, the upload kept the app's expected counts for any stand that had counted out in the app, and it kept every old item the new PDF didn't list (old Coke-era rows stayed on lists as 0s, as found at DFA on 11/6). Now:
+  - **Expected counts:** a new box on the upload preview, ticked by default: "Football (Mountain America) stands: use this PDF's expected counts". Mountain America stands take the PDF's Exp Start / On-Hand. Other venues (DFA, Softball, Soccer) still keep the app's counts (last Count Out + restocks), as before.
+  - **Old items not in the PDF:** removed, except items that stand actually uses. Those are items it asked for in a stock request, had delivered or transferred in through the app, or counted above 0. Kept items stay at the end of the list with their counts. Retired items (Coke/Sprite) always go. If the request, delivery or count history can't be loaded, nothing is removed.
+  - **Stock request lists follow:** the Request Stock screen reads the same stand list, so it updates in the same upload.
+  - After saving, the screen shows how many old items were removed and how many kept.
+  - Tested with a fake database: a football stand took the PDF's 40 over the app's 5, and a DFA stand kept 5. The requested, delivered and counted items stayed. The untouched 0 item, the item counted as 0, and the Sprite row were removed.
+
 ## 2026-11-07-fix-143
 - **⚡ Restock access for the day.** The Warehouse Manager, Warehouse Supervisors and Stand Supervisors (supervisors and multi-stand leads; managers and Admin too) can let a **regular worker or runner scheduled today** do **Force Restock**. Before, that was only for leads, supervisors, warehouse and managers.
   - **Where:** the Warehouse Manager / Supervisor home screen has a **⚡ Give restock access** button at the top ("2 people have restock access today"), plus a Manager-tools tile. Supervisors have it in the Requests menu; Admin / managers in 🧰 Manager Tools.
