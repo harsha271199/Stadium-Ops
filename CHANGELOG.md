@@ -13,6 +13,19 @@ the deploy date — always verify the tag on the live site after deploying.
   - **Skipped:** 205P Kona Ice SC, which has no app stand.
   - **Not in the PDFs (lists unchanged):** 203P Beer Portable, 209P / 218P / 229P Fan Fuel Beverage MKT, 210P and 226P Beer Portable.
   - **Backups:** `stand_sheets_backup_ydfb_20261107` (taken right before) and `stand_sheets_backup_mas_20261107`.
+- **Data, follow-up (same day):** every active Mountain America stand now has a list (85 stands).
+  - **57 from their own Yellow Dog sheet.**
+  - **2 from the same stand's sheet under Yellow Dog's name, counts included:** 203P Beer Portable ← YD 202P Beer Portable, and 206P Bar S Sausage ← YD 208P BarS Sausage (208P BarS is switched off in the app).
+  - **9 borrow a same-kind stand's item list.** Each keeps its own previous expected count per item, or 0 for items new to it. Requested, delivered or counted items stay.
+    - 209P, 218P and 229P Fan Fuel ← 204P Fan Fuel
+    - 210P Beer Portable ← 209P Beer Portable
+    - 226P Beer Portable ← 224P Beer Portable
+    - 231P BarS ← 229P BarS
+    - 217P BarS Draft ← YD 208P BarS
+    - 227P Chick-Fil-A ← 226P Chick-Fil-A
+    - 219P Venezia ← 224P Venezia
+  - **17 have no sheet of their kind in the PDFs** (Stinger, Bahama Bucks, Lemonade, Kathy's, StreetEats, BBQ Trailer, Taco Bar, SW Gate). Their lists are kept, with 29 Coke-era rows removed.
+  - **Backup:** `stand_sheets_backup_ydfam_20261107`.
 
 ## 2026-11-07-fix-144
 - **Yellow Dog PDF upload for football: the warehouse's new counts win, and old items are cleaned off.** The warehouse manager updated football inventory in Yellow Dog. Before, the upload kept the app's expected counts for any stand that had counted out in the app, and it kept every old item the new PDF didn't list (old Coke-era rows stayed on lists as 0s, as found at DFA on 11/6). Now:
