@@ -4779,7 +4779,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-07-fix-144';
+const BUILD_TAG = '2026-11-07-fix-145';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -14975,13 +14975,15 @@ async function ydParseStandSheetPdf(pdf) {
     if (!event) event = strs[iN - 1] || '';
     const head = [];
     for (let k = iN + 1; k < strs.length && head.length < 4; k++) {
-      if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(strs[k])) break;
+      if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(strs[k]) || /^\d{4}-\d{2}-\d{2}/.test(strs[k])) break;
       head.push(strs[k]);
     }
-    const stand = head.join(' ').replace(/\s+/g, ' ').trim();
+    // 11/7 export prints the event / print time as 2026-11-07 17:00 after the
+    // stand name — strip it or "140 Inferno Favorites" matches nothing.
+    const stand = head.join(' ').replace(/\s+\d{4}-\d{2}-\d{2}(\s+\d{1,2}:\d{2}(\s*[AP]M)?)?.*$/i, '').replace(/\s+/g, ' ').trim();
     if (!stand) continue;
     // Positions in top-down page coordinates (pdf.js y is from the bottom).
-    const foot = /^(Page \d+|\(C\) YDS.*|Support:.*|\d{1,2}[\/-]\d{1,2}[\/-]\d{4}\s+\d{1,2}:\d{2}.*)$/;
+    const foot = /^(Page \d+|\(C\) YDS.*|Support:.*|\d{1,2}[\/-]\d{1,2}[\/-]\d{4}\s+\d{1,2}:\d{2}.*|\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}.*)$/;
     const sp = raw.map(t => ({ x: t.transform[4], y: vp.height - t.transform[5], t: String(t.str).trim() })).filter(o => o.y > 160 && !foot.test(o.t) && !/^Item - Size/.test(o.t));
     // Row numbers ≥100 wrap: "10" with "0" just under it = 100.
     const n0 = sp.filter(o => o.x < 50 && /^\d+$/.test(o.t)).sort((a, b) => a.y - b.y), nums = [];
@@ -16021,10 +16023,13 @@ function admYdPdfRender() {
 async function ydItemsStandUses(stand) {
   const names = standDbCandidateNames2026(stand).concat([stand]).filter((v, i, a) => v && a.indexOf(v) === i);
   const inList = 'stand=in.(' + names.map(n => '"' + encodeURIComponent(n.replace(/"/g, '')) + '"').join(',') + ')';
+  // This season only (last ~45 days): September's Coke-era requests and
+  // counts must not keep Dasani / Powerade on a Pepsi stand's list.
+  const since = localISODate(new Date(Date.now() - 45 * 864e5));
   const [req, led, inv] = await Promise.all([
-    sb('stock_requests?' + inList + '&select=items_json&limit=3000').catch(() => ({ _err: true })),
-    sb('stock_ledger?' + inList + '&direction=eq.in&select=item_name&limit=5000').catch(() => ({ _err: true })),
-    sb('inventory_entries?' + inList + '&select=counts&limit=1000').catch(() => ({ _err: true }))]);
+    sb('stock_requests?' + inList + '&created_at=gte.' + since + '&select=items_json&limit=3000').catch(() => ({ _err: true })),
+    sb('stock_ledger?' + inList + '&direction=eq.in&ts=gte.' + since + '&select=item_name&limit=5000').catch(() => ({ _err: true })),
+    sb('inventory_entries?' + inList + '&entry_date=gte.' + since + '&select=counts&limit=1000').catch(() => ({ _err: true }))]);
   if (!Array.isArray(req) || !Array.isArray(led) || !Array.isArray(inv)) return { has: () => true };
   const s = new Set();
   req.forEach(r => ((r.items_json && r.items_json.items) || []).forEach(x => { if (x && x.itemName) s.add(ydItemKey(x.itemName)); }));
@@ -16073,9 +16078,13 @@ async function admYdPdfSave() {
     // counted above 0. Leftovers from old sheets that nobody touched go
     // (11/6: 68 old Coke-era 0 rows were still on the DFA lists).
     const used = await ydItemsStandUses(p.app);
-    const gone = (old || []).filter(o => !have.has(ydItemKey(o.item_name)) && (isRetiredItem(o.item_name) || !used.has(ydItemKey(o.item_name))));
-    keptOld += (old || []).filter(o => !have.has(ydItemKey(o.item_name))).length - gone.length; droppedOld += gone.length;
-    (old || []).filter(o => !have.has(ydItemKey(o.item_name)) && !isRetiredItem(o.item_name) && used.has(ydItemKey(o.item_name))).forEach((o, j) => rows.push({ stand: p.app, item_name: o.item_name, unit: o.unit || '', pack: o.pack || '', on_hand: o.on_hand, restock: o.restock, exp_start: o.exp_start,
+    // Coke-era lines the Pepsi switch replaced (Dasani→Aquafina, Powerade→
+    // Gatorade, Smart Water→Life Water, old BIB names) go like Coke/Sprite.
+    const cokeEra = n => isRetiredItem(n) || /\b(DASANI|POWERADE)\b|SMART WATER|^BIB (DR PEPPER 5 GAL|LEMONADE 2\.5 GAL)$/i.test(String(n || '').trim());
+    const keepOld = o => !have.has(ydItemKey(o.item_name)) && !cokeEra(o.item_name) && used.has(ydItemKey(o.item_name));
+    const notInPdf = (old || []).filter(o => !have.has(ydItemKey(o.item_name)));
+    keptOld += notInPdf.filter(keepOld).length; droppedOld += notInPdf.length - notInPdf.filter(keepOld).length;
+    (old || []).filter(keepOld).forEach((o, j) => rows.push({ stand: p.app, item_name: o.item_name, unit: o.unit || '', pack: o.pack || '', on_hand: o.on_hand, restock: o.restock, exp_start: o.exp_start,
       chargeable: o.chargeable || 'Chargeable', category: o.category || null, is_addon: true, sort_order: 1000 + j }));
     const del = await sb('stand_sheets?stand=eq.' + enc, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
     if (del && del._err) { failed.push(p.app); continue; }

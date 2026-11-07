@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-07-fix-145
+- **Yellow Dog PDF: the new export's date no longer breaks stand matching.** The 11/7 football PDFs print the event and print time after each stand name ("140 Inferno Favorites 2026-11-07 17:00 2026-11-07 08:03"). The reader kept that text as part of the name, so 9 stands matched nothing (140 Inferno, 142 Inferno Burgers, 216P SunDeck Grill, 221B Fork Em BBQ, 414 Sun Devil Favorites…). It now stops at a YYYY-MM-DD date and strips it, as it already did for M/D/YYYY. Tested with both 11/7 PDFs: 60 stand sheets read, 57 matched automatically.
+- **Old-item cleanup on upload uses this season only.** "Requested / delivered / counted above 0" now looks at the last 45 days. Coke-era lines the Pepsi switch replaced (Dasani, Powerade, Smart Water, old "BIB DR PEPPER 5 GAL" / "BIB LEMONADE 2.5 GAL") are removed like Coke/Sprite, even if a stand asked for them in September. Tested: a requested Dasani row was removed; requested, delivered and counted items stayed.
+- **Data (11/7 football, from Matt's two Yellow Dog PDFs, pages 1–90 and 91–179):** 59 stands replaced with 1,795 PDF rows, using the PDF's expected counts. Two Yellow Dog stands had different names and were matched by number: 334 San Tan Burgers & Tenders → 334 San Tan Favorites, and 442 Huss Hideout Burgers & Tenders → 442 Huss Hideout Favorites.
+  - **Removed:** 742 old rows (Coke-era items, untouched 0 leftovers, and lines duplicating a PDF line under another name: PRETZELS, BEER - COORS BANQUET 24OZ, BUN POTATO 4").
+  - **Kept:** 73 items stands requested, received or counted since 10/1, such as ice, Pitchfork dogs, wine cans, pulled pork and Sour Patch Kids.
+  - **Skipped:** 205P Kona Ice SC, which has no app stand.
+  - **Not in the PDFs (lists unchanged):** 203P Beer Portable, 209P / 218P / 229P Fan Fuel Beverage MKT, 210P and 226P Beer Portable.
+  - **Backups:** `stand_sheets_backup_ydfb_20261107` (taken right before) and `stand_sheets_backup_mas_20261107`.
+
 ## 2026-11-07-fix-144
 - **Yellow Dog PDF upload for football: the warehouse's new counts win, and old items are cleaned off.** The warehouse manager updated football inventory in Yellow Dog. Before, the upload kept the app's expected counts for any stand that had counted out in the app, and it kept every old item the new PDF didn't list (old Coke-era rows stayed on lists as 0s, as found at DFA on 11/6). Now:
   - **Expected counts:** a new box on the upload preview, ticked by default: "Football (Mountain America) stands: use this PDF's expected counts". Mountain America stands take the PDF's Exp Start / On-Hand. Other venues (DFA, Softball, Soccer) still keep the app's counts (last Count Out + restocks), as before.
