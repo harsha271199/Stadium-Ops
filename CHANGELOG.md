@@ -26,6 +26,14 @@ the deploy date — always verify the tag on the live site after deploying.
     - 219P Venezia ← 224P Venezia
   - **17 have no sheet of their kind in the PDFs** (Stinger, Bahama Bucks, Lemonade, Kathy's, StreetEats, BBQ Trailer, Taco Bar, SW Gate). Their lists are kept, with 29 Coke-era rows removed.
   - **Backup:** `stand_sheets_backup_ydfam_20261107`.
+  - **The last 14 no-sheet stands, as Harsha picked:**
+    - 219T BBQ Trailer and 221P Taco Bar ← 221B Fork Em BBQ (YD)
+    - 218T StreetEats and 219 Kathy's Cookies ← 226P Chick-Fil-A (YD). StreetEats sold the same bottled sodas and water on 10/24.
+    - All 5 Stinger stands ← 243P Lemonade SC's list
+    - The other 5 Bahama Bucks ← 206P Bahama Bucks (no Bahama Bucks sheet in Yellow Dog)
+    - SW Gate-138 left as is.
+    - Each keeps its own count per item, or 0 for new items, and its requested or used items. 117 rows replaced with 92, plus 3 kept at Taco Bar.
+    - **Backup:** `stand_sheets_backup_ydfam2_20261107`.
 
 ## 2026-11-07-fix-144
 - **Yellow Dog PDF upload for football: the warehouse's new counts win, and old items are cleaned off.** The warehouse manager updated football inventory in Yellow Dog. Before, the upload kept the app's expected counts for any stand that had counted out in the app, and it kept every old item the new PDF didn't list (old Coke-era rows stayed on lists as 0s, as found at DFA on 11/6). Now:
