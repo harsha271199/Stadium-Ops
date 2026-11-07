@@ -4,6 +4,17 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-07-fix-146
+- **8 Yellow Dog-only Beer Portables turned off:** 202P, 206P, 209P, 220P, 229P, 230P, 231P, 234P. They were added to the stand list on 10/10 from the Yellow Dog inventory but were never scheduled. 206P and 220P were counted once, on 10/10; the others never were. Yellow Dog numbers portables differently: its 202P is our 203P, and its 209P is our 210P.
+  - **Where:** added to `HIDDEN_INACTIVE_STANDS_2026` in the app, and the `stands` rows set to "Mountain America Stadium - Inactive". They no longer show in stand lists, the PDF upload or inventory. Nothing is deleted. Backups: `stands_backup_20261107`, `stand_sheets_backup_ydfam3_20261107`.
+  - **Real Beer Portables now:** 203P, 208P, 210P, 212P, 217P, 224P, 226P, 228P, 310P, 316P. Checked in the browser: exactly these 10 show.
+- **Data:**
+  - **210P Beer Portable:** takes Yellow Dog 209P's counts (Coors Light 185, Miller Lite 138, Topo Chico 193…).
+  - **226P Beer Portable:** takes Yellow Dog 228P's item list, keeping its own counts.
+  - **NPO stands and members for 11/7** were updated from the gameday sheet:
+    - 39 members switched back on and 20 added; nobody switched off.
+    - Backups: `npo_groups_backup_20261107`, `npo_members_backup_20261107`.
+
 ## 2026-11-07-fix-145
 - **Yellow Dog PDF: the new export's date no longer breaks stand matching.** The 11/7 football PDFs print the event and print time after each stand name ("140 Inferno Favorites 2026-11-07 17:00 2026-11-07 08:03"). The reader kept that text as part of the name, so 9 stands matched nothing (140 Inferno, 142 Inferno Burgers, 216P SunDeck Grill, 221B Fork Em BBQ, 414 Sun Devil Favorites…). It now stops at a YYYY-MM-DD date and strips it, as it already did for M/D/YYYY. Tested with both 11/7 PDFs: 60 stand sheets read, 57 matched automatically.
 - **Old-item cleanup on upload uses this season only.** "Requested / delivered / counted above 0" now looks at the last 45 days. Coke-era lines the Pepsi switch replaced (Dasani, Powerade, Smart Water, old "BIB DR PEPPER 5 GAL" / "BIB LEMONADE 2.5 GAL") are removed like Coke/Sprite, even if a stand asked for them in September. Tested: a requested Dasani row was removed; requested, delivered and counted items stayed.

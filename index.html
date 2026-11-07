@@ -4779,7 +4779,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-07-fix-145';
+const BUILD_TAG = '2026-11-07-fix-146';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -19103,7 +19103,11 @@ const STAND_NAME_ALIASES_2026 = {"226P Fan Fuel Beverage MKT": "226P Beer Portab
 // V11.9.1 — inactive locations stay in Supabase for history, but are hidden
 // from current game-day assignment/mapping pickers.
 const HIDDEN_INACTIVE_STANDS_2026 = new Set([
-  '218P Fan Faves Cart (Fryers-Corndog)'
+  '218P Fan Faves Cart (Fryers-Corndog)',
+  // 11/7: Yellow Dog-only Beer Portable names — never scheduled, never a
+  // real stand (YD "202P" = our 203P, YD "209P" = our 210P). Turned off.
+  '202P Beer Portable', '206P Beer Portable', '209P Beer Portable', '220P Beer Portable',
+  '229P Beer Portable', '230P Beer Portable', '231P Beer Portable', '234P Beer Portable'
 ]);
 function canonicalStandName2026(name){
   const s=String(name||'').trim();
