@@ -4,6 +4,17 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-08-fix-147
+- **Chat: messages no longer repeat.** On 11/7, 19 of 79 chat messages were saved more than once. One NPO lead's "Went to fan fuel on the other side…" was saved 7 times in 0.8 s, and "🙋 REQUEST · SOS" twice 1.2 s apart. There were two causes:
+  - **Repeated taps sent again:** Send checked who was on duty (about 1 s) before clearing the text box, so every extra tap sent the same text again. Now:
+    - The box clears right away, and only one send runs at a time.
+    - The same text to the same chat is ignored for 3 s.
+    - The request buttons (SOS, Comp, Complaint) allow one request per 3 s.
+    - If a send fails, or the stand is missing for a group message, the text comes back so nothing is lost.
+  - **Overlapping reloads showed rows twice:** the 5-second refresh and the reload after Send could run together, both fetch the same new rows and both add them. Now only one load runs at a time, and each message is added once, by its id.
+  - **Old duplicates:** copies already saved (same person, same text, within 5 s) show once in the thread. Nothing is deleted from the database.
+  - Tested in the browser with a fake chat: 7 taps → saved once, SOS twice → 1 request, 3 overlapping reloads → each message once, an old duplicate pair → shown once.
+
 ## 2026-11-07-fix-146
 - **8 Yellow Dog-only Beer Portables turned off:** 202P, 206P, 209P, 220P, 229P, 230P, 231P, 234P. They were added to the stand list on 10/10 from the Yellow Dog inventory but were never scheduled. 206P and 220P were counted once, on 10/10; the others never were. Yellow Dog numbers portables differently: its 202P is our 203P, and its 209P is our 210P.
   - **Where:** added to `HIDDEN_INACTIVE_STANDS_2026` in the app, and the `stands` rows set to "Mountain America Stadium - Inactive". They no longer show in stand lists, the PDF upload or inventory. Nothing is deleted. Backups: `stands_backup_20261107`, `stand_sheets_backup_ydfam3_20261107`.

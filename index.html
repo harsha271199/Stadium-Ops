@@ -4779,7 +4779,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-07-fix-146';
+const BUILD_TAG = '2026-11-08-fix-147';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -23021,6 +23021,9 @@ function chatRenderInbox() {
 const CHAT_REQUESTS = [['💵','Refund'],['😠','Customer complaint'],['🏷️','Comp / price'],['🆘','SOS']];
 async function chatRequest(kind) {
   const th = state._chatThread; if (!th) return;
+  // 11/7: "🙋 REQUEST · SOS" was saved twice 1.2 s apart — one request per 3 s.
+  if (state._chatReqAt && Date.now() - state._chatReqAt < 3000) return;
+  state._chatReqAt = Date.now();
   // 10/10: chat refunds had no customer, amount or card — and the form was separate.
   // The chat button now opens the refund form; it comes back here as a request card.
   if (kind === 'Refund') {
@@ -23175,14 +23178,24 @@ function chatRenderWho() {
   const pin = l => p.pinned && p.pinned[l] ? ' <span style="font-size:10px;color:var(--asu-maroon);font-weight:800">📌 set by Admin</span>' : '';
   el.innerHTML = (p.crew.length ? '<div>👥 Crew: ' + names('crew') + '</div>' : '') + '<div>⭐ Stand Lead: ' + names('lead') + pin('lead') + (!p.pinned.lead && p.areas.length && p.lead.length ? ' <span style="color:var(--text-3)">(' + escapeHtml(p.areas.join(', ')) + ')</span>' : '') + '</div><div>🧭 Supervisor: ' + names('sup') + pin('sup') + '</div><div>👔 Manager: ' + (p.mgr.length ? names('mgr') + pin('mgr') : '<span style="color:var(--text-3)">none assigned</span>') + '</div>';
 }
+// 11/7: the 5-second poll and the reload after Send could run at the same
+// time, both fetch the same new rows (same maxId) and both append them — the
+// thread showed messages twice. One load at a time; rows are added by id once.
 async function chatLoadThread(first) {
   const th = state._chatThread; if (!th || th.stand !== state._chatStand) return;
+  if (th._loading) { th._reload = true; return; }
+  th._loading = true;
+  try { await chatLoadThreadOnce(th, first); }
+  finally { th._loading = false; if (th._reload && th === state._chatThread) { th._reload = false; chatLoadThread(false); } }
+}
+async function chatLoadThreadOnce(th, first) {
+  th._ids = th._ids || new Set(th.rows.map(r => r.id));
   const rows = await sb('stand_chat?event_date=eq.' + stadiumDay() + '&stand=eq.' + encodeURIComponent(th.stand) + '&id=gt.' + th.maxId + '&select=id,stand,side,sender_id,sender_name,sender_role,sender_level,to_level,body,created_at,client_id&order=id.asc&limit=500').catch(()=>({_err:true}));
   if (th !== state._chatThread) return;
   if (!Array.isArray(rows)) { if (first) document.getElementById('chat-thread').innerHTML = '<div class="notice">Could not load messages — check your connection.</div>'; return; }
   if (!rows.length && !first) return;
   const hadIncoming = rows.some(r => String(r.sender_id) !== chatMe().id);
-  rows.forEach(r => { th.rows.push(r); if (r.id > th.maxId) th.maxId = r.id; th.pending = th.pending.filter(p => p.client_id !== r.client_id); });
+  rows.forEach(r => { th.pending = th.pending.filter(p => p.client_id !== r.client_id); if (th._ids.has(r.id)) return; th._ids.add(r.id); th.rows.push(r); if (r.id > th.maxId) th.maxId = r.id; });
   chatRenderThread();
   if (hadIncoming && !th._toTouched) { th.to = null; chatRenderTo(); }
   if (th.maxId) chatSetRead(th.stand, th.maxId);
@@ -23243,7 +23256,15 @@ async function chatCompleteRefund(stand, msg) {
 function chatRenderThread() {
   const th = state._chatThread, el = document.getElementById('chat-thread'); if (!th || !el) return;
   const me = chatMe(), lead = me.level === 'sup' || me.level === 'mgr';
-  const all = th.rows.concat(th.pending);
+  // Copies already saved by repeated taps before the 11/7 fix (same person,
+  // same text, within 5 s) show once. Nothing is deleted.
+  const seen = [];
+  const all = th.rows.filter(r => {
+    const t = new Date(r.created_at || 0).getTime();
+    const dup = seen.some(s => s.sid === String(r.sender_id) && s.body === r.body && Math.abs(t - s.t) < 5000);
+    seen.push({sid: String(r.sender_id), body: r.body, t}); if (seen.length > 30) seen.shift();
+    return !dup;
+  }).concat(th.pending);
   const nearBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 120);
   const tm = r => r.created_at ? new Date(r.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) + ' MST' : 'sending…';
   let prev = null;
@@ -23289,16 +23310,30 @@ async function chatSend(quick) {
   const input = document.getElementById('chat-input');
   let body = String(quick || input.value || '').trim().slice(0, 1000);
   if (!body) return;
+  // 11/7: one NPO lead's message was saved 7 times in 0.8 s. The box was only
+  // cleared after the on-duty lookups (~1 s), so every extra tap on Send sent
+  // the same text again. Clear it now, one send at a time, and ignore the same
+  // text again within 3 s.
+  const typed = quick ? null : input.value, sig = th.stand + '|' + body, now = Date.now();
+  if (state._chatSending) return;
+  if (state._chatLast && state._chatLast.sig === sig && now - state._chatLast.at < 3000) return;
+  state._chatSending = true; state._chatLast = {sig, at: now};
+  if (!quick) { input.value = ''; input.style.height = 'auto'; }
+  const restore = () => { state._chatLast = null; if (!quick && !input.value) input.value = typed; };
+  try { return await chatSendInner(th, me, input, quick, body, restore); }
+  finally { state._chatSending = false; }
+}
+async function chatSendInner(th, me, input, quick, body, restore) {
   const group = chatIsGroup(th.stand), member = group && chatIsGroupMember(th.stand);
   const groupTo = member ? (th.to === 'sup' || th.to === 'mgr' ? th.to : 'team') : 'team';
   if (member) {
     const si = document.getElementById('chat-stand'), raw = String(si && si.value || '').trim();
     const need = groupTo === 'sup';
-    if (!raw && need) { if (si) si.focus(); return toast('Which stand? Its Supervisor gets the message', 'error'); }
+    if (!raw && need) { restore(); if (si) si.focus(); return toast('Which stand? Its Supervisor gets the message', 'error'); }
     if (raw) {
     const all = await allVenueStands(), low = raw.toLowerCase();
     const hit = all.find(x => x.name.toLowerCase() === low) || all.find(x => x.name.toLowerCase().startsWith(low)) || all.find(x => x.name.toLowerCase().includes(low));
-    if (!hit) { if (si) si.focus(); return toast('Stand not found — pick it from the list', 'error'); }
+    if (!hit) { restore(); if (si) si.focus(); return toast('Stand not found — pick it from the list', 'error'); }
     if (si) si.value = hit.name;
     body = ('📍 ' + hit.name + ' — ' + body).slice(0, 1000);
     }
@@ -23323,7 +23358,7 @@ async function chatSend(quick) {
   if (r && r._err) {
     th.pending = th.pending.filter(x => x.client_id !== row.client_id);
     chatRenderThread();
-    if (!quick) input.value = body;
+    restore();
     return toast('Message not sent — check your connection and try again', 'error');
   }
   if (r && r._queued) toast('📤 No signal — message will send when WiFi returns');
