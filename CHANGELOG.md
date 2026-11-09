@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-09-fix-150
+- **Premium card in the manager Times tab now uses the Premium Managers' own exports.** It replaces the hours-based tip sheet from fix-149. The ⬇️ CSV and 🖨️ PDF are the same check-in files a Premium Manager downloads from the Premium check-in card, for the game date picked in the Times tab. Same access as before: Admin, `premium_team_access`, and `premium_timesheet_access` (Reno, 00590000), download only.
+  - Tested in the browser: Reno's CSV has the same columns as the Premium Manager CSV, and the PDF opens the same "⭐ Premium — Check-ins" page. Another manager doesn't see the card.
+- **Data:** Jorge Flores (DFA Tailgate, 11/7) marked present. His check-in time is set to 5:00 PM, when the rest of DFA Tailgate was checked in. Backup: `premium_schedule_backup_jorge_20261109`.
+
 ## 2026-11-09-fix-149
 - **⭐ Premium tip sheet in the manager Times tab.** Under the concession break sheet there is now a Premium card with **⬇️ Premium tip sheet (CSV)** and **🖨️ Premium time sheet (PDF)** for the game date picked above.
   - Grouped by location with a location total, like the concession sheet. The CSV columns are Location, Employee ID, Name, Role, Scheduled Start/End, Status, Tapped In At, Checked Out, Hours, Hours From, Walk-in.
