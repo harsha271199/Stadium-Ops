@@ -4,6 +4,23 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-09-fix-148
+- **🍾 Bottle Tracker: sell whole bottles, and move bottles between locations.**
+  - **💵 Sell:** a guest buys a whole bottle (e.g. wine in a suite). Pick where it was sold, scan the sticker, and it is recorded as **SOLD** (not empty): who sold it, where and when.
+    - A sold bottle can't be sold again or marked empty, and the message says who sold it and where.
+    - Undo works for 5 minutes, the same as Tag and Empty.
+    - 📋 Bottles shows "Sold today" per location, and the CSV has Sold / Sold by / Sold at columns.
+  - **🚚 Move:** pick "Move to" (e.g. Premium Warehouse → Suites 300), then scan each sticker. Only open bottles move, and every move is kept in the bottle's history ("From Premium Warehouse to Suites 300").
+  - **Suite Attendants can sell, with no new accounts.** On the 💵 Sell tab, a Premium Manager ticks who can sell bottles today; the list is today's Premium schedule, with Suite Attendants first.
+    - Those people sign in with **their own ID + last name** and only see 💵 Sell a bottle and 🔎 Look up. The "Sold at" choice starts on their scheduled location.
+    - Access ends at the end of the day. If a manager switches it off, the next sale is refused.
+    - Someone on the Premium schedule who isn't switched on gets "Bottle selling isn't switched on for you today — ask your Premium Manager".
+    - Stored as `app_settings` key `bottle_sell_access:YYYY-MM-DD` (employee IDs); each change is logged in the bottle history.
+  - **Database:** `liquor_bottles` status now allows `sold`; new columns `sold_at`, `sold_by`, `sold_to`. Nothing was removed or changed for existing bottles.
+- **Square 1" × 1" Dymo labels (Dymo 30332).** New size in ⚙️ Setup → Label size. A striped barcode is too thin to scan at 1", so the square label prints a **QR code** with the number under it. The scanner now reads QR as well as the old Code 39 / Code 128 labels, so old labels keep working.
+  - The QR tool is shipped with the app (`/vendor/qrcode.js`, MIT licence), so it doesn't depend on a CDN.
+- Tested in the browser against a fake database: tag → move → sell → sell again refused → empty-a-sold-bottle refused → undo sale; grant → Suite Attendant login → sell; a Bartender not granted is refused; tag and move are blocked for the attendant; revoking blocks the next sale. Printed square labels for 3000001 and 1592345 decode correctly.
+
 ## 2026-11-08-fix-147
 - **Chat: messages no longer repeat.** On 11/7, 19 of 79 chat messages were saved more than once. One NPO lead's "Went to fan fuel on the other side…" was saved 7 times in 0.8 s, and "🙋 REQUEST · SOS" twice 1.2 s apart. There were two causes:
   - **Repeated taps sent again:** Send checked who was on duty (about 1 s) before clearing the text box, so every extra tap sent the same text again. Now:

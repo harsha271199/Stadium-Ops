@@ -4779,7 +4779,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-08-fix-147';
+const BUILD_TAG = '2026-11-09-fix-148';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5723,9 +5723,28 @@ async function api(action, data) {
       }
 
 
+      // 🍾 Suite Attendants selling bottles: own ID + last name. Only works
+      // when they are on TODAY's Premium schedule AND a Premium Manager has
+      // switched bottle selling on for them today (Bottle Tracker → 💵 Sell).
+      // No separate account is created.
+      let premNoSell = false;
+      {
+        const pday = localISODate();
+        const ps = await sb('premium_schedule?event_date=eq.' + pday + '&employee_id=like.*' + encodeURIComponent(idInput) + '&select=employee_id,worker_name,role_title,location_name').catch(() => ({ _err: true }));
+        if (Array.isArray(ps) && ps.length) {
+          const g = await sb('app_settings?key=eq.' + encodeURIComponent('bottle_sell_access:' + pday) + '&select=value').catch(() => ({ _err: true }));
+          const ids = Array.isArray(g) && g[0] ? String(g[0].value || '').split(/[,\s]+/).filter(Boolean) : [];
+          const okRows = ps.filter(r => ids.includes(String(r.employee_id)));
+          if (okRows.length && secret) {
+            const pk = loginPickByName(okRows, secret, r => r.worker_name, r => r.employee_id);
+            if (pk.people === 1) { const r = pk.rows[0]; return { ok:true, isStaffSmart:true, staffAccount:{ empId:r.employee_id, name:r.worker_name, role:'premium_seller', group:'premium', sellLoc:r.location_name || '' } }; }
+          }
+          if (!okRows.length) premNoSell = true;
+        }
+      }
       const rows = await sb('schedule?employee_id=like.*' + encodeURIComponent(idInput) + '&select=*');
       if (rows._err) return { ok:false, error:'Network — try again' };
-      if (!rows.length) return { ok:false, error:"ID not found in today's schedule" };
+      if (!rows.length) return { ok:false, error: premNoSell ? "Bottle selling isn't switched on for you today — ask your Premium Manager" : "ID not found in today's schedule" };
       const letters = x => String(x||'').toLowerCase().replace(/[^a-z]/g,'');
       const entered = letters(data.lastName);
       if (!entered) return { ok:false, error:'Enter your last name' };
@@ -24889,6 +24908,17 @@ function btAllowed() {
   return isAdminSession() || isPremiumManagerSession() || (typeof premiumTeamAllowed === 'function' && premiumTeamAllowed());
 }
 function btWho() { return (state.staffAccount && state.staffAccount.name) || (state.user && state.user.name) || 'Manager'; }
+// Suite Attendant signed in with their own ID for today's bottle sales.
+function btIsSeller() { return !!(state.staffAccount && state.staffAccount.role === 'premium_seller'); }
+function btSellKey(d) { return 'bottle_sell_access:' + (d || localISODate()); }
+function btCanSell() { return btAllowed() || (btIsSeller() && !!_bt.sellOk); }
+// "was already …" text for a bottle that is no longer open.
+function btWasText(l) {
+  const when = v => v ? ' ' + new Date(v).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+  if (l.status === 'empty') return 'marked empty' + when(l.emptied_at) + (l.emptied_by ? ' by ' + l.emptied_by : '');
+  if (l.status === 'sold') return 'SOLD' + (l.sold_to ? ' at ' + l.sold_to : '') + when(l.sold_at) + (l.sold_by ? ' by ' + l.sold_by : '');
+  return 'voided';
+}
 function btUid(p) { return p + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); }
 // Pre-printed rolls + the labels this app has printed (3000001 up to the counter).
 function btAllRolls() { const r = (_bt.rolls || []).slice(); if ((_bt.labelNext || 0) > 3000001) r.push({ from: 3000001, to: _bt.labelNext - 1, color: 'Printed', roll: 'app' }); return r; }
@@ -24976,12 +25006,52 @@ async function btRun(op) {
         const last = await btReq('liquor_bottles?sticker_no=eq.' + encodeURIComponent(op.sticker) + '&order=issued_at.desc&limit=1&select=*');
         if (last && last.net) return { net: true };
         const l = Array.isArray(last) && last[0];
-        return { fail: l ? 'Sticker ' + op.sticker + ' (' + l.item_name + ') was already ' + (l.status === 'empty' ? 'marked empty' + (l.emptied_at ? ' ' + new Date(l.emptied_at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '') + (l.emptied_by ? ' by ' + l.emptied_by : '') : 'voided') : 'Sticker ' + op.sticker + ' was never tagged — tag it first or check the number' };
+        return { fail: l ? 'Sticker ' + op.sticker + ' (' + l.item_name + ') was already ' + btWasText(l) : 'Sticker ' + op.sticker + ' was never tagged — tag it first or check the number' };
       }
     }
     const lg = await btLog({ bottle_id: row.id, sticker_no: row.sticker_no, action: 'empty', item_name: row.item_name, location: row.location, who: op.who, client_uuid: op.uuid + '-ev' });
     if (lg && lg.net) return { net: true, row };
     return { ok: true, row };
+  }
+  if (op.k === 'sold') {
+    // Whole bottle sold to a guest (e.g. wine in a suite). Retry-safe like Empty.
+    const done = await btReq('liquor_bottles?empty_uuid=eq.' + encodeURIComponent(op.uuid) + '&select=*');
+    if (done && done.net) return { net: true };
+    let row = Array.isArray(done) && done[0];
+    if (!row) {
+      const r = await btReq('liquor_bottles?sticker_no=eq.' + encodeURIComponent(op.sticker) + '&status=eq.open', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'sold', sold_at: op.at, sold_by: op.who, sold_to: op.loc, empty_uuid: op.uuid, updated_at: new Date().toISOString() }) });
+      if (r && r.net) return { net: true };
+      row = Array.isArray(r) && r[0];
+      if (!row) {
+        const last = await btReq('liquor_bottles?sticker_no=eq.' + encodeURIComponent(op.sticker) + '&order=issued_at.desc&limit=1&select=*');
+        if (last && last.net) return { net: true };
+        const l = Array.isArray(last) && last[0];
+        return { fail: l ? 'Sticker ' + op.sticker + ' (' + l.item_name + ') was already ' + btWasText(l) : 'Sticker ' + op.sticker + ' was never tagged — a manager has to tag the bottle first' };
+      }
+    }
+    const lg = await btLog({ bottle_id: row.id, sticker_no: row.sticker_no, action: 'sold', item_name: row.item_name, location: op.loc, who: op.who, note: row.location && row.location !== op.loc ? 'Bottle was at ' + row.location : '', client_uuid: op.uuid + '-ev' });
+    if (lg && lg.net) return { net: true, row };
+    return { ok: true, row };
+  }
+  if (op.k === 'move') {
+    // Open bottle moves to another location (e.g. Premium Warehouse → Suites 300).
+    const cur = await btReq('liquor_bottles?sticker_no=eq.' + encodeURIComponent(op.sticker) + '&status=eq.open&select=*');
+    if (cur && cur.net) return { net: true };
+    const b = Array.isArray(cur) && cur[0];
+    if (!b) {
+      const last = await btReq('liquor_bottles?sticker_no=eq.' + encodeURIComponent(op.sticker) + '&order=issued_at.desc&limit=1&select=*');
+      if (last && last.net) return { net: true };
+      const l = Array.isArray(last) && last[0];
+      return { fail: l ? 'Sticker ' + op.sticker + ' (' + l.item_name + ') was already ' + btWasText(l) + ' — only open bottles can move' : 'Sticker ' + op.sticker + ' was never tagged — tag it first' };
+    }
+    if (b.location === op.to) return { ok: true, row: b, already: true };
+    const r = await btReq('liquor_bottles?id=eq.' + b.id + '&status=eq.open&location=eq.' + encodeURIComponent(b.location), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ location: op.to, updated_at: new Date().toISOString() }) });
+    if (r && r.net) return { net: true };
+    const row = Array.isArray(r) && r[0];
+    if (!row) return { fail: 'Sticker ' + op.sticker + ' changed while moving — scan it again' };
+    const lg = await btLog({ bottle_id: row.id, sticker_no: row.sticker_no, action: 'move', item_name: row.item_name, location: op.to, who: op.who, note: 'From ' + b.location + ' to ' + op.to, client_uuid: op.uuid + '-ev' });
+    if (lg && lg.net) return { net: true, row };
+    return { ok: true, row, from: b.location };
   }
   return { fail: 'Unknown action' };
 }
@@ -25057,7 +25127,7 @@ async function btLoadBasics() {
   _bt.offline = !!(items && items.net);
 }
 async function openLiquorBottles(tab) {
-  if (!btAllowed()) return toast('Bottle Tracker is for Premium managers', 'error');
+  if (!btAllowed() && !btIsSeller()) return toast('Bottle Tracker is for Premium managers', 'error');
   setTimeout(btWarmPaddle, 1200);
   const old = document.getElementById('bt-overlay'); if (old) old.remove();
   const el = document.createElement('div');
@@ -25066,13 +25136,14 @@ async function openLiquorBottles(tab) {
   el.innerHTML = '<div style="max-width:560px;margin:0 auto;padding:12px 14px 40px">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px"><div style="font-size:19px;font-weight:900">🍾 Bottle Tracker</div><button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 14px" onclick="closeLiquorBottles()">Close</button></div>' +
     '<div id="bt-outbox"></div>' +
-    '<div style="display:flex;gap:6px;margin-bottom:12px" id="bt-tabs">' +
-      ['tag:🏷️ Tag', 'empty:🍾 Empty', 'list:📋 Bottles', 'look:🔎 Look up', 'setup:⚙️ Setup'].map(x => { const [k, l] = x.split(':'); return '<button class="chip" data-bt-tab="' + k + '" onclick="btTab(\'' + k + '\')" style="flex:1;padding:10px 1px;font-size:11px;font-weight:800">' + l + '</button>'; }).join('') +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" id="bt-tabs">' +
+      (btIsSeller() ? ['sell:💵 Sell a bottle', 'look:🔎 Look up'] : ['tag:🏷️ Tag', 'move:🚚 Move', 'sell:💵 Sell', 'empty:🍾 Empty', 'list:📋 Bottles', 'look:🔎 Look up', 'setup:⚙️ Setup']).map(x => { const [k, l] = x.split(':'); return '<button class="chip" data-bt-tab="' + k + '" onclick="btTab(\'' + k + '\')" style="flex:1 1 22%;padding:10px 1px;font-size:11px;font-weight:800">' + l + '</button>'; }).join('') +
     '</div><div id="bt-body"><div class="loading"><div class="spinner"></div>Loading…</div></div></div>';
   document.body.appendChild(el);
   btRenderOutbox();
   await btLoadBasics();
-  btTab(tab || _bt.tab || 'tag');
+  if (btIsSeller()) { await btLoadSellAccess(); _bt.sellLoc = _bt.sellLoc || (state.staffAccount && state.staffAccount.sellLoc) || ''; }
+  btTab(btIsSeller() ? (tab === 'look' ? 'look' : 'sell') : (tab || _bt.tab || 'tag'));
   btFlushOutbox();
 }
 function closeLiquorBottles() { btStopScan(); const el = document.getElementById('bt-overlay'); if (el) el.remove(); }
@@ -25081,7 +25152,8 @@ function btTab(t) {
   document.querySelectorAll('#bt-tabs [data-bt-tab]').forEach(b => b.classList.toggle('selected', b.dataset.btTab === t));
   const body = document.getElementById('bt-body'); if (!body) return;
   if (_bt.tableMissing) { body.innerHTML = '<div class="notice" style="color:#DC2626">The liquor_bottles table is not set up yet — ask Admin.</div>'; return; }
-  if (t === 'tag') btRenderTag(); else if (t === 'empty') btRenderEmpty(); else if (t === 'look') btRenderLook(); else if (t === 'setup') btRenderSetup(); else btRenderList();
+  if (btIsSeller() && t !== 'sell' && t !== 'look') t = 'sell';
+  if (t === 'tag') btRenderTag(); else if (t === 'move') btRenderMove(); else if (t === 'sell') btRenderSell(); else if (t === 'empty') btRenderEmpty(); else if (t === 'look') btRenderLook(); else if (t === 'setup') btRenderSetup(); else btRenderList();
 }
 function btNumberBox(action, label) {
   // Tag: rolls that are switched on. Empty / Look up: every roll (old bottles still come back).
@@ -25122,11 +25194,11 @@ function btRenderTag() {
 function btRenderSession() {
   const el = document.getElementById('bt-session'); if (!el) return;
   // Each tab lists only its own work: Tag shows tags, Empty shows empties.
-  const kind = _bt.tab === 'empty' ? 'empty' : 'tag', list = _bt.session.filter(r => r.kind === kind);
+  const kind = _bt.tab === 'sell' ? 'sold' : ['empty', 'move'].includes(_bt.tab) ? _bt.tab : 'tag', list = _bt.session.filter(r => r.kind === kind);
   if (!list.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div style="font-size:12px;font-weight:800;margin-bottom:4px">' + (kind === 'empty' ? 'Marked empty' : 'Tagged') + ' on this phone (' + list.length + ')</div>' +
-    list.slice(0, 40).map(r => '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12px"><span>' + (r.kind === 'empty' ? '🍾' : '🏷️') + ' <b>' + escapeHtml(r.sticker_no) + '</b> · ' + escapeHtml(r.item_name || '…') + '<br><span style="color:var(--text-2)">' + escapeHtml(r.location || '') + (r.pending ? ' · ⏳ waiting for signal' : '') + '</span></span>' +
-      (r.id && !r.undone && Date.now() - r.t < BT_UNDO_MS ? '<button class="btn btn-ghost" style="width:auto;margin:0;padding:4px 10px;font-size:11px" onclick="btUndo(' + r.id + ',\'' + r.kind + '\')">Undo</button>' : (r.undone ? '<span style="font-size:11px;color:var(--text-3)">undone</span>' : '')) + '</div>').join('');
+  el.innerHTML = '<div style="font-size:12px;font-weight:800;margin-bottom:4px">' + ({ empty: 'Marked empty', sold: 'Sold', move: 'Moved', tag: 'Tagged' })[kind] + ' on this phone (' + list.length + ')</div>' +
+    list.slice(0, 40).map(r => '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12px"><span>' + ({ empty: '🍾', sold: '💵', move: '🚚', tag: '🏷️' })[r.kind] + ' <b>' + escapeHtml(r.sticker_no) + '</b> · ' + escapeHtml(r.item_name || '…') + '<br><span style="color:var(--text-2)">' + escapeHtml(r.location || '') + (r.pending ? ' · ⏳ waiting for signal' : '') + '</span></span>' +
+      (r.id && r.kind !== 'move' && !r.undone && Date.now() - r.t < BT_UNDO_MS ? '<button class="btn btn-ghost" style="width:auto;margin:0;padding:4px 10px;font-size:11px" onclick="btUndo(' + r.id + ',\'' + r.kind + '\')">Undo</button>' : (r.undone ? '<span style="font-size:11px;color:var(--text-3)">undone</span>' : '')) + '</div>').join('');
 }
 function btMsg(html, color) { const m = document.getElementById('bt-msg'); if (m) m.innerHTML = '<div style="padding:10px 12px;border-radius:10px;font-size:13px;font-weight:700;background:' + (color === 'red' ? 'rgba(220,38,38,.1);color:#B91C1C' : color === 'amber' ? 'rgba(245,158,11,.12);color:#92400E' : 'rgba(22,163,74,.12);color:#166534') + '">' + html + '</div>'; }
 // Typed number -> ONE sticker number (old rolls allow the last 3-4 digits).
@@ -25180,6 +25252,99 @@ async function btSaveTag(code, opt) {
   btMsg(escapeHtml(txt), res.net ? 'amber' : 'green'); btBeep(true);
   return { ok: true, text: txt };
 }
+// 🚚 Move open bottles between locations (Premium Warehouse → a suite, bar…).
+function btRenderMove() {
+  document.getElementById('bt-body').innerHTML = '<div class="notice info" style="font-size:12px;margin-bottom:10px">Moving bottles? Pick where they are going, then scan each sticker. Every move is kept in the bottle\'s history.</div>' +
+    '<label class="form-label" style="margin-top:0">Move to</label><select class="form-input" id="bt-move-to" onchange="_bt.moveTo=this.value"><option value="">Pick location…</option>' +
+      btAllLocs().map(l => '<option' + (l === _bt.moveTo ? ' selected' : '') + '>' + escapeHtml(l) + '</option>').join('') + '</select>' +
+    btNumberBox('btMoveBottle', 'Move') + '<div id="bt-session" style="margin-top:14px"></div>';
+  btRenderSession();
+}
+// Premium Warehouse is a real place bottles sit, so it is a Move/Sell choice too.
+function btAllLocs() { return [...new Set(['Premium Warehouse'].concat(_bt.locs || []))]; }
+async function btMoveBottle(code) {
+  if (!btAllowed()) return { fail: 'Not allowed' };
+  const to = (document.getElementById('bt-move-to') || {}).value || _bt.moveTo;
+  if (!to) { btMsg('Pick where the bottle is going first', 'red'); btBeep(false); return { fail: 'Pick where the bottle is going first' }; }
+  const no = typeof code === 'string' ? btCleanCode(code) : btResolve('btMoveBottle'); if (!no) return { fail: '' };
+  const bad = btBadNo(no); if (bad) { btMsg('⚠️ ' + escapeHtml(bad), 'red'); btBeep(false); return { fail: bad, invalid: true }; }
+  _bt.moveTo = to;
+  const op = { id: btUid('btm'), k: 'move', uuid: '', sticker: no, to, who: btWho(), at: new Date().toISOString() }; op.uuid = op.id;
+  const res = await btSubmit(op);
+  const inp = document.getElementById('bt-no'); if (inp) inp.value = '';
+  if (res.fail) { btMsg('⚠️ ' + escapeHtml(res.fail), 'red'); btBeep(false); return res; }
+  const b = res.row || {};
+  _bt.session.unshift({ kind: 'move', id: b.id, sticker_no: no, item_name: b.item_name, location: (res.from ? res.from + ' → ' : '') + to, t: Date.now(), pending: !!res.net });
+  btRenderSession();
+  const txt = res.net ? '⏳ Saved on phone — ' + no + ' will move to ' + to + ' when signal returns' : res.already ? 'ℹ️ ' + no + ' · ' + (b.item_name || '') + ' is already at ' + to : '✅ ' + no + ' · ' + (b.item_name || '') + ' moved ' + (res.from ? res.from + ' → ' : 'to ') + to;
+  btMsg(escapeHtml(txt), res.net || res.already ? 'amber' : 'green'); btBeep(true);
+  return { ok: true, text: txt };
+}
+// 💵 Sell a whole bottle (e.g. wine to a suite). Managers, plus Suite
+// Attendants a manager switched on for today.
+async function btLoadSellAccess() {
+  const g = await btReq('app_settings?key=eq.' + encodeURIComponent(btSellKey()) + '&select=value');
+  _bt.sellIds = Array.isArray(g) && g[0] ? String(g[0].value || '').split(/[,\s]+/).filter(Boolean) : [];
+  const me = String((state.staffAccount && state.staffAccount.empId) || '');
+  _bt.sellOk = btIsSeller() ? (Array.isArray(g) ? _bt.sellIds.includes(me) : !!_bt.sellOk) : true;
+}
+function btRenderSell() {
+  const body = document.getElementById('bt-body');
+  const mine = btIsSeller();
+  if (mine && !_bt.sellOk) { body.innerHTML = '<div class="notice" style="color:#B91C1C;font-weight:700">Bottle selling is not switched on for you today. Ask your Premium Manager to turn it on in Bottle Tracker → 💵 Sell.</div>'; return; }
+  body.innerHTML = (mine ? '' : '<div id="bt-sellers" style="margin-bottom:12px"></div>') +
+    '<div class="notice info" style="font-size:12px;margin-bottom:10px">Guest bought a whole bottle? Pick where it was sold, then scan the bottle\'s sticker. It is recorded as SOLD (not empty).</div>' +
+    '<label class="form-label" style="margin-top:0">Sold at</label><select class="form-input" id="bt-sell-loc" onchange="_bt.sellLoc=this.value"><option value="">Pick location…</option>' +
+      [...new Set((_bt.sellLoc ? [_bt.sellLoc] : []).concat(btAllLocs()))].map(l => '<option' + (l === _bt.sellLoc ? ' selected' : '') + '>' + escapeHtml(l) + '</option>').join('') + '</select>' +
+    btNumberBox('btMarkSold', 'Sold') + '<div id="bt-session" style="margin-top:14px"></div>';
+  btRenderSession();
+  if (!mine) btRenderSellers();
+}
+async function btMarkSold(code) {
+  if (!btCanSell()) return { fail: 'Bottle selling is not switched on for you today' };
+  const loc = (document.getElementById('bt-sell-loc') || {}).value || _bt.sellLoc;
+  if (!loc) { btMsg('Pick where the bottle was sold first', 'red'); btBeep(false); return { fail: 'Pick where the bottle was sold first' }; }
+  const no = typeof code === 'string' ? btCleanCode(code) : btResolve('btMarkSold'); if (!no) return { fail: '' };
+  const bad = btBadNo(no); if (bad) { btMsg('⚠️ ' + escapeHtml(bad), 'red'); btBeep(false); return { fail: bad, invalid: true }; }
+  if (_bt.session.some(r => r.kind === 'sold' && r.sticker_no === no && !r.undone)) { const m = no + ' was just sold on this phone'; btMsg(m, 'amber'); return { dup: true, fail: m }; }
+  _bt.sellLoc = loc;
+  const op = { id: btUid('bts'), k: 'sold', uuid: '', sticker: no, loc, who: btWho(), at: new Date().toISOString() }; op.uuid = op.id;
+  const res = await btSubmit(op);
+  const inp = document.getElementById('bt-no'); if (inp) inp.value = '';
+  if (res.fail) { btMsg('⚠️ ' + escapeHtml(res.fail), 'red'); btBeep(false); return res; }
+  const b = res.row || {};
+  _bt.session.unshift({ kind: 'sold', id: b.id, sticker_no: no, item_name: b.item_name, location: loc, t: Date.now(), pending: !!res.net });
+  btRenderSession();
+  const txt = res.net ? '⏳ Saved on phone — ' + no + ' will be marked SOLD when signal returns' : '✅ ' + no + ' · ' + (b.item_name || '') + ' SOLD at ' + loc;
+  btMsg(escapeHtml(txt), res.net ? 'amber' : 'green'); btBeep(true);
+  return { ok: true, text: txt };
+}
+// Manager: who may sell bottles today (today's Premium schedule, Suite
+// Attendants first). They sign in with their own ID + last name.
+async function btRenderSellers() {
+  const el = document.getElementById('bt-sellers'); if (!el || !btAllowed()) return;
+  el.innerHTML = '<div class="card" style="padding:12px"><div style="font-weight:900">👥 Who can sell bottles today</div><div class="loading"><div class="spinner"></div></div></div>';
+  const [ps] = await Promise.all([btReq('premium_schedule?event_date=eq.' + localISODate() + '&order=worker_name.asc&select=employee_id,worker_name,role_title,location_name'), btLoadSellAccess()]);
+  if (!Array.isArray(ps)) { el.innerHTML = '<div class="notice" style="color:#DC2626">Could not load today\'s Premium schedule</div>'; return; }
+  const seen = new Set(), rows = ps.filter(r => r.employee_id && !seen.has(String(r.employee_id)) && seen.add(String(r.employee_id)));
+  rows.sort((a, b) => (/suite attendant/i.test(b.role_title) - /suite attendant/i.test(a.role_title)) || String(a.worker_name).localeCompare(String(b.worker_name)));
+  const on = new Set(_bt.sellIds || []);
+  const open = _bt.sellersOpen || on.size === 0;
+  el.innerHTML = '<details class="card" style="padding:12px"' + (open ? ' open' : '') + ' ontoggle="_bt.sellersOpen=this.open"><summary style="font-weight:900;cursor:pointer">👥 Who can sell bottles today · ' + on.size + ' on</summary>' +
+    '<div style="font-size:12px;color:var(--text-2);margin:6px 0">Switched-on people sign in with <b>their own ID + last name</b> and only see 💵 Sell a bottle. It ends at the end of today.</div>' +
+    (rows.length ? rows.map(r => '<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:13px"><input type="checkbox" style="width:22px;height:22px" ' + (on.has(String(r.employee_id)) ? 'checked ' : '') + 'onchange="btToggleSeller(\'' + escapeHtml(String(r.employee_id)) + '\',this.checked,this)"><span><b>' + escapeHtml(r.worker_name || '') + '</b><br><span style="color:var(--text-2);font-size:11px">' + escapeHtml([r.role_title, r.location_name].filter(Boolean).join(' · ')) + '</span></span></label>').join('') : '<div style="font-size:12px;color:var(--text-2)">Nobody is on today\'s Premium schedule yet.</div>') + '</details>';
+}
+async function btToggleSeller(empId, on, box) {
+  if (!btAllowed()) return;
+  await btLoadSellAccess();
+  const ids = new Set(_bt.sellIds || []); if (on) ids.add(empId); else ids.delete(empId);
+  const r = await btSetting(btSellKey(), [...ids].join(','));
+  if (r && r._err) { if (box) box.checked = !on; return toast(r.net ? 'No signal — not saved' : 'Could not save', 'error'); }
+  _bt.sellIds = [...ids];
+  btLog({ sticker_no: '-', action: 'sell_access', note: (on ? 'Selling ON for ' : 'Selling OFF for ') + empId + ' (' + localISODate() + ')', client_uuid: btUid('bta') });
+  toast(on ? '✅ Can sell bottles today' : 'Selling switched off');
+  const sum = document.querySelector('#bt-sellers summary'); if (sum) sum.textContent = '👥 Who can sell bottles today · ' + ids.size + ' on';
+}
 function btRenderEmpty() {
   document.getElementById('bt-body').innerHTML = '<div class="notice info" style="font-size:12px;margin-bottom:10px">Empty bottles came back? Scan each sticker, then peel it off. Each beep is saved.</div>' + btNumberBox('btMarkEmpty', 'Empty') + '<div id="bt-session" style="margin-top:14px"></div>';
   btRenderSession();
@@ -25229,12 +25394,15 @@ async function btUndo(id, kind) {
   if (!rec || Date.now() - rec.t > BT_UNDO_MS) return toast('Undo is only for 5 minutes — use Void in Bottles', 'error');
   const what = kind === 'tag' && !rec.paper ? 'Undo the tag on ' + rec.sticker_no + ' (' + (rec.item_name || '') + ' → ' + (rec.location || '') + ')? The bottle will not be counted as out.'
     : rec.paper ? 'Undo recording ' + rec.sticker_no + ' as emptied?'
+    : kind === 'sold' ? 'Undo SOLD on ' + rec.sticker_no + ' (' + (rec.item_name || '') + ')? The bottle goes back to OPEN.'
     : 'Undo EMPTY on ' + rec.sticker_no + ' (' + (rec.item_name || '') + ')? The bottle goes back to OPEN at ' + (rec.location || 'its location') + '.';
   if (!(await confirmAction(what, { title: 'Undo ' + rec.sticker_no + '?', confirmLabel: 'Yes, undo', cancelLabel: 'No, keep it' }))) return;
-  const body = kind === 'tag' || rec.paper ? { status: 'void', void_reason: (rec.paper ? 'Undo right after recording a paper-list empty — ' : 'Undo right after tagging — ') + btWho(), updated_at: new Date().toISOString() } : { status: 'open', emptied_at: null, emptied_by: null, empty_uuid: null, updated_at: new Date().toISOString() };
-  const r = await btReq('liquor_bottles?id=eq.' + id + '&status=eq.' + (kind === 'tag' ? 'open' : 'empty'), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(body) });
+  const body = kind === 'tag' || rec.paper ? { status: 'void', void_reason: (rec.paper ? 'Undo right after recording a paper-list empty — ' : 'Undo right after tagging — ') + btWho(), updated_at: new Date().toISOString() }
+    : kind === 'sold' ? { status: 'open', sold_at: null, sold_by: null, sold_to: null, empty_uuid: null, updated_at: new Date().toISOString() }
+    : { status: 'open', emptied_at: null, emptied_by: null, empty_uuid: null, updated_at: new Date().toISOString() };
+  const r = await btReq('liquor_bottles?id=eq.' + id + '&status=eq.' + (kind === 'tag' ? 'open' : kind === 'sold' ? 'sold' : 'empty'), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(body) });
   if (!Array.isArray(r) || !r.length) return toast(r && r.net ? 'No signal — try Undo again' : 'Could not undo — it changed already', 'error');
-  await btLog({ bottle_id: id, sticker_no: rec.sticker_no, action: kind === 'tag' ? 'undo_tag' : 'undo_empty', item_name: rec.item_name, location: rec.location, client_uuid: btUid('btu') });
+  await btLog({ bottle_id: id, sticker_no: rec.sticker_no, action: kind === 'tag' ? 'undo_tag' : kind === 'sold' ? 'undo_sold' : 'undo_empty', item_name: rec.item_name, location: rec.location, client_uuid: btUid('btu') });
   rec.undone = true; btRenderSession(); toast('↩️ Undone');
 }
 async function btSetting(key, value) {
@@ -25272,7 +25440,7 @@ function btRenderSetup() {
     '<div class="card" style="padding:12px"><div style="font-weight:900;font-size:15px">② 🖨️ Dymo barcode labels — same numbers as your stickers</div>' +
     '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Each Dymo label = a barcode + the <b>same number</b> as a sticker from your rolls. Stick it on the bottle <b>next to the sticker with that number</b> — from then on just scan it.</div>' +
     '<label class="form-label" style="margin-top:0">Label size</label><select class="form-input" id="bt-lab-size" onchange="try{localStorage.setItem(\'bt_label_size\',this.value)}catch(e){}">' +
-      [['2.125x1', 'Dymo 30336 — 1" × 2-1/8" (small, multi-purpose)'], ['2.25x1.25', 'Dymo 30334 — 2-1/4" × 1-1/4"'], ['3.5x1.125', 'Dymo 30252 — 1-1/8" × 3-1/2" (address)']].map(([v, l]) => '<option value="' + v + '"' + (v === btSavedLabelSize() ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
+      [['2.125x1', 'Dymo 30336 — 1" × 2-1/8" (small, multi-purpose)'], ['2.25x1.25', 'Dymo 30334 — 2-1/4" × 1-1/4"'], ['3.5x1.125', 'Dymo 30252 — 1-1/8" × 3-1/2" (address)'], ['1x1', 'Dymo 30332 — 1" × 1" square (QR code, smallest)']].map(([v, l]) => '<option value="' + v + '"' + (v === btSavedLabelSize() ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
     '<label class="form-label">Which numbers?</label>' +
     '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><span id="bt-lr-chips">' + btTapeRolls().filter(btRollActive).map((r, i) => '<button class="chip' + ((_bt.lblRoll ? _bt.lblRoll === r.color : i === 0) ? ' selected' : '') + '" style="padding:6px 12px;font-weight:800;border-color:' + btRollCss(r.color) + '" onclick="_bt.lblRoll=\'' + escapeHtml(r.color).replace(/'/g, '') + '\';document.querySelectorAll(\'#bt-lr-chips .chip\').forEach(b=>b.classList.toggle(\'selected\',b===this))">' + escapeHtml(btRollLabel(r)) + '</button>').join(' ') + '</span>' +
       '<input class="form-input" id="bt-lab-n" type="number" min="1" max="200" value="24" style="width:70px;margin:0">' +
@@ -25402,6 +25570,18 @@ function btCatDownload() {
 // 7/7 in tests, tilted/blurred/small) with the number printed under it.
 function btLabelHtml(nums, size, sub) {
   const [w, h] = String(size || '2.125x1').split('x').map(Number);
+  // Square label: a striped barcode is too thin to scan at 1", so print a QR
+  // code (the scanner reads QR as well as the old Code 39 / Code 128 labels).
+  if (Math.abs(w - h) < 0.01) {
+    const q = Math.round(h * 0.72 * 100) / 100;
+    const cssq = '@page{size:' + w + 'in ' + h + 'in;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{margin:0;padding:0;background:#fff}' +
+      '.lab{width:' + w + 'in;height:' + h + 'in;padding:0.04in;display:flex;flex-direction:column;align-items:center;justify-content:center;page-break-after:always;overflow:hidden;font-family:Arial,Helvetica,sans-serif}' +
+      '.qr{width:' + q + 'in;height:' + q + 'in}.qr svg{width:100%;height:100%;display:block}.n{font-size:' + Math.max(8, Math.round(h * 10)) + 'pt;font-weight:900;letter-spacing:1px;line-height:1;margin-top:0.03in}';
+    return '<!doctype html><html><head><meta charset="utf-8"><title>Bottle labels ' + nums[0] + '–' + nums[nums.length - 1] + '</title><style>' + cssq + '</style></head><body>' +
+      nums.map(n => '<div class="lab"><div class="qr" data-v="' + n + '"></div><div class="n">' + n + '</div></div>').join('') +
+      '<script>function go(){try{document.querySelectorAll(".qr").forEach(function(d){var c=qrcode(1,"M");c.addData(d.getAttribute("data-v"));c.make();d.innerHTML=c.createSvgTag({cellSize:4,margin:0}).replace(/ width="[^"]*"/,"").replace(/ height="[^"]*"/,"");});}catch(e){document.body.insertAdjacentHTML("afterbegin","<p style=\\"font:14px Arial;color:#b91c1c\\">QR tool did not load — check signal and try again.</p>");return;}setTimeout(function(){window.print();},300);}<\/script>' +
+      '<script src="' + location.origin + '/vendor/qrcode.js" onload="go()" onerror="go()"><\/script></body></html>';
+  }
   const css = '@page{size:' + w + 'in ' + h + 'in;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{margin:0;padding:0;background:#fff}' +
     '.lab{width:' + w + 'in;height:' + h + 'in;padding:0.06in 0.1in;display:flex;flex-direction:column;align-items:center;justify-content:center;page-break-after:always;overflow:hidden;font-family:Arial,Helvetica,sans-serif}' +
     '.lab svg{width:100%;height:' + (h * 0.58) + 'in}.n{font-size:' + Math.max(11, Math.round(h * 17)) + 'pt;font-weight:900;letter-spacing:2px;line-height:1}.t{font-size:6pt;color:#333;margin-top:1px}';
@@ -25505,23 +25685,26 @@ async function btRenderList() {
   const body = document.getElementById('bt-body');
   body.innerHTML = '<div class="loading"><div class="spinner"></div>Loading bottles…</div>';
   const today = localISODate();
-  const [open, emptied] = await Promise.all([
+  const t0 = encodeURIComponent(new Date(today + 'T00:00:00').toISOString());
+  const [open, emptied, sold] = await Promise.all([
     btReq('liquor_bottles?status=eq.open&order=location.asc,item_name.asc,sticker_no.asc&limit=5000&select=*'),
-    btReq('liquor_bottles?status=eq.empty&emptied_at=gte.' + encodeURIComponent(new Date(today + 'T00:00:00').toISOString()) + '&limit=5000&select=*')
+    btReq('liquor_bottles?status=eq.empty&emptied_at=gte.' + t0 + '&limit=5000&select=*'),
+    btReq('liquor_bottles?status=eq.sold&sold_at=gte.' + t0 + '&limit=5000&select=*')
   ]);
-  if (!Array.isArray(open) || !Array.isArray(emptied)) { body.innerHTML = '<div class="notice" style="color:#DC2626">Could not load — check signal and try again</div>'; return; }
+  if (!Array.isArray(open) || !Array.isArray(emptied) || !Array.isArray(sold)) { body.innerHTML = '<div class="notice" style="color:#DC2626">Could not load — check signal and try again</div>'; return; }
   _bt.listOpen = open;
-  const locs = [...new Set(open.map(r => r.location).concat(emptied.map(r => r.location)))].sort();
+  sold.forEach(r => { r.location = r.sold_to || r.location; });
+  const locs = [...new Set(open.map(r => r.location).concat(emptied.map(r => r.location), sold.map(r => r.location)))].sort();
   const old = open.filter(r => r.event_date && r.event_date < today);
-  let h = '<div style="display:flex;gap:8px;margin-bottom:10px"><div class="status-summary-card" style="flex:1"><div class="n">' + open.length + '</div><div class="t">Open bottles</div></div><div class="status-summary-card" style="flex:1"><div class="n">' + emptied.length + '</div><div class="t">Emptied today</div></div><div class="status-summary-card" style="flex:1"><div class="n" style="color:' + (old.length ? '#B45309' : 'inherit') + '">' + old.length + '</div><div class="t">Open from earlier events</div></div></div>' +
+  let h = '<div style="display:flex;gap:8px;margin-bottom:10px"><div class="status-summary-card" style="flex:1"><div class="n">' + open.length + '</div><div class="t">Open bottles</div></div><div class="status-summary-card" style="flex:1"><div class="n">' + emptied.length + '</div><div class="t">Emptied today</div></div><div class="status-summary-card" style="flex:1"><div class="n">' + sold.length + '</div><div class="t">Sold today</div></div><div class="status-summary-card" style="flex:1"><div class="n" style="color:' + (old.length ? '#B45309' : 'inherit') + '">' + old.length + '</div><div class="t">Open from earlier events</div></div></div>' +
     '<button class="btn btn-ghost" style="margin:0 0 10px" onclick="btExportCSV()">⬇️ Download (CSV)</button>';
   if (!locs.length) h += '<div class="empty" style="padding:20px"><p style="color:var(--text-2)">No bottles tagged yet.</p></div>';
   locs.forEach(loc => {
-    const o = open.filter(r => r.location === loc), e = emptied.filter(r => r.location === loc);
-    const items = [...new Set(o.map(r => r.item_name).concat(e.map(r => r.item_name)))].sort();
-    h += '<details open style="border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:8px"><summary style="font-weight:800;cursor:pointer">' + escapeHtml(loc) + ' · ' + o.length + ' open · ' + e.length + ' emptied today</summary>' +
-      items.map(it => { const oo = o.filter(r => r.item_name === it), ee = e.filter(r => r.item_name === it);
-        return '<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + escapeHtml(it) + '</b><span>' + oo.length + ' open · ' + ee.length + ' empty</span></div>' +
+    const o = open.filter(r => r.location === loc), e = emptied.filter(r => r.location === loc), so = sold.filter(r => r.location === loc);
+    const items = [...new Set(o.map(r => r.item_name).concat(e.map(r => r.item_name), so.map(r => r.item_name)))].sort();
+    h += '<details open style="border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:8px"><summary style="font-weight:800;cursor:pointer">' + escapeHtml(loc) + ' · ' + o.length + ' open · ' + e.length + ' emptied · ' + so.length + ' sold today</summary>' +
+      items.map(it => { const oo = o.filter(r => r.item_name === it), ee = e.filter(r => r.item_name === it), ss = so.filter(r => r.item_name === it);
+        return '<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + escapeHtml(it) + '</b><span>' + oo.length + ' open · ' + ee.length + ' empty' + (ss.length ? ' · ' + ss.length + ' sold' : '') + '</span></div>' +
           (oo.length ? '<div style="color:var(--text-2);margin-top:3px;line-height:1.8">' + oo.map(r => '<span style="display:inline-block;margin-right:8px;' + (r.event_date && r.event_date < today ? 'color:#B45309;font-weight:700' : '') + '">' + escapeHtml(r.sticker_no) + ' <a href="#" onclick="btVoid(' + r.id + ');return false" style="color:var(--text-3);font-size:10px">void</a></span>').join('') + '</div>' : '') + '</div>'; }).join('') + '</details>';
   });
   if (old.length) h += '<div style="font-size:11px;color:#B45309;margin-top:4px">Orange numbers are still open from an earlier event — find the bottle, or void it with the reason if it is gone.</div>';
@@ -25547,7 +25730,7 @@ async function btLookup(code) {
   const el = document.getElementById('bt-look'); if (el) el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   const ev = await btReq('liquor_bottle_events?sticker_no=eq.' + encodeURIComponent(no) + '&order=at.asc&select=*');
   if (!Array.isArray(ev)) { if (el) el.innerHTML = '<div class="notice" style="color:#DC2626">Could not load — check signal</div>'; return { fail: 'load' }; }
-  const lbl = { tag: '🏷️ Tagged', empty: '🍾 Emptied', undo_tag: '↩️ Tag undone', undo_empty: '↩️ Empty undone', void: '🚫 Voided', rejected_tag: '⚠️ Tag rejected', rejected_empty: '⚠️ Empty rejected', camera_read_confirmed: '📷 Number read by camera — confirmed', old_labels_printed: '🖨️ Barcode label printed for old sticker', restored: '♻️ Restored to open', rolls_changed: '🎞️ Sticker rolls changed', labels_printed: '🖨️ Labels printed' };
+  const lbl = { sold: '💵 Sold', move: '🚚 Moved', undo_sold: '↩️ Sale undone', rejected_sold: '⚠️ Sale rejected', rejected_move: '⚠️ Move rejected', tag: '🏷️ Tagged', empty: '🍾 Emptied', undo_tag: '↩️ Tag undone', undo_empty: '↩️ Empty undone', void: '🚫 Voided', rejected_tag: '⚠️ Tag rejected', rejected_empty: '⚠️ Empty rejected', camera_read_confirmed: '📷 Number read by camera — confirmed', old_labels_printed: '🖨️ Barcode label printed for old sticker', restored: '♻️ Restored to open', rolls_changed: '🎞️ Sticker rolls changed', labels_printed: '🖨️ Labels printed' };
   if (el) el.innerHTML = '<div style="font-weight:900;font-size:16px;margin-bottom:6px">' + escapeHtml(no) + '</div>' + (ev.length ? ev.map(e => '<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px"><b>' + (lbl[e.action] || escapeHtml(e.action)) + '</b> · ' + new Date(e.at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' · ' + escapeHtml(e.who || '') + '<br><span style="color:var(--text-2)">' + escapeHtml([e.item_name, e.location, e.note].filter(Boolean).join(' · ')) + '</span></div>').join('') : '<div style="font-size:12px;color:var(--text-2)">No history — this sticker was never used.</div>');
   btMsg('', 'green'); const m = document.getElementById('bt-msg'); if (m) m.innerHTML = '';
   return { ok: true, text: no + ': ' + ev.length + ' entries' };
@@ -25558,8 +25741,8 @@ async function btExportCSV() {
   if (!Array.isArray(rows)) return toast('Could not load', 'error');
   const esc = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
   const t = v => v ? new Date(v).toLocaleString() : '';
-  let csv = 'Sticker #,Roll,Bottle,Location,Status,Tagged,Tagged by,Emptied,Emptied by,Void reason\n';
-  rows.forEach(r => { csv += [r.sticker_no, r.roll_color, r.item_name, r.location, r.status, t(r.issued_at), r.issued_by, t(r.emptied_at), r.emptied_by, r.void_reason].map(esc).join(',') + '\n'; });
+  let csv = 'Sticker #,Roll,Bottle,Location,Status,Tagged,Tagged by,Emptied,Emptied by,Sold,Sold by,Sold at,Void reason\n';
+  rows.forEach(r => { csv += [r.sticker_no, r.roll_color, r.item_name, r.location, r.status, t(r.issued_at), r.issued_by, t(r.emptied_at), r.emptied_by, t(r.sold_at), r.sold_by, r.sold_to, r.void_reason].map(esc).join(',') + '\n'; });
   downloadCSV(csv, 'liquor_bottles_' + localISODate() + '.csv');
 }
 // ── Camera: barcodes only (exact) ──
@@ -25606,10 +25789,10 @@ async function btBarcodeReader() {
     // Only the label formats we print (Dymo: Code 39 / Code 128). Other
     // formats gave broken part-reads ("20", "20377") off the same label, and
     // the bottle's own UPC/EAN is simply not looked for.
-    try { const fm = await window.BarcodeDetector.getSupportedFormats(); const want = (fm || []).filter(f => f === 'code_39' || f === 'code_128'); if (want.length) { const d = new window.BarcodeDetector({ formats: want }); return async (canvas) => { const r = await d.detect(canvas); return r && r[0] ? r[0].rawValue : ''; }; } } catch (e) {}
+    try { const fm = await window.BarcodeDetector.getSupportedFormats(); const want = (fm || []).filter(f => f === 'code_39' || f === 'code_128' || f === 'qr_code'); if (want.length) { const d = new window.BarcodeDetector({ formats: want }); return async (canvas) => { const r = await d.detect(canvas); return r && r[0] ? r[0].rawValue : ''; }; } } catch (e) {}
   }
   const Z = await btLoadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js', 'ZXing');
-  const hints = new Map(); hints.set(Z.DecodeHintType.TRY_HARDER, true); hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.CODE_39, Z.BarcodeFormat.CODE_128]);
+  const hints = new Map(); hints.set(Z.DecodeHintType.TRY_HARDER, true); hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.CODE_39, Z.BarcodeFormat.CODE_128, Z.BarcodeFormat.QR_CODE]);
   const reader = new Z.MultiFormatReader(); reader.setHints(hints);
   const one = (cv, Bin) => { try { return reader.decode(new Z.BinaryBitmap(new Bin(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText(); } catch (e) { return ''; } };
   const crop = document.createElement('canvas');
@@ -25840,7 +26023,7 @@ function btStopScan() {
 let _premLocations = [];
 
 function premiumRoleLabel(role) {
-  return role === 'premium_manager' ? 'Premium Manager' : 'Premium Employee';
+  return role === 'premium_manager' ? 'Premium Manager' : role === 'premium_seller' ? 'Suite Attendant · Bottle sales' : 'Premium Employee';
 }
 
 async function premiumRenderGameDay() {
@@ -25882,7 +26065,13 @@ async function renderPremiumForRole() {
   const checkinCard = document.getElementById('prem-checkin-card');
   if (checkinCard) checkinCard.style.display = isMgr ? 'block' : 'none';
   const btBtn = document.getElementById('prem-bottles-btn');
-  if (btBtn) btBtn.style.display = isMgr ? '' : 'none';
+  if (btBtn) btBtn.style.display = isMgr || role === 'premium_seller' ? '' : 'none';
+  if (role === 'premium_seller') {
+    // Suite Attendant signed in only to sell bottles: straight to 💵 Sell.
+    if (meta) meta.textContent = 'Sell a bottle: scan its sticker';
+    openLiquorBottles('sell');
+    return;
+  }
 
   if (isMgr) {
     await premiumLoadLocations();
