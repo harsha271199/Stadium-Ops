@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-09-fix-151
+- **Premium check-in downloads now show in the manager's 🕐 Time sheet when it is opened from the manager menu.** The card was only switched on through the old tab bar, so a manager opening Time sheet from the menu (the normal way) never saw it. The menu tile now reads "Breaks · tip export · Premium". Tested: Reno (00590000) sees ⭐ Premium check-ins (CSV / PDF) under the break sheet buttons, and another manager doesn't.
+
 ## 2026-11-09-fix-150
 - **Premium card in the manager Times tab now uses the Premium Managers' own exports.** It replaces the hours-based tip sheet from fix-149. The ⬇️ CSV and 🖨️ PDF are the same check-in files a Premium Manager downloads from the Premium check-in card, for the game date picked in the Times tab. Same access as before: Admin, `premium_team_access`, and `premium_timesheet_access` (Reno, 00590000), download only.
   - Tested in the browser: Reno's CSV has the same columns as the Premium Manager CSV, and the PDF opens the same "⭐ Premium — Check-ins" page. Another manager doesn't see the card.

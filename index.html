@@ -3320,7 +3320,7 @@
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('inv')">📋 Inventory<span class="sub">Counts · print · ledger</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('transfers')">🚚 Transfers<span class="sub">Review transfer status</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('reports')">📝 Reports<span class="sub">Feedback · checklists</span></button>
-          <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('times')">🕐 Time sheet<span class="sub">Breaks · tip export</span></button>
+          <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('times')">🕐 Time sheet<span class="sub">Breaks · tip export · Premium</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('refunds')">💵 Refunds<span class="sub">Supervisor completions · records</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('maint')">🔨 Maintenance<span class="sub">Open facility issues</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" id="mgr-v10-admin-tool" onclick="mgrV10OpenTool('admin')" style="display:none">⚙️ Admin Setup<span class="sub">Access · assignments · game info · uploads</span></button>
@@ -4785,7 +4785,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-09-fix-150';
+const BUILD_TAG = '2026-11-09-fix-151';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -13294,7 +13294,7 @@ function mgrV10OpenTool(tab){
   if(tab==='inv'&&!document.getElementById('mgr-inv-date').value)document.getElementById('mgr-inv-date').value=localISODate();
   if(tab==='transfers')loadMgrTransfers();
   if(tab==='reports'){loadMgrFeedback();loadMgrChecklists();}
-  if(tab==='times')loadTimesheet();
+  if(tab==='times'){loadTimesheet();premTipInit();}
   if(tab==='refunds')loadMgrRefunds();
   if(tab==='carts')loadMgrCarts();
   if(tab==='maint')loadMgrMaint('open');
