@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-09-fix-149
+- **⭐ Premium tip sheet in the manager Times tab.** Under the concession break sheet there is now a Premium card with **⬇️ Premium tip sheet (CSV)** and **🖨️ Premium time sheet (PDF)** for the game date picked above.
+  - Grouped by location with a location total, like the concession sheet. The CSV columns are Location, Employee ID, Name, Role, Scheduled Start/End, Status, Tapped In At, Checked Out, Hours, Hours From, Walk-in.
+  - **Hours:** Premium check-in has no check-out (11/7: 80 checked in, 0 checked out), and the check-in time is when the manager tapped them in (e.g. 4:53 PM for a 1:30 PM shift). So hours = the **scheduled shift** for everyone marked In, overnight shifts included. A real check-out time is used if one exists. Not checked in or absent = 0. Walk-ins with no scheduled times are flagged "add hours by hand".
+  - **Who sees it:** Admin, managers on `premium_team_access`, and managers on the new `premium_timesheet_access`. The new key gives download only, with no Premium check-in or Bottle Tracker powers. Reno Andriyansa (00590000) was added to it.
+  - Tested in the browser: Reno sees the card, other managers don't, and the CSV and PDF totals are right (7.5 + 4.5 + 7.5 hrs).
+
 ## 2026-11-09-fix-148
 - **🍾 Bottle Tracker: sell whole bottles, and move bottles between locations.**
   - **💵 Sell:** a guest buys a whole bottle (e.g. wine in a suite). Pick where it was sold, scan the sticker, and it is recorded as **SOLD** (not empty): who sold it, where and when.

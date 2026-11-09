@@ -3828,6 +3828,12 @@
       <button class="btn btn-primary" onclick="loadTimesheet()" style="margin-top:8px">Load time sheet</button>
       <button class="btn btn-ghost" onclick="exportTimesheetCSV()" style="margin-top:8px">⬇️ Download CSV (tip sheet)</button>
       <button class="btn btn-ghost" onclick="printTimesheet()" style="margin-top:8px">🖨️ Printable break sheet</button>
+      <div id="mgr-ts-prem" class="card" style="display:none;margin-top:12px;padding:12px;border-left:4px solid var(--asu-maroon)">
+        <div style="font-weight:800;font-size:14px">⭐ Premium tip sheet</div>
+        <div style="font-size:11px;color:var(--text-2);margin:4px 0 8px">Premium check-ins for the game date above. Premium has no check-out, so hours are the <b>scheduled shift</b> for everyone marked In; the time they were tapped in is shown next to it.</div>
+        <button class="btn btn-ghost" onclick="premTipExport('csv')" style="margin-top:0">⬇️ Premium tip sheet (CSV)</button>
+        <button class="btn btn-ghost" onclick="premTipExport('pdf')" style="margin-top:8px">🖨️ Premium time sheet (PDF)</button>
+      </div>
       <div id="mgr-ts-list" style="margin-top:12px"></div>
     </div>
 
@@ -4779,7 +4785,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-09-fix-148';
+const BUILD_TAG = '2026-11-09-fix-149';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -13704,7 +13710,7 @@ function mgrTab(el, tab) {
   if (tab === 'maint') { loadMgrMaint('open'); }
   if (tab === 'transfers') { loadMgrTransfers(); }
   if (tab === 'refunds') { loadMgrRefunds(); }
-  if (tab === 'times') { loadTimesheet(); }
+  if (tab === 'times') { loadTimesheet(); premTipInit(); }
   if (tab === 'admin') { adminLoadNpo(); adminLoadDrivers(); saLoadStands(); adminAccessLoad(); coverageAdminInit(); chatRouteInit(); populateRollStandSelect(); }
 }
 
@@ -16578,6 +16584,61 @@ async function loadTimesheet() {
   el.innerHTML = html;
 }
 
+// ⭐ Premium tip sheet in the manager Times tab — Admin, managers on
+// premium_team_access, and managers on premium_timesheet_access (download
+// only: no Premium check-in or Bottle Tracker powers). 11/9: Reno.
+async function premTipAllowed() {
+  const a = state.staffAccount; if (!a) return false;
+  if (isAdminSession()) return true;
+  if (a.group !== 'manager') return false;
+  const rows = await sb('app_settings?key=in.(premium_team_access,premium_timesheet_access)&select=key,value').catch(() => ({ _err: true }));
+  const ids = new Set(); if (Array.isArray(rows)) rows.forEach(r => String(r.value || '').split(/[,\s]+/).filter(Boolean).forEach(x => ids.add(x)));
+  return ids.has(String(a.empId || ''));
+}
+async function premTipInit() { const el = document.getElementById('mgr-ts-prem'); if (el) el.style.display = (await premTipAllowed()) ? '' : 'none'; }
+function premTipMins(t) { const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})\s*([AP]M)?$/i); if (!m) return null; let h = +m[1] % 12; if (m[3]) { if (/P/i.test(m[3])) h += 12; } else h = +m[1]; return h * 60 + (+m[2]); }
+function premTipHours(r) {
+  if (r.status !== 'present') return { hrs: 0, note: r.status === 'absent' ? 'Absent' : 'Not checked in' };
+  const tz = { timeZone: 'America/Phoenix', hour: 'numeric', minute: '2-digit', hour12: false };
+  const s = premTipMins(r.start_time);
+  let e = premTipMins(r.end_time), how = 'scheduled shift';
+  if (r.checked_out_at) { const t = new Date(r.checked_out_at).toLocaleTimeString('en-US', tz); e = premTipMins(t); how = 'scheduled start → checked out'; }
+  if (s == null || e == null) return { hrs: '', note: 'No scheduled times — add hours by hand' };
+  let d = e - s; if (d < 0) d += 1440;
+  return { hrs: Math.round(d / 60 * 100) / 100, note: how };
+}
+async function premTipExport(kind) {
+  if (!(await premTipAllowed())) return toast('Premium tip sheet is not on for this account', 'error');
+  const date = (document.getElementById('mgr-ts-date') || {}).value || localISODate();
+  const rows = await sb('premium_schedule?event_date=eq.' + encodeURIComponent(date) + '&order=location_name.asc,worker_name.asc&select=*').catch(() => ({ _err: true }));
+  if (!Array.isArray(rows)) return toast('Could not load Premium — try again', 'error');
+  if (!rows.length) return toast('No Premium staff on ' + date, 'error');
+  const tm = v => v ? new Date(v).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Phoenix' }) : '';
+  const list = rows.map(r => Object.assign({}, r, premTipHours(r))).sort((a, b) => String(a.location_name).localeCompare(String(b.location_name)) || String(a.worker_name).localeCompare(String(b.worker_name)));
+  const byLoc = {}; list.forEach(r => (byLoc[r.location_name || '—'] = byLoc[r.location_name || '—'] || []).push(r));
+  const sum = l => Math.round(l.reduce((n, r) => n + (Number(r.hrs) || 0), 0) * 100) / 100;
+  if (kind === 'csv') {
+    const esc = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const idCell = v => { const t = String(v == null ? '' : v).trim(); return t ? '="' + t.replace(/"/g, '') + '"' : ''; };
+    let csv = 'Location,Employee ID,Name,Role,Scheduled Start,Scheduled End,Status,Tapped In At,Checked Out,Hours,Hours From,Walk-in\n';
+    Object.keys(byLoc).forEach(loc => {
+      byLoc[loc].forEach(r => { csv += [loc, '\u0000ID', r.worker_name, r.role_title || '', r.start_time || '', r.end_time || '', r.status === 'present' ? 'In' : r.status, tm(r.checked_in_at), tm(r.checked_out_at), r.hrs, r.note, r.is_walkin ? 'Yes' : ''].map(esc).join(',').replace('\u0000ID', idCell(r.employee_id)) + '\n'; });
+      csv += [loc, '', 'LOCATION TOTAL', '', '', '', '', '', '', sum(byLoc[loc]), '', ''].map(esc).join(',') + '\n';
+    });
+    downloadCSV(csv, 'premium_tip_sheet_' + date + '.csv');
+    return toast('⬇️ Premium tip sheet downloaded');
+  }
+  const w = window.open('', '_blank'); if (!w) return toast('⚠️ Popup blocked — allow popups for this site and try again', 'error');
+  let html = '<html><head><title>Premium Time Sheet — ' + escapeHtml(date) + '</title><style>@page{size:letter portrait;margin:0.5in}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Arial,sans-serif;font-size:11px;margin:0}h1{font-size:18px;text-align:center;margin:0 0 4px}.meta{text-align:center;font-size:10px;color:#555;margin-bottom:10px}h2{font-size:13px;margin:14px 0 4px;padding:6px;background:#8C1D40;color:#fff;page-break-after:avoid}h2 span{float:right;font-weight:normal}table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:6px}th,td{border:1px solid #444;padding:4px 5px;text-align:left}th{background:#eee}tr{page-break-inside:avoid}.tot td{font-weight:bold;background:#f3f3f3}.r{text-align:right}</style></head><body>' +
+    '<h1>PREMIUM TIME SHEET</h1><div class="meta">Mountain America Stadium · ' + escapeHtml(date) + ' · ' + list.filter(r => r.status === 'present').length + ' of ' + list.length + ' in · ' + sum(list) + ' hrs · Hours = scheduled shift (Premium has no check-out) · Generated ' + new Date().toLocaleString() + '</div>';
+  Object.keys(byLoc).forEach(loc => {
+    html += '<h2>' + escapeHtml(loc) + '<span>' + sum(byLoc[loc]) + ' HRS</span></h2><table><thead><tr><th>NAME</th><th>EMPLOYEE ID</th><th>ROLE</th><th>SCHEDULED</th><th>STATUS</th><th>TAPPED IN</th><th class="r">HRS</th><th>NOTE</th></tr></thead><tbody>' +
+      byLoc[loc].map(r => '<tr><td>' + escapeHtml(r.worker_name || '') + '</td><td>' + escapeHtml(r.employee_id || '') + '</td><td>' + escapeHtml(r.role_title || '') + '</td><td>' + escapeHtml([r.start_time, r.end_time].filter(Boolean).join(' – ')) + '</td><td>' + (r.status === 'present' ? 'In' : escapeHtml(r.status || '')) + (r.is_walkin ? ' (walk-in)' : '') + '</td><td>' + tm(r.checked_in_at) + '</td><td class="r">' + r.hrs + '</td><td>' + escapeHtml(r.note === 'scheduled shift' ? '' : r.note) + '</td></tr>').join('') +
+      '<tr class="tot"><td colspan="6">LOCATION TOTAL</td><td class="r">' + sum(byLoc[loc]) + '</td><td></td></tr></tbody></table>';
+  });
+  html += '<scr' + 'ipt>window.print()<\/scr' + 'ipt></body></html>';
+  w.document.write(html); w.document.close();
+}
 function exportTimesheetCSV() {
   const data = state.tsData;
   if (!data || !data.stands || !data.stands.length) return toast('Load the time sheet first', 'error');
