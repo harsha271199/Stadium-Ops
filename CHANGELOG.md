@@ -4,6 +4,9 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-12-fix-152
+- **Bottle labels: 2 small QR codes on the current 1" × 2-1/8" roll (Dymo 30336).** New choice in ⚙️ Setup → Label size: "Dymo 30336 roll — 2 small QR codes per label (cut in half)". Each label prints two QR stickers (0.7" QR with the number under it) and a dotted cut line, so cutting it gives two ~1" × 1" squares without buying the 30332 roll. With an odd count, the last half is left blank. Tested: labels 3000001–3000003 printed on 2 labels, and each QR reads back its own number.
+
 ## 2026-11-09-fix-151
 - **Premium check-in downloads now show in the manager's 🕐 Time sheet when it is opened from the manager menu.** The card was only switched on through the old tab bar, so a manager opening Time sheet from the menu (the normal way) never saw it. The menu tile now reads "Breaks · tip export · Premium". Tested: Reno (00590000) sees ⭐ Premium check-ins (CSV / PDF) under the break sheet buttons, and another manager doesn't.
 

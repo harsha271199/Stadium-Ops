@@ -4785,7 +4785,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-09-fix-151';
+const BUILD_TAG = '2026-11-12-fix-152';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -25478,7 +25478,7 @@ function btRenderSetup() {
     '<div class="card" style="padding:12px"><div style="font-weight:900;font-size:15px">② 🖨️ Dymo barcode labels — same numbers as your stickers</div>' +
     '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Each Dymo label = a barcode + the <b>same number</b> as a sticker from your rolls. Stick it on the bottle <b>next to the sticker with that number</b> — from then on just scan it.</div>' +
     '<label class="form-label" style="margin-top:0">Label size</label><select class="form-input" id="bt-lab-size" onchange="try{localStorage.setItem(\'bt_label_size\',this.value)}catch(e){}">' +
-      [['2.125x1', 'Dymo 30336 — 1" × 2-1/8" (small, multi-purpose)'], ['2.25x1.25', 'Dymo 30334 — 2-1/4" × 1-1/4"'], ['3.5x1.125', 'Dymo 30252 — 1-1/8" × 3-1/2" (address)'], ['1x1', 'Dymo 30332 — 1" × 1" square (QR code, smallest)']].map(([v, l]) => '<option value="' + v + '"' + (v === btSavedLabelSize() ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
+      [['2.125x1', 'Dymo 30336 — 1" × 2-1/8" (small, multi-purpose)'], ['2.25x1.25', 'Dymo 30334 — 2-1/4" × 1-1/4"'], ['3.5x1.125', 'Dymo 30252 — 1-1/8" × 3-1/2" (address)'], ['1x1', 'Dymo 30332 — 1" × 1" square (QR code, smallest)'], ['2.125x1q2', 'Dymo 30336 roll — 2 small QR codes per label (cut in half)']].map(([v, l]) => '<option value="' + v + '"' + (v === btSavedLabelSize() ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
     '<label class="form-label">Which numbers?</label>' +
     '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><span id="bt-lr-chips">' + btTapeRolls().filter(btRollActive).map((r, i) => '<button class="chip' + ((_bt.lblRoll ? _bt.lblRoll === r.color : i === 0) ? ' selected' : '') + '" style="padding:6px 12px;font-weight:800;border-color:' + btRollCss(r.color) + '" onclick="_bt.lblRoll=\'' + escapeHtml(r.color).replace(/'/g, '') + '\';document.querySelectorAll(\'#bt-lr-chips .chip\').forEach(b=>b.classList.toggle(\'selected\',b===this))">' + escapeHtml(btRollLabel(r)) + '</button>').join(' ') + '</span>' +
       '<input class="form-input" id="bt-lab-n" type="number" min="1" max="200" value="24" style="width:70px;margin:0">' +
@@ -25607,6 +25607,21 @@ function btCatDownload() {
 // Labels: one label per page at the Dymo label size, Code 39 barcode (read
 // 7/7 in tests, tilted/blurred/small) with the number printed under it.
 function btLabelHtml(nums, size, sub) {
+  // Current 1" × 2-1/8" roll, two QR stickers per label: cut along the
+  // dotted line to get two ~1" squares (no new roll needed).
+  if (/q2$/.test(String(size || ''))) {
+    const W = 2.125, H = 1, half = W / 2, q = 0.7;
+    const cssq2 = '@page{size:' + W + 'in ' + H + 'in;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{margin:0;padding:0;background:#fff}' +
+      '.lab{width:' + W + 'in;height:' + H + 'in;display:flex;page-break-after:always;overflow:hidden;font-family:Arial,Helvetica,sans-serif}' +
+      '.half{width:' + half + 'in;height:' + H + 'in;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.04in}.half+.half{border-left:1px dashed #bbb}' +
+      '.qr{width:' + q + 'in;height:' + q + 'in}.qr svg{width:100%;height:100%;display:block}.n{font-size:10pt;font-weight:900;letter-spacing:1px;line-height:1;margin-top:0.03in}';
+    const pairs = []; for (let i = 0; i < nums.length; i += 2) pairs.push(nums.slice(i, i + 2));
+    const cell = n => '<div class="half">' + (n == null ? '' : '<div class="qr" data-v="' + n + '"></div><div class="n">' + n + '</div>') + '</div>';
+    return '<!doctype html><html><head><meta charset="utf-8"><title>Bottle labels ' + nums[0] + '–' + nums[nums.length - 1] + '</title><style>' + cssq2 + '</style></head><body>' +
+      pairs.map(p => '<div class="lab">' + cell(p[0]) + cell(p[1]) + '</div>').join('') +
+      '<script>function go(){try{document.querySelectorAll(".qr").forEach(function(d){var c=qrcode(1,"M");c.addData(d.getAttribute("data-v"));c.make();d.innerHTML=c.createSvgTag({cellSize:4,margin:0}).replace(/ width="[^"]*"/,"").replace(/ height="[^"]*"/,"");});}catch(e){document.body.insertAdjacentHTML("afterbegin","<p style=\\"font:14px Arial;color:#b91c1c\\">QR tool did not load — check signal and try again.</p>");return;}setTimeout(function(){window.print();},300);}<\/script>' +
+      '<script src="' + location.origin + '/vendor/qrcode.js" onload="go()" onerror="go()"><\/script></body></html>';
+  }
   const [w, h] = String(size || '2.125x1').split('x').map(Number);
   // Square label: a striped barcode is too thin to scan at 1", so print a QR
   // code (the scanner reads QR as well as the old Code 39 / Code 128 labels).
