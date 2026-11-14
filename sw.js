@@ -11,7 +11,11 @@
 // Bump CACHE_VERSION any time you want to force every installed device to
 // drop its old cache — e.g. after a major update where you want to be
 // extra sure nobody's stuck on stale cached assets.
-const CACHE_VERSION = 'stadium-ops-v2';
+const CACHE_VERSION = 'stadium-ops-v3'; // v3 (10/24): a changed worker makes open apps reload once
+// The bottle number reader (/ocr/, ~30 MB, never changes for a given build of
+// it) is the one exception to network-first: downloaded once, then served from
+// this cache. Bump OCR_CACHE when the files in /ocr/ are replaced.
+const OCR_CACHE = 'stadium-ops-ocr-v1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting(); // activate the new service worker immediately, don't wait for old tabs to close
@@ -30,7 +34,7 @@ self.addEventListener('message', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== CACHE_VERSION && k !== OCR_CACHE).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim(); // take control of any already-open tabs immediately
@@ -40,6 +44,18 @@ self.addEventListener('fetch', (event) => {
   // Only handle GET requests — never intercept POST/PATCH/DELETE (the
   // actual app writes, like check-ins and transfers) with caching logic.
   if (event.request.method !== 'GET') return;
+
+  const u = new URL(event.request.url);
+  if (u.origin === self.location.origin && u.pathname.startsWith('/ocr/')) {
+    event.respondWith(caches.open(OCR_CACHE).then(async (cache) => {
+      const hit = await cache.match(event.request);
+      if (hit) return hit;
+      const res = await fetch(event.request);
+      if (res.ok) cache.put(event.request, res.clone());
+      return res;
+    }));
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)
