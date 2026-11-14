@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## Demo site (2026-11-14)
+- **New: a separate demo of the app for people who want to try it** (`demo/`). `python3 demo/build_demo.py` builds `demo/dist/` from the current `index.html`. Upload that folder as its own Netlify site, never over the real one.
+  - **No real data, and no way to reach it.** The real database address and key are replaced with dummy values, and the build stops if either is still in the page. `demo-shim.js` answers every database call inside the browser from a small fake database (real stand and item names, made-up people). Each tester's changes stay in their own browser, and the data resets every game day or with ↺ Reset.
+  - **Every role can sign in.** A yellow "DEMO · fake data" badge with 🔑 Logins lists the test sign-ins: worker, student, lead, supervisor, bartender, manager, support manager, warehouse manager and runner, food manager and runner, IT, Premium Manager, Suite Attendant (bottle selling), NPO lead and member, and Admin at /manager.
+  - No service worker and no OCR files. The page asks search engines not to index it.
+  - Tested in the browser: all 17 sign-ins land on the right screen. A lead's stock request shows up for the warehouse runner. The Suite Attendant sells a bottle and the Premium Manager sees it as sold. 0 requests went to the real database.
+
 ## 2026-11-14-fix-153
 - **Merged the Bus Code of Conduct update from the live site.** On 11/14 at 12:57 AM AZ another session uploaded `2026-11-13-bus-coc-1` to Netlify. It was built on fix-151, so it left out fix-152 (two QR codes per label on the 30336 roll). This build is that live file plus fix-152, so nothing from either is lost. What the bus update adds:
   - Workers scheduled at a stand listed in `app_settings.bus_conduct_stands` (now "UA Away Trip") must e-sign the Employer Bus Code of Conduct when they open the app: tick to agree, type their name, sign on screen. Signing saves to the new `bus_conduct_signatures` table and checks them in (attendance = working).

@@ -4,3 +4,4 @@ node_modules/
 .netlify/
 .playwright/
 .playwright-cli/
+demo/dist/
