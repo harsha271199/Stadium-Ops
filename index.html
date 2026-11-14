@@ -4785,7 +4785,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-12-fix-152';
+const BUILD_TAG = '2026-11-14-fix-153';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -11640,6 +11640,8 @@ async function loadMyTeam() {
   });
   if (requestId !== state._myTeamReqId || !document.getElementById('screen-my-team').classList.contains('active')) return;
   const team = res.team || [];
+  try{ await busConductAnnotateTeam(stand, team); }catch(e){}
+  if (requestId !== state._myTeamReqId) return;
   if(!leadershipTeamView && res.resolvedStand && res.resolvedStand!==state.myTeamStand){
     state.myTeamStand=res.resolvedStand;
     const sel=document.getElementById('my-team-stand-select');if(sel)sel.value=res.resolvedStand;
@@ -30074,6 +30076,138 @@ init();
   <button id="install-banner-btn" onclick="triggerInstallPrompt()" class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:12.5px;margin:0;flex-shrink:0">Install</button>
   <button onclick="dismissInstallBanner()" style="background:none;border:none;color:var(--text-2,#999);font-size:18px;line-height:1;padding:4px;cursor:pointer;flex-shrink:0">×</button>
 </div>
+<script>
+// ============ BUS CODE OF CONDUCT E-SIGN (away trips) ============
+// Workers scheduled at a stand listed in app_settings.bus_conduct_stands
+// (e.g. "UA Away Trip") must e-sign the Employer Bus Code of Conduct when
+// they open the app. Signing saves to bus_conduct_signatures and checks
+// them in (attendance = working), so managers see them as Working in My Team.
+const BUS_POLICY_VERSION = 'Aramark Employer Bus Code of Conduct v1';
+const BUS_POLICY_HTML = "<p>Employer-Sponsored Bus : Program Policy and Employee Acknowledgment</p><p>Effective Date: ___________________</p><p>Company: _________________________</p><h4>Purpose</h4><p>The Company offers an Employer-Sponsored Bus Transit Program (&quot;Program&quot;) as a voluntary benefit to assist employees with transportation to and from designated work locations. The Program is intended to provide a safe, reliable, and professional commuting environment. Participation in the Program is a privilege and may be suspended or revoked for violations of this policy.</p><p>All employees who elect to participate in the Program are expected to conduct themselves in a manner consistent with Company values, workplace standards, and all applicable safety requirements.</p><h4>Eligibility and Participation</h4><p>Participation in the Program is voluntary and may be subject to route availability, scheduling requirements, and operational capacity.</p><p>Employees who choose to participate agree to:</p><ul><li>Follow all instructions given by bus drivers, transportation providers, and Company representatives.</li><li>Arrive at designated pick-up locations on time.</li><li>Use only authorized bus stops and routes.</li><li>Comply with all Company policies while utilizing the Program.</li><li>Treat fellow employees, drivers, and members of the public with respect and professionalism.</li></ul><h4>Employee Conduct Standards</h4><p>Employees are expected to maintain a safe, respectful, and professional environment while waiting for, boarding, riding, and exiting the bus.</p><p>Participants must:</p><ul><li>1. Follow Driver Instructions</li></ul><p>Employees must comply with all lawful instructions provided by the bus operator and transportation staff.</p><ul><li>2. Maintain Professional Conduct</li></ul><p>Employees must behave respectfully toward drivers, fellow passengers, Company representatives, and members of the public.</p><ul><li>3. Observe Safety Requirements</li></ul><p>Employees shall remain seated whenever possible while the bus is in motion and use available safety equipment as instructed.</p><ul><li>4. Respect Company Property and Vendor Property</li></ul><p>Employees shall not damage, vandalize, misuse, or deface any bus, transit equipment, bus stop facilities, or related property.</p><h4>Prohibited Conduct</h4><p>The following conduct is strictly prohibited and may result in immediate removal from the Program and disciplinary action, up to and including termination of employment.</p><h4>Safety Violations</h4><ul><li>Crossing the designated safety line at the front of the vehicle.</li><li>Interfering with the driver&#x27;s ability to safely operate the vehicle.</li><li>Obstructing the driver&#x27;s vision.</li><li>Touching or attempting to operate vehicle controls or equipment.</li><li>Creating conditions that compromise passenger safety.</li></ul><h4>Disruptive Behavior</h4><ul><li>Excessive noise, yelling, screaming, or disruptive conversations.</li><li>Running, horseplay, practical jokes, or roughhousing.</li><li>Physical intimidation or threatening behavior.</li><li>Verbal abuse directed at drivers, passengers, or Company representatives.</li><li>Harassment, discrimination, bullying, retaliation, or inappropriate conduct that would violate Company workplace policies.</li></ul><h4>Electronic Devices and Audio</h4><ul><li>Playing music, videos, games, or other media through speakers.</li><li>Using speakerphone functions in a manner that disturbs other passengers.</li><li>Failing to use headphones when listening to electronic devices.</li><li>Playing audio at a volume audible to surrounding passengers.</li></ul><h4>Prohibited Substances</h4><ul><li>Smoking, vaping, or use of any tobacco products.</li><li>Consumption of alcoholic beverages.</li><li>Possession or use of illegal drugs.</li><li>Possession or use of controlled substances without lawful authorization.</li><li>Being under the influence of alcohol or drugs in a manner that creates a safety risk or disrupts operations.</li></ul><h4>Food and Beverage Restrictions</h4><ul><li>Consuming food on the bus unless specifically authorized.</li><li>Bringing open food containers onto the bus.</li><li>Bringing open beverage containers onto the bus.</li><li>Spilling food or beverages that create sanitation or safety concerns.</li></ul><p>Water in sealed containers may be permitted unless otherwise prohibited by the transportation provider.</p><h4>Hygiene and Dress Standards</h4><p>Employees must:</p><ul><li>Wear appropriate clothing at all times.</li><li>Wear footwear while boarding and riding the bus.</li><li>Maintain personal hygiene standards that do not create an unreasonable disturbance or discomfort for other passengers.</li></ul><h4>Damage to Property</h4><ul><li>Defacing, marking, or vandalizing the vehicle.</li><li>Tampering with safety equipment.</li><li>Damage to seats, windows, doors, or other vehicle components.</li></ul><h4>Prohibited Items</h4><p>Unless expressly authorized by law or Company policy:</p><ul><li>Weapons of any kind.</li><li>Explosives, fireworks, or flammable materials.</li><li>Hazardous chemicals or dangerous substances.</li><li>Any item that presents a safety risk to passengers or operators.</li></ul><h4>Other Unacceptable Conduct</h4><ul><li>Fighting or encouraging physical altercations.</li><li>Using offensive, discriminatory, or threatening language.</li><li>Engaging in unlawful activity.</li><li>Refusing a reasonable instruction from the driver or Company representative.</li><li>Any conduct that disrupts transportation operations or compromises safety.</li></ul><h4>Reporting Safety Concerns, Accidents, and Injuries</h4><p>Employees must immediately report:</p><ul><li>Accidents or collisions.</li><li>Injuries occurring during Program participation.</li><li>Unsafe conditions.</li><li>Harassing, threatening, or violent behavior.</li><li>Property damage.</li><li>Any emergency situation.</li></ul><p>Reports should be made to a supervisor, Human Resources, or designated Company representative as soon as practicable.</p><h4>Personal Property</h4><p>The Company and transportation provider are not responsible for lost, stolen, or damaged personal property brought onto the bus.</p><p>Employees are responsible for safeguarding their personal belongings.</p><h4>Compliance with Company Policies</h4><p>Participation in the Program does not alter the employee&#x27;s obligation to comply with all Company policies, including but not limited to:</p><ul><li>Code of Conduct</li><li>Anti-Harassment and Anti-Discrimination Policies</li><li>Workplace Violence Prevention Policies</li><li>Drug and Alcohol-Free Workplace Policies</li><li>Safety Policies</li><li>Attendance and Punctuality Policies</li></ul><p>Any violation of Company policy during Program participation may result in disciplinary actio</p>";
+let _busStandsCache = null;
+
+async function busConductStands() {
+  if (_busStandsCache) return _busStandsCache;
+  const r = await sb('app_settings?key=eq.bus_conduct_stands&select=value').catch(() => ({_err:true}));
+  const v = (!r._err && Array.isArray(r) && r[0] && r[0].value) || '';
+  _busStandsCache = v.split(',').map(x => x.trim()).filter(Boolean);
+  return _busStandsCache;
+}
+function busConductDate() {
+  return (state.user && state.user.shiftDate) || localISODate();
+}
+async function busConductSignedSet(date) {
+  const r = await sb('bus_conduct_signatures?event_date=eq.' + encodeURIComponent(date) + '&select=employee_id,signed_at').catch(() => ({_err:true}));
+  const m = new Map();
+  if (!r._err && Array.isArray(r)) r.forEach(x => m.set(String(x.employee_id), x.signed_at));
+  return m;
+}
+
+async function busConductCheck() {
+  const u = state.user;
+  if (!u || !u.empId || u.offSchedule) return;
+  const stands = await busConductStands();
+  if (!stands.includes(u.stand)) return;
+  if (document.getElementById('bus-coc-overlay')) return;
+  const signed = await busConductSignedSet(busConductDate());
+  if (signed.has(String(u.empId))) return;
+  busConductOpen();
+}
+
+function busConductOpen() {
+  const u = state.user;
+  const o = document.createElement('div');
+  o.id = 'bus-coc-overlay';
+  o.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:10px';
+  o.innerHTML = `
+  <div style="background:#fff;color:#111;border-radius:14px;max-width:560px;width:100%;max-height:96vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:#8C1D40;color:#fff;padding:12px 16px">
+      <div style="font-weight:800;font-size:16px">🚌 Sign before you board</div>
+      <div style="font-size:12px;opacity:.9">${escapeHtml(u.stand)} · ${escapeHtml(busConductDate())} · Signing checks you in</div>
+    </div>
+    <div id="bus-coc-text" style="overflow:auto;padding:12px 16px;font-size:13px;line-height:1.45;flex:1;border-bottom:1px solid #ddd">${BUS_POLICY_HTML}</div>
+    <div style="padding:12px 16px">
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px">
+        <input type="checkbox" id="bus-coc-agree" style="margin-top:3px">
+        <span>I have read and agree to the Employer-Sponsored Bus Program Policy and Code of Conduct.</span>
+      </label>
+      <label class="form-label" style="margin-top:10px">Type your full name</label>
+      <input class="form-input" id="bus-coc-name" autocomplete="off" placeholder="${escapeAttr(u.name)}">
+      <label class="form-label" style="margin-top:10px">Sign below</label>
+      <canvas id="bus-coc-pad" style="width:100%;height:130px;border:1px dashed #888;border-radius:8px;touch-action:none;background:#fafafa"></canvas>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+        <button class="btn btn-ghost" style="flex:0 0 auto;width:auto;min-height:0;padding:10px 16px" onclick="busConductClearPad()">Clear</button>
+        <button class="btn btn-primary" id="bus-coc-submit" style="flex:1;width:auto;min-height:0;padding:10px 16px" onclick="busConductSubmit()">✍️ Sign &amp; check in</button>
+      </div>
+      <div id="bus-coc-err" style="color:#DC2626;font-size:12px;margin-top:6px"></div>
+    </div>
+  </div>`;
+  document.body.appendChild(o);
+  busConductInitPad();
+}
+
+let _busPadDirty = false;
+function busConductInitPad() {
+  const c = document.getElementById('bus-coc-pad');
+  const ratio = window.devicePixelRatio || 1;
+  c.width = c.clientWidth * ratio; c.height = c.clientHeight * ratio;
+  const ctx = c.getContext('2d');
+  ctx.scale(ratio, ratio); ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
+  _busPadDirty = false;
+  let drawing = false;
+  const pos = e => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  c.onpointerdown = e => { drawing = true; c.setPointerCapture(e.pointerId); const [x,y] = pos(e); ctx.beginPath(); ctx.moveTo(x,y); };
+  c.onpointermove = e => { if (!drawing) return; const [x,y] = pos(e); ctx.lineTo(x,y); ctx.stroke(); _busPadDirty = true; };
+  c.onpointerup = c.onpointercancel = () => { drawing = false; };
+}
+function busConductClearPad() {
+  const c = document.getElementById('bus-coc-pad');
+  c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  _busPadDirty = false;
+}
+
+async function busConductSubmit() {
+  const u = state.user;
+  const err = document.getElementById('bus-coc-err');
+  const name = document.getElementById('bus-coc-name').value.trim();
+  if (!document.getElementById('bus-coc-agree').checked) { err.textContent = 'Tick the box to agree to the policy.'; return; }
+  if (name.length < 3) { err.textContent = 'Type your full name.'; return; }
+  if (!_busPadDirty) { err.textContent = 'Draw your signature in the box.'; return; }
+  const btn = document.getElementById('bus-coc-submit');
+  btn.disabled = true; btn.textContent = 'Saving…'; err.textContent = '';
+  const date = busConductDate();
+  const sig = await sb('bus_conduct_signatures', { method:'POST', headers:{Prefer:'return=minimal'},
+    body: JSON.stringify({ event_date:date, employee_id:String(u.empId), worker_name:u.name, stand:u.stand,
+      signed_name:name, signature_png:document.getElementById('bus-coc-pad').toDataURL('image/png'),
+      policy_version:BUS_POLICY_VERSION, user_agent:navigator.userAgent.slice(0,250) }) });
+  // 409 = already signed today (e.g. second phone) - still fine to check in.
+  if (sig._err && sig.status !== 409) { btn.disabled = false; btn.textContent = '✍️ Sign & check in'; err.textContent = 'Could not save - check signal and try again.'; return; }
+  await sb('attendance', { method:'POST', headers:{Prefer:'return=minimal'},
+    body: JSON.stringify({ employee_id:String(u.empId), worker_name:u.name, stand:u.stand, status:'working',
+      notes:'Checked in by e-signing bus code of conduct' }) }).catch(() => {});
+  const o = document.getElementById('bus-coc-overlay'); if (o) o.remove();
+  toast('Signed - you are checked in', 'success');
+}
+
+// My Team: mark who has signed (managers, supervisors) on bus-trip stands.
+async function busConductAnnotateTeam(stand, team) {
+  const stands = await busConductStands();
+  if (!stands.includes(stand) || !Array.isArray(team)) return;
+  const signed = await busConductSignedSet(localISODate());
+  team.forEach(w => {
+    if (w.isNpo) return;
+    const at = signed.get(String(w.empId));
+    const tag = at ? ' · ✍️ Bus CoC signed ' + new Date(at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : ' · ⏳ Not signed yet';
+    if (!String(w.role||'').includes('Bus CoC') && !String(w.role||'').includes('Not signed')) w.role = (w.role || '') + tag;
+  });
+}
+
+(function(){
+  const _renderHome = renderHome;
+  renderHome = function(){ const r = _renderHome.apply(this, arguments); busConductCheck().catch(()=>{}); return r; };
+})();
+
+</script>
 </body>
 </html>
 

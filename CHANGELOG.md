@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-14-fix-153
+- **Merged the Bus Code of Conduct update from the live site.** On 11/14 at 12:57 AM AZ another session uploaded `2026-11-13-bus-coc-1` to Netlify. It was built on fix-151, so it left out fix-152 (two QR codes per label on the 30336 roll). This build is that live file plus fix-152, so nothing from either is lost. What the bus update adds:
+  - Workers scheduled at a stand listed in `app_settings.bus_conduct_stands` (now "UA Away Trip") must e-sign the Employer Bus Code of Conduct when they open the app: tick to agree, type their name, sign on screen. Signing saves to the new `bus_conduct_signatures` table and checks them in (attendance = working).
+  - My Team shows who has signed.
+  - Database: migration `bus_conduct_signatures` (insert/select only, one signature per person per day). 11/14 has 31 people at "UA Away Trip"; 0 have signed so far.
+- Checked in the browser: the page loads with no errors, the bus, bottle Sell/Move and Premium download functions are present, and the 2-QR label prints.
+
 ## 2026-11-12-fix-152
 - **Bottle labels: 2 small QR codes on the current 1" × 2-1/8" roll (Dymo 30336).** New choice in ⚙️ Setup → Label size: "Dymo 30336 roll — 2 small QR codes per label (cut in half)". Each label prints two QR stickers (0.7" QR with the number under it) and a dotted cut line, so cutting it gives two ~1" × 1" squares without buying the 30332 roll. With an odd count, the last half is left blank. Tested: labels 3000001–3000003 printed on 2 labels, and each QR reads back its own number.
 
