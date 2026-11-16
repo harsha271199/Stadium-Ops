@@ -4,6 +4,17 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-16-fix-154
+- **Bottle Tracker: cleaner look. Same tabs, same places, same steps.**
+  - **Header:** shows who is signed in ("Hernandez, Nestor · Premium liquor"), with a proper Close button. It stays at the top while scrolling.
+  - **Tabs:** tiles with the icon above the name, in a neat 4-column grid. The open tab is solid maroon. Suite Attendants see 2 large tiles (Sell a bottle, Look up).
+  - **Each screen's form sits in a card** in the same order as before (where → which bottle → Scan / Read number → or type the number). "On this phone" lists are their own card with a count badge.
+  - **Who can sell bottles today** (top of 💵 Sell): green on/off switches instead of small checkboxes, a count badge, and a one-line explanation. A switch always shows the saved state, and goes back if saving fails.
+  - **⚙️ Setup:** new optional step 4, "Let Suite Attendants sell → 💵 Sell tab", which jumps to the switches. Nothing was moved or removed.
+  - Grey buttons (Read number, Save, Undo) now fit dark mode. Location cards on 📋 Bottles match the other cards.
+  - All styles are scoped to the Bottle Tracker and use the app's theme colours, so other screens are untouched.
+- **Tested in the browser (dark and light, desktop and phone):** tag ×3, move, sell, empty, look up, list and setup. Tapping a Suite Attendant's switch, their login and sale, and a Bartender not switched on being refused. Selling twice and emptying a sold bottle are both refused, undoing a sale works, and switching a seller off blocks their next sale. The 1×1 and 2-per-label QR labels still read back. No page errors, and the results are identical to before the change.
+
 ## Demo site (2026-11-14)
 - **New: a separate demo of the app for people who want to try it** (`demo/`). `python3 demo/build_demo.py` builds `demo/dist/` from the current `index.html`. Upload that folder as its own Netlify site, never over the real one.
   - **No real data, and no way to reach it.** The real database address and key are replaced with dummy values, and the build stops if either is still in the page. `demo-shim.js` answers every database call inside the browser from a small fake database (real stand and item names, made-up people). Each tester's changes stay in their own browser, and the data resets every game day or with ↺ Reset.
