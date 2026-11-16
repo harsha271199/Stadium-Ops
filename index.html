@@ -4785,7 +4785,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-16-fix-155';
+const BUILD_TAG = '2026-11-16-fix-156';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5028,6 +5028,19 @@ async function sb(path, opts = {}, tries = 2) {
   }
 }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+// Database sign-in checks (staff_accounts_safe / staff_pin_match). They never
+// return a PIN, so the PIN column can stay hidden from the public key. Not
+// queued for retry like writes — a sign-in must answer now or say "try again".
+async function sbRpc(fn, args) {
+  try {
+    const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 12000);
+    const res = await fetch(SUPA_URL + '/rest/v1/rpc/' + fn, { method: 'POST', signal: ctrl.signal, headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(args || {}) });
+    clearTimeout(timer);
+    const txt = await res.text();
+    if (!res.ok) return { _err: true, status: res.status, msg: txt };
+    try { const v = txt ? JSON.parse(txt) : []; return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  } catch (e) { return { _err: true, net: true, msg: String(e) }; }
+}
 // One download of the warehouse's open transfers per refresh, shared by every
 // warehouse list and badge (it used to be fetched 2-4 times every 10 seconds).
 // Any write to transfers clears it, so a list never shows a stale state after
@@ -5623,13 +5636,13 @@ async function api(action, data) {
       // The second field is the person's last name (full name can be used for duplicates).
       if(idInput==='60000'){
         if(!secret)return {ok:false,error:'Enter your assigned warehouse sign-in credential'};
-        const rows=await sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor,warehouse_manager)&is_active=eq.true&select=employee_id,name,role,pin').catch(()=>({_err:true}));
+        const rows=await sbRpc('staff_accounts_safe',{p_roles:['warehouse_employee','warehouse_supervisor','warehouse_manager'],p_suffix:null});
         if(rows._err)return {ok:false,error:'Warehouse login unavailable — try again'};
         if(!Array.isArray(rows)||!rows.length)return {ok:false,error:'Warehouse accounts are not available — contact Admin'};
         const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
         const entered=norm(secret);
         // Temp walk-in workers keep their real employee ID but carry pin 60000, so they sign in the same way.
-        const aliases=(Array.isArray(rows)?rows:[]).filter(r=>String(r.employee_id||'').endsWith('60000')||(String(r.pin||'')==='60000'&&r.role==='warehouse_employee'));
+        const aliases=(Array.isArray(rows)?rows:[]).filter(r=>String(r.employee_id||'').endsWith('60000')||(r.pin_shared&&r.role==='warehouse_employee'));
         if(!aliases.length)return {ok:false,error:'Warehouse login is unavailable — contact Admin'};
         const pick=loginPickByName(aliases,secret,r=>r.name,r=>r.employee_id);
         const matches=pick.people>1?pick.rows:pick.rows.slice(0,1);
@@ -5676,7 +5689,7 @@ async function api(action, data) {
       }
 
       const opsRoles='manager,support_manager,warehouse_employee,warehouse_supervisor,warehouse_manager,tech,food_runner,food_manager,kitchen_runner,kitchen_coordinator,premium_employee,premium_manager';
-      const staffRows=await sb('staff_accounts?employee_id=like.*'+encodeURIComponent(idInput)+'&role=in.('+opsRoles+')&is_active=eq.true&select=employee_id,name,role,pin').catch(()=>({_err:true}));
+      const staffRows=await sbRpc('staff_accounts_safe',{p_roles:opsRoles.split(','),p_suffix:idInput});
       if(!staffRows._err&&Array.isArray(staffRows)&&staffRows.length){
         const roleGroup=role=>{
           if(String(role).startsWith('warehouse'))return 'warehouse';
@@ -5688,7 +5701,9 @@ async function api(action, data) {
         };
         let acct=null;
         if(/^\d{4}$/.test(secret)){
-          const pinMatches=staffRows.filter(r=>String(r.pin||'')===secret);
+          const pm=await sbRpc('staff_pin_match',{p_suffix:idInput,p_pin:secret,p_roles:opsRoles.split(',')});
+          if(pm._err)return {ok:false,error:'Network — try again'};
+          const pinMatches=pm;
           if(pinMatches.length===1)acct=pinMatches[0];
           else if(pinMatches.length>1){
             return {ok:false,error:'Shared game-day ID: enter your last name instead of the PIN'};
@@ -5702,7 +5717,7 @@ async function api(action, data) {
           const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
           const entered=norm(secret);
           // Warehouse runners / temp walk-ins (pin 60000) may also use their own last 5 + last name.
-          const lastNameRows=staffRows.filter(r=>['manager','support_manager','premium_manager','food_manager','food_runner','tech'].includes(r.role)||(r.role==='warehouse_employee'&&String(r.pin||'')==='60000'));
+          const lastNameRows=staffRows.filter(r=>['manager','support_manager','premium_manager','food_manager','food_runner','tech'].includes(r.role)||(r.role==='warehouse_employee'&&r.pin_shared));
           const pick=loginPickByName(lastNameRows,secret,r=>r.name,r=>r.employee_id);
           if(pick.people===1)acct=pick.rows[0];
           else if(pick.people>1){
@@ -5869,7 +5884,7 @@ async function api(action, data) {
       // is deployed AND tested — see VERIFY_LOGIN_FUNCTION_URL.
       const idInput = (data.employeeId||'').trim();
       if (idInput.length < 5) return { ok:false, error:'Enter the last 5 digits of your ID' };
-      const rows = await sb('staff_accounts?employee_id=like.*'+encodeURIComponent(idInput)+'&is_active=eq.true&select=*');
+      const rows = await sbRpc('staff_accounts_safe',{p_roles:null,p_suffix:idInput});
       if (rows._err) return { ok:false, error:'Network — try again' };
       if (!rows.length) return { ok:false, error:'ID not found' };
       const group=data.expectedGroup;
@@ -5881,7 +5896,9 @@ async function api(action, data) {
         (group==='tech' && r.role==='tech');
       const eligible=rows.filter(roleAllowed);
       if(!eligible.length)return {ok:false,error:'This ID is not set up for this access page'};
-      const pinMatches=eligible.filter(r=>String(r.pin||'')===String(data.pin||''));
+      const pm=await sbRpc('staff_pin_match',{p_suffix:idInput,p_pin:String(data.pin||''),p_roles:[...new Set(eligible.map(r=>r.role))]});
+      if(pm._err)return { ok:false, error:'Network — try again' };
+      const pinMatches=pm;
       if(!pinMatches.length)return {ok:false,error:'Wrong PIN'};
       if(pinMatches.length>1)return {ok:false,error:'More than one account matches this ID/PIN — ask Admin to make the PIN unique'};
       const acct=pinMatches[0];
@@ -13184,7 +13201,7 @@ async function runnersLoad(){
   splitSettings(true).then(splitRenderAdmin).catch(()=>{});
   const a=document.getElementById('rn-area');if(a&&!a.innerHTML)a.innerHTML=rnAreaOptions('');
   const [acc,food,wh,stands]=await Promise.all([
-    sb('staff_accounts?is_active=eq.true&role=in.(food_runner,kitchen_runner,warehouse_employee)&select=employee_id,name,role,pin&order=name.asc').catch(()=>({_err:true})),
+    sbRpc('staff_accounts_safe',{p_roles:['food_runner','kitchen_runner','warehouse_employee'],p_suffix:null}).then(r=>Array.isArray(r)?r.sort((a,b)=>String(a.name).localeCompare(String(b.name))):r),
     kitchenFetchAssignments().catch(()=>[]),
     coverageGetAssignments(stadiumDay(),'Mountain America Stadium').catch(()=>[]),
     allVenueStands().catch(()=>[])]);
@@ -13234,8 +13251,8 @@ async function runnersMove(emp,to,btn){
   const keepArea=to==='food'?rnAreaOf(wa&&wa.direct_stands):rnAreaOf(fa&&fa.stands);
   if(!await confirmAction('Move '+whDisp(p.name)+' to '+(to==='food'?'Food runners':'Warehouse')+'?\n\nThey sign in with '+(to==='food'?'the last 5 of their ID + last name':'60000 + last name')+' from now on'+(keepArea?' and keep the same area.':'.'),{title:to==='food'?'→ 🍽️ Food':'→ 📦 Warehouse',confirmLabel:'Move'}))return;
   await withLock(btn,'Moving…',async()=>{
-    const patch=to==='food'?{role:'food_runner'}:{role:'warehouse_employee',pin:p.pin||'60000'};
-    if(to==='warehouse'&&!/^\d+$/.test(String(p.pin||'')))patch.pin='60000';
+    // Keep their own PIN; only someone without one gets the shared 60000.
+    const patch=to==='food'?{role:'food_runner'}:Object.assign({role:'warehouse_employee'},p.has_pin?{}:{pin:'60000'});
     const r=await sb('staff_accounts?employee_id=eq.'+encodeURIComponent(emp),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(patch)}).catch(()=>({_err:true}));
     if(r&&r._err)return toast('Could not move — try again','error');
     p.role=patch.role;
@@ -18821,18 +18838,19 @@ function adminAccessNew(){
 async function adminAccessEdit(emp){
   const r=_adminAccessRows.find(x=>String(x.employee_id)===String(emp));if(!r)return;
   if(r.role==='admin')return toast('Admin access is protected and cannot be changed here','error');
-  let pin='';
-  const full=await sb('staff_accounts?employee_id=eq.'+encodeURIComponent(emp)+'&select=pin&limit=1').catch(()=>({_err:true}));
-  if(!full._err&&Array.isArray(full)&&full[0])pin=String(full[0].pin||'');
+  // The current PIN is never read back (hidden from the public key).
+  // Leave the PIN box empty to keep it, or type a new 4-digit PIN.
+  const pin='';
   _adminAccessEditId=String(emp);
   document.getElementById('admin-access-editor-title').textContent='Edit '+(r.name||'login');
   document.getElementById('aa-name').value=r.name||'';document.getElementById('aa-employee-id').value=r.employee_id||'';document.getElementById('aa-employee-id').readOnly=true;document.getElementById('aa-role').value=['kitchen_coordinator','kitchen_runner'].includes(r.role)?(r.role==='kitchen_coordinator'?'food_manager':'food_runner'):r.role;document.getElementById('aa-pin').value=pin;document.getElementById('aa-active').checked=r.is_active!==false;
   document.getElementById('admin-access-editor').classList.add('open');
   const note=document.getElementById('admin-access-editor-note');if(note)note.textContent=adminAccessLiveSync()?'Saving here updates Supabase staff_accounts immediately.':'Local preview safety mode — this test will not change Supabase.';
-  if(!pin)adminAccessSetSyncStatus('error','Account loaded, but PIN could not be read. You can set a new 4-digit PIN before saving.');
+  { const pe=document.getElementById('aa-pin'); if(pe){ pe.value=''; pe.placeholder='Leave empty to keep current PIN'; } }
+  adminAccessSetSyncStatus('ok','Account loaded · the current PIN is hidden for security. Leave PIN empty to keep it, or type a new 4-digit PIN.');
 }
 function adminAccessClose(){document.getElementById('admin-access-editor').classList.remove('open');_adminAccessEditId='';}
-function adminAccessGeneratePin(){document.getElementById('aa-pin').value=String(Math.floor(1000+Math.random()*9000));}
+function adminAccessGeneratePin(){const pe=document.getElementById('aa-pin');pe.placeholder='4 digits';pe.value=String(Math.floor(1000+Math.random()*9000));}
 function adminAccessOptimistic(row){
   const i=_adminAccessRows.findIndex(x=>String(x.employee_id)===String(row.employee_id));
   if(i>=0)_adminAccessRows[i]={..._adminAccessRows[i],...row};else _adminAccessRows.push(row);
@@ -18854,9 +18872,10 @@ async function adminAccessSave(){
   const name=document.getElementById('aa-name').value.trim(),employee_id=document.getElementById('aa-employee-id').value.trim(),role=document.getElementById('aa-role').value,pin=document.getElementById('aa-pin').value.trim(),is_active=document.getElementById('aa-active').checked;
   if(!name)return toast('Enter the person’s name','error');
   if(!employee_id||employee_id.length<5)return toast('Enter a valid employee ID','error');
-  if(!/^\d{4}$/.test(pin))return toast('PIN must be 4 digits','error');
+  // Editing: an empty PIN keeps the current one. New accounts need a PIN.
+  if(_adminAccessEditId&&pin===''){} else if(!/^\d{4}$/.test(pin))return toast('PIN must be 4 digits','error');
   if(role==='admin')return toast('Admin access cannot be granted here','error');
-  const row={employee_id,name,role,pin,is_active};
+  const row=Object.assign({employee_id,name,role,is_active},pin?{pin}:{});
 
   if(!adminAccessLiveSync()){
     const o=adminAccessPreviewOverrides();o[employee_id]=row;adminAccessSavePreviewOverrides(o);adminAccessOptimistic(row);
@@ -18866,7 +18885,7 @@ async function adminAccessSave(){
   adminAccessSetSyncStatus('loading',_adminAccessEditId?'Updating Supabase account…':'Creating Supabase account…');
   let r;
   if(_adminAccessEditId){
-    r=await sb('staff_accounts?employee_id=eq.'+encodeURIComponent(employee_id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({name,role,pin,is_active})});
+    r=await sb('staff_accounts?employee_id=eq.'+encodeURIComponent(employee_id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(Object.assign({name,role,is_active},pin?{pin}:{}))});
   }else{
     r=await sb('staff_accounts',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)});
   }

@@ -45,6 +45,7 @@
     ['Support Manager', 'Main sign-in', 'ID 20003 · PIN 3333'],
     ['Warehouse Manager', 'Main sign-in', 'ID 20004 · PIN 4444'],
     ['Warehouse runner', 'Main sign-in', 'ID 20005 · PIN 5555'],
+    ['Warehouse (shared 60000)', 'Main sign-in', 'ID 60000 · last name Walker'],
     ['Food Manager', 'Main sign-in', 'ID 20006 · PIN 6666'],
     ['Food Runner', 'Main sign-in', 'ID 20007 · PIN 7777'],
     ['IT', 'Main sign-in', 'ID 20008 · PIN 8888'],
@@ -70,7 +71,8 @@
     var acct = function (eid, pin, name, role) { return { id: id(), employee_id: eid, pin: pin, name: name, role: role, is_active: true, created_at: t }; };
     db.staff_accounts = [acct('90020001', '1111', 'Admin, Demo', 'admin'), acct('90020002', '2222', 'Manager, Demo', 'manager'), acct('90020003', '3333', 'Support, Demo', 'support_manager'),
       acct('90020004', '4444', 'Warehouse, Demo', 'warehouse_manager'), acct('90020005', '5555', 'Runner, Demo', 'warehouse_employee'), acct('90020006', '6666', 'Kitchen, Demo', 'food_manager'),
-      acct('90020007', '7777', 'Delivery, Demo', 'food_runner'), acct('90020008', '8888', 'Tech, Demo', 'tech'), acct('98770000', '9999', 'Premium, Demo', 'premium_manager')];
+      acct('90020007', '7777', 'Delivery, Demo', 'food_runner'), acct('90020008', '8888', 'Tech, Demo', 'tech'), acct('98770000', '9999', 'Premium, Demo', 'premium_manager'),
+      acct('98760000', '4321', 'Shared, Demo', 'warehouse_employee'), acct('90020009', '60000', 'Walker, Temp', 'warehouse_employee')];
     db.kitchen_runner_assignments = [{ employee_id: '90020007', name: 'Delivery, Demo', role: 'food_runner', stands: db.stands.map(function (s) { return s.stand_name; }), is_active: true, updated_at: t }];
     db.game_day_assignments = [{ event_date: d, venue: V, employee_id: '90020005', name: 'Runner, Demo', role: 'warehouse_employee', team: 'warehouse', area_keys: [], direct_stands: db.stands.map(function (s) { return s.stand_name; }), backup_stands: [], notify_requests: true, source: 'manual', updated_at: t, updated_by: '' }];
     db.warehouse_roster = [{ id: id(), event_date: d, role: 'Warehouse Worker', name: 'Runner, Demo', employee_id: '90020005', phone: '', work_schedule_type: 'Demo', start_time: '06:00', end_time: '23:59', uploaded_at: t }];
@@ -170,12 +172,22 @@
   function clone(x) { return JSON.parse(JSON.stringify(x)); }
   function json(body, status, extra) { return new Response(body === null ? null : JSON.stringify(body), { status: status || 200, headers: Object.assign({ 'Content-Type': 'application/json' }, extra || {}) }); }
 
+  // Same answers as the real database sign-in checks (never return a PIN).
+  function rpc(fn, a) {
+    var acc = table('staff_accounts').filter(function (x) { return x.is_active !== false; });
+    var roleOk = function (x) { return !a.p_roles || a.p_roles.indexOf(x.role) >= 0; };
+    var sfxOk = function (x) { return a.p_suffix == null || (String(a.p_suffix).length >= 5 && String(x.employee_id).slice(-String(a.p_suffix).length) === String(a.p_suffix)); };
+    if (fn === 'staff_accounts_safe') return json(acc.filter(function (x) { return roleOk(x) && sfxOk(x); }).map(function (x) { return { employee_id: x.employee_id, name: x.name, role: x.role, is_active: true, pin_shared: String(x.pin || '') === '60000', has_pin: /^\d+$/.test(String(x.pin || '')) }; }));
+    if (fn === 'staff_pin_match') { if (String(a.p_suffix || '').length < 5 || String(a.p_pin || '').length < 4) return json([]); return json(acc.filter(function (x) { return roleOk(x) && sfxOk(x) && String(x.pin) === String(a.p_pin); }).map(function (x) { return { employee_id: x.employee_id, name: x.name, role: x.role }; })); }
+    return json([]);
+  }
   function rest(method, url, body, prefer) {
     var path = new URL(url).pathname.replace(/^.*\/rest\/v1\//, '');
-    if (path.indexOf('rpc/') === 0) return json([]);
+    if (path.indexOf('rpc/') === 0) return rpc(path.slice(4), body || {});
     var tn = decodeURIComponent(path), T = table(tn), q = parse(url), wantRep = /return=representation/.test(prefer || '');
     if (method === 'GET' || method === 'HEAD') {
       var rows = sortRows(T.filter(q.match), q.order).slice(q.offset, q.limit != null ? q.offset + q.limit : undefined);
+      if (tn === 'staff_accounts') rows = rows.map(function (r) { var c = Object.assign({}, r); delete c.pin; return c; });
       return json(clone(rows), 200, { 'Content-Range': '0-' + Math.max(0, rows.length - 1) + '/' + rows.length });
     }
     if (method === 'POST') {

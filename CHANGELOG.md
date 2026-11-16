@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-16-fix-156 (built and tested, NOT live yet)
+- **Security step 1: staff PINs are no longer read by the app.** Every PIN check (main sign-in, warehouse 60000, manager/admin/warehouse/IT PIN pages) now asks the database "does this PIN match?" through two new checks, `staff_accounts_safe` and `staff_pin_match`. They return the person, never the PIN. Sign-in looks and works the same for everyone.
+  - Admin → Access: the current PIN is no longer shown. Leave PIN empty to keep it, or type a new one. Moving a runner to warehouse keeps their own PIN and only gives 60000 to someone without one.
+  - **Go-live order:** (1) upload fix-156 to Netlify and check sign-ins; (2) run `step1_GO_LIVE.sql` to hide the PIN column from the public. **Undo:** `step1_UNDO.sql` plus re-uploading the previous zip.
+  - **Tested:** all 17 demo sign-ins with PINs hidden; wrong PIN refused; last-name, shared 60000, 70000 and admin PIN pages; admin edit keeps the PIN. On the real database (2 QA accounts, switched off afterwards): right and wrong PIN, last name, 60000, manager PIN page, no PIN returned. The hide-PIN change was tried inside a rolled-back transaction: the public can't read PINs, and the checks still sign people in.
+- Demo: the fake database now has the same two checks and hides PINs, and adds a shared 60000 warehouse login (ID 60000 · Walker).
+
 ## 2026-11-16-fix-155
 - **Easier "Who can sell bottles today" (Bottle Tracker → 💵 Sell), for phone and computer.**
   - **🔍 Search a name:** filters as you type, by name, location or ID.
