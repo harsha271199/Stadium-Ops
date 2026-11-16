@@ -4785,7 +4785,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-16-fix-154';
+const BUILD_TAG = '2026-11-16-fix-155';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -25224,6 +25224,20 @@ function btEnsureCss() {
     '#bt-overlay .bt-switch:checked{background:#16A34A}#bt-overlay .bt-switch:checked:after{left:21px}' +
     '#bt-overlay .bt-step{display:flex;gap:10px;align-items:center;padding:6px 0;font-size:14px}' +
     '#bt-body>details{background:var(--bg-card)!important;border:1px solid var(--border)!important;border-radius:14px!important;padding:12px 14px!important;box-shadow:var(--shadow)}' +
+    '#bt-overlay .bt-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 4px}' +
+    '#bt-overlay .bt-seg button{border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text-2);border-radius:14px;padding:8px 6px;font-size:12.5px;font-weight:800;cursor:pointer;line-height:1.2;min-height:40px}' +
+    '#bt-overlay .bt-seg button span{opacity:.75;margin-left:2px}' +
+    '#bt-overlay .bt-seg button.on{background:var(--asu-maroon);border-color:var(--asu-maroon);color:#fff}' +
+    '#bt-overlay .bt-people{display:grid;grid-template-columns:1fr;column-gap:18px;max-height:min(420px,55vh);overflow:auto;margin:4px 0 6px}' +
+    '@media (min-width:700px){#bt-overlay .bt-people{grid-template-columns:1fr 1fr}}' +
+    '#bt-overlay .bt-people .bt-person{min-height:52px}' +
+    '#bt-overlay .bt-sell-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}' +
+    '#bt-overlay .bt-sell-actions .btn{font-size:13px;padding:11px 8px}' +
+    '#bt-overlay .bt-add{margin-top:12px;border-top:1px solid var(--border);padding-top:10px}' +
+    '#bt-overlay .bt-add>summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--asu-maroon);padding:4px 0}' +
+    '#bt-overlay .bt-add-grid{display:grid;grid-template-columns:1fr;gap:0 10px}' +
+    '@media (min-width:600px){#bt-overlay .bt-add-grid{grid-template-columns:1fr 1fr}}' +
+    '@media (max-width:420px){#bt-overlay .bt-sell-actions{grid-template-columns:1fr}}' +
     '#bt-overlay details>summary{list-style:none}#bt-overlay details>summary::-webkit-details-marker{display:none}' +
     '@media (max-width:420px){#bt-tabs .chip{min-height:56px;font-size:11px}#bt-tabs .chip .bt-ti{font-size:18px}}';
   document.head.appendChild(st);
@@ -25403,32 +25417,108 @@ async function btMarkSold(code) {
 }
 // Manager: who may sell bottles today (today's Premium schedule, Suite
 // Attendants first). They sign in with their own ID + last name.
+// 👥 Who can sell bottles today — manager card at the top of 💵 Sell.
+// Search, quick filters, "turn on all Suite Attendants", and adding someone
+// who is not on today's Premium list (as a walk-in with their real ID, so
+// they can sign in). One saved list per day: app_settings bottle_sell_access:DATE.
 async function btRenderSellers() {
   const el = document.getElementById('bt-sellers'); if (!el || !btAllowed()) return;
-  el.innerHTML = '<div class="card"><div class="bt-h">👥 Who can sell bottles today</div><div class="loading"><div class="spinner"></div></div></div>';
-  const [ps] = await Promise.all([btReq('premium_schedule?event_date=eq.' + localISODate() + '&order=worker_name.asc&select=employee_id,worker_name,role_title,location_name'), btLoadSellAccess()]);
-  if (!Array.isArray(ps)) { el.innerHTML = '<div class="notice" style="color:#DC2626">Could not load today\'s Premium schedule</div>'; return; }
+  if (!el.innerHTML) el.innerHTML = '<div class="card"><div class="bt-h">👥 Who can sell bottles today</div><div class="loading"><div class="spinner"></div></div></div>';
+  const [ps] = await Promise.all([btReq('premium_schedule?event_date=eq.' + localISODate() + '&order=worker_name.asc&select=employee_id,worker_name,role_title,location_name,is_walkin'), btLoadSellAccess()]);
+  if (!Array.isArray(ps)) { el.innerHTML = '<div class="notice" style="color:#DC2626">Could not load today\'s Premium schedule — check signal and open 💵 Sell again.</div>'; return; }
   const seen = new Set(), rows = ps.filter(r => r.employee_id && !seen.has(String(r.employee_id)) && seen.add(String(r.employee_id)));
-  rows.sort((a, b) => (/suite attendant/i.test(b.role_title) - /suite attendant/i.test(a.role_title)) || String(a.worker_name).localeCompare(String(b.worker_name)));
+  rows.sort((a, b) => (btIsSuite(b) - btIsSuite(a)) || String(a.worker_name).localeCompare(String(b.worker_name)));
+  _bt.sellRows = rows;
   const on = new Set(_bt.sellIds || []);
-  const open = _bt.sellersOpen || on.size === 0;
-  el.innerHTML = '<details class="card"' + (open ? ' open' : '') + ' ontoggle="_bt.sellersOpen=this.open"><summary style="cursor:pointer">' + btSellersSummary(on.size) + '</summary>' +
+  if (!_bt.sellF) _bt.sellF = rows.some(btIsSuite) ? 'suite' : 'all';
+  const open = _bt.sellersOpen !== false;
+  el.innerHTML = '<details class="card" id="bt-sell-card"' + (open ? ' open' : '') + ' ontoggle="_bt.sellersOpen=this.open"><summary style="cursor:pointer">' + btSellersSummary(on.size) + '</summary>' +
     '<div class="bt-help" style="margin-top:8px">Switch a person <b>on</b> → they sign in to the app with <b>their own ID + last name</b> and only see 💵 Sell a bottle. It ends at the end of today.</div>' +
-    (rows.length ? rows.map(r => '<label class="bt-person"><input type="checkbox" class="bt-switch" ' + (on.has(String(r.employee_id)) ? 'checked ' : '') + 'onchange="btToggleSeller(\'' + escapeHtml(String(r.employee_id)) + '\',this.checked,this)"><span style="flex:1"><b>' + escapeHtml(r.worker_name || '') + '</b><br><span style="color:var(--text-2);font-size:12px">' + escapeHtml([r.role_title, r.location_name].filter(Boolean).join(' · ')) + '</span></span></label>').join('') : '<div class="bt-help" style="margin:0">Nobody is on today\'s Premium schedule yet. Load the Premium roster first, then switch people on here.</div>') + '</details>';
+    '<input class="form-input" id="bt-sell-q" type="search" placeholder="🔍 Search a name" autocomplete="off" value="' + escapeHtml(_bt.sellQ || '') + '" oninput="_bt.sellQ=this.value;btRenderSellerList()" style="margin:0 0 8px">' +
+    '<div class="bt-seg" id="bt-sell-f"></div>' +
+    '<div id="bt-sell-list" class="bt-people"></div>' +
+    '<div class="bt-sell-actions"><button class="btn btn-ghost" style="margin:0" onclick="btSellersBulk(true)">✅ Turn on all Suite Attendants</button><button class="btn btn-ghost" style="margin:0" onclick="btSellersBulk(false)">⛔ Turn everyone off</button></div>' +
+    '<details class="bt-add" id="bt-sell-add"><summary>➕ Add someone who is not on today\'s list</summary>' +
+      '<div class="bt-add-grid"><div><label class="form-label">Full name</label><input class="form-input" id="bt-add-name" placeholder="Last, First" autocomplete="off"></div>' +
+      '<div><label class="form-label">Employee ID</label><input class="form-input" id="bt-add-id" inputmode="numeric" placeholder="8-digit ID" autocomplete="off"></div>' +
+      '<div><label class="form-label">Works at</label><select class="form-input" id="bt-add-loc">' + btAllLocs().map(l => '<option>' + escapeHtml(l) + '</option>').join('') + '</select></div>' +
+      '<div><label class="form-label">Role</label><select class="form-input" id="bt-add-role"><option>Suite Attendant</option><option>Bartender</option><option>Premium Supervisor</option><option>Other</option></select></div></div>' +
+      '<div class="bt-help" style="margin:6px 0 8px">They are added to today\'s Premium list as a walk-in (checked in) and switched on to sell. They sign in with the last 5 digits of this ID + their last name.</div>' +
+      '<button class="btn btn-primary" style="margin:0" onclick="btSellersAdd()">➕ Add and switch on</button></details>' +
+    '</details>';
+  btRenderSellerList();
+}
+function btIsSuite(r) { return /suite/i.test(String((r && r.role_title) || '')) ? 1 : 0; }
+function btRenderSellerList() {
+  const box = document.getElementById('bt-sell-list'); if (!box) return;
+  const rows = _bt.sellRows || [], on = new Set(_bt.sellIds || []), q = String(_bt.sellQ || '').trim().toLowerCase();
+  btRenderSellerSeg();
+  let list = rows.filter(r => _bt.sellF === 'suite' ? btIsSuite(r) : _bt.sellF === 'on' ? on.has(String(r.employee_id)) : true);
+  if (q) list = rows.filter(r => (String(r.worker_name || '') + ' ' + String(r.location_name || '') + ' ' + String(r.employee_id || '')).toLowerCase().includes(q));
+  if (!rows.length) { box.innerHTML = '<div class="bt-help" style="margin:0">Nobody is on today\'s Premium list yet. Load the Premium roster, or add someone below.</div>'; return; }
+  if (!list.length) { box.innerHTML = '<div class="bt-help" style="margin:4px 0">' + (q ? 'No one matches "' + escapeHtml(q) + '".' : _bt.sellF === 'on' ? 'Nobody is switched on yet.' : 'No Suite Attendants today — tap Everyone.') + '</div>'; return; }
+  box.innerHTML = list.map(r => { const id = escapeHtml(String(r.employee_id)); return '<label class="bt-person"><input type="checkbox" class="bt-switch" data-emp="' + id + '" ' + (on.has(String(r.employee_id)) ? 'checked ' : '') + 'onchange="btToggleSeller(\'' + id + '\',this.checked,this)"><span style="flex:1;min-width:0"><b>' + escapeHtml(r.worker_name || '') + '</b>' + (r.is_walkin ? ' <span style="font-size:11px;color:var(--text-3)">walk-in</span>' : '') + '<br><span style="color:var(--text-2);font-size:12px">' + escapeHtml([r.role_title, r.location_name].filter(Boolean).join(' · ')) + '</span></span></label>'; }).join('');
+}
+// Filter buttons with live counts (Suite Attendants · Everyone · Switched on).
+function btRenderSellerSeg() {
+  const seg = document.getElementById('bt-sell-f'); if (!seg) return;
+  const rows = _bt.sellRows || [], on = new Set(_bt.sellIds || []);
+  const counts = { suite: rows.filter(btIsSuite).length, all: rows.length, on: rows.filter(r => on.has(String(r.employee_id))).length };
+  seg.innerHTML = [['suite', 'Suite Attendants'], ['all', 'Everyone'], ['on', 'Switched on']].map(([k, l]) => '<button class="' + (_bt.sellF === k ? 'on' : '') + '" onclick="_bt.sellF=\'' + k + '\';_bt.sellQ=\'\';var q=document.getElementById(\'bt-sell-q\');if(q)q.value=\'\';btRenderSellerList()">' + l + ' <span>' + counts[k] + '</span></button>').join('');
 }
 function btSellersSummary(n) {
   return '<div class="bt-h" style="margin:0;justify-content:space-between"><span>👥 Who can sell bottles today</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2);font-weight:700"><span class="bt-count" style="background:' + (n ? '#16A34A' : 'var(--text-3)') + '">' + n + '</span>on ▾</span></div>';
 }
+// Saves today's list. Re-reads first so two managers don't overwrite each other.
+async function btSaveSellers(change, note) {
+  await btLoadSellAccess();
+  const ids = new Set(_bt.sellIds || []); change(ids);
+  const r = await btSetting(btSellKey(), [...ids].join(','));
+  if (r && r._err) { toast(r.net ? 'No signal — not saved' : 'Could not save', 'error'); return false; }
+  _bt.sellIds = [...ids];
+  btLog({ sticker_no: '-', action: 'sell_access', note: note + ' (' + localISODate() + ')', client_uuid: btUid('bta') });
+  const sum = document.querySelector('#bt-sellers summary'); if (sum) sum.innerHTML = btSellersSummary(ids.size);
+  return true;
+}
 async function btToggleSeller(empId, on, box) {
   if (!btAllowed()) return;
-  await btLoadSellAccess();
-  const ids = new Set(_bt.sellIds || []); if (on) ids.add(empId); else ids.delete(empId);
-  const r = await btSetting(btSellKey(), [...ids].join(','));
-  if (r && r._err) { if (box) box.checked = !on; return toast(r.net ? 'No signal — not saved' : 'Could not save', 'error'); }
-  _bt.sellIds = [...ids]; if (box) box.checked = !!on;
-  btLog({ sticker_no: '-', action: 'sell_access', note: (on ? 'Selling ON for ' : 'Selling OFF for ') + empId + ' (' + localISODate() + ')', client_uuid: btUid('bta') });
+  const ok = await btSaveSellers(ids => { if (on) ids.add(empId); else ids.delete(empId); }, (on ? 'Selling ON for ' : 'Selling OFF for ') + empId);
+  if (box) box.checked = ok ? !!on : !on;
+  if (!ok) return;
   toast(on ? '✅ Can sell bottles today' : 'Selling switched off');
-  const sum = document.querySelector('#bt-sellers summary'); if (sum) sum.innerHTML = btSellersSummary(ids.size);
+  if (_bt.sellF === 'on') btRenderSellerList(); else btRenderSellerSeg();
+}
+async function btSellersBulk(on) {
+  if (!btAllowed()) return;
+  const rows = _bt.sellRows || [];
+  const target = on ? rows.filter(btIsSuite) : rows.filter(r => (_bt.sellIds || []).includes(String(r.employee_id)));
+  if (!target.length) return toast(on ? 'No Suite Attendants on today\'s list' : 'Nobody is switched on', 'error');
+  const names = target.slice(0, 8).map(r => r.worker_name).join(', ') + (target.length > 8 ? '…' : '');
+  if (!(await confirmAction((on ? 'Switch ON bottle selling for ' : 'Switch OFF bottle selling for ') + target.length + ' people?\n\n' + names, { title: on ? 'Turn on all Suite Attendants?' : 'Turn everyone off?', confirmLabel: on ? 'Turn on' : 'Turn off' }))) return;
+  const ok = await btSaveSellers(ids => target.forEach(r => { if (on) ids.add(String(r.employee_id)); else ids.delete(String(r.employee_id)); }), (on ? 'Selling ON for all Suite Attendants: ' : 'Selling OFF for: ') + target.length);
+  if (!ok) return;
+  toast(on ? '✅ ' + target.length + ' can sell bottles today' : 'Selling switched off for ' + target.length);
+  btRenderSellerList();
+}
+async function btSellersAdd() {
+  if (!btAllowed()) return;
+  const name = String((document.getElementById('bt-add-name') || {}).value || '').trim();
+  const id = String((document.getElementById('bt-add-id') || {}).value || '').replace(/\D/g, '');
+  const loc = (document.getElementById('bt-add-loc') || {}).value || '';
+  const role = (document.getElementById('bt-add-role') || {}).value || 'Suite Attendant';
+  if (name.length < 3) return toast('Type their full name', 'error');
+  if (!/^\d{5,8}$/.test(id)) return toast('Type their employee ID (5–8 digits) — they need it to sign in', 'error');
+  if ((_bt.sellRows || []).some(r => String(r.employee_id) === id || String(r.employee_id).endsWith(id))) {
+    await btSaveSellers(ids => ids.add(((_bt.sellRows || []).find(r => String(r.employee_id) === id || String(r.employee_id).endsWith(id)) || {}).employee_id || id), 'Selling ON for ' + id);
+    toast('Already on today\'s list — switched on'); return btRenderSellers();
+  }
+  const res = await api('addPremiumWalkin', { date: localISODate(), name, empId: id, roleTitle: role, location: loc });
+  if (!res || !res.ok) return toast((res && res.error) || 'Could not add — try again', 'error');
+  const ok = await btSaveSellers(ids => ids.add(id), 'Added ' + name + ' (' + id + ') and selling ON');
+  if (!ok) return;
+  toast('✅ ' + name + ' added and can sell bottles today');
+  _bt.sellQ = ''; _bt.sellF = 'on';
+  btRenderSellers();
 }
 function btRenderEmpty() {
   document.getElementById('bt-body').innerHTML = '<div class="notice info">Empty bottles came back? Scan each sticker, then peel it off. Each beep is saved.</div>' + '<div class="bt-panel">' + btNumberBox('btMarkEmpty', 'Empty') + '</div><div id="bt-session"></div>';

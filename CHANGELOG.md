@@ -4,6 +4,16 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-16-fix-155
+- **Easier "Who can sell bottles today" (Bottle Tracker → 💵 Sell), for phone and computer.**
+  - **🔍 Search a name:** filters as you type, by name, location or ID.
+  - **Quick filters with counts:** Suite Attendants (default) · Everyone · Switched on. They share the width evenly on a phone.
+  - **✅ Turn on all Suite Attendants** and **⛔ Turn everyone off:** one tap, with a confirm that lists the names.
+  - **➕ Add someone who is not on today's list:** name, employee ID, where they work and role. They are added to today's Premium list as a walk-in (checked in) and switched on. They sign in with the last 5 of that ID + last name. An ID is required, since without it they couldn't sign in. Someone already on the list is just switched on.
+  - **Layout:** the people list is 2 columns on a computer and 1 on a phone, scrolls inside the card, and every row is a large tap target. Tapping a switch only updates the counts, without redrawing the list under your finger.
+  - Saving re-reads today's list first, so two managers switching people on at the same time don't overwrite each other. Every change is logged in the bottle history.
+- Tested on a phone (iPhone size) and a desktop with 12 people: default filter shows 5 Suite Attendants; search "lee" finds 1; one tap saves 1; turn on all takes it to 6; the Switched on filter shows those 6; turn everyone off clears it; adding a new person saves them as a walk-in and switches them on, and they then sign in and sell a bottle; a bad ID is refused with a clear message. The full Bottle Tracker regression (tag, move, sell, empty, look up, undo, seller login and limits, QR labels) passes with no page errors.
+
 ## 2026-11-16-fix-154
 - **Bottle Tracker: cleaner look. Same tabs, same places, same steps.**
   - **Header:** shows who is signed in ("Hernandez, Nestor · Premium liquor"), with a proper Close button. It stays at the top while scrolling.
