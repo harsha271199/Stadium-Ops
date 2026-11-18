@@ -4785,7 +4785,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-16-fix-156';
+const BUILD_TAG = '2026-11-18-fix-157';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -8830,11 +8830,11 @@ let _checkinBlob = null;
 async function markStarted() {
   // Check-in time window: workers and stand leads can only check in
   // starting 5 minutes before their scheduled shift start — not any time
-  // earlier. Supervisors are exempt, since they may need to arrive early
-  // to set up or oversee opening. Fails open (allows check-in) if the
-  // shift's start_time can't be parsed, rather than blocking someone over
-  // a formatting quirk in their schedule row.
-  if (state.user.role !== 'supervisor') {
+  // earlier. Supervisors and stand leads are exempt, since they arrive early
+  // to set up, restock and count in before their crew. Fails open (allows
+  // check-in) if the shift's start_time can't be parsed, rather than blocking
+  // someone over a formatting quirk in their schedule row.
+  if (state.user.role !== 'supervisor' && state.user.role !== 'lead') {
     const startMins = parseTimeToMinutes(state.user.startTime);
     if (startMins !== null) {
       const opensAt = startMins - 5;

@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-18-fix-157
+- **Stand leads can check in early, like supervisors.** Before, a stand lead could only check in from 5 minutes before their shift start, so leads who came early to restock and count in got "Check-in opens 5 minutes before your shift" and managers had to move their start time. Leads and supervisors can now check in any time on their scheduled day. Workers still check in from 5 minutes before their start.
+  - Tested: a worker 3 hours early is still blocked with the same message; a lead and a supervisor 3 hours early get through.
+  - Nothing else changed from fix-156 (which is live).
+
 ## 2026-11-16-fix-156 (built and tested, NOT live yet)
 - **Security step 1: staff PINs are no longer read by the app.** Every PIN check (main sign-in, warehouse 60000, manager/admin/warehouse/IT PIN pages) now asks the database "does this PIN match?" through two new checks, `staff_accounts_safe` and `staff_pin_match`. They return the person, never the PIN. Sign-in looks and works the same for everyone.
   - Admin → Access: the current PIN is no longer shown. Leave PIN empty to keep it, or type a new one. Moving a runner to warehouse keeps their own PIN and only gives 60000 to someone without one.
