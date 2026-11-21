@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-21-fix-158
+- **Night-game shifts that end after midnight are no longer flagged as overdue.** The 11/21 football roster runs 4:30 PM – 1:30 AM. The manager Live view read "1:30 AM" as 1:30 AM on the morning of the game, so every checked-in worker showed "⚠ 15h past scheduled end" and landed in NEEDS ATTENTION. A shift whose end time is earlier than its start time now ends on the next day.
+  - Tested: a 4:30 PM – 1:30 AM shift at 8 PM shows 5 hours left (not overdue); a shift that really ended hours ago is still flagged; a shift with no start time and an end before 6 AM is treated as overnight.
+
 ## 2026-11-18-fix-157
 - **Stand leads can check in early, like supervisors.** Before, a stand lead could only check in from 5 minutes before their shift start, so leads who came early to restock and count in got "Check-in opens 5 minutes before your shift" and managers had to move their start time. Leads and supervisors can now check in any time on their scheduled day. Workers still check in from 5 minutes before their start.
   - Tested: a worker 3 hours early is still blocked with the same message; a lead and a supervisor 3 hours early get through.

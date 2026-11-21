@@ -4785,7 +4785,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-18-fix-157';
+const BUILD_TAG = '2026-11-21-fix-158';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -6398,7 +6398,7 @@ async function api(action, data) {
       const [rows, sched, todaySched] = await Promise.all([
         sb('attendance?entry_date=eq.'+todayLS+'&order=updated_at.desc&select=*'),
         sb('schedule?is_test=eq.true&select=employee_id'),
-        sb('schedule?event_date=eq.'+todayLS+'&select=employee_id,end_time')
+        sb('schedule?event_date=eq.'+todayLS+'&select=employee_id,start_time,end_time')
       ]);
       if (rows._err) return {ok:false,error:'Network'};
       // Cross-references against schedule's is_test flag rather than adding
@@ -6406,8 +6406,8 @@ async function api(action, data) {
       // manager/supervisor-facing live view without touching the check-in
       // flow at all.
       const testIds = new Set((sched._err ? [] : sched).map(s => s.employee_id));
-      const endTimes = {};
-      if (!todaySched._err) todaySched.forEach(s => { endTimes[s.employee_id] = s.end_time; });
+      const endTimes = {}, startTimes = {};
+      if (!todaySched._err) todaySched.forEach(s => { endTimes[s.employee_id] = s.end_time; startTimes[s.employee_id] = s.start_time; });
       const latest = latestByEmp(rows);
       const byStand = {};
       latest.filter(a=>['working','break'].includes(a.status) && !testIds.has(a.employee_id)).forEach(a=>{
@@ -6420,6 +6420,11 @@ async function api(action, data) {
         const endTimeStr = endTimes[a.employee_id];
         if (endTimeStr) {
           const endDt = new Date(todayLS + ' ' + endTimeStr);
+          // A shift that ends after midnight (e.g. 4:30 PM – 1:30 AM) ends on the
+          // NEXT calendar day. Without this every worker on a night game showed
+          // "15h past scheduled end" as soon as they checked in.
+          const endM = parseTimeToMinutes(endTimeStr), startM = parseTimeToMinutes(startTimes[a.employee_id]);
+          if (endM !== null && ((startM !== null && endM < startM) || (startM === null && endM < 360))) endDt.setDate(endDt.getDate() + 1);
           if (!isNaN(endDt.getTime())) hoursOverdue = (Date.now() - endDt.getTime()) / 3600000;
         }
         (byStand[a.stand] = byStand[a.stand]||[]).push({ empId:a.employee_id, name:a.worker_name, since:a.updated_at, onBreak:a.status==='break', hoursOverdue });
