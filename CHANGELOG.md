@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-21-fix-163
+- **Stand Transfer Report now includes stock moved between stands.** It only listed warehouse → stand deliveries and waste; stand-to-stand moves (`stand_transfers`, 176 this season) were never in it, so e.g. the 277 souvenir cups Steven moved Soccer → Softball on 11/04 could not be traced from any download. Each stand's CSV lines and PDF page now add "🔁 Moved between stands" (OUT → stand / IN ← stand, item, qty, status, who, time) for that game day (6 AM – 6 AM Arizona). Stands that only had moves now get their own page too.
+- Tested on the real database (read-only): 11/04 went from 1 stand (442 Huss) to 3 (Soccer 16 out, Softball 16 in, incl. the 277 cups); 11/07 game day: 33 stands, 55 deliveries, 6 moves.
+
 ## 2026-11-21-fix-162
 - **Warehouse → Assign & Team lists only today's warehouse crew.** It showed all 34 warehouse accounts (including concession runners who once had a warehouse login) because 11/21's warehouse roster had not been loaded. Loaded it from the 11/21 ReadyOn roster: 19 people (Flenard, Larry, 10 warehouse workers, 6 warehouse runners, Alex). The other 15 accounts sit behind "Show 15 people not on today's roster".
 - Roster matching now ignores name order and also matches by employee ID, so "Raymond Gilmer" = "Gilmer, Raymond" and "FNU, SooryaSathish" = "SooryaSathish, FNU" (before they could drop off the working list).

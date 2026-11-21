@@ -4790,7 +4790,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-21-fix-162';
+const BUILD_TAG = '2026-11-21-fix-163';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -14790,10 +14790,18 @@ async function loadStandTransferReportData(date, standFilter) {
   let wasteRows = await sb('wastage_logs?log_date=eq.' + iso + '&order=stand.asc&select=*').catch(() => ({ _err: true }));
   let waste = (!wasteRows._err && Array.isArray(wasteRows)) ? wasteRows : [];
   if (q) waste = waste.filter(w => (w.stand || '').toLowerCase().includes(q));
+  // fix-162: stand-to-stand moves (stand_transfers) were never in this report,
+  // so e.g. 277 cups moved Soccer -> Softball on 11/04 could not be traced.
+  // Same game day as everything else here: 6 AM -> 6 AM Arizona.
+  const s2sFrom = iso + 'T06:00:00-07:00', s2sTo = nextISODate(iso) + 'T06:00:00-07:00';
+  let moves = await sb('stand_transfers?created_at=gte.' + encodeURIComponent(s2sFrom) + '&created_at=lt.' + encodeURIComponent(s2sTo) + '&order=created_at.asc&select=*').catch(() => ({ _err: true }));
+  moves = (!moves._err && Array.isArray(moves)) ? moves : [];
+  if (q) moves = moves.filter(m => (m.from_stand || '').toLowerCase().includes(q) || (m.to_stand || '').toLowerCase().includes(q));
   const byStand = {};
-  const get = s => (byStand[s] = byStand[s] || { stand: s, transfers: [], waste: [] });
+  const get = s => (byStand[s] = byStand[s] || { stand: s, transfers: [], waste: [], movesOut: [], movesIn: [] });
   transfers.forEach(t => get(t.stand).transfers.push({ ...t, items: itemsByTransfer[t.id] || [] }));
   waste.forEach(w => get(w.stand).waste.push(w));
+  moves.forEach(m => { if (m.from_stand) get(m.from_stand).movesOut.push(m); if (m.to_stand) get(m.to_stand).movesIn.push(m); });
   return Object.values(byStand).sort((a, b) => a.stand.localeCompare(b.stand));
 }
 
@@ -14827,6 +14835,8 @@ async function exportStandTransferReportCSV() {
         csv += [s.stand, 'Waste', e.item || '', (e.qty || '') + (e.unit ? ' ' + e.unit : ''), e.reason || '', w.submitted_by || '', w.created_at || ''].map(esc).join(',') + '\n';
       });
     });
+    (s.movesOut || []).forEach(m => { csv += [s.stand, 'Moved OUT to ' + m.to_stand, m.item_name || '', m.qty, m.status, m.initiated_by || '', m.created_at || ''].map(esc).join(',') + '\n'; });
+    (s.movesIn || []).forEach(m => { csv += [s.stand, 'Moved IN from ' + m.from_stand, m.item_name || '', m.qty, m.status, m.confirmed_by || m.initiated_by || '', m.created_at || ''].map(esc).join(',') + '\n'; });
   });
   downloadCSV(csv, 'stand_transfer_report_' + date + '.csv');
   toast('⬇️ Stand transfer report downloaded');
@@ -14884,6 +14894,12 @@ async function printStandTransferReportPDF() {
             ).join('')).join('') +
             '</tbody></table>'
           : '<div class="empty-note">No waste logged for this stand.</div>') +
+        (((s.movesOut || []).length + (s.movesIn || []).length)
+          ? '<div class="section">🔁 Moved between stands</div><table><thead><tr><th style="width:110px">Direction</th><th>Item</th><th style="width:50px">Qty</th><th style="width:70px">Status</th><th>By</th><th style="width:80px">Time</th></tr></thead><tbody>' +
+            (s.movesOut || []).map(m => '<tr><td>OUT → ' + escapeHtml(m.to_stand || '') + '</td><td>' + escapeHtml(m.item_name || '') + '</td><td>' + escapeHtml(String(m.qty)) + '</td><td>' + escapeHtml(m.status || '') + '</td><td>' + escapeHtml(m.initiated_by || '') + '</td><td>' + escapeHtml(m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '') + '</td></tr>').join('') +
+            (s.movesIn || []).map(m => '<tr><td>IN ← ' + escapeHtml(m.from_stand || '') + '</td><td>' + escapeHtml(m.item_name || '') + '</td><td>' + escapeHtml(String(m.qty)) + '</td><td>' + escapeHtml(m.status || '') + '</td><td>' + escapeHtml(m.confirmed_by || m.initiated_by || '') + '</td><td>' + escapeHtml(m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '') + '</td></tr>').join('') +
+            '</tbody></table>'
+          : '') +
       '</div>';
     }).join('') +
     '<scr' + 'ipt>window.print()<\/scr' + 'ipt></body></html>';
@@ -24549,7 +24565,7 @@ function whBuildInventoryPane() {
     invContainer.innerHTML =
       '<div style="max-width:480px">' +
         '<div style="font-weight:700;font-size:14px;margin-bottom:4px">📄 Stand Transfer Report</div>' +
-        '<div style="font-size:11.5px;color:var(--text-3);margin:2px 0 6px">Everything delivered to each stand, plus logged waste.</div>' +
+        '<div style="font-size:11.5px;color:var(--text-3);margin:2px 0 6px">Everything delivered to each stand, logged waste, and stock moved between stands.</div>' +
         '<label class="form-label" style="margin-top:8px">Date</label>' +
         '<div style="display:flex;gap:8px;align-items:center">' +
           '<input class="form-input" type="date" id="wh-mgr-inv-date" style="margin:0;flex:1">' +
