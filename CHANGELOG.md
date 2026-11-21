@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-21-fix-165
+- **Matt's Assign & Team only lists people who signed in today.** "Signed in" = opened the app today, or checked in at the Warehouse on 👥 My Team. Rostered people who haven't signed in yet sit behind "Show N on today's roster not signed in yet"; people not on the roster stay behind their own button. The summary shows "Signed in x/19". The 🕳 Stand gaps person picker offers signed-in people only (falls back to the roster when nobody has signed in yet). 👥 My Team is unchanged — it still lists everyone scheduled so he can check them in.
+- Matched by employee ID or by name in any order (shared 60000 accounts match by name).
+- Tested on the real database (read-only) at 3:30 PM game day: 0/19 signed in with a clear note and the "Show 19" button; with sign-ins added, only those people show in the list and the gap picker.
+
 ## 2026-11-21-fix-164
 - **Runner transparency.** Stand leads, supervisors and managers can now see who is assigned to each stand.
   - Stand Lead / Supervisor home: a "👥 Your runners today" card at the top of their tools — 🚚 Warehouse (from Matt's Assign & Team) and 🍔 Food runners for their stand, 🟢 = has the app open now. When nobody is assigned it says so ("any warehouse runner takes your requests").

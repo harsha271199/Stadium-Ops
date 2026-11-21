@@ -4799,7 +4799,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-21-fix-164';
+const BUILD_TAG = '2026-11-21-fix-165';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -19111,6 +19111,7 @@ async function warehouseCoverageInit(){const card=document.getElementById('wh-co
    (!rows._err&&Array.isArray(rows)?rows:[]).forEach(p=>{const k=key(p.name);const cur=best.get(k);if(!cur||score(p)>score(cur))best.set(k,p);});
    _whCovPeople=[...best.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name)));}
   _whCovRoster=new Set(Array.isArray(roster)?roster.flatMap(r=>[key(r.name),'id:'+String(r.employee_id||'')]):[]);
+  await whCovLoadSignedIn();
   const sel=document.getElementById('whcov-person');if(sel)sel.innerHTML='<option value=""></option>'+_whCovPeople.map(p=>'<option value="'+escapeAttr(p.employee_id)+'">'+escapeHtml(p.name)+'</option>').join('');
   whCovClose();
   await whCovLoadStandsList();await warehouseCoverageCurrent();}
@@ -19180,6 +19181,22 @@ function whCovRenderLegend(){
   el.innerHTML='<div class="coverage-area-chips">'+WH_GROUPS.map(g=>{const n=whGroupPeopleCount(g,'');return '<span class="coverage-area-chip" style="cursor:default;'+(n?'':'opacity:.6')+'">'+escapeHtml(g.name.replace(' · ',': '))+' <b>· '+n+'</b></span>';}).join('')+'</div>';
 }
 let _whCovRoster=new Set(),_whCovRows=[],_whCovAreas=[],_whCovShowOthers=false;
+// fix-165: Matt only sees people who SIGNED IN today (opened the app, or were
+// checked in at the Warehouse). Rostered people who haven't signed in yet sit
+// behind a button so he isn't assigning stands to someone who isn't here.
+let _whCovSignedIn=new Set(),_whCovShowNotIn=false;
+async function whCovLoadSignedIn(){
+  const day=stadiumDay();
+  const [duty,att]=await Promise.all([
+    sb('on_duty?day=eq.'+day+'&select=employee_id,name').catch(()=>({_err:true})),
+    sb('attendance?entry_date=eq.'+day+'&stand=eq.Warehouse&select=employee_id,worker_name').catch(()=>({_err:true}))
+  ]);
+  const set=new Set();
+  (Array.isArray(duty)?duty:[]).forEach(d=>{set.add('id:'+d.employee_id);if(d.name)set.add(whNameKey(d.name));});
+  (Array.isArray(att)?att:[]).forEach(a=>{set.add('id:'+a.employee_id);if(a.worker_name)set.add(whNameKey(a.worker_name));});
+  _whCovSignedIn=set;
+}
+function whCovIsSignedIn(p){return _whCovSignedIn.has('id:'+p.employee_id)||_whCovSignedIn.has(whNameKey(p.name));}
 function whCovSummaryText(r){const gn=WH_GROUPS.filter(g=>whGroupCovered(g,r.direct_stands));const rest=(r.direct_stands||[]).filter(x=>!gn.some(g=>whGroupStands(g).includes(x)));if(gn.length&&!(r.area_keys||[]).length)return [...gn.map(g=>g.name),...rest].join(' · ');const names=(r.area_keys||[]).map(k=>{const a=_whCovAreas.find(x=>x.area_key===k);return a?a.area_name:k;});const parts=[...names,...(r.direct_stands||[])];return parts.join(' · ');}
 // Assign & Team, built for a big crew: everyone is a card, grouped by what
 // still needs doing (working today with no stands first), with search.
@@ -19193,17 +19210,20 @@ function whCovRenderPeople(){
   const rowOf=p=>_whCovRows.find(x=>String(x.employee_id)===String(p.employee_id));
   let people=_whCovPeople.filter(p=>!q||loginFold(p.name+' '+whDisp(p.name)).includes(q));
   const working=p=>!hasRoster||_whCovRoster.has(key(p.name))||_whCovRoster.has('id:'+p.employee_id);
-  const todo=people.filter(p=>working(p)&&!rowOf(p)),done=people.filter(p=>working(p)&&rowOf(p)),others=people.filter(p=>!working(p));
+  const here=p=>working(p)&&whCovIsSignedIn(p);
+  const todo=people.filter(p=>here(p)&&!rowOf(p)),done=people.filter(p=>here(p)&&rowOf(p)),notIn=people.filter(p=>working(p)&&!whCovIsSignedIn(p)),others=people.filter(p=>!working(p));
   const card=p=>{const r=rowOf(p),txt=r?whCovSummaryText(r):'';const sup=p.role==='warehouse_supervisor';
     return '<div class="food-runner-card" id="whcov-card-'+escapeAttr(p.employee_id)+'" onclick="'+(_whCovBulk?'whCovBulkPick':'whCovOpen')+'(\''+escapeAttr(p.employee_id)+'\')" style="cursor:pointer;padding:10px 12px;margin-bottom:7px;'+(r?'':'border-left-color:#F59E0B')+(_whCovBulk&&_whCovBulkSel.has(String(p.employee_id))?';outline:3px solid var(--asu-maroon);background:rgba(140,29,64,0.08)':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0"><div style="font-weight:800;font-size:14px">'+escapeHtml(whDisp(p.name))+(sup?' <span style="font-size:10px;font-weight:800;color:var(--asu-maroon)">SUPERVISOR</span>':'')+'</div><div style="font-size:12px;margin-top:2px;color:'+(r?'var(--text-2)':'#B45309')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(txt||'No stands yet — tap to assign')+'</div></div><span style="font-size:12px;font-weight:800;color:var(--asu-maroon);flex-shrink:0">'+(_whCovBulk?(_whCovBulkSel.has(String(p.employee_id))?'✅':'⬜'):'Edit ›')+'</span></div></div>';};
   const sec=(t,list)=>list.length?'<div class="section-title" style="margin-top:10px">'+t+' · '+list.length+'</div>'+list.map(card).join(''):'';
-  let html=sec(hasRoster?'⚠️ Working today — no stands yet':'⚠️ No stands yet',todo)+sec(hasRoster?'✅ Working today — assigned':'✅ Assigned',done);
+  let html=sec('⚠️ Signed in — no stands yet',todo)+sec('✅ Signed in — assigned',done);
+  if(!todo.length&&!done.length&&!q)html+='<div class="notice info" style="font-size:12px;margin-top:6px">Nobody has signed in yet today. People show here as soon as they sign in to the app or are checked in on 👥 My Team.</div>';
+  if(notIn.length)html+=q||_whCovShowNotIn?sec('On today\'s roster — not signed in yet',notIn):'<button class="btn btn-ghost" onclick="_whCovShowNotIn=true;whCovRenderPeople()" style="margin-top:8px">Show '+notIn.length+' on today\'s roster not signed in yet</button>';
   if(others.length)html+=q||_whCovShowOthers?sec('Not on today\'s roster',others):'<button class="btn btn-ghost" onclick="_whCovShowOthers=true;whCovRenderPeople()" style="margin-top:8px">Show '+others.length+' people not on today\'s roster</button>';
   el.innerHTML=html||'<div class="empty"><p>No one matches.</p></div>';
   whCovRenderLegend();
   const sum=document.getElementById('whcov-summary');
-  if(sum){const all=_whCovPeople.filter(working),n=all.filter(p=>rowOf(p)).length;
-    sum.innerHTML='<div class="wh-stat-row"><div class="wh-stat-chip'+(all.length-n?' warn':'')+'"><b>'+(all.length-n)+'</b><span>No stands</span></div><div class="wh-stat-chip"><b>'+n+'</b><span>Assigned</span></div><div class="wh-stat-chip"><b>'+all.length+'</b><span>'+(hasRoster?'Working today':'Warehouse team')+'</span></div></div>'+
+  if(sum){const all=_whCovPeople.filter(here),n=all.filter(p=>rowOf(p)).length,sched=_whCovPeople.filter(working).length;
+    sum.innerHTML='<div class="wh-stat-row"><div class="wh-stat-chip'+(all.length-n?' warn':'')+'"><b>'+(all.length-n)+'</b><span>No stands</span></div><div class="wh-stat-chip"><b>'+n+'</b><span>Assigned</span></div><div class="wh-stat-chip"><b>'+all.length+'/'+sched+'</b><span>Signed in</span></div></div>'+
       (!_whCovRows.length?'<button class="btn btn-primary" onclick="whCovCopyLast()" style="margin-top:8px">📋 Copy last game\'s plan</button>':'');}
   const ed=document.getElementById('whcov-editor'),open=document.getElementById('whcov-person');
   if(ed&&open&&open.value){const c=document.getElementById('whcov-card-'+open.value);if(c)c.after(ed);else whCovClose();}
@@ -19239,7 +19259,7 @@ function whCovToggleStand(cb,stand){if(cb.checked){if(!_whCovSelectedStands.incl
 async function warehouseCoveragePersonChanged(){_whCovSelected=[];_whCovSelectedStands=[];const emp=document.getElementById('whcov-person').value;if(!emp){warehouseCoverageRenderAreas();whCovRenderStands();return;}const rows=await coverageGetAssignments(stadiumDay(),'Mountain America Stadium'),r=rows.find(x=>String(x.employee_id)===String(emp)&&x.team==='warehouse');if(r){const ar=await coverageGetAreas('Mountain America Stadium');_whCovAreas=ar;const fromAreas=(r.area_keys||[]).flatMap(k=>{const a=ar.find(x=>x.area_key===k);return a&&Array.isArray(a.stands)?a.stands:[];});_whCovSelected=[];_whCovSelectedStands=[...new Set([...(r.direct_stands||[]),...fromAreas])];}warehouseCoverageRenderAreas();whCovRenderStands();}
 async function warehouseCoverageSave(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person','error');if(!_whCovSelected.length&&!_whCovSelectedStands.length)return toast('Tap a group first','error');const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));if(await coverageSaveAssignment({event_date:stadiumDay(),venue:'Mountain America Stadium',employee_id:emp,name:p?p.name:'',role:p?p.role:'warehouse_employee',team:'warehouse',area_keys:_whCovSelected,direct_stands:_whCovSelectedStands,notify_requests:true,updated_at:new Date().toISOString()})){toast('✅ Saved — '+(p?p.name:'')+' covers '+(_whCovSelected.length+_whCovSelectedStands.length)+' area/stand choice(s)');whCovClose();warehouseCoverageCurrent();}else toast('Could not save coverage','error');}
 async function warehouseCoverageClear(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person first','error');if(!(await confirmAction('They\'ll go back to seeing every stand/request until reassigned.',{title:'Remove this person\'s coverage?',confirmLabel:'Remove'})))return;if(await coverageDeleteAssignment(stadiumDay(),'Mountain America Stadium',emp,'warehouse')){_whCovSelected=[];_whCovSelectedStands=[];whCovClose();toast('Coverage removed');warehouseCoverageCurrent();}else toast('Could not remove coverage','error');}
-async function warehouseCoverageCurrent(){_whCovRows=(await coverageGetAssignments(stadiumDay(),'Mountain America Stadium')).filter(x=>x.team==='warehouse');_whCovAreas=await coverageGetAreas('Mountain America Stadium');whCovRenderPeople();whCovRenderGaps().catch(()=>{});}
+async function warehouseCoverageCurrent(){await whCovLoadSignedIn().catch(()=>{});_whCovRows=(await coverageGetAssignments(stadiumDay(),'Mountain America Stadium')).filter(x=>x.team==='warehouse');_whCovAreas=await coverageGetAreas('Mountain America Stadium');whCovRenderPeople();whCovRenderGaps().catch(()=>{});}
 // fix-160: STAND GAPS for the warehouse manager — the same plan seen from the
 // stands' side. Every stand open today (on today's schedule or with an NPO
 // group) that no warehouse person covers is listed; tap it, tap a person, done.
@@ -19273,7 +19293,9 @@ async function whCovRenderGaps(){
   const gaps=open.filter(st=>!covered[st]);
   if(!gaps.length){el.innerHTML='<div class="notice success" style="font-size:13px;padding:10px 12px">✅ <b>No gaps</b> — all '+open.length+' stands open today have a warehouse person.</div>';return;}
   const key=whNameKey;
-  const working=_whCovPeople.filter(p=>!_whCovRoster.size||_whCovRoster.has(key(p.name))||_whCovRoster.has('id:'+p.employee_id));
+  const onRoster=_whCovPeople.filter(p=>!_whCovRoster.size||_whCovRoster.has(key(p.name))||_whCovRoster.has('id:'+p.employee_id));
+  const signedIn=onRoster.filter(whCovIsSignedIn);
+  const working=(signedIn.length&&!_whCovShowNotIn)?signedIn:onRoster;
   const nStands=p=>{const r=_whCovRows.find(x=>String(x.employee_id)===String(p.employee_id));return r?(r.direct_stands||[]).length:0;};
   const people=working.slice().sort((a,b)=>nStands(a)-nStands(b)||String(a.name).localeCompare(String(b.name)));
   el.innerHTML='<div class="card" style="padding:12px;border:2px solid #F59E0B"><div style="font-weight:900;font-size:14px">🕳 Stand gaps · '+gaps.length+' of '+open.length+' stands have nobody</div>'+
