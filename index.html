@@ -4790,7 +4790,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-21-fix-161';
+const BUILD_TAG = '2026-11-21-fix-162';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -19065,13 +19065,15 @@ async function coverageImportFootballPlan(){const date=document.getElementById('
 // all. Both now live on the same row here (area_keys + direct_stands),
 // which resolveWarehouseAssigneesForStand() and getMyWarehouseCoverageStands()
 // already know how to expand together — no other code needed to change.
+// fix-162: same person whether written "Gilmer, Raymond" or "Raymond Gilmer".
+function whNameKey(n){return loginFold(n).replace(/[^a-z ,]/g,' ').split(/[ ,]+/).filter(Boolean).sort().join('');}
 let _whCovPeople=[],_whCovSelected=[],_whCovSelectedStands=[],_whCovStandsList=[];
 async function warehouseCoverageInit(){const card=document.getElementById('wh-coverage-card');if(!card)return;
   const [rows,roster]=await Promise.all([
     sb('staff_accounts?role=in.(warehouse_employee,warehouse_supervisor)&is_active=eq.true&select=employee_id,name,role&order=name.asc').catch(()=>({_err:true})),
     sb('warehouse_roster?event_date=eq.'+stadiumDay()+'&select=name,employee_id').catch(()=>({_err:true}))
   ]);
-  const key=n=>loginFold(n).replace(/[^a-z]/g,'');
+  const key=whNameKey;
   // One card per person: the same name can have two accounts (a temp walk-in
   // "…60000" ID plus their real ID). Keep the one on today's roster, else the real ID.
   {const rosterIds=new Set(Array.isArray(roster)?roster.map(r=>String(r.employee_id||'')):[]);
@@ -19079,7 +19081,7 @@ async function warehouseCoverageInit(){const card=document.getElementById('wh-co
    const best=new Map();
    (!rows._err&&Array.isArray(rows)?rows:[]).forEach(p=>{const k=key(p.name);const cur=best.get(k);if(!cur||score(p)>score(cur))best.set(k,p);});
    _whCovPeople=[...best.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name)));}
-  _whCovRoster=new Set(Array.isArray(roster)?roster.map(r=>key(r.name)):[]);
+  _whCovRoster=new Set(Array.isArray(roster)?roster.flatMap(r=>[key(r.name),'id:'+String(r.employee_id||'')]):[]);
   const sel=document.getElementById('whcov-person');if(sel)sel.innerHTML='<option value=""></option>'+_whCovPeople.map(p=>'<option value="'+escapeAttr(p.employee_id)+'">'+escapeHtml(p.name)+'</option>').join('');
   whCovClose();
   await whCovLoadStandsList();await warehouseCoverageCurrent();}
@@ -19157,11 +19159,11 @@ function whCovRenderPeople(){
   const el=document.getElementById('whcov-people');if(!el)return;
   {const ed0=document.getElementById('whcov-editor');if(ed0&&el.contains(ed0))el.after(ed0);} // keep the editor out of the list we are about to redraw
   const q=loginFold((document.getElementById('whcov-people-search')||{}).value||'').trim();
-  const key=n=>loginFold(n).replace(/[^a-z]/g,'');
+  const key=whNameKey;
   const hasRoster=_whCovRoster.size>0;
   const rowOf=p=>_whCovRows.find(x=>String(x.employee_id)===String(p.employee_id));
   let people=_whCovPeople.filter(p=>!q||loginFold(p.name+' '+whDisp(p.name)).includes(q));
-  const working=p=>!hasRoster||_whCovRoster.has(key(p.name));
+  const working=p=>!hasRoster||_whCovRoster.has(key(p.name))||_whCovRoster.has('id:'+p.employee_id);
   const todo=people.filter(p=>working(p)&&!rowOf(p)),done=people.filter(p=>working(p)&&rowOf(p)),others=people.filter(p=>!working(p));
   const card=p=>{const r=rowOf(p),txt=r?whCovSummaryText(r):'';const sup=p.role==='warehouse_supervisor';
     return '<div class="food-runner-card" id="whcov-card-'+escapeAttr(p.employee_id)+'" onclick="'+(_whCovBulk?'whCovBulkPick':'whCovOpen')+'(\''+escapeAttr(p.employee_id)+'\')" style="cursor:pointer;padding:10px 12px;margin-bottom:7px;'+(r?'':'border-left-color:#F59E0B')+(_whCovBulk&&_whCovBulkSel.has(String(p.employee_id))?';outline:3px solid var(--asu-maroon);background:rgba(140,29,64,0.08)':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0"><div style="font-weight:800;font-size:14px">'+escapeHtml(whDisp(p.name))+(sup?' <span style="font-size:10px;font-weight:800;color:var(--asu-maroon)">SUPERVISOR</span>':'')+'</div><div style="font-size:12px;margin-top:2px;color:'+(r?'var(--text-2)':'#B45309')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(txt||'No stands yet — tap to assign')+'</div></div><span style="font-size:12px;font-weight:800;color:var(--asu-maroon);flex-shrink:0">'+(_whCovBulk?(_whCovBulkSel.has(String(p.employee_id))?'✅':'⬜'):'Edit ›')+'</span></div></div>';};
@@ -19241,8 +19243,8 @@ async function whCovRenderGaps(){
   const covered=await whCovCoveredStands();
   const gaps=open.filter(st=>!covered[st]);
   if(!gaps.length){el.innerHTML='<div class="notice success" style="font-size:13px;padding:10px 12px">✅ <b>No gaps</b> — all '+open.length+' stands open today have a warehouse person.</div>';return;}
-  const key=n=>loginFold(n).replace(/[^a-z]/g,'');
-  const working=_whCovPeople.filter(p=>!_whCovRoster.size||_whCovRoster.has(key(p.name)));
+  const key=whNameKey;
+  const working=_whCovPeople.filter(p=>!_whCovRoster.size||_whCovRoster.has(key(p.name))||_whCovRoster.has('id:'+p.employee_id));
   const nStands=p=>{const r=_whCovRows.find(x=>String(x.employee_id)===String(p.employee_id));return r?(r.direct_stands||[]).length:0;};
   const people=working.slice().sort((a,b)=>nStands(a)-nStands(b)||String(a.name).localeCompare(String(b.name)));
   el.innerHTML='<div class="card" style="padding:12px;border:2px solid #F59E0B"><div style="font-weight:900;font-size:14px">🕳 Stand gaps · '+gaps.length+' of '+open.length+' stands have nobody</div>'+

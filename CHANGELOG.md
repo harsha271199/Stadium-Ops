@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-21-fix-162
+- **Warehouse → Assign & Team lists only today's warehouse crew.** It showed all 34 warehouse accounts (including concession runners who once had a warehouse login) because 11/21's warehouse roster had not been loaded. Loaded it from the 11/21 ReadyOn roster: 19 people (Flenard, Larry, 10 warehouse workers, 6 warehouse runners, Alex). The other 15 accounts sit behind "Show 15 people not on today's roster".
+- Roster matching now ignores name order and also matches by employee ID, so "Raymond Gilmer" = "Gilmer, Raymond" and "FNU, SooryaSathish" = "SooryaSathish, FNU" (before they could drop off the working list).
+- Tested on the real database (read-only) at game time: 19 working today, the exact roster; the Stand gaps person picker offers the same 19.
+
 ## 2026-11-21-fix-161
 - **Warehouse → Assign & Team: "🕳 Stand gaps".** The same plan seen from the stands' side: every stand open today (on today's schedule, or an NPO group's stand) that no warehouse person covers is listed in an orange card ("26 of 42 stands have nobody"). Tap a stand, tap a person (number = how many stands they already have, fewest first) and it is added to that person's stands; nothing else they had changes. When every open stand is covered it says "✅ No gaps". Before anyone is assigned it explains that everyone sees every stand.
 - **Premium Manager: floating "📱 App QR" button** (bottom-left, every screen after sign-in). Shows the app's QR (built in, works offline) with "scan → tap the link → sign in with the last 5 digits of your ID + last name", plus "Share the link" (phone share sheet, or copies the link). Only the Premium Manager sees it.
