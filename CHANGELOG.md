@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-21-fix-164
+- **Runner transparency.** Stand leads, supervisors and managers can now see who is assigned to each stand.
+  - Stand Lead / Supervisor home: a "👥 Your runners today" card at the top of their tools — 🚚 Warehouse (from Matt's Assign & Team) and 🍔 Food runners for their stand, 🟢 = has the app open now. When nobody is assigned it says so ("any warehouse runner takes your requests").
+  - Manager → Manage → **🧭 Runner coverage**: every stand open today (schedule + NPO stands) with its warehouse and food people, a search box, and counts of stands with no warehouse / no food runner (stands without warehouse coverage get an orange edge). Also in the manager/admin tools list.
+  - Same data the request routing already uses; one person with two accounts shows once.
+- Tested on the real database (read-only): today with no assignments (clear "not assigned" text), and with the 11/07 warehouse plan (229 shows Shawn Harris · Digvijay Rathod · Larry Purcell); manager list = the 42 open stands; full manager walkthrough 0 errors.
+
 ## 2026-11-21-fix-163
 - **Stand Transfer Report now includes stock moved between stands.** It only listed warehouse → stand deliveries and waste; stand-to-stand moves (`stand_transfers`, 176 this season) were never in it, so e.g. the 277 souvenir cups Steven moved Soccer → Softball on 11/04 could not be traced from any download. Each stand's CSV lines and PDF page now add "🔁 Moved between stands" (OUT → stand / IN ← stand, item, qty, status, who, time) for that game day (6 AM – 6 AM Arizona). Stands that only had moves now get their own page too.
 - Tested on the real database (read-only): 11/04 went from 1 stand (442 Huss) to 3 (Soccer 16 out, Softball 16 in, incl. the 277 cups); 11/07 game day: 33 stands, 55 deliveries, 6 moves.

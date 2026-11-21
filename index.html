@@ -2093,6 +2093,7 @@
     </div>
 
     <div id="lead-actions" style="display:none">
+      <div id="home-runners" class="card" style="padding:10px 12px;margin-bottom:10px;display:none"></div>
 
       <!-- 5-TILE GRID -->
       <div class="action-tiles">
@@ -3327,6 +3328,7 @@
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('times')">🕐 Time sheet<span class="sub">Breaks · tip export · Premium</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('refunds')">💵 Refunds<span class="sub">Supervisor completions · records</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('maint')">🔨 Maintenance<span class="sub">Open facility issues</span></button>
+          <button class="btn btn-ghost mgr-v10-manage-btn" onclick="mgrV10OpenTool('runners')">🧭 Runner coverage<span class="sub">Who covers each stand</span></button>
           <button class="btn btn-ghost mgr-v10-manage-btn" id="mgr-v10-admin-tool" onclick="mgrV10OpenTool('admin')" style="display:none">⚙️ Admin Setup<span class="sub">Access · assignments · game info · uploads</span></button>
         </div>
       </div>
@@ -3865,6 +3867,13 @@
       <div style="height:1px;background:var(--border);margin:16px 0"></div>
       <div style="font-size:13px;font-weight:700;color:var(--text-2);margin-bottom:8px">🪪 VERIFIED DRIVERS THIS SEASON</div>
       <div id="mgr-cart-drivers"></div>
+    </div>
+
+    <!-- Runner coverage (fix-164) -->
+    <div id="mgr-runners" style="display:none">
+      <div class="notice info" style="font-size:12px">🧭 Who covers each stand open today — <b>warehouse</b> (Matt's Assign &amp; Team) and <b>food</b> runners. 🟢 = has the app open now.</div>
+      <input class="form-input" type="text" id="mgr-runners-q" placeholder="🔍 Stand or person" oninput="renderMgrRunners()" style="margin:8px 0">
+      <div id="mgr-runners-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>
     </div>
 
     <!-- Maintenance tab -->
@@ -4790,7 +4799,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-21-fix-163';
+const BUILD_TAG = '2026-11-21-fix-164';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -8648,6 +8657,7 @@ function renderHome() {
       scHomeInvStatus(); } }
   setupSupervisorWorkingStand();
   renderWorkerActions();
+  if ((u.role === 'lead' || u.role === 'supervisor') && !u.isSubcontractor) renderHomeRunners(u.stand).catch(() => {});
   if(!u.isSubcontractor)syncAttendanceFromServer();
   // Load contacts and show on home screen
   // Contacts stay loaded for every event (genuinely useful regardless of
@@ -12204,7 +12214,8 @@ const SUPERVISOR_STYLE_EXTRA_ACCESS={
     {key:'times',icon:'🕐',title:'Break Time Sheets',sub:'Break log · tip distribution CSV',action:"mgrV10OpenTool('times')"},
     {key:'transfers',icon:'🔁',title:'Transfer Management',sub:'Plan and review stock transfers',action:"mgrV10OpenTool('transfers')"},
     {key:'refunds',icon:'💵',title:'Refunds',sub:'Review refund assistance activity',action:"mgrV10OpenTool('refunds')"},
-    {key:'maint',icon:'🔨',title:'Maintenance',sub:'Open facility issues from stands',action:"mgrV10OpenTool('maint')"}
+    {key:'maint',icon:'🔨',title:'Maintenance',sub:'Open facility issues from stands',action:"mgrV10OpenTool('maint')"},
+    {key:'runners',icon:'🧭',title:'Runner coverage',sub:'Who covers each stand · warehouse & food',action:"mgrV10OpenTool('runners')"}
   ],
   admin:[
     {key:'inv',icon:'📋',title:'Inventory reports',sub:'Any game date · print · Yellow Dog copy-paste · ledger',action:"mgrV10OpenTool('inv')"},
@@ -12213,6 +12224,7 @@ const SUPERVISOR_STYLE_EXTRA_ACCESS={
     {key:'transfers',icon:'🔁',title:'Transfer Management',sub:'Plan and review stock transfers',action:"mgrV10OpenTool('transfers')"},
     {key:'refunds',icon:'💵',title:'Refunds',sub:'Review refund assistance activity',action:"mgrV10OpenTool('refunds')"},
     {key:'maint',icon:'🔨',title:'Maintenance',sub:'Open facility issues from stands',action:"mgrV10OpenTool('maint')"},
+    {key:'runners',icon:'🧭',title:'Runner coverage',sub:'Who covers each stand · warehouse & food',action:"mgrV10OpenTool('runners')"},
     {key:'admin',icon:'⚙️',title:'Admin Control',sub:'Access · game info · coverage · setup',action:"mgrV10OpenTool('admin')"}
   ]
 };
@@ -13327,6 +13339,7 @@ function mgrV10OpenTool(tab){
   if(tab==='refunds')loadMgrRefunds();
   if(tab==='carts')loadMgrCarts();
   if(tab==='maint')loadMgrMaint('open');
+  if(tab==='runners')loadMgrRunners();
   if(tab==='admin'){
     adminLoadNpo();adminLoadDrivers();saLoadStands();populateRollStandSelect();
     const gd=document.getElementById('gdc-date');if(gd&&!gd.value)gd.value=localISODate();
@@ -19283,6 +19296,60 @@ async function whCovFillGap(stand,emp){
 // used for push routing. No assignment anywhere = null = show everything,
 // same contract as before this existed.
 async function getMyWarehouseCoverageStands(employeeId){if(!employeeId)return null;const rows=await coverageGetAssignments(stadiumDay(),'Mountain America Stadium').catch(()=>[]);const row=(rows||[]).find(r=>String(r.employee_id)===String(employeeId)&&r.team==='warehouse');if(row){const expanded=await coverageExpandAssignmentStands([row]);if(expanded.stands.length)return expanded.stands;}const res=await api('getMyZoneStands',{employeeId});return (res.ok&&res.stands&&res.stands.length)?res.stands:null;}
+// fix-164: RUNNER TRANSPARENCY — who covers each stand today (warehouse from
+// Matt's Assign & Team, food from the food coverage), for stand leads,
+// supervisors and managers. Same data the request routing already uses.
+let _runnerMapCache=null;
+// Same person even when spaces/order differ ("FNU, SooryaSathish" = "Soorya Sathish FNU").
+function runnerNameKey(n){return loginFold(n).replace(/[^a-z]/g,'').split('').sort().join('');}
+async function standRunnerMap(force){
+  const day=stadiumDay();
+  if(!force&&_runnerMapCache&&_runnerMapCache.day===day&&Date.now()-_runnerMapCache.at<60000)return _runnerMapCache;
+  const [rows,duty]=await Promise.all([coverageGetAssignments(day,'').catch(()=>[]),sb('on_duty?day=eq.'+day+'&select=employee_id,last_seen').catch(()=>({_err:true}))]);
+  const live=new Set();(Array.isArray(duty)?duty:[]).forEach(d=>{if(d.last_seen&&Date.now()-new Date(d.last_seen).getTime()<15*60000)live.add(String(d.employee_id));});
+  const map={},teams={warehouse:0,food:0};
+  for(const r of (rows||[])){
+    if(r.team!=='warehouse'&&r.team!=='food')continue;teams[r.team]++;
+    const ex=await coverageExpandAssignmentStands([r]);
+    ex.stands.forEach(st=>{const c=canonicalStandName2026(st);const m=(map[c]=map[c]||{warehouse:[],food:[]});if(!m[r.team].some(x=>String(x.employee_id)===String(r.employee_id)||runnerNameKey(x.name)===runnerNameKey(r.name||'')))m[r.team].push({employee_id:r.employee_id,name:r.name||r.employee_id,live:live.has(String(r.employee_id))});});
+  }
+  _runnerMapCache={day,at:Date.now(),map,teams};return _runnerMapCache;
+}
+function runnerChips(list,emptyText){
+  if(!list||!list.length)return '<span style="color:var(--text-3)">'+escapeHtml(emptyText)+'</span>';
+  return list.map(p=>'<span style="white-space:nowrap">'+(p.live?'🟢 ':'')+escapeHtml(whDisp(p.name))+'</span>').join(' · ');
+}
+async function renderHomeRunners(stand){
+  const el=document.getElementById('home-runners');if(!el||!stand)return;
+  const rm=await standRunnerMap();const m=rm.map[canonicalStandName2026(stand)]||{warehouse:[],food:[]};
+  el.style.display='';
+  el.innerHTML='<div style="font-weight:850;font-size:13px;margin-bottom:4px">👥 Your runners today · '+escapeHtml(stand)+'</div>'+
+    '<div style="font-size:12.5px;line-height:1.6"><b>🚚 Warehouse:</b> '+runnerChips(m.warehouse,rm.teams.warehouse?'Nobody assigned to this stand yet — any warehouse runner can take your request':'Not assigned today — any warehouse runner takes your requests')+'</div>'+
+    '<div style="font-size:12.5px;line-height:1.6"><b>🍔 Food:</b> '+runnerChips(m.food,rm.teams.food?'Nobody assigned to this stand yet — any food runner can take your request':'Not assigned today — any food runner takes your requests')+'</div>';
+}
+let _mgrRunnersData=null;
+async function loadMgrRunners(){
+  const el=document.getElementById('mgr-runners-list');if(!el)return;
+  el.innerHTML='<div class="loading"><div class="spinner"></div>Loading…</div>';
+  const day=stadiumDay();
+  const [rm,sched,npo]=await Promise.all([standRunnerMap(true),sb('schedule?event_date=eq.'+day+'&is_test=neq.true&select=location').catch(()=>({_err:true})),sb('npo_groups?is_active=eq.true&select=stand').catch(()=>({_err:true}))]);
+  const all=await allVenueStands().catch(()=>[]);const known=new Set((all||[]).map(x=>canonicalStandName2026(x.name)));
+  const open=new Set();
+  [].concat(Array.isArray(sched)?sched.map(r=>r.location):[],Array.isArray(npo)?npo.flatMap(r=>String(r.stand||'').split(',').map(x=>x.trim())):[]).forEach(n=>{const c=canonicalStandName2026(n);if(c&&known.has(c))open.add(c);});
+  _mgrRunnersData={rm,stands:[...open].sort((a,b)=>(parseInt(a,10)||9999)-(parseInt(b,10)||9999)||a.localeCompare(b))};
+  renderMgrRunners();
+}
+function renderMgrRunners(){
+  const el=document.getElementById('mgr-runners-list');if(!el||!_mgrRunnersData)return;
+  const {rm,stands}=_mgrRunnersData;const q=loginFold((document.getElementById('mgr-runners-q')||{}).value||'').trim();
+  const rows=stands.map(st=>({st,m:rm.map[st]||{warehouse:[],food:[]}})).filter(r=>!q||loginFold(r.st+' '+r.m.warehouse.map(p=>p.name).join(' ')+' '+r.m.food.map(p=>p.name).join(' ')).includes(q));
+  const whGap=stands.filter(st=>!(rm.map[st]&&rm.map[st].warehouse.length)).length,fdGap=stands.filter(st=>!(rm.map[st]&&rm.map[st].food.length)).length;
+  el.innerHTML='<div class="wh-stat-row" style="margin-bottom:8px"><div class="wh-stat-chip"><b>'+stands.length+'</b><span>Stands open</span></div><div class="wh-stat-chip'+(rm.teams.warehouse&&whGap?' warn':'')+'"><b>'+(rm.teams.warehouse?whGap:'—')+'</b><span>No warehouse</span></div><div class="wh-stat-chip'+(rm.teams.food&&fdGap?' warn':'')+'"><b>'+(rm.teams.food?fdGap:'—')+'</b><span>No food runner</span></div></div>'+
+    (!rm.teams.warehouse?'<div class="notice warning" style="font-size:12px;margin-bottom:8px">Warehouse has no assignments yet today — every warehouse runner sees every stand. Matt sets them in Assign &amp; Team.</div>':'')+
+    rows.map(r=>'<div class="card" style="padding:8px 10px;margin-bottom:6px'+((rm.teams.warehouse&&!r.m.warehouse.length)?';border-left:4px solid #F59E0B':'')+'"><div style="font-weight:800;font-size:13px">'+escapeHtml(r.st)+'</div>'+
+      '<div style="font-size:12px;line-height:1.55">🚚 '+runnerChips(r.m.warehouse,rm.teams.warehouse?'⚠️ nobody':'not assigned')+'</div>'+
+      '<div style="font-size:12px;line-height:1.55">🍔 '+runnerChips(r.m.food,rm.teams.food?'nobody':'not assigned')+'</div></div>').join('')||'<div class="empty"><p>No stands match.</p></div>';
+}
 function supportOpsScopeLabel(){if(state.supportOpsScope==='__my__')return state.supportMyCoverageLabel||'My coverage';return state.supportOpsScope||'All stands';}
 
 
