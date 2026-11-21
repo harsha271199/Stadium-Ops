@@ -4785,7 +4785,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-21-fix-159';
+const BUILD_TAG = '2026-11-21-fix-160';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -23022,6 +23022,12 @@ function chatBannerNew() {
 }
 async function chatPollBadge() {
   if (document.hidden) return;
+  // fix-160: never two checks at once on slow signal.
+  if (state._chatPolling && Date.now() - state._chatPolling < 20000) return;
+  state._chatPolling = Date.now();
+  try { await chatPollBadgeInner(); } finally { state._chatPolling = 0; state._chatPolledAt = Date.now(); }
+}
+async function chatPollBadgeInner() {
   if (state.user) await chatRefreshAssigned().catch(()=>{});
   if (!chatLevel()) return;
   if (await chatSyncIndex()) {
@@ -23030,7 +23036,10 @@ async function chatPollBadge() {
     if (state.currentScreen === 'screen-chat' && !state._chatStand) chatRenderInbox();
   }
 }
-setInterval(chatPollBadge, 20000);
+// fix-160: chat felt slow — new messages, unread badges and the banner only
+// checked every 20 s. Now every 8 s, and every 4 s while the chat list is open
+// (each check only fetches messages newer than the last one seen).
+setInterval(() => { const gap = state.currentScreen === 'screen-chat' ? 4000 : 8000; if (Date.now() - (state._chatPolledAt || 0) >= gap - 500) chatPollBadge(); }, 4000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) chatPollBadge(); });
 
 async function goChat(stand) {
@@ -23249,7 +23258,7 @@ async function chatOpenThread(stand) {
   else chatPeopleFor(stand).then(p => { if (state._chatThread !== th) return; th.people = p; if (!th._toTouched) th.to = null; chatRenderTo(); chatRenderWho(); }).catch(()=>{});
   await chatLoadThread(true);
   if (state._chatThreadTimer) clearInterval(state._chatThreadTimer);
-  state._chatThreadTimer = setInterval(() => { if (document.hidden) return; chatLoadThread(false); const t = state._chatThread; if (t && t.rows.some(r => /^🙋 REQUEST/.test(r.body||'') && String(r.sender_id) === chatMe().id)) chatRenderThread(); }, 5000);
+  state._chatThreadTimer = setInterval(() => { if (document.hidden) return; chatLoadThread(false); const t = state._chatThread; if (t && t.rows.some(r => /^🙋 REQUEST/.test(r.body||'') && String(r.sender_id) === chatMe().id)) chatRenderThread(); }, 3000);
 }
 async function chatGroupPeople(stand) {
   if (stand === LEAD_GROUP) {

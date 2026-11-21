@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-21-fix-160
+- **Chat updates faster.** New messages, unread badges and the pop-up banner were checked every 20 s. Now every 8 s on any screen, every 4 s while the chat list is open, and every 3 s inside an open conversation (was 5 s). Each check only fetches messages newer than the last one seen, and two checks never run at once on slow signal.
+- Checked (no change needed): Bottle Tracker → Sell already shows the people to switch on. On game day 11/21 Nestor sees the 12 Suite Attendants first, "Everyone" (all 77 premium staff) and "Switched on"; tapping a person turns selling on for that day only.
+
 ## 2026-11-21-fix-159
 - **Count In / Count Out search finds words in any order.** "coors light", "light coors", "24oz coors", "dasani", "m&m" and "mm peanut" all find the item; punctuation and spacing no longer matter. Same search in Force Restock / Add Stock.
 - **Items added at a stand now stay for the next game, and every Count Out carries over.** After a Count Out the app updated the stand's list one item at a time (~80 saves) in the background while it already went back home; closing the app in those seconds left the list half-updated (seen at DFA 191, 217P) and items added while counting never reached the list. Now 8 at a time (80 items ≈ 1.5 s), finished before the screen changes, a failed save is retried once, and a toast says if anything still failed.
