@@ -752,6 +752,7 @@
     #screen-bedcheck #mgr-times,
     #screen-bedcheck #mgr-checkins,
     #screen-bedcheck #mgr-carts,
+    #screen-bedcheck #mgr-runners,
     #screen-bedcheck #mgr-maint {
       grid-area: content;
       background: var(--bg-card);
@@ -1622,6 +1623,7 @@
     #screen-bedcheck #mgr-checkins,
     #screen-bedcheck #mgr-carts,
     #screen-bedcheck #mgr-maint,
+    #screen-bedcheck #mgr-runners,
     #screen-bedcheck #mgr-reports{
       grid-area:auto;background:transparent;border:0;border-radius:0;padding:0;box-shadow:none
     }
@@ -4799,7 +4801,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-21-fix-165';
+const BUILD_TAG = '2026-11-21-fix-166';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -12539,7 +12541,7 @@ function applyManagerTierAccess() {
   setupMgrSimpleHome();
   mgrRefreshCoverageProfile();
 }
-const MGR_V10_PANELS=['mgr-v10-requests','mgr-roster','mgr-stock','mgr-kitchen','mgr-it','mgr-live','mgr-inv','mgr-transfers','mgr-reports','mgr-carts','mgr-maint','mgr-refunds','mgr-times','mgr-admin','mgr-checkins'];
+const MGR_V10_PANELS=['mgr-v10-requests','mgr-roster','mgr-stock','mgr-kitchen','mgr-it','mgr-live','mgr-inv','mgr-transfers','mgr-reports','mgr-carts','mgr-maint','mgr-runners','mgr-refunds','mgr-times','mgr-admin','mgr-checkins'];
 
 function mgrV10HidePanels(){
   MGR_V10_PANELS.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
