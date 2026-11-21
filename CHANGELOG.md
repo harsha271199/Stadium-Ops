@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-21-fix-169
+
+- **Coca-Cola products hidden on every count screen:** Dasani, Powerade and Smart Water now follow the same rule as Coke, Diet Coke, Coke Zero and Sprite. Staff were still typing 0 for them at every game (DFA Chick-fil-A, 104P, 113P, Soccer). Add Stock, requests and orders hide them too.
+- **The download still has them in Yellow Dog order, with 0:** the Yellow Dog copy-paste, the CSV and the print keep each one in its sheet row, so a pasted column still lines up row for row. Tested on 104P (11/20 real data): Smart Water stays row 6 and Dasani row 9, both 0, out of 19 rows.
+- **Warehouse assignments drop 221B Fork Em BBQ and 216P SunDeck Grill:** "Copy last game's plan" no longer copies them from 11/07, the stand list behind a person's plan leaves them out, and Matt's per-person summary doesn't list them. Old plan rows are not changed.
+
 ## 2026-11-21-fix-168
 
 - Hid **221B Fork Em BBQ** and **216P SunDeck Grill** (and its old name "216 Sundeck Grill") from every stand picker: schedule, coverage, requests, inventory and the 50000 subcontractor login. These stands are not open. Their item lists and history are kept.
