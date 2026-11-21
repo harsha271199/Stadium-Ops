@@ -4801,7 +4801,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-21-fix-167';
+const BUILD_TAG = '2026-11-21-fix-168';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -19392,7 +19392,9 @@ const HIDDEN_INACTIVE_STANDS_2026 = new Set([
   // 11/7: Yellow Dog-only Beer Portable names — never scheduled, never a
   // real stand (YD "202P" = our 203P, YD "209P" = our 210P). Turned off.
   '202P Beer Portable', '206P Beer Portable', '209P Beer Portable', '220P Beer Portable',
-  '229P Beer Portable', '230P Beer Portable', '231P Beer Portable', '234P Beer Portable'
+  '229P Beer Portable', '230P Beer Portable', '231P Beer Portable', '234P Beer Portable',
+  // 11/21: not open this season — hidden from every picker (counts/history kept).
+  '216P - SunDeck Grill', '216P SunDeck Grill', '216 Sundeck Grill', '221B Fork Em BBQ'
 ]);
 function canonicalStandName2026(name){
   const s=String(name||'').trim();

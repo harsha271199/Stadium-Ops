@@ -4,6 +4,11 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-21-fix-168
+
+- Hid **221B Fork Em BBQ** and **216P SunDeck Grill** (and its old name "216 Sundeck Grill") from every stand picker: schedule, coverage, requests, inventory and the 50000 subcontractor login. These stands are not open. Their item lists and history are kept.
+- 221B was also turned off in the stands table (Admin → Stands shows it as "off"), so the live site hides it before this build is deployed. Turn it back on there if needed.
+
 ## 2026-11-21-fix-167
 - **Matt's Assign & Team: only people scheduled today — nobody else.** Replaces fix-165's "signed in" rule (not what was wanted). The list, the counter ("Scheduled today") and the 🕳 Stand gaps person picker show only people on today's warehouse roster, signed in or not. The "Show N not on today's roster" / "not signed in yet" buttons are gone — everyone else is simply not shown. "📋 Copy last game's plan" only copies people scheduled today. With no warehouse roster for the day, it says so and lists nobody.
 - Tested on the real database (read-only): 11/21 → exactly the 19 scheduled, no extra buttons, picker offers the same 19; a day with no roster → nobody, with the note.
