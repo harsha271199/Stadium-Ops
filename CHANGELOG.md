@@ -4,6 +4,10 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-21-fix-167
+- **Matt's Assign & Team: only people scheduled today — nobody else.** Replaces fix-165's "signed in" rule (not what was wanted). The list, the counter ("Scheduled today") and the 🕳 Stand gaps person picker show only people on today's warehouse roster, signed in or not. The "Show N not on today's roster" / "not signed in yet" buttons are gone — everyone else is simply not shown. "📋 Copy last game's plan" only copies people scheduled today. With no warehouse roster for the day, it says so and lists nobody.
+- Tested on the real database (read-only): 11/21 → exactly the 19 scheduled, no extra buttons, picker offers the same 19; a day with no roster → nobody, with the note.
+
 ## 2026-11-21-fix-166
 - **Fix: Manager → 🧭 Runner coverage stayed open.** After opening it, its stand list stayed on screen when switching to another tool and after Back, sitting over the "All Stands" section (Sign-in help & QR, All Stands Live…). It was missing from the list of manager panels that get hidden when you switch; added, plus the same panel layout as the other tools.
 - Tested as manager and admin: open Runner coverage → open Maintenance → Back; Runner coverage hides each time and All Stands shows Sign-in help & QR as before.

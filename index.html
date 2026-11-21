@@ -4801,7 +4801,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-21-fix-166';
+const BUILD_TAG = '2026-11-21-fix-167';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -19212,20 +19212,19 @@ function whCovRenderPeople(){
   const rowOf=p=>_whCovRows.find(x=>String(x.employee_id)===String(p.employee_id));
   let people=_whCovPeople.filter(p=>!q||loginFold(p.name+' '+whDisp(p.name)).includes(q));
   const working=p=>!hasRoster||_whCovRoster.has(key(p.name))||_whCovRoster.has('id:'+p.employee_id);
-  const here=p=>working(p)&&whCovIsSignedIn(p);
-  const todo=people.filter(p=>here(p)&&!rowOf(p)),done=people.filter(p=>here(p)&&rowOf(p)),notIn=people.filter(p=>working(p)&&!whCovIsSignedIn(p)),others=people.filter(p=>!working(p));
+  // fix-167: only people SCHEDULED today (today's warehouse roster) — nobody else, no "show more".
+  const here=p=>hasRoster&&working(p);
+  const todo=people.filter(p=>here(p)&&!rowOf(p)),done=people.filter(p=>here(p)&&rowOf(p));
   const card=p=>{const r=rowOf(p),txt=r?whCovSummaryText(r):'';const sup=p.role==='warehouse_supervisor';
     return '<div class="food-runner-card" id="whcov-card-'+escapeAttr(p.employee_id)+'" onclick="'+(_whCovBulk?'whCovBulkPick':'whCovOpen')+'(\''+escapeAttr(p.employee_id)+'\')" style="cursor:pointer;padding:10px 12px;margin-bottom:7px;'+(r?'':'border-left-color:#F59E0B')+(_whCovBulk&&_whCovBulkSel.has(String(p.employee_id))?';outline:3px solid var(--asu-maroon);background:rgba(140,29,64,0.08)':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0"><div style="font-weight:800;font-size:14px">'+escapeHtml(whDisp(p.name))+(sup?' <span style="font-size:10px;font-weight:800;color:var(--asu-maroon)">SUPERVISOR</span>':'')+'</div><div style="font-size:12px;margin-top:2px;color:'+(r?'var(--text-2)':'#B45309')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(txt||'No stands yet — tap to assign')+'</div></div><span style="font-size:12px;font-weight:800;color:var(--asu-maroon);flex-shrink:0">'+(_whCovBulk?(_whCovBulkSel.has(String(p.employee_id))?'✅':'⬜'):'Edit ›')+'</span></div></div>';};
   const sec=(t,list)=>list.length?'<div class="section-title" style="margin-top:10px">'+t+' · '+list.length+'</div>'+list.map(card).join(''):'';
-  let html=sec('⚠️ Signed in — no stands yet',todo)+sec('✅ Signed in — assigned',done);
-  if(!todo.length&&!done.length&&!q)html+='<div class="notice info" style="font-size:12px;margin-top:6px">Nobody has signed in yet today. People show here as soon as they sign in to the app or are checked in on 👥 My Team.</div>';
-  if(notIn.length)html+=q||_whCovShowNotIn?sec('On today\'s roster — not signed in yet',notIn):'<button class="btn btn-ghost" onclick="_whCovShowNotIn=true;whCovRenderPeople()" style="margin-top:8px">Show '+notIn.length+' on today\'s roster not signed in yet</button>';
-  if(others.length)html+=q||_whCovShowOthers?sec('Not on today\'s roster',others):'<button class="btn btn-ghost" onclick="_whCovShowOthers=true;whCovRenderPeople()" style="margin-top:8px">Show '+others.length+' people not on today\'s roster</button>';
+  let html=sec('⚠️ Scheduled today — no stands yet',todo)+sec('✅ Scheduled today — assigned',done);
+  if(!hasRoster)html='<div class="notice warning" style="font-size:12px">No warehouse schedule for today yet, so there is nobody to assign. Once today\'s warehouse roster is loaded, the people scheduled today show here.</div>';
   el.innerHTML=html||'<div class="empty"><p>No one matches.</p></div>';
   whCovRenderLegend();
   const sum=document.getElementById('whcov-summary');
-  if(sum){const all=_whCovPeople.filter(here),n=all.filter(p=>rowOf(p)).length,sched=_whCovPeople.filter(working).length;
-    sum.innerHTML='<div class="wh-stat-row"><div class="wh-stat-chip'+(all.length-n?' warn':'')+'"><b>'+(all.length-n)+'</b><span>No stands</span></div><div class="wh-stat-chip"><b>'+n+'</b><span>Assigned</span></div><div class="wh-stat-chip"><b>'+all.length+'/'+sched+'</b><span>Signed in</span></div></div>'+
+  if(sum){const all=_whCovPeople.filter(here),n=all.filter(p=>rowOf(p)).length;
+    sum.innerHTML='<div class="wh-stat-row"><div class="wh-stat-chip'+(all.length-n?' warn':'')+'"><b>'+(all.length-n)+'</b><span>No stands</span></div><div class="wh-stat-chip"><b>'+n+'</b><span>Assigned</span></div><div class="wh-stat-chip"><b>'+all.length+'</b><span>Scheduled today</span></div></div>'+
       (!_whCovRows.length?'<button class="btn btn-primary" onclick="whCovCopyLast()" style="margin-top:8px">📋 Copy last game\'s plan</button>':'');}
   const ed=document.getElementById('whcov-editor'),open=document.getElementById('whcov-person');
   if(ed&&open&&open.value){const c=document.getElementById('whcov-card-'+open.value);if(c)c.after(ed);else whCovClose();}
@@ -19245,7 +19244,8 @@ async function whCovCopyLast(){
   const prev=await sb('game_day_assignments?team=eq.warehouse&venue=eq.Mountain%20America%20Stadium&event_date=lt.'+stadiumDay()+'&select=event_date&order=event_date.desc&limit=1').catch(()=>({_err:true}));
   if(!Array.isArray(prev)||!prev.length)return toast('No earlier game plan found','error');
   const d=prev[0].event_date;
-  const rows=(await coverageGetAssignments(d,'Mountain America Stadium')).filter(x=>x.team==='warehouse'&&_whCovPeople.some(p=>String(p.employee_id)===String(x.employee_id)));
+  const sched=p=>_whCovRoster.size&&(_whCovRoster.has(whNameKey(p.name))||_whCovRoster.has('id:'+p.employee_id));
+  const rows=(await coverageGetAssignments(d,'Mountain America Stadium')).filter(x=>x.team==='warehouse'&&_whCovPeople.some(p=>String(p.employee_id)===String(x.employee_id)&&sched(p)));
   if(!rows.length)return toast('Nobody from '+d+' is still on the team','error');
   if(!(await confirmAction('Give '+rows.length+' people the same areas and stands they had on '+d+'. You can change anyone after.',{title:'Copy last game\'s plan?',confirmLabel:'Copy plan'})))return;
   await withLock(evtBtn(),'Copying…',async()=>{let ok=0;for(const r of rows){if(await coverageSaveAssignment({event_date:stadiumDay(),venue:'Mountain America Stadium',employee_id:r.employee_id,name:r.name,role:r.role,team:'warehouse',area_keys:r.area_keys||[],direct_stands:r.direct_stands||[],notify_requests:true,updated_at:new Date().toISOString()}))ok++;}toast('✅ Copied '+ok+' people from '+d);await warehouseCoverageCurrent();});
@@ -19295,9 +19295,7 @@ async function whCovRenderGaps(){
   const gaps=open.filter(st=>!covered[st]);
   if(!gaps.length){el.innerHTML='<div class="notice success" style="font-size:13px;padding:10px 12px">✅ <b>No gaps</b> — all '+open.length+' stands open today have a warehouse person.</div>';return;}
   const key=whNameKey;
-  const onRoster=_whCovPeople.filter(p=>!_whCovRoster.size||_whCovRoster.has(key(p.name))||_whCovRoster.has('id:'+p.employee_id));
-  const signedIn=onRoster.filter(whCovIsSignedIn);
-  const working=(signedIn.length&&!_whCovShowNotIn)?signedIn:onRoster;
+  const working=_whCovPeople.filter(p=>_whCovRoster.size&&(_whCovRoster.has(key(p.name))||_whCovRoster.has('id:'+p.employee_id)));
   const nStands=p=>{const r=_whCovRows.find(x=>String(x.employee_id)===String(p.employee_id));return r?(r.direct_stands||[]).length:0;};
   const people=working.slice().sort((a,b)=>nStands(a)-nStands(b)||String(a.name).localeCompare(String(b.name)));
   el.innerHTML='<div class="card" style="padding:12px;border:2px solid #F59E0B"><div style="font-weight:900;font-size:14px">🕳 Stand gaps · '+gaps.length+' of '+open.length+' stands have nobody</div>'+
