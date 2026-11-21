@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-21-fix-159
+- **Count In / Count Out search finds words in any order.** "coors light", "light coors", "24oz coors", "dasani", "m&m" and "mm peanut" all find the item; punctuation and spacing no longer matter. Same search in Force Restock / Add Stock.
+- **Items added at a stand now stay for the next game, and every Count Out carries over.** After a Count Out the app updated the stand's list one item at a time (~80 saves) in the background while it already went back home; closing the app in those seconds left the list half-updated (seen at DFA 191, 217P) and items added while counting never reached the list. Now 8 at a time (80 items ≈ 1.5 s), finished before the screen changes, a failed save is retried once, and a toast says if anything still failed.
+- **Force Restock / Add Stock shows every item.** It listed only chargeable items, so cups, napkins, syrup boxes and gloves were "missing". Chargeable items still come first; the rest follow under "📦 Supplies & non-chargeable". The 80-item cap on that list is gone.
+- **Subcontractor sign-in QR no longer repeats in Contacts.** Contacts shows phone numbers only; the App QR and the 32 subcontractor logins stay behind 🏪 Sign-in help (Chat and home).
+- **Warehouse screen is steadier.** Its 10-second refresh could start before the last one finished on slow stadium signal (lists redrew out of order and flickered) and could redraw while someone typed a quantity. Refreshes no longer overlap, and the automatic one waits while someone is typing.
+- Data: Raymond Gilmer had two active warehouse logins, so "60000 + Gilmer" was refused; the older duplicate is switched off (kept, renamed "(duplicate, off)"). Karthik Ponugoti (warehouse runner 11/21) got a warehouse login like the other runners.
+- Tested: search cases above; 229 inventory search; Add Stock lists for 442 / 334 / 229; Contacts has no QR and Sign-in help still does; warehouse sign-in for all 26 crew logins (real database, nothing saved), refresh every 10 s, paused while typing; Count Out carry-over on a fake 80-item stand (all rolled, failed save retried, new item added); night-shift and lead check-in tests; read-only manager walkthrough of every screen with 0 errors.
+
 ## 2026-11-21-fix-158
 - **Night-game shifts that end after midnight are no longer flagged as overdue.** The 11/21 football roster runs 4:30 PM – 1:30 AM. The manager Live view read "1:30 AM" as 1:30 AM on the morning of the game, so every checked-in worker showed "⚠ 15h past scheduled end" and landed in NEEDS ATTENTION. A shift whose end time is earlier than its start time now ends on the next day.
   - Tested: a 4:30 PM – 1:30 AM shift at 8 PM shows 5 hours left (not overdue); a shift that really ended hours ago is still flagged; a shift with no start time and an end before 6 AM is treated as overnight.

@@ -4785,7 +4785,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-21-fix-158';
+const BUILD_TAG = '2026-11-21-fix-159';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4828,7 +4828,7 @@ function showScreen(id) {
   try{document.body.dataset.bar=id==='screen-inventory'?'inv':id==='screen-order'?'ord':'';}catch(e){}
   updateFloatingContactVisibility();
   if (id === 'screen-submenu-requests') { prepareRequestHub(); q3State().then(st => { const el = document.getElementById('hub-q3'); if (el) el.innerHTML = q3NoticeHtml(st); }).catch(()=>{}); }
-  if (id === 'screen-warehouse') { loadWarehouse(); state.refreshInterval = setInterval(loadWarehouse, 10000); }
+  if (id === 'screen-warehouse') { loadWarehouse(); state.refreshInterval = setInterval(() => loadWarehouse({ auto: true }), 10000); }
   if (id === 'screen-kitchen') { loadKitchenConsole(); state.refreshInterval = setInterval(loadKitchenConsole, 10000); }
   if (id === 'screen-my-kitchen') { loadMyKitchenRequests(); state.refreshInterval = setInterval(loadMyKitchenRequests, 12000); }
   if (id === 'screen-all-live') { loadAllStandsLive(); state.refreshInterval = setInterval(loadAllStandsLive, 15000); }
@@ -15870,17 +15870,34 @@ async function populateRollStandSelect(){
 async function invRollForwardFromCountOut(stand, counts) {
   const names = standDbCandidateNames2026(stand).concat([stand]).filter((v, i, a) => v && a.indexOf(v) === i);
   const inList = 'stand=in.(' + names.map(n => '"' + encodeURIComponent(n.replace(/"/g, '')) + '"').join(',') + ')';
-  const missing = [];
+  const todo = [];
   for (const itemName of Object.keys(counts || {})) {
     const co = counts[itemName] && counts[itemName].countOut;
     if (co === undefined || co === null || String(co).trim() === '') continue;
     const val = Number(co); if (!Number.isFinite(val)) continue;
-    const r = await sb('stand_sheets?' + inList + '&item_name=eq.' + encodeURIComponent(itemName), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ on_hand: val, exp_start: val }) }).catch(() => ({ _err: true }));
+    todo.push({ itemName: itemName, val: val });
+  }
+  // fix-159: these used to run one at a time (~80 saves) in the background
+  // while the app already went back home, so closing the app right after a
+  // Count Out left half the list un-rolled (and items added while counting
+  // never reached the list). Now 8 at a time, awaited by the Save button,
+  // and a failed save is tried once more.
+  const missing = [], failed = [];
+  const one = async (t) => {
+    let r = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      r = await sb('stand_sheets?' + inList + '&item_name=eq.' + encodeURIComponent(t.itemName), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ on_hand: t.val, exp_start: t.val }) }).catch(() => ({ _err: true }));
+      if (Array.isArray(r)) break;
+    }
     // Counted but not on the stand's list (added while counting): put it on
     // the list so it shows next game with this Count Out as its expected.
-    if (Array.isArray(r) && !r.length) missing.push(Object.assign({}, counts[itemName], { itemName: itemName, qty: val }));
-  }
+    if (Array.isArray(r) && !r.length) missing.push(Object.assign({}, counts[t.itemName], { itemName: t.itemName, qty: t.val }));
+    else if (!Array.isArray(r)) failed.push(t.itemName);
+  };
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(8, todo.length) }, async () => { while (next < todo.length) await one(todo[next++]); }));
   if (missing.length) await invEnsureOnSheet(stand, missing);
+  return { updated: todo.length - failed.length - missing.length, added: missing.length, failed: failed };
 }
 // Items added at a stand stay on that stand's list for every game after,
 // whether or not Yellow Dog lists them (is_addon = added in the app). Free-
@@ -17020,7 +17037,7 @@ function showContactPopup() {
           </div>
           <button class="cp-call" onclick="callContact('${c.phone||''}','${c.name}')">${c.phone?'📞 Call':'—'}</button>
         </div>`).join('')}
-      ${scLoginsHtml()}
+      ${/* fix-159: sign-in help & QR lives only behind 🏪 Sign-in help (Chat / home), not repeated in Contacts */''}
 
       <div style="height:1px;background:var(--border);margin:14px 0"></div>
       ${isFootballGameEvent() ? `
@@ -21513,13 +21530,23 @@ function invJumpNextBlank() {
 // searching is never lost when the search term changes. Category headers hide
 // too when every item under them is filtered out, so there's no orphaned
 // "ALCOHOL" header sitting above zero visible items.
+// fix-159: search by words in any order, ignoring punctuation and spacing —
+// "coors light", "light coors", "dasani water", "m&m" and "mm" all find the
+// item. The old search needed the exact run of letters ("24oz coors").
+function itemSearchNorm(t) { return String(t || '').toLowerCase().replace(/&amp;/g, '&').replace(/[^a-z0-9]+/g, ' ').trim(); }
+function itemSearchMatch(text, q) {
+  const words = itemSearchNorm(q).split(' ').filter(Boolean);
+  if (!words.length) return true;
+  const hay = itemSearchNorm(text), squash = hay.replace(/ /g, '');
+  return words.every(w => hay.indexOf(w) !== -1 || squash.indexOf(w) !== -1);
+}
 function filterInvItems(term) {
   const q = (term || '').trim().toLowerCase();
   const cards = document.querySelectorAll('#inv-items-list .inv-item-card');
   const catVisible = {};
   let visibleCount = 0;
   cards.forEach(function(card) {
-    const match = !q || card.dataset.search.indexOf(q) !== -1;
+    const match = !q || itemSearchMatch(card.dataset.search, q);
     card.style.display = match ? '' : 'none';
     if (match) { catVisible[card.dataset.cat] = true; visibleCount++; }
   });
@@ -22108,8 +22135,11 @@ async function submitInventory() {
       toast('✅ Saved ' + entries.length + ' items (' + state.invPhase + ')');
       // Added while counting -> stays on this stand's list for next game.
       // Count Out also carries their count as next game's expected.
-      if (state.invPhase === 'Count Out') invRollForwardFromCountOut(stand, counts);
-      else if (manualAdds.length) invEnsureOnSheet(stand, manualAdds.map(n => Object.assign({}, counts[n], { itemName: n, qty: 0 })));
+      // Awaited (inside the Saving… lock) so it finishes before the screen changes.
+      try {
+        if (state.invPhase === 'Count Out') { const rf = await invRollForwardFromCountOut(stand, counts); if (rf && rf.failed && rf.failed.length) toast('Saved. ' + rf.failed.length + ' item(s) could not update next game\'s expected — a manager can fix it', 'error'); }
+        else if (manualAdds.length) await invEnsureOnSheet(stand, manualAdds.map(n => Object.assign({}, counts[n], { itemName: n, qty: 0 })));
+      } catch (e) {}
       invDraftClear(stand, state.invPhase);
       state._invManuallyAdded = [];
       state._invEditingEntryId = null;
@@ -26864,7 +26894,21 @@ async function loadWhApprovals() {
   }).join('');
 }
 
-async function loadWarehouse() {
+// fix-159: warehouse "glitches" — on slow stadium signal a 10 s refresh started
+// before the last one finished, so lists redrew out of order and flickered,
+// and an auto refresh could redraw while someone was typing a quantity.
+// Now refreshes never overlap and the automatic one waits while typing.
+async function loadWarehouse(opts) {
+  const auto = !!(opts && opts.auto);
+  if (auto) {
+    const ae = document.activeElement;
+    if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.closest && ae.closest('#screen-warehouse')) return;
+    if (state._whLoading && Date.now() - state._whLoading < 30000) return;
+  }
+  state._whLoading = Date.now();
+  try { return await loadWarehouseInner(); } finally { state._whLoading = 0; }
+}
+async function loadWarehouseInner() {
   // Tab visibility runs FIRST, synchronously, before any network await —
   // this used to sit after `await api('getStockRequests', ...)`, which
   // meant every single 10s refresh had a real gap where the default HTML
@@ -27905,7 +27949,12 @@ async function openTransferStand(stand, source, transferId) {
   // sells). Non-chargeable and supplies stay on the sheet for counts/downloads.
   const onlyChargeable = isFieldForceStockSource(source) || source === 'qr';
   const isChargeable = i => !/^(n|non|supp|false|no)/i.test(String(i.chargeable||'').trim());
-  const sheetItems = (sheet.ok && sheet.items) ? sheet.items.filter(i=>!onlyChargeable||isChargeable(i)).map(i=>i.itemName) : [];
+  // fix-159: Force Restock / Add Stock showed ONLY chargeable items, so cups,
+  // napkins, BIB syrup and gloves were "missing". Chargeable items still come
+  // first; the rest follow under "Supplies & non-chargeable".
+  const allSheet = (sheet.ok && sheet.items) ? sheet.items : [];
+  const sheetItems = onlyChargeable ? allSheet.filter(isChargeable).map(i=>i.itemName).concat(allSheet.filter(i=>!isChargeable(i)).map(i=>i.itemName)) : allSheet.map(i=>i.itemName);
+  _tsNonChargeable = new Set(onlyChargeable ? allSheet.filter(i=>!isChargeable(i)).map(i=>i.itemName) : []);
   document.getElementById('ts-item-list').innerHTML = sheetItems.map(n=>'<option value="'+n.replace(/"/g,'&quot;')+'">').join('');
 
   // QR/self modes expose a real item menu; ordinary planned/request
@@ -27934,10 +27983,12 @@ async function openTransferStand(stand, source, transferId) {
   if(!forceMode && _tsTransfer && !String(_tsTransfer.initiated_by||'').trim())await loadTsStockRequests(stand);
 }
 
+let _tsNonChargeable = new Set();
 function renderTsQuickPicker() {
   const el=document.getElementById('ts-self-picker-list'); if(!el)return;
   const q=((document.getElementById('ts-quick-search')||{}).value||'').toLowerCase().trim();
-  const list=(_tsSheetItems||[]).filter(n=>!q||(n||'').toLowerCase().includes(q)).slice(0,80);
+  // fix-159: no 80-item cap — big stands (442 Huss 96, 334 79) lost their last items.
+  const list=(_tsSheetItems||[]).filter(n=>!q||itemSearchMatch(n,q));
   if(!list.length){el.innerHTML='<div class="notice info" style="font-size:14px;padding:14px">No matching item — use the manual box below.</div>';return;}
   const force=isFieldForceStockSource(_tsSource);
   // Force Restock happens standing at a stand mid-game — often in a
@@ -27948,13 +27999,15 @@ function renderTsQuickPicker() {
   // large readable text, and a +1 button that's impossible to miss.
   const alreadyAdded={};
   (_tsItems||[]).forEach(it=>{alreadyAdded[String(it.item_name||'').toLowerCase()]=(alreadyAdded[String(it.item_name||'').toLowerCase()]||0)+Number(it.qty||0);});
+  let _ncShown=false;
   el.innerHTML=list.map(n=>{
     const safe=escapeAttr(n);
     const have=alreadyAdded[String(n).toLowerCase()]||0;
+    const divider=(!_ncShown&&_tsNonChargeable.has(n))?(_ncShown=true,'<div style="margin:14px 0 4px;font-size:12px;font-weight:900;letter-spacing:.5px;color:var(--text-2)">📦 SUPPLIES &amp; NON-CHARGEABLE</div>'):'';
     if(!force){
-      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><button class="btn btn-ghost" onclick="tsPickSelfItem('${safe}')" style="flex:1;text-align:left;margin:0;padding:9px 10px">${escapeHtml(n)}</button><button class="btn btn-primary" onclick="tsQuickAddOne('${safe}',this)" style="width:auto;margin:0;padding:9px 12px">+1</button></div>`;
+      return divider+`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><button class="btn btn-ghost" onclick="tsPickSelfItem('${safe}')" style="flex:1;text-align:left;margin:0;padding:9px 10px">${escapeHtml(n)}</button><button class="btn btn-primary" onclick="tsQuickAddOne('${safe}',this)" style="width:auto;margin:0;padding:9px 12px">+1</button></div>`;
     }
-    return `<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)">
+    return divider+`<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="flex:1;min-width:0;font-size:15px;font-weight:650;line-height:1.3">
         ${escapeHtml(n)}${have?`<span style="display:block;margin-top:3px;font-size:13px;font-weight:800;color:#00A651">✓ ${have} added</span>`:''}
       </div>
