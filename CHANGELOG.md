@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-21-fix-161
+- **Warehouse → Assign & Team: "🕳 Stand gaps".** The same plan seen from the stands' side: every stand open today (on today's schedule, or an NPO group's stand) that no warehouse person covers is listed in an orange card ("26 of 42 stands have nobody"). Tap a stand, tap a person (number = how many stands they already have, fewest first) and it is added to that person's stands; nothing else they had changes. When every open stand is covered it says "✅ No gaps". Before anyone is assigned it explains that everyone sees every stand.
+- **Premium Manager: floating "📱 App QR" button** (bottom-left, every screen after sign-in). Shows the app's QR (built in, works offline) with "scan → tap the link → sign in with the last 5 digits of your ID + last name", plus "Share the link" (phone share sheet, or copies the link). Only the Premium Manager sees it.
+- Data: liquor bottles are protected. Snapshot `liquor_bottles_backup_20261121` (868 bottles) and `liquor_bottle_events_backup_20261121` (1,776 events); `liquor_bottles_history` keeps the old and new version of every bottle on every insert/update/delete; a daily automatic backup at 3:15 AM Arizona (`liquor_bottles_daily`, kept 30 days); the public key can no longer delete or wipe bottles or bottle events (the app never does). Tag / sell / empty still save (checked inside a rolled-back test).
+- Tested: gaps with nobody assigned, with last game's plan (no gaps), and with only 3 people assigned (26 of 42 gaps; tap → saves that stand to the person); NPO stands that list several stands are split. App QR button shows only for the Premium Manager, decodes to https://asu-aramark.netlify.app/.
+
 ## 2026-11-21-fix-160
 - **Chat updates faster.** New messages, unread badges and the pop-up banner were checked every 20 s. Now every 8 s on any screen, every 4 s while the chat list is open, and every 3 s inside an open conversation (was 5 s). Each check only fetches messages newer than the last one seen, and two checks never run at once on slow signal.
 - Checked (no change needed): Bottle Tracker → Sell already shows the people to switch on. On game day 11/21 Nestor sees the 12 Suite Attendants first, "Everyone" (all 77 premium staff) and "Switched on"; tapping a person turns selling on for that day only.

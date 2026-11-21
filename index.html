@@ -458,6 +458,9 @@
   /* Emergency numbers are always one tap away, for every login — chat no longer hides them. */
   .float-sos{position:fixed;bottom:calc(76px + env(safe-area-inset-bottom));right:14px;z-index:800;width:46px;height:46px;border-radius:50%;border:2px solid var(--aramark-red);background:var(--bg-card,#fff);color:var(--aramark-red);font-size:20px;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.18)}
   .float-sos.visible{display:flex}
+  /* fix-160: 📱 App QR for the Premium Manager (bottom-left, away from Chat/Contacts) */
+  .float-qr{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom));left:14px;z-index:800;height:46px;padding:0 14px;border-radius:999px;border:2px solid var(--asu-maroon,#8C1D40);background:var(--bg-card,#fff);color:var(--asu-maroon,#8C1D40);font-size:14px;font-weight:850;display:none;align-items:center;gap:6px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.18);font-family:inherit}
+  .float-qr.visible{display:flex}
   .float-sos.solo{bottom:calc(18px + env(safe-area-inset-bottom))}
   /* Screens with a pinned Send / Submit bar: lift 📞 and 💬 above it so they never cover the button. */
   body[data-bar="inv"] .float-sos,body[data-bar="inv"] .float-contact{transform:translateY(-76px)}
@@ -2220,6 +2223,7 @@
 </div>
 
 <!-- ============ FLOATING CONTACT BUTTON ============ -->
+<button class="float-qr" id="float-qr-btn" onclick="showAppQrPopup()" title="Show the app QR" aria-label="Show the app QR code">📱 App QR</button>
 <button class="float-sos" id="float-sos-btn" onclick="showContactPopup()" title="Emergency numbers" aria-label="Emergency numbers">📞</button>
 <button class="float-contact" id="float-contact-btn" onclick="floatContactTap()" title="Game day contacts"><span id="fc-icon">📞</span><span class="fc-label" id="fc-label">Contacts</span><span class="fc-badge" id="fc-badge"></span></button>
 <!-- Connection status — was a bare 12px dot at bottom-right, easy to miss and not
@@ -4659,6 +4663,7 @@
   <div class="content">
     <div id="wh-coverage-card">
       <div id="whcov-summary" style="margin-bottom:10px"></div>
+      <div id="whcov-gaps" style="margin-bottom:10px"></div>
       <div id="whcov-groups-legend" style="margin-bottom:8px"></div>
       <div style="display:flex;gap:8px;margin-bottom:8px"><input class="form-input" type="text" id="whcov-people-search" placeholder="🔍 Find a person" oninput="whCovRenderPeople()" style="margin:0;flex:1"><button class="btn btn-ghost" id="whcov-bulk-btn" onclick="whCovToggleBulk()" style="width:auto;margin:0;padding:0 12px;white-space:nowrap;font-size:12px">☑ Select several</button></div>
       <div id="whcov-bulk-bar" style="display:none;position:sticky;top:0;z-index:5;background:var(--surface,#fff);border:2px solid var(--asu-maroon);border-radius:10px;padding:10px;margin-bottom:8px"></div>
@@ -4785,7 +4790,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-21-fix-160';
+const BUILD_TAG = '2026-11-21-fix-161';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -16931,6 +16936,8 @@ function renderContactBar() {
 function updateFloatingContactVisibility(){
   const btn=document.getElementById('float-contact-btn'); if(!btn)return;
   const loggedIn=!!(state.user||state.staffAccount);
+  const qrb=document.getElementById('float-qr-btn');
+  if(qrb)qrb.classList.toggle('visible',loggedIn&&isPremiumManagerSession()&&!['screen-login','screen-npo-login','screen-npo-stand-picker','screen-pin'].includes(state.currentScreen));
   const blocked=['screen-login','screen-npo-login','screen-npo-stand-picker','screen-chat','screen-pin','screen-golfcart','screen-kitchen'].includes(state.currentScreen)||(state.currentScreen==='screen-bedcheck'&&!chatLevel());
   const chat=!!chatLevel();
   const ic=document.getElementById('fc-icon'),lb=document.getElementById('fc-label');
@@ -17002,6 +17009,28 @@ function appQrBlockHtml(open) {
   return '<details' + (open ? ' open' : '') + ' style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px"><summary style="font-size:13px;font-weight:800;cursor:pointer">📱 App QR</summary>' +
     '<div style="text-align:center;margin-top:8px"><div role="img" aria-label="QR code for the Stadium Ops app" style="width:240px;height:240px;max-width:72vw;max-height:72vw;margin:0 auto;background:#fff;border-radius:10px;padding:6px">' + APP_QR_SVG + '</div>' +
     '<div style="font-size:13px;font-weight:800;margin-top:6px">' + escapeHtml(STAND_QR_APP_URL.replace(/^https?:\/\//, '')) + '</div></div></details>';
+}
+// fix-160: Premium Manager's floating 📱 App QR — staff scan it with the phone
+// camera, the app opens on the sign-in page, they sign in with their own last
+// 5 digits + last name. Built into the app, works without the internet QR service.
+function showAppQrPopup() {
+  const old = document.getElementById('app-qr-overlay'); if (old) { old.remove(); return; }
+  const url = STAND_QR_APP_URL + '/';
+  const el = document.createElement('div');
+  el.id = 'app-qr-overlay'; el.className = 'contact-popup-overlay'; el.style.zIndex = '10001';
+  el.innerHTML = '<div class="contact-popup" style="text-align:center"><div style="font-size:18px;font-weight:800">📱 Scan to open the app</div>' +
+    '<div style="font-size:13px;color:var(--text-2);margin:4px 0 12px">Point your phone camera at this code → tap the link → sign in with the <b>last 5 digits of your ID</b> + <b>last name</b>.</div>' +
+    '<div role="img" aria-label="QR code for the Stadium Ops app" style="width:260px;height:260px;max-width:76vw;max-height:76vw;margin:0 auto;background:#fff;border-radius:12px;padding:8px">' + APP_QR_SVG + '</div>' +
+    '<div style="font-size:14px;font-weight:800;margin-top:8px">' + escapeHtml(url.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</div>' +
+    '<button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="appQrShareLink()">Share the link</button>' +
+    '<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="document.getElementById(\'app-qr-overlay\').remove()">Close</button></div>';
+  el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+  document.body.appendChild(el);
+}
+async function appQrShareLink() {
+  const url = STAND_QR_APP_URL + '/';
+  try { if (navigator.share) { await navigator.share({ title: 'Stadium Ops', text: 'Open the app and sign in with the last 5 digits of your ID + last name', url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(url); toast('Link copied — paste it in a text'); } catch (e) { toast(url); }
 }
 function showScLogins() {
   const html = scLoginsHtml(true);
@@ -19179,7 +19208,56 @@ function whCovToggleStand(cb,stand){if(cb.checked){if(!_whCovSelectedStands.incl
 async function warehouseCoveragePersonChanged(){_whCovSelected=[];_whCovSelectedStands=[];const emp=document.getElementById('whcov-person').value;if(!emp){warehouseCoverageRenderAreas();whCovRenderStands();return;}const rows=await coverageGetAssignments(stadiumDay(),'Mountain America Stadium'),r=rows.find(x=>String(x.employee_id)===String(emp)&&x.team==='warehouse');if(r){const ar=await coverageGetAreas('Mountain America Stadium');_whCovAreas=ar;const fromAreas=(r.area_keys||[]).flatMap(k=>{const a=ar.find(x=>x.area_key===k);return a&&Array.isArray(a.stands)?a.stands:[];});_whCovSelected=[];_whCovSelectedStands=[...new Set([...(r.direct_stands||[]),...fromAreas])];}warehouseCoverageRenderAreas();whCovRenderStands();}
 async function warehouseCoverageSave(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person','error');if(!_whCovSelected.length&&!_whCovSelectedStands.length)return toast('Tap a group first','error');const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));if(await coverageSaveAssignment({event_date:stadiumDay(),venue:'Mountain America Stadium',employee_id:emp,name:p?p.name:'',role:p?p.role:'warehouse_employee',team:'warehouse',area_keys:_whCovSelected,direct_stands:_whCovSelectedStands,notify_requests:true,updated_at:new Date().toISOString()})){toast('✅ Saved — '+(p?p.name:'')+' covers '+(_whCovSelected.length+_whCovSelectedStands.length)+' area/stand choice(s)');whCovClose();warehouseCoverageCurrent();}else toast('Could not save coverage','error');}
 async function warehouseCoverageClear(){const emp=document.getElementById('whcov-person').value;if(!emp)return toast('Select a warehouse person first','error');if(!(await confirmAction('They\'ll go back to seeing every stand/request until reassigned.',{title:'Remove this person\'s coverage?',confirmLabel:'Remove'})))return;if(await coverageDeleteAssignment(stadiumDay(),'Mountain America Stadium',emp,'warehouse')){_whCovSelected=[];_whCovSelectedStands=[];whCovClose();toast('Coverage removed');warehouseCoverageCurrent();}else toast('Could not remove coverage','error');}
-async function warehouseCoverageCurrent(){_whCovRows=(await coverageGetAssignments(stadiumDay(),'Mountain America Stadium')).filter(x=>x.team==='warehouse');_whCovAreas=await coverageGetAreas('Mountain America Stadium');whCovRenderPeople();}
+async function warehouseCoverageCurrent(){_whCovRows=(await coverageGetAssignments(stadiumDay(),'Mountain America Stadium')).filter(x=>x.team==='warehouse');_whCovAreas=await coverageGetAreas('Mountain America Stadium');whCovRenderPeople();whCovRenderGaps().catch(()=>{});}
+// fix-160: STAND GAPS for the warehouse manager — the same plan seen from the
+// stands' side. Every stand open today (on today's schedule or with an NPO
+// group) that no warehouse person covers is listed; tap it, tap a person, done.
+// Adds the stand to that person's existing stands (nothing else changes).
+let _whGapOpen='';
+async function whCovOpenStandsToday(){
+  const day=stadiumDay();
+  const [sched,npo]=await Promise.all([
+    sb('schedule?event_date=eq.'+day+'&is_test=neq.true&select=location').catch(()=>({_err:true})),
+    sb('npo_groups?is_active=eq.true&select=stand').catch(()=>({_err:true}))
+  ]);
+  const known=new Set((_whCovStandsList||[]).map(x=>canonicalStandName2026(x)));
+  const out=new Set();
+  // npo_groups.stand can list several stands: "140 Inferno Favorites,142 Inferno Burgers".
+  [].concat(Array.isArray(sched)?sched.map(r=>r.location):[],Array.isArray(npo)?npo.flatMap(r=>String(r.stand||'').split(',').map(x=>x.trim())):[]).forEach(n=>{
+    const c=canonicalStandName2026(n);if(c&&known.has(c)&&(_whCovStandVenue[c]||'Mountain America Stadium')==='Mountain America Stadium')out.add(c);});
+  return [...out].sort((a,b)=>(parseInt(a,10)||999)-(parseInt(b,10)||999)||a.localeCompare(b));
+}
+async function whCovCoveredStands(){
+  const covered={};
+  for(const r of _whCovRows){const ex=await coverageExpandAssignmentStands([r]);ex.stands.forEach(st=>{const c=canonicalStandName2026(st);(covered[c]=covered[c]||[]).push(r);});}
+  return covered;
+}
+async function whCovRenderGaps(){
+  const el=document.getElementById('whcov-gaps');if(!el)return;
+  if(!_whCovStandsList||!_whCovStandsList.length)await whCovLoadStandsList();
+  const open=await whCovOpenStandsToday();
+  if(!open.length){el.innerHTML='';return;}
+  if(!_whCovRows.length){el.innerHTML='<div class="notice info" style="font-size:12px">🕳 <b>Stand gaps</b> show here once people have stands. Right now nobody is assigned, so <b>every warehouse person sees every stand</b>.</div>';return;}
+  const covered=await whCovCoveredStands();
+  const gaps=open.filter(st=>!covered[st]);
+  if(!gaps.length){el.innerHTML='<div class="notice success" style="font-size:13px;padding:10px 12px">✅ <b>No gaps</b> — all '+open.length+' stands open today have a warehouse person.</div>';return;}
+  const key=n=>loginFold(n).replace(/[^a-z]/g,'');
+  const working=_whCovPeople.filter(p=>!_whCovRoster.size||_whCovRoster.has(key(p.name)));
+  const nStands=p=>{const r=_whCovRows.find(x=>String(x.employee_id)===String(p.employee_id));return r?(r.direct_stands||[]).length:0;};
+  const people=working.slice().sort((a,b)=>nStands(a)-nStands(b)||String(a.name).localeCompare(String(b.name)));
+  el.innerHTML='<div class="card" style="padding:12px;border:2px solid #F59E0B"><div style="font-weight:900;font-size:14px">🕳 Stand gaps · '+gaps.length+' of '+open.length+' stands have nobody</div>'+
+    '<div style="font-size:12px;color:var(--text-2);margin:4px 0 8px">Requests from these stands reach no one in particular. Tap a stand, then tap who should cover it.</div>'+
+    gaps.map(st=>{const isOpen=_whGapOpen===st;return '<div style="border-top:1px solid var(--border);padding:8px 0"><button class="btn btn-ghost" style="width:100%;margin:0;text-align:left;font-weight:800;border-color:#F59E0B" onclick="_whGapOpen=(_whGapOpen===\''+escapeAttr(st)+'\'?\'\':\''+escapeAttr(st)+'\');whCovRenderGaps()">⚠️ '+escapeHtml(st)+' <span style="float:right;color:var(--text-3)">'+(isOpen?'▲':'Assign ▼')+'</span></button>'+
+      (isOpen?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+(people.length?people.map(p=>'<button class="coverage-area-chip" onclick="whCovFillGap(\''+escapeAttr(st)+'\',\''+escapeAttr(p.employee_id)+'\')">'+escapeHtml(whDisp(p.name))+' <b style="opacity:.6">· '+nStands(p)+'</b></button>').join(''):'<span style="font-size:12px;color:var(--text-3)">Nobody on today\'s warehouse roster.</span>')+'</div>':'')+'</div>';}).join('')+'</div>';
+}
+async function whCovFillGap(stand,emp){
+  const p=_whCovPeople.find(x=>String(x.employee_id)===String(emp));
+  const r=_whCovRows.find(x=>String(x.employee_id)===String(emp));
+  const stands=((r&&r.direct_stands)||[]).slice();if(!stands.includes(stand))stands.push(stand);
+  const ok=await coverageSaveAssignment({event_date:stadiumDay(),venue:'Mountain America Stadium',employee_id:emp,name:p?p.name:(r?r.name:''),role:p?p.role:(r?r.role:'warehouse_employee'),team:'warehouse',area_keys:(r&&r.area_keys)||[],direct_stands:stands,notify_requests:true,updated_at:new Date().toISOString()});
+  if(!ok)return toast('Could not save — try again','error');
+  toast('✅ '+stand+' → '+whDisp(p?p.name:emp));_whGapOpen='';await warehouseCoverageCurrent();
+}
 // "My Stands" filter and new-request push routing both resolve through
 // this — coverage first (area + direct stand, today's game), falling back
 // to the legacy zone_assignments table only if nothing was ever migrated
