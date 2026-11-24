@@ -4,6 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-24 · database security step 1 (no app change, live build stays fix-169)
+
+- **Staff PINs are hidden from the public.** The website's public key can no longer read the `pin` column of `staff_accounts`. Names, IDs, roles and active flags still load. Sign-in checks PINs through `staff_pin_match` / `staff_accounts_safe`, which never return a PIN. The app has used only those checks since fix-156.
+- SQL: `sql/27_security_step1_hide_pins.sql`. **Undo:** `sql/27_security_step1_UNDO.sql` (one line).
+- Tested first as a rolled-back dry run, then live. From outside, reading `pin` or `select *` is refused and names/roles still read. Real sign-ins all work: premium manager (70000 + last name, and the PIN), manager 90000, warehouse 60000, student, supervisor and runner (last 5 + last name). A wrong last name and a wrong PIN are refused.
+- Still open (step 2): the public key can still **change** `staff_accounts` rows (insert/update), so someone could set a PIN or role. Fixing that needs Admin saves to go through a checked database function.
+
 ## 2026-11-21-fix-169
 
 - **Coca-Cola products hidden on every count screen:** Dasani, Powerade and Smart Water now follow the same rule as Coke, Diet Coke, Coke Zero and Sprite. Staff were still typing 0 for them at every game (DFA Chick-fil-A, 104P, 113P, Soccer). Add Stock, requests and orders hide them too.
