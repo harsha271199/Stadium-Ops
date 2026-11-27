@@ -4801,7 +4801,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-27-fix-172b';
+const BUILD_TAG = '2026-11-27-fix-173';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -5018,7 +5018,7 @@ async function staffAccountWrite(action, row) {
     if (!secret) return { _err: true, cancelled: true, error: 'Cancelled' };
     let r;
     try {
-      const res = await fetch(SUPA_URL + '/rest/v1/rpc/staff_account_write', { method: 'POST', headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+      const res = await fetch(SUPA_URL + '/rest/v1/rpc/staff_account_write', { method: 'POST', headers: Object.assign({ apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' }, passHdr()),
         body: JSON.stringify({ p_actor_id: String(a.empId), p_actor_secret: String(secret), p_action: action, p_employee_id: String(row.employee_id || ''),
           p_name: row.name == null ? null : String(row.name), p_role: row.role == null ? null : String(row.role), p_pin: row.pin == null || row.pin === '' ? null : String(row.pin),
           p_is_active: row.is_active === undefined || row.is_active === null ? null : !!row.is_active }) });
@@ -5043,6 +5043,43 @@ const SUPA_KEY = 'sb_publishable_dshWLIMbJWPaFSq36Zwxog_3TSenM6k';
 
 const PINS = {}; // Legacy shared-PIN gate disabled; individual role logins must be server-verified.
 
+// ── Server sign-in pass (sql/30_server_pass_step1.sql) ──
+// At sign-in the app asks the server for a pass; after that the pass rides
+// along with every request in the x-stadium-pass header. Step 1 blocks
+// nothing: no pass, or a failed pass, still works exactly like before.
+const PASS_KEY = 'stadium_pass_v1';
+function passGet() {
+  try { const p = JSON.parse(localStorage.getItem(PASS_KEY) || 'null'); if (p && p.pass && (!p.exp || Date.parse(p.exp) > Date.now())) return p; } catch (e) {}
+  return null;
+}
+function passHdr() { const p = passGet(); return p ? { 'x-stadium-pass': p.pass } : {}; }
+function passRpc(fn, args) {
+  return fetch(SUPA_URL + '/rest/v1/rpc/' + fn, { method: 'POST', headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(args || {}) })
+    .then(r => r.ok ? r.json() : null).catch(() => null);
+}
+// Never awaited by the sign-in screens, so sign-in is not slower.
+function passIssue(kind, code, secret, empId, extra) {
+  extra = extra || {};
+  try { localStorage.removeItem(PASS_KEY); } catch (e) {}
+  return passRpc('issue_pass', { p_kind: kind, p_code: String(code || ''), p_secret: String(secret || ''), p_employee_id: String(empId || ''),
+    p_stand: extra.stand || null, p_group_id: extra.groupId == null ? null : Number(extra.groupId), p_name: extra.name || null })
+    .then(r => { if (r && r.ok && r.pass) { try { localStorage.setItem(PASS_KEY, JSON.stringify({ pass: r.pass, exp: r.expires_at, kind: r.kind })); } catch (e) {} } });
+}
+function passEnd() {
+  const p = passGet();
+  try { localStorage.removeItem(PASS_KEY); } catch (e) {}
+  if (p) passRpc('end_pass', { p_pass: p.pass });
+}
+// Staff passes last 7 days; renewed quietly while the app is open.
+function passRenew() {
+  const p = passGet();
+  if (!p || !['admin', 'staff'].includes(p.kind) || (p.exp && Date.parse(p.exp) - Date.now() > 3 * 864e5)) return;
+  passRpc('renew_pass', { p_pass: p.pass }).then(r => {
+    if (r && r.ok) { try { localStorage.setItem(PASS_KEY, JSON.stringify(Object.assign({}, p, { exp: r.expires_at }))); } catch (e) {} }
+  });
+}
+setTimeout(passRenew, 8000); setInterval(passRenew, 6 * 3600e3);
+
 // Low-level Supabase REST helper with retry + timeout
 async function sb(path, opts = {}, tries = 2) {
   const url = SUPA_URL + '/rest/v1/' + path;
@@ -5050,7 +5087,7 @@ async function sb(path, opts = {}, tries = 2) {
     'apikey': SUPA_KEY,
     'Authorization': 'Bearer ' + SUPA_KEY,
     'Content-Type': 'application/json'
-  }, opts.headers || {});
+  }, passHdr(), opts.headers || {});
   const isWrite = opts.method && ['POST','PATCH','PUT','DELETE'].includes(opts.method);
   if (isWrite && /^transfer/.test(path) && typeof state !== 'undefined') state._whTfCache = null;
   for (let attempt = 1; attempt <= tries; attempt++) {
@@ -5094,7 +5131,7 @@ function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function sbRpc(fn, args) {
   try {
     const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 12000);
-    const res = await fetch(SUPA_URL + '/rest/v1/rpc/' + fn, { method: 'POST', signal: ctrl.signal, headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(args || {}) });
+    const res = await fetch(SUPA_URL + '/rest/v1/rpc/' + fn, { method: 'POST', signal: ctrl.signal, headers: Object.assign({ apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' }, passHdr()), body: JSON.stringify(args || {}) });
     clearTimeout(timer);
     const txt = await res.text();
     if (!res.ok) return { _err: true, status: res.status, msg: txt };
@@ -5368,7 +5405,7 @@ async function drainQueue() {
       const url = SUPA_URL + '/rest/v1/' + item.path;
       const res = await fetch(url, {
         ...item.opts,
-        headers: Object.assign({ 'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY, 'Content-Type':'application/json' }, item.opts.headers||{})
+        headers: Object.assign({ 'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY, 'Content-Type':'application/json' }, passHdr(), item.opts.headers||{})
       });
       if (res.ok) { sent++; } else { remaining.push(item); }
     } catch(e) { remaining.push(item); }
@@ -7748,6 +7785,7 @@ async function doLogin() {
       state.smartLoginTarget='';
       const smartHint=document.getElementById('smart-login-role');if(smartHint)smartHint.classList.remove('show');
       state.staffAccount=res.staffAccount;
+      passIssue(state.staffAccount.role==='premium_seller'?'premium_seller':'staff',empId,secret,state.staffAccount.empId);
       localStorage.removeItem('stadium_user');
       localStorage.setItem('stadium_staff',JSON.stringify(state.staffAccount));
       maybeAutoPromptPush(state.staffAccount.role);
@@ -7781,6 +7819,7 @@ async function doLogin() {
     }
     if(res.user)res.user.loginDay=stadiumDay();
     state.user=res.user;
+    if(res.user)passIssue(res.user.isSubcontractor?'subcontractor':'worker',empId,secret,res.user.empId,{stand:res.user.stand});
     localStorage.setItem('stadium_user',JSON.stringify(res.user));
     state.attendance=localStorage.getItem('stadium_attend_'+empId)||'not_started';
     maybeAutoPromptPush(res.user.role);
@@ -7789,6 +7828,7 @@ async function doLogin() {
 }
 
 function logout() {
+  passEnd();
   localStorage.removeItem('stadium_user');
   state.user = null;
   state.attendance = 'not_started';
@@ -8135,6 +8175,7 @@ async function doNpoLogin() {
     state._npoPendingGroup = g;
     state._npoPendingName = matches[0].member_name;
     state._npoPendingMember = member;
+    state._npoPendingPin = pin;
 
     if (available.length > 1) {
       showNpoStandPicker(available);
@@ -8168,6 +8209,7 @@ async function finishNpoLogin(g, memberName, stand, member) {
     // must never become the NPO's event or shift date.
     const ctxRows = await sb('schedule?'+schedLocFilter2026(stand)+'&event_date=eq.'+today+'&select=event_name,site,event_date&limit=1').catch(()=>({_err:true}));
     const ctx = (!ctxRows._err && Array.isArray(ctxRows) && ctxRows.length) ? ctxRows[0] : {};
+    if (state._npoPendingPin) { passIssue('npo', '', state._npoPendingPin, member && member.id, { stand, groupId: g.id, name: memberName }); state._npoPendingPin = null; }
     member = member || {id:g.id,is_lead:true};
     const standMetaRows=await sb('stands?stand_name=eq.'+encodeURIComponent(stand)+'&select=is_main_stand,lead_access_for_all&limit=1').catch(()=>({_err:true}));
     const standMeta=(!standMetaRows._err&&Array.isArray(standMetaRows)&&standMetaRows[0])?standMetaRows[0]:{};
@@ -8238,6 +8280,7 @@ async function submitPin() {
       const res = await api('checkStaffLogin', { employeeId: empId, pin, expectedGroup: state.pinTarget });
       if (!res.ok) return toast(res.error || 'ID or PIN not recognized', 'error');
       state.staffAccount = { empId: res.empId, name: res.name, role: res.role, group: state.pinTarget==='admin'?'manager':state.pinTarget };
+      passIssue(res.role === 'admin' ? 'admin' : 'staff', empId, pin, res.empId);
       // Persisted so this survives a fresh page load — a QR scan opens a new
       // page load every time, and previously that meant re-entering Employee
       // ID + PIN on every single stand, 30 times for 30 stands. This stays
@@ -8315,6 +8358,7 @@ function adminActAsExit(){
 async function staffLogout() {
   if (state._adminActAs) return adminActAsExit();
   if (!(await confirmAction('You’ll need your ID and PIN to sign back in on this device.', {title:'Log out on this device?', confirmLabel:'Log out'}))) return;
+  passEnd();
   localStorage.removeItem('stadium_staff');
   state.staffAccount = null;
   state.whName = null;
@@ -25341,7 +25385,7 @@ async function btReq(path, opts) {
   opts = opts || {};
   try {
     const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 12000);
-    const res = await fetch(SUPA_URL + '/rest/v1/' + path, { ...opts, signal: ctrl.signal, headers: Object.assign({ apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' }, opts.headers || {}) });
+    const res = await fetch(SUPA_URL + '/rest/v1/' + path, { ...opts, signal: ctrl.signal, headers: Object.assign({ apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' }, passHdr(), opts.headers || {}) });
     clearTimeout(timer);
     const txt = await res.text();
     if (!res.ok) return { _err: true, status: res.status, msg: txt };

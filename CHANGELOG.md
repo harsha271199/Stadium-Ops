@@ -4,7 +4,17 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
-## 2026-11-27-fix-172b (built, not live) · security: lock staff account changes
+## 2026-11-27-fix-173 · security step 3a: server sign-in pass (no rules yet)
+
+- **At sign-in the app now also gets a pass from the server** (`issue_pass`, `sql/30_server_pass_step1.sql`). The server re-checks the same things the app checks: Admin ID + PIN; staff last-5 or shared code (60000 warehouse, 70000 premium, 90000 managers) + last name (same forgiving name match as the app); workers on today's / last night's schedule (leads and supervisors any day); NPO group PIN + roster member; 50000 subcontractor stand; bottle sellers switched on today. Wrong last name or PIN → no pass.
+- The pass is sent with every request (`x-stadium-pass` header: REST, sign-in checks, staff account changes, offline queue replay, bottle tracker). It is not awaited at sign-in, so signing in is not slower (timed the same as fix-172b).
+- **Nothing is blocked.** A request with no pass or a bad pass works exactly as before. People already signed in keep working; they get a pass the next time they sign in.
+- How long a pass lasts: workers, leads, students, NPO, subcontractors until 6 AM (end of the stadium day). Admin and staff accounts 7 days, renewed quietly while the app is open. Sign out ends the pass.
+- The server keeps a small log of which kind of pass made each change (`pass_audit`, 51 tables, one row per save). Used to check the access rules (`docs/ACCESS_RULES_DRAFT.md`) against real game-day use before any rule is switched on. Old log rows are cleaned up nightly. The public key cannot read or write the pass tables.
+- Tested on a separate test project (`stadium-ops-test`, made-up people only): 39 server cases (right/wrong PIN, name typos, inactive account, staff pretending to be Admin, wrong shared code, off-schedule worker, test rows, NPO wrong PIN / wrong group, fake subcontractor stand, pass tables locked, saves work with no / fake / real pass, sign-out ends the pass) and 15 browser cases with the real app (every sign-in kind, pass survives refresh, saves carry it, sign-out clears it, no page errors). Dry run of the SQL on live in a rolled-back transaction: saves OK, pass tables refused, log works.
+- **Undo:** `sql/30_server_pass_step1_UNDO.sql` and/or the previous zip. Either one alone is safe: the app without the SQL just gets no pass; the SQL without the app just logs "no pass".
+
+## 2026-11-27-fix-172b (live) · security: lock staff account changes
 
 - **Staff logins can only be changed through a database check.** Before, the public website key could create or change any staff account directly (PIN, role, active), e.g. make anyone a manager. Now every change goes through `staff_account_write`, which checks the caller on every call:
   - **Admin** (own ID + own PIN): create/edit name, role, PIN, active. Never an admin account and never role admin.
