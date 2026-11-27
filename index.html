@@ -4801,7 +4801,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-27-fix-171';
+const BUILD_TAG = '2026-11-27-fix-172';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4966,6 +4966,10 @@ function promptAction(message, opts) {
     inputEl.value = '';
     inputEl.placeholder = opts.placeholder || '';
     inputEl.style.display = '';
+    // fix-172: secret entry (PIN) — dots instead of digits, number keypad, one line.
+    inputEl.style.webkitTextSecurity = opts.secret ? 'disc' : '';
+    inputEl.setAttribute('inputmode', opts.numeric ? 'numeric' : 'text');
+    inputEl.rows = opts.secret ? 1 : 3; inputEl.style.minHeight = opts.secret ? '0' : '88px';
     okBtn.textContent = opts.confirmLabel || 'OK';
     okBtn.className = 'btn btn-primary';
     cancelBtn.textContent = 'Cancel';
@@ -4973,7 +4977,7 @@ function promptAction(message, opts) {
     // Top-aligned so the on-screen keyboard never covers what's being typed.
     modal.style.alignItems = 'flex-start';
     modal.style.paddingTop = '12vh';
-    const finish = (val) => { modal.style.paddingTop = '20px'; modal.style.alignItems = 'center'; inputEl.style.display = 'none'; resolve(val); };
+    const finish = (val) => { modal.style.paddingTop = '20px'; modal.style.alignItems = 'center'; inputEl.style.display = 'none'; inputEl.style.webkitTextSecurity = ''; inputEl.rows = 3; inputEl.style.minHeight = '88px'; inputEl.setAttribute('inputmode', 'text'); resolve(val); };
     _appDialogResolve = (ok) => finish(ok ? inputEl.value.trim() : null);
     okBtn.onclick = () => {
       if (opts.required && !inputEl.value.trim()) { inputEl.style.borderColor = '#DC2626'; inputEl.focus(); return; }
@@ -4987,6 +4991,44 @@ function promptAction(message, opts) {
 // notifyUser(message, {title}) -> Promise<void> — single-button alert() replacement
 function notifyUser(message, opts) {
   return confirmAction(message, Object.assign({ confirmLabel: 'OK', hideCancel: true }, opts || {}));
+}
+
+// ============ STAFF ACCOUNT CHANGES (security step 2, fix-172) ============
+// Every create/edit of a login goes through the database check
+// staff_account_write: the caller proves who they are on each call (Admin and
+// Warehouse Manager: their own PIN; Warehouse Supervisor: their last name, as at
+// sign-in). Asked once per sign-in and kept in memory only — never stored.
+async function staffActorSecret(again) {
+  const a = state.staffAccount; if (!a) return null;
+  if (!again && state._actorSecret) return state._actorSecret;
+  const sup = a.role === 'warehouse_supervisor';
+  const v = await promptAction((again ? 'That did not match. ' : '') + (sup ? 'Type your last name to confirm this change.' : 'Type your PIN to confirm this change.'),
+    { title: 'Confirm it\'s you', placeholder: sup ? 'Last name' : 'PIN', confirmLabel: 'Confirm', required: true, secret: !sup, numeric: !sup });
+  if (!v) return null;
+  state._actorSecret = v;
+  return v;
+}
+async function staffAccountWrite(action, row) {
+  const a = state.staffAccount;
+  if (!a || !a.empId) return { _err: true, error: 'Sign in again' };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const secret = await staffActorSecret(attempt > 0);
+    if (!secret) return { _err: true, cancelled: true, error: 'Cancelled' };
+    let r;
+    try {
+      const res = await fetch(SUPA_URL + '/rest/v1/rpc/staff_account_write', { method: 'POST', headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_actor_id: String(a.empId), p_actor_secret: String(secret), p_action: action, p_employee_id: String(row.employee_id || ''),
+          p_name: row.name == null ? null : String(row.name), p_role: row.role == null ? null : String(row.role), p_pin: row.pin == null || row.pin === '' ? null : String(row.pin),
+          p_is_active: row.is_active === undefined || row.is_active === null ? null : !!row.is_active }) });
+      const txt = await res.text();
+      if (!res.ok) return { _err: true, status: res.status, error: 'Could not save (HTTP ' + res.status + ')' };
+      r = txt ? JSON.parse(txt) : null;
+    } catch (e) { return { _err: true, net: true, error: 'Network — try again' }; }
+    if (r && r.ok) return r;
+    if (r && r.error === 'auth') { state._actorSecret = null; continue; }
+    return { _err: true, error: (r && r.error) || 'Could not save' };
+  }
+  return { _err: true, error: 'Could not confirm it was you' };
 }
 
 // ============================================================
@@ -13279,8 +13321,8 @@ async function runnersMove(emp,to,btn){
   await withLock(btn,'Moving…',async()=>{
     // Keep their own PIN; only someone without one gets the shared 60000.
     const patch=to==='food'?{role:'food_runner'}:Object.assign({role:'warehouse_employee'},p.has_pin?{}:{pin:'60000'});
-    const r=await sb('staff_accounts?employee_id=eq.'+encodeURIComponent(emp),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(patch)}).catch(()=>({_err:true}));
-    if(r&&r._err)return toast('Could not move — try again','error');
+    const r=await staffAccountWrite('upsert',{employee_id:emp,role:patch.role,pin:patch.pin||null});
+    if(r&&r._err){if(!r.cancelled)toast('Could not move — '+(r.error||'try again'),'error');return;}
     p.role=patch.role;
     // Same stands as before the move — nothing to redo.
     if(to==='food'){await coverageDeleteAssignment(stadiumDay(),'Mountain America Stadium',emp,'warehouse').catch(()=>{});await rnSaveArea(p,'food',keepArea,wa&&wa.direct_stands);}
@@ -13297,10 +13339,11 @@ async function runnersAdd(btn){
   await withLock(btn,'Adding…',async()=>{
     const ex=await sb('staff_accounts?employee_id=eq.'+id+'&select=employee_id,role,is_active').catch(()=>({_err:true}));
     const row={employee_id:id,name,role:team==='food'?'food_runner':'warehouse_employee',pin:team==='food'?String(Math.floor(1000+Math.random()*9000)):'60000',is_active:true};
-    const r=Array.isArray(ex)&&ex.length
-      ?await sb('staff_accounts?employee_id=eq.'+id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({name,role:row.role,is_active:true,...(team==='warehouse'?{pin:'60000'}:{})})}).catch(()=>({_err:true}))
-      :await sb('staff_accounts',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)}).catch(()=>({_err:true}));
-    if(r&&r._err)return toast('Could not add — check the ID and try again','error');
+    // Existing login: same as before — name, role, switched on, and 60000 only for warehouse.
+    const r=await staffAccountWrite('upsert',Array.isArray(ex)&&ex.length
+      ?{employee_id:id,name,role:row.role,is_active:true,pin:team==='warehouse'?'60000':null}
+      :row);
+    if(r&&r._err){if(!r.cancelled)toast('Could not add — '+(r.error||'check the ID and try again'),'error');return;}
     await rnSaveArea({employee_id:id,name},team,area);
     toast('✅ Added '+whDisp(name)+' — sign in: '+(team==='food'?'last 5 of ID + last name':'60000 + last name'));
     ['rn-name','rn-id'].forEach(x=>{const e=document.getElementById(x);if(e)e.value='';});
@@ -19004,10 +19047,16 @@ async function adminAccessSave(){
 
   adminAccessSetSyncStatus('loading',_adminAccessEditId?'Updating Supabase account…':'Creating Supabase account…');
   let r;
-  if(_adminAccessEditId){
-    r=await sb('staff_accounts?employee_id=eq.'+encodeURIComponent(employee_id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(Object.assign({name,role,is_active},pin?{pin}:{}))});
-  }else{
-    r=await sb('staff_accounts',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)});
+  // fix-172: saved through the database check (asks for the Admin PIN once).
+  if(!_adminAccessEditId){
+    // A new account must not overwrite an existing login (same as the old 409).
+    const ex=await sb('staff_accounts?employee_id=eq.'+encodeURIComponent(employee_id)+'&select=employee_id').catch(()=>({_err:true}));
+    if(Array.isArray(ex)&&ex.length){adminAccessSetSyncStatus('error','Employee ID already exists');return toast('That Employee ID already has an account','error');}
+  }
+  r=await staffAccountWrite('upsert',{employee_id,name,role,is_active,pin:pin||null});
+  if(r&&r._err){
+    adminAccessSetSyncStatus('error',r.cancelled?'Not saved — PIN not confirmed':'Save failed · '+(r.error||''));
+    return r.cancelled?undefined:toast('Could not save — '+(r.error||'try again'),'error');
   }
   if(r&&r._queued){
     adminAccessOptimistic(row);adminAccessClose();
@@ -24850,15 +24899,15 @@ async function whTempAddPerson(empId, name) {
   const ok = await confirmAction('Add ' + whDisp(name) + ' (ID ' + empId + ') as a warehouse worker for today?\n\nThey sign in with 60000 + last name.', { title: 'Add temp worker', confirmLabel: 'Add' });
   if (!ok) return;
   const box = document.getElementById('wh-temp-results');
-  const existing = await sb('staff_accounts?employee_id=eq.' + encodeURIComponent(empId) + '&select=employee_id,role,is_active').catch(() => ({ _err: true }));
-  if (existing._err) return toast('Could not check accounts — try again', 'error');
-  if (Array.isArray(existing) && existing.length) {
-    const ex = existing[0];
-    if (!String(ex.role).startsWith('warehouse')) return toast(whDisp(name) + ' already has a ' + ex.role + ' account — ask Admin', 'error', 7000);
-    if (!ex.is_active) await sb('staff_accounts?employee_id=eq.' + encodeURIComponent(empId), { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ is_active: true }) });
-  } else {
-    const r = await sb('staff_accounts', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ employee_id: empId, name: name, role: 'warehouse_employee', pin: '60000', is_active: true }) });
-    if (r && r._err) return toast('Could not create the login' + (r.status ? ' · HTTP ' + r.status : ''), 'error');
+  // fix-172: created/switched on through the database check (warehouse manager:
+  // PIN; warehouse supervisor: last name — asked once). Same rules as before:
+  // a new ID becomes a 60000 warehouse login; an existing warehouse login is
+  // switched on; any other kind of account is refused.
+  const w = await staffAccountWrite('wh_temp', { employee_id: empId, name: name });
+  if (w && w._err) {
+    if (w.cancelled) return;
+    if (/^already has a /.test(w.error || '')) return toast(whDisp(name) + ' ' + w.error + ' — ask Admin', 'error', 7000);
+    return toast('Could not create the login — ' + (w.error || 'try again'), 'error');
   }
   const day = stadiumDay();
   const onRoster = await sb('warehouse_roster?event_date=eq.' + day + '&employee_id=eq.' + encodeURIComponent(empId) + '&select=id').catch(() => ({ _err: true }));
