@@ -1,8 +1,8 @@
 -- Security step 2 (part A): every change to staff_accounts goes through this
 -- checked function. The caller proves who they are on every call:
---   admin / warehouse_manager -> their own employee ID + their own PIN
---   warehouse_supervisor      -> their own employee ID + last name (they share
---                                PIN 60000; same check as their sign-in)
+--   admin                         -> own employee ID + own PIN (the only PIN login)
+--   warehouse_manager / supervisor -> own employee ID + last name (same as their
+--                                     sign-in; they do not use PINs)
 -- What each may do:
 --   admin              p_action 'upsert'  : create/edit name, role, PIN, active
 --                                           (never an admin account, never role admin)
@@ -27,9 +27,9 @@ begin
    where employee_id = p_actor_id and is_active
      and role in ('admin','warehouse_manager','warehouse_supervisor') limit 1;
   if not found then return jsonb_build_object('ok',false,'error','auth'); end if;
-  if a.role in ('admin','warehouse_manager') then
+  if a.role = 'admin' then
     ok_actor := exists (select 1 from staff_accounts where employee_id = p_actor_id and is_active and pin = p_actor_secret);
-  else -- warehouse_supervisor: last name, as at sign-in
+  else -- warehouse manager / supervisor: last name, as at their sign-in (no PINs)
     norm_last := lower(regexp_replace(split_part(a.name, ',', 1), '[^a-zA-Z]', '', 'g'));
     ok_actor := norm_last <> '' and norm_last = lower(regexp_replace(p_actor_secret, '[^a-zA-Z]', '', 'g'));
   end if;

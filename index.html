@@ -4801,7 +4801,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-27-fix-172';
+const BUILD_TAG = '2026-11-27-fix-172b';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -4998,10 +4998,12 @@ function notifyUser(message, opts) {
 // staff_account_write: the caller proves who they are on each call (Admin and
 // Warehouse Manager: their own PIN; Warehouse Supervisor: their last name, as at
 // sign-in). Asked once per sign-in and kept in memory only — never stored.
+// (11/27: Warehouse Manager confirms with last name too — only Admin uses a PIN.)
 async function staffActorSecret(again) {
   const a = state.staffAccount; if (!a) return null;
   if (!again && state._actorSecret) return state._actorSecret;
-  const sup = a.role === 'warehouse_supervisor';
+  // Only Admin signs in with a PIN; warehouse managers/supervisors use their last name.
+  const sup = a.role !== 'admin';
   const v = await promptAction((again ? 'That did not match. ' : '') + (sup ? 'Type your last name to confirm this change.' : 'Type your PIN to confirm this change.'),
     { title: 'Confirm it\'s you', placeholder: sup ? 'Last name' : 'PIN', confirmLabel: 'Confirm', required: true, secret: !sup, numeric: !sup });
   if (!v) return null;

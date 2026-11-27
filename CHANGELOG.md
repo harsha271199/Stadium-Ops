@@ -4,12 +4,13 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
-## 2026-11-27-fix-172 (built, not live) · security step 2
+## 2026-11-27-fix-172b (built, not live) · security: lock staff account changes
 
 - **Staff logins can only be changed through a database check.** Before, the public website key could create or change any staff account directly (PIN, role, active), e.g. make anyone a manager. Now every change goes through `staff_account_write`, which checks the caller on every call:
   - **Admin** (own ID + own PIN): create/edit name, role, PIN, active. Never an admin account and never role admin.
-  - **Warehouse manager** (own PIN) and **warehouse supervisor** (last name, as at their sign-in, since they share 60000): only "add temp worker": a new 60000 warehouse login, or switch an existing warehouse login back on.
-- The app asks once per sign-in ("Confirm it's you" — PIN masked, number keypad; last name for supervisors) and keeps it in memory only. Wrong PIN asks again; Cancel saves nothing.
+  - **Warehouse manager and warehouse supervisor** (own ID + last name, as at their sign-in — they do not use PINs): only "add temp worker": a new 60000 warehouse login, or switch an existing warehouse login back on.
+  - 11/27 (fix-172b): only Admin signs in with a PIN, so only Admin is asked for one; everyone else confirms with their last name.
+- The app asks once per sign-in ("Confirm it's you" — Admin: PIN, masked, number keypad; everyone else: last name) and keeps it in memory only. Wrong PIN asks again; Cancel saves nothing.
 - Changed: Admin → Access save, Admin → Runners add/move, Warehouse → add temp worker. No other screen writes staff accounts.
 - Tested: the database check in a rolled-back transaction as the public key (10 cases: wrong PIN, wrong last name, unknown caller, make-admin and edit-admin refused, supervisor full edit refused, temp-add over a manager account refused; create, edit-keep-PIN and temp-add allowed). The app with captured calls: PIN asked once, wrong-then-right, cancel, refusal messages, supervisor last-name prompt, Admin Access save and Runners add send the right fields, new runner gets a 4-digit PIN, zero direct writes left. No page errors.
 - **Go-live order:** (1) upload this build; (2) check Admin → Access save and a warehouse temp add; (3) run `sql/28_security_step2_GO_LIVE.sql` to remove direct writes from the public key. **Undo:** `sql/28_security_step2_UNDO.sql` + the previous zip. The checked function (`sql/28_security_step2_staff_write.sql`) is already in the database and changes nothing on its own.
