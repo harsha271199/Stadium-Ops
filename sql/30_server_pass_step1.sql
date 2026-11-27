@@ -102,7 +102,7 @@ end $$;
 
 -- Arizona time; the stadium day rolls over at 6 AM (same as the app).
 create or replace function public.pass_next_6am() returns timestamptz
-language sql stable as $$
+language sql stable set search_path = public as $$
   select ((date_trunc('day', (now() at time zone 'America/Phoenix') - interval '6 hours')
            + interval '1 day 6 hours') at time zone 'America/Phoenix')
 $$;
