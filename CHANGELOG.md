@@ -4,6 +4,12 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-27-fix-171 (built, not live)
+
+- **348 San Tan Venezia's opened as an empty stand.** Dropdown values (stand pickers, people pickers, admin lists) were built with the onclick escape, which puts a backslash before an apostrophe, so picking **348 San Tan Venezia's** opened `348 San Tan Venezia\'s`: a different stand with no item list. Ebony's 11/21 counts and Kijana's 11/7 Count Out were saved under that broken name, and the real 65-item 348 list was never counted. All 34 dropdown/input values now use the HTML escape (no backslash); onclick code is unchanged.
+- Tested as Ebony on 11/21: live fix-169 opens the broken name with 3 items; this build opens the real 348 with 65 items. No page errors.
+- 348 is the only active stand with an apostrophe. Data saved under the broken name is not moved by this build.
+
 ## 2026-11-27-fix-170
 
 - **Yellow Dog copy-paste now lines up row for row.** On 11/21 only 2 of 52 stands pasted correctly: the rest slid by one or more rows, so counts landed on the wrong items. Three causes, all fixed:

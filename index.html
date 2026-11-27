@@ -4801,7 +4801,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-27-fix-170';
+const BUILD_TAG = '2026-11-27-fix-171';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -10156,23 +10156,23 @@ async function populateStandPicker(selectId, defaultStand) {
     let html='<option value="">— Select a stand —</option>';
     if(scInList.length){
       html+='<optgroup label="🏪 Subcontractor stands">'+scInList.map(s=>
-        '<option value="'+escapeAttr(s)+'"'+(s===defaultStand?' selected':'')+'>'+escapeHtml(s)+' · Subcontractor</option>'
+        '<option value="'+escapeHtml(s)+'"'+(s===defaultStand?' selected':'')+'>'+escapeHtml(s)+' · Subcontractor</option>'
       ).join('')+'</optgroup>';
     }
     if(npoStands.length){
       html+='<optgroup label="🤝 NPO assigned stands">'+npoStands.map(s=>
-        '<option value="'+escapeAttr(s)+'"'+(s===defaultStand?' selected':'')+'>'+escapeHtml(s)+' · NPO</option>'
+        '<option value="'+escapeHtml(s)+'"'+(s===defaultStand?' selected':'')+'>'+escapeHtml(s)+' · NPO</option>'
       ).join('')+'</optgroup>';
     }
     if(other.length){
       html+='<optgroup label="🏟️ All other stands">'+other.map(s=>
-        '<option value="'+escapeAttr(s)+'"'+(s===defaultStand?' selected':'')+'>'+escapeHtml(s)+'</option>'
+        '<option value="'+escapeHtml(s)+'"'+(s===defaultStand?' selected':'')+'>'+escapeHtml(s)+'</option>'
       ).join('')+'</optgroup>';
     }
     sel.innerHTML=html;
   }else{
     sel.innerHTML='<option value="">— Select a stand —</option>'+stands.map(s=>
-      '<option value="'+escapeAttr(s)+'"'+(s===defaultStand?' selected':'')+'>'+escapeHtml(s)+'</option>'
+      '<option value="'+escapeHtml(s)+'"'+(s===defaultStand?' selected':'')+'>'+escapeHtml(s)+'</option>'
     ).join('');
   }
   sel.value = defaultStand || '';
@@ -10457,9 +10457,9 @@ async function admStandsLoad(){
   const vs=await admStandVenues(),vSel=document.getElementById('adm-st-venue');
   if(vSel){const cur=vSel.value;vSel.innerHTML=vs.map(v=>'<option>'+escapeHtml(v)+'</option>').join('');if(cur&&vs.includes(cur))vSel.value=cur;}
   const all=await allVenueStands(),sc=new Set(scStandList());
-  const opts=all.map(x=>'<option value="'+escapeAttr(x.name)+'">'+escapeHtml(x.name)+(x.venue!=='Mountain America Stadium'?' · '+escapeHtml(x.venue):'')+'</option>').join('');
+  const opts=all.map(x=>'<option value="'+escapeHtml(x.name)+'">'+escapeHtml(x.name)+(x.venue!=='Mountain America Stadium'?' · '+escapeHtml(x.venue):'')+'</option>').join('');
   const cp=document.getElementById('adm-st-copy');if(cp)cp.innerHTML=opts;
-  const mk=document.getElementById('adm-sc-make');if(mk)mk.innerHTML='<option value="">— pick a stand —</option>'+all.filter(x=>!sc.has(x.name)).map(x=>'<option value="'+escapeAttr(x.name)+'">'+escapeHtml(x.name)+(x.venue!=='Mountain America Stadium'?' · '+escapeHtml(x.venue):'')+'</option>').join('');
+  const mk=document.getElementById('adm-sc-make');if(mk)mk.innerHTML='<option value="">— pick a stand —</option>'+all.filter(x=>!sc.has(x.name)).map(x=>'<option value="'+escapeHtml(x.name)+'">'+escapeHtml(x.name)+(x.venue!=='Mountain America Stadium'?' · '+escapeHtml(x.venue):'')+'</option>').join('');
   admStandOpChanged();admScRender();admStandListRender();
 }
 function admStandOpChanged(){const w=document.getElementById('adm-st-sc-wrap'),o=document.getElementById('adm-st-op');if(w&&o)w.style.display=o.value==='Subcontractor'?'':'none';}
@@ -10569,7 +10569,7 @@ function admStandListRender(){
   const el=document.getElementById('adm-st-list');if(!el)return;
   const rows=(state._adminStands||[]).filter(r=>r.created_by||/inactive/i.test(r.venue||''));
   const offPick=(state._allVenueStands&&state._allVenueStands.rows||[]).filter(x=>x.venue==='Mountain America Stadium');
-  const pick='<div style="display:flex;gap:6px;margin-bottom:8px"><select id="adm-st-offpick" class="form-input" style="margin:0;font-size:12px;padding:8px"><option value="">— turn off a stand —</option>'+offPick.map(x=>'<option value="'+escapeAttr(x.name)+'">'+escapeHtml(x.name)+'</option>').join('')+'</select><button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="admStandOffPick()">Turn off</button></div>';
+  const pick='<div style="display:flex;gap:6px;margin-bottom:8px"><select id="adm-st-offpick" class="form-input" style="margin:0;font-size:12px;padding:8px"><option value="">— turn off a stand —</option>'+offPick.map(x=>'<option value="'+escapeHtml(x.name)+'">'+escapeHtml(x.name)+'</option>').join('')+'</select><button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 10px;font-size:12px" onclick="admStandOffPick()">Turn off</button></div>';
   if(!rows.length){el.innerHTML=pick+'<div class="empty"><p>No stands created here yet.</p></div>';return;}
   el.innerHTML=pick+rows.map(r=>{const off=/inactive/i.test(r.venue||'');const venue=String(r.venue||'').replace(/\s*-\s*Inactive$/i,'');
     return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)'+(off?';opacity:.55':'')+'"><div style="min-width:0"><div style="font-size:13px;font-weight:700">'+escapeHtml(r.stand_name)+'</div><div style="font-size:11px;color:var(--text-2)">'+escapeHtml(venue)+' · '+escapeHtml(r.operator||'')+(r.is_main_stand?' · main stand':'')+(r.description?' · '+escapeHtml(r.description):'')+(off?' · <b>off</b>':'')+'</div></div>'+
@@ -12599,7 +12599,7 @@ async function setupSupportRequestStandFilter(){
   if(!sel||(!isSupportManagerSession()&&!isManagerOpsSession()))return;
   const res=await api('getStandsList',{}).catch(()=>({ok:false,stands:[]}));
   const stands=(res.ok&&Array.isArray(res.stands)?res.stands.map(x=>x.stand_name):[]).filter(Boolean).sort(standSort);
-  sel.innerHTML='<option value="">All stands</option>'+stands.map(s=>'<option value="'+escapeAttr(s)+'">'+escapeHtml(s)+'</option>').join('');
+  sel.innerHTML='<option value="">All stands</option>'+stands.map(s=>'<option value="'+escapeHtml(s)+'">'+escapeHtml(s)+'</option>').join('');
   const selected=isSupportManagerSession()?(state.supportRequestStand||''):(state.mgrV10RequestStand||'');
   sel.value=selected;
   supportRequestStandSummary();
@@ -12676,7 +12676,7 @@ async function setupSupportOps(){
   state.supportMyCoverageLabel=expanded.areaNames.length?('My coverage · '+expanded.areaNames.join(' + ')):'My coverage';
   let html='<option value="">All stands</option>';
   if(state.supportMyCoverageStands.length)html+='<option value="__my__">'+escapeHtml(state.supportMyCoverageLabel)+'</option>';
-  html+=stands.map(s=>'<option value="'+escapeAttr(s)+'">'+escapeHtml(s)+'</option>').join('');
+  html+=stands.map(s=>'<option value="'+escapeHtml(s)+'">'+escapeHtml(s)+'</option>').join('');
   sel.innerHTML=html;
   if(!state.supportOpsScope&&state.supportMyCoverageStands.length)state.supportOpsScope='__my__';
   sel.value=state.supportOpsScope||'';
@@ -12883,7 +12883,7 @@ function supportOpsRenderTeam(preserveFocus){
   }
 
   html+='<div class="support-team-compact-summary"><span><b>'+visible.length+'</b> stand'+(visible.length===1?'':'s')+' shown</span><span class="right">'+checkedIn+'/'+scheduled+' checked in · '+late+' late</span></div>'+
-    '<div class="support-mobile-search-wrap '+(searchOpen?'open':'')+'"><input class="form-input" id="support-team-search" placeholder="Search stand or person…" value="'+escapeAttr(state.supportTeamSearch||'')+'" oninput="supportTeamSearchInput()"></div>';
+    '<div class="support-mobile-search-wrap '+(searchOpen?'open':'')+'"><input class="form-input" id="support-team-search" placeholder="Search stand or person…" value="'+escapeHtml(state.supportTeamSearch||'')+'" oninput="supportTeamSearchInput()"></div>';
 
   if(visible.length){
     const forceOpen=(!!scope&&scope!=='__my__')||!!q;
@@ -13032,7 +13032,7 @@ function supportOpsRenderRequests(kind,preserveFocus){
     '</div>'+
     '<div class="support-mobile-search-wrap '+((state.supportMobileSearchOpen&&state.supportMobileSearchOpen[kind])?'open':'')+'">'+
       '<input class="form-input" id="support-req-search" placeholder="Search stand, requester, item…" value="'+
-      escapeAttr((state.supportReqSearch&&state.supportReqSearch[kind])||'')+'" oninput="supportReqSearchInput(\''+kind+'\')">'+
+      escapeHtml((state.supportReqSearch&&state.supportReqSearch[kind])||'')+'" oninput="supportReqSearchInput(\''+kind+'\')">'+
     '</div>';
 
   if(open.length){
@@ -13481,7 +13481,7 @@ function mgrV10RenderSmartRequests(){
       '<div style="flex:1;font-size:8px;color:var(--text-3);text-align:right">'+open.length+' active · '+overdue.length+' overdue</div>'+
     '</div>'+
     '<div class="support-mobile-search-wrap '+(state.mgrSmartSearchOpen?'open':'')+'">'+
-      '<input class="form-input" id="mgr-smart-req-search" placeholder="Search stand, requester, item…" value="'+escapeAttr(state.mgrSmartReqSearch||'')+'" oninput="mgrSmartRequestSearchInput()">'+
+      '<input class="form-input" id="mgr-smart-req-search" placeholder="Search stand, requester, item…" value="'+escapeHtml(state.mgrSmartReqSearch||'')+'" oninput="mgrSmartRequestSearchInput()">'+
     '</div>';
 
   if(state.mgrV10NeedsActionOnly){
@@ -14101,12 +14101,12 @@ async function mtLoadAssignees() {
   // his own "assign to" list (only warehouse_employee_directory rows
   // show up there). Listed first so it's the fast, obvious choice.
   const me = state.staffAccount;
-  const meOption = me ? '<option value="'+escapeAttr(me.empId)+'|'+escapeAttr(me.name)+'">🙋 Myself ('+escapeHtml(whDisp(me.name))+') — deliver it yourself</option>' : '';
+  const meOption = me ? '<option value="'+escapeHtml(me.empId)+'|'+escapeHtml(me.name)+'">🙋 Myself ('+escapeHtml(whDisp(me.name))+') — deliver it yourself</option>' : '';
   const opt = r => {
       const n = counts[r.employee_id] || 0;
       const load = n === 0 ? 'no open tasks' : n + ' open task' + (n === 1 ? '' : 's');
       const tag = r.role === 'warehouse_supervisor' ? ' (Supervisor)' : '';
-      return '<option value="'+escapeAttr(r.employee_id)+'|'+escapeAttr(r.name)+'">'+escapeHtml(whDisp(r.name))+tag+' — '+load+'</option>';
+      return '<option value="'+escapeHtml(r.employee_id)+'|'+escapeHtml(r.name)+'">'+escapeHtml(whDisp(r.name))+tag+' — '+load+'</option>';
     };
   // With a big crew, people on today's roster come first.
   const roster = await sb('warehouse_roster?event_date=eq.'+stadiumDay()+'&select=name').catch(()=>({_err:true}));
@@ -15928,7 +15928,7 @@ async function populateRollStandSelect(){
   const res=await api('getStandsList',{}).catch(()=>({ok:false,stands:[]}));
   const stands=(res.stands||[]).map(s=>s.stand_name).sort();
   sel.innerHTML='<option value="__all__">All stands with a recent Count Out</option>'+
-    stands.map(s=>'<option value="'+escapeAttr(s)+'">'+escapeHtml(s)+'</option>').join('');
+    stands.map(s=>'<option value="'+escapeHtml(s)+'">'+escapeHtml(s)+'</option>').join('');
 }
 // Deliberate, admin-pressed roll-forward — the SAFE version of the old
 // auto carry-forward that caused the On-Hand bug. That one fired
@@ -17790,7 +17790,7 @@ function addFoodQuick(name){
 function selectKitchenUrgency(btn,u,mins){document.querySelectorAll('#kitchen-urgency-row .chip').forEach(x=>x.classList.remove('selected'));btn.classList.add('selected');state.kitchenUrgency=u;state.kitchenETA=mins;const l=document.getElementById('kitchen-eta-label');if(l)l.textContent=mins+' minutes';}
 function addKitchenDraftItem(name,qty){_kitchenDraft.push({itemName:name||'',qty:Number(qty)||1});renderKitchenDraft();}
 function removeKitchenDraftItem(i){_kitchenDraft.splice(i,1);renderKitchenDraft();}
-function renderKitchenDraft(){const el=document.getElementById('kitchen-draft-items');if(!el)return;el.innerHTML=_kitchenDraft.map((x,i)=>`<div class="card" style="padding:10px;margin-bottom:8px;display:flex;gap:8px;align-items:center"><input class="form-input" list="kitchen-food-options" value="${escapeAttr(x.itemName||'')}" placeholder="Food item" oninput="_kitchenDraft[${i}].itemName=this.value" style="margin:0;flex:1"><input class="form-input" type="number" min="1" inputmode="numeric" value="${Number(x.qty||1)}" oninput="_kitchenDraft[${i}].qty=Number(this.value)||1" style="margin:0;width:78px"><button onclick="removeKitchenDraftItem(${i})" style="border:none;background:none;color:#DC2626;font-size:20px">×</button></div>`).join('');}
+function renderKitchenDraft(){const el=document.getElementById('kitchen-draft-items');if(!el)return;el.innerHTML=_kitchenDraft.map((x,i)=>`<div class="card" style="padding:10px;margin-bottom:8px;display:flex;gap:8px;align-items:center"><input class="form-input" list="kitchen-food-options" value="${escapeHtml(x.itemName||'')}" placeholder="Food item" oninput="_kitchenDraft[${i}].itemName=this.value" style="margin:0;flex:1"><input class="form-input" type="number" min="1" inputmode="numeric" value="${Number(x.qty||1)}" oninput="_kitchenDraft[${i}].qty=Number(this.value)||1" style="margin:0;width:78px"><button onclick="removeKitchenDraftItem(${i})" style="border:none;background:none;color:#DC2626;font-size:20px">×</button></div>`).join('');}
 
 // Food delivery requests: real Stand Leads and Supervisors only (incl. multi-stand
 // leads). Not workers, not portable/temporary stand access, not managers.
@@ -17812,7 +17812,7 @@ async function goKitchenRequest(targetStand){
     const isMgr=!!(state.staffAccount&&state.staffAccount.group==='manager'&&['manager','support_manager','admin'].includes(state.staffAccount.role));
     const wrap=document.getElementById('kitchen-req-runner-wrap'),sel=document.getElementById('kitchen-req-runner');
     if(wrap)wrap.style.display=isMgr?'':'none';
-    if(isMgr&&sel){const rs=await kitchenGetRunners().catch(()=>[]);sel.innerHTML='<option value="">Auto — runner who covers this stand</option>'+(rs||[]).filter(x=>!String(x.employee_id).startsWith('preview-')).map(x=>'<option value="'+escapeAttr(x.employee_id)+'">'+escapeHtml(x.name)+'</option>').join('');}
+    if(isMgr&&sel){const rs=await kitchenGetRunners().catch(()=>[]);sel.innerHTML='<option value="">Auto — runner who covers this stand</option>'+(rs||[]).filter(x=>!String(x.employee_id).startsWith('preview-')).map(x=>'<option value="'+escapeHtml(x.employee_id)+'">'+escapeHtml(x.name)+'</option>').join('');}
   }
   const who=getRequesterIdentity();
   if(!canRequestFood())return toast('Food requests are for Stand Leads and Supervisors only — use Request Stock for warehouse items','error',6000);
@@ -17829,7 +17829,7 @@ async function goKitchenRequest(targetStand){
   q3State(true).then(st=>{const el=document.getElementById('kitchen-q3');if(el)el.innerHTML=q3NoticeHtml(st);}).catch(()=>{});
 }
 async function kitchenReqStandChanged(){const s=document.getElementById('kitchen-req-stand').value;state.kitchenTargetStand=s;if(isManagerOpsSession()&&s)mgrOpsSyncRequestStand(s);await loadKitchenStandItems(s);}
-async function loadKitchenStandItems(stand){document.getElementById('kitchen-req-sub').textContent=stand||'Pick a stand';_kitchenStandItems=[];loadExistingKitchenRequestsForStand(stand);if(stand){const res=await api('getStandSheet',{stand}).catch(()=>({ok:false}));if(res.ok&&res.items)_kitchenStandItems=res.items;}const common=['Burgers','Cheeseburgers','Chicken Tenders','Hot Dogs','Watermelon','Fruit Cups','Brats','Fries','Pretzels','Pizza'];const names=[...new Set([...common,..._kitchenStandItems.map(x=>x.itemName)])];document.getElementById('kitchen-food-options').innerHTML=names.map(x=>'<option value="'+escapeAttr(x)+'">').join('');}
+async function loadKitchenStandItems(stand){document.getElementById('kitchen-req-sub').textContent=stand||'Pick a stand';_kitchenStandItems=[];loadExistingKitchenRequestsForStand(stand);if(stand){const res=await api('getStandSheet',{stand}).catch(()=>({ok:false}));if(res.ok&&res.items)_kitchenStandItems=res.items;}const common=['Burgers','Cheeseburgers','Chicken Tenders','Hot Dogs','Watermelon','Fruit Cups','Brats','Fries','Pretzels','Pizza'];const names=[...new Set([...common,..._kitchenStandItems.map(x=>x.itemName)])];document.getElementById('kitchen-food-options').innerHTML=names.map(x=>'<option value="'+escapeHtml(x)+'">').join('');}
 
 async function loadExistingKitchenRequestsForStand(stand){
   const el=document.getElementById('kitchen-existing-requests');
@@ -18204,7 +18204,7 @@ async function renderKitchenQueue(rows){
   // behind "More" so the list stays easy to scan on a phone.
   const me=state.staffAccount||{};
   const card=r=>{
-    const opts=runners.map(x=>`<option value="${escapeAttr(x.employee_id)}" ${String(x.employee_id)===String(r.assigned_runner_id)?'selected':''}>${escapeHtml(x.name)}</option>`).join('');
+    const opts=runners.map(x=>`<option value="${escapeHtml(x.employee_id)}" ${String(x.employee_id)===String(r.assigned_runner_id)?'selected':''}>${escapeHtml(x.name)}</option>`).join('');
     const pick=`<select class="form-input fm-pick" onchange="kitchenAssignRunner('${r.id}',this.value,this.options[this.selectedIndex].text)"><option value="">${r.assigned_runner_id?'— Take it off the runner —':'👉 Pick a runner'}</option>${opts}</select>`;
     const lt=late(r),st=stuck(r),m=waitMins(r),mine=String(r.assigned_runner_id||'')===String(me.empId||'');
     const cls=!r.assigned_runner_id||lt?'bad':st?'warn':r.status==='on_the_way'?'go':'';
@@ -18425,7 +18425,7 @@ async function renderKitchenAssignments(){
   el.innerHTML='<div class="fd-k">RUNNERS · AREA · WHAT THEY HAVE NOW</div>'+
     '<div id="fm-cov-current" style="margin-bottom:14px"></div>'+
     '<div class="card" id="fm-cov-editor" style="padding:12px">'+
-    '<div class="fd-k" style="margin:0 0 4px">GIVE A RUNNER AN AREA</div><label class="form-label" style="margin-top:0">Runner</label><select class="form-input" id="fm-cov-person" onchange="foodManagerCoveragePersonChanged()"><option value="">— Pick a runner —</option>'+_foodMgrCovPeople.map(r=>'<option value="'+escapeAttr(r.employee_id)+'">'+escapeHtml(r.name)+'</option>').join('')+'</select>'+
+    '<div class="fd-k" style="margin:0 0 4px">GIVE A RUNNER AN AREA</div><label class="form-label" style="margin-top:0">Runner</label><select class="form-input" id="fm-cov-person" onchange="foodManagerCoveragePersonChanged()"><option value="">— Pick a runner —</option>'+_foodMgrCovPeople.map(r=>'<option value="'+escapeHtml(r.employee_id)+'">'+escapeHtml(r.name)+'</option>').join('')+'</select>'+
     '<div id="fm-cov-body" style="display:none">'+
     '<label class="form-label">Groups (tap one or more)</label><div class="coverage-area-chips" id="fm-cov-areas" style="margin-top:4px"></div>'+
     '<label class="form-label">Stands <span id="fm-cov-count" style="font-weight:700"></span></label>'+
@@ -18637,7 +18637,7 @@ async function adminPopulateGameContentVenues(){
     ? [...new Set(rows.map(r=>String(r.venue||'').trim()).filter(Boolean))].sort()
     : [];
   sel.innerHTML='<option value="all">All venues / default</option>'+
-    venues.map(v=>'<option value="'+escapeAttr(v)+'">'+escapeHtml(v)+'</option>').join('');
+    venues.map(v=>'<option value="'+escapeHtml(v)+'">'+escapeHtml(v)+'</option>').join('');
   sel.value=[...venues,'all'].includes(prev)?prev:'all';
   state._gdcLastVenue=sel.value;
 }
@@ -18713,7 +18713,7 @@ async function adminLoadAreaLeadPeople(){
   }
   _v11AreaLeads=leads;
   const sel=document.getElementById('sla-person');
-  if(sel)sel.innerHTML='<option value="">— Select person —</option>'+leads.map(x=>`<option value="${escapeAttr(x.employee_id)}">${x.kind==='Supervisor'?'🧭 ':''}${escapeHtml(x.name)} · ${x.kind}${x.homeStand?' · '+escapeHtml(x.homeStand):''}</option>`).join('');
+  if(sel)sel.innerHTML='<option value="">— Select person —</option>'+leads.map(x=>`<option value="${escapeHtml(x.employee_id)}">${x.kind==='Supervisor'?'🧭 ':''}${escapeHtml(x.name)} · ${x.kind}${x.homeStand?' · '+escapeHtml(x.homeStand):''}</option>`).join('');
   if(status){const ns=leads.filter(x=>x.kind==='Supervisor').length;status.textContent=rows._err?'Could not load today’s schedule':(leads.length?ns+' Supervisor'+(ns===1?'':'s')+' · '+(leads.length-ns)+' Stand Lead'+(leads.length-ns===1?'':'s')+' on '+date:'No Stand Leads or Supervisors scheduled for '+date);}
   _v11AreaStands=await getConfiguredStandNames();
   _v11AreaSelected=[];
@@ -19108,10 +19108,10 @@ async function notifyStandLeadsAndSupervisors(stand,title,body,skipIds){
 async function coverageNotifyRequest(kind,stand,title,body,includeOperational){const route=await coverageResolveStand(kind,stand),rows=[...(route.support||[]),...(includeOperational?(route.operational||[]):[])],seen=new Set();rows.forEach(p=>{const id=String(p.employee_id||'');if(id&&!seen.has(id)){seen.add(id);sendPushTo(id,title,body);}});return rows;}
 
 let _covPeople=[],_covSelectedAreas=[],_covAreaStands=[],_covAllStands=[];
-async function coverageAdminInit(){const d=document.getElementById('cov-date');if(!d)return;if(!d.value)d.value=localISODate();const venues=await coverageGetVenues(),vs=document.getElementById('cov-venue');if(vs){vs.innerHTML=venues.map(v=>'<option value="'+escapeAttr(v)+'">'+escapeHtml(v)+'</option>').join('');if(venues.includes('Mountain America Stadium'))vs.value='Mountain America Stadium';}await coverageAdminReload();}
+async function coverageAdminInit(){const d=document.getElementById('cov-date');if(!d)return;if(!d.value)d.value=localISODate();const venues=await coverageGetVenues(),vs=document.getElementById('cov-venue');if(vs){vs.innerHTML=venues.map(v=>'<option value="'+escapeHtml(v)+'">'+escapeHtml(v)+'</option>').join('');if(venues.includes('Mountain America Stadium'))vs.value='Mountain America Stadium';}await coverageAdminReload();}
 async function coverageAdminReload(){await coverageAdminLoadPeople();await coverageAdminLoadAreas();await coverageAdminRenderCurrent();}
-async function coverageAdminLoadAreas(){const venue=document.getElementById('cov-venue').value,areas=await coverageGetAreas(venue),chips=document.getElementById('cov-assign-areas');if(chips)chips.innerHTML=areas.map(a=>'<button class="coverage-area-chip '+(_covSelectedAreas.includes(a.area_key)?'selected':'')+'" onclick="coverageAdminToggleArea(\''+escapeAttr(a.area_key)+'\')">'+escapeHtml(a.area_name)+'</button>').join('');const sel=document.getElementById('cov-area-select');if(sel){sel.innerHTML=areas.map(a=>'<option value="'+escapeAttr(a.area_key)+'">'+escapeHtml(a.area_name)+'</option>').join('');await coverageAdminRenderAreaStands();}}
-async function coverageAdminLoadPeople(){const team=document.getElementById('cov-team').value,roleMap={support:'manager,support_manager',warehouse:'warehouse_employee,warehouse_supervisor,warehouse_manager',food:'food_manager,food_runner,kitchen_coordinator,kitchen_runner',it:'tech'},roles=roleMap[team]||'',rows=await sb('staff_accounts?role=in.('+roles+')&is_active=eq.true&select=employee_id,name,role&order=name.asc').catch(()=>({_err:true}));_covPeople=!rows._err&&Array.isArray(rows)?rows:[];const sel=document.getElementById('cov-person');if(sel)sel.innerHTML='<option value="">— Select person —</option>'+_covPeople.map(p=>'<option value="'+escapeAttr(p.employee_id)+'">'+escapeHtml(p.name)+' · '+escapeHtml(p.role.replaceAll('_',' '))+'</option>').join('');_covSelectedAreas=[];await coverageAdminLoadAreas();}
+async function coverageAdminLoadAreas(){const venue=document.getElementById('cov-venue').value,areas=await coverageGetAreas(venue),chips=document.getElementById('cov-assign-areas');if(chips)chips.innerHTML=areas.map(a=>'<button class="coverage-area-chip '+(_covSelectedAreas.includes(a.area_key)?'selected':'')+'" onclick="coverageAdminToggleArea(\''+escapeAttr(a.area_key)+'\')">'+escapeHtml(a.area_name)+'</button>').join('');const sel=document.getElementById('cov-area-select');if(sel){sel.innerHTML=areas.map(a=>'<option value="'+escapeHtml(a.area_key)+'">'+escapeHtml(a.area_name)+'</option>').join('');await coverageAdminRenderAreaStands();}}
+async function coverageAdminLoadPeople(){const team=document.getElementById('cov-team').value,roleMap={support:'manager,support_manager',warehouse:'warehouse_employee,warehouse_supervisor,warehouse_manager',food:'food_manager,food_runner,kitchen_coordinator,kitchen_runner',it:'tech'},roles=roleMap[team]||'',rows=await sb('staff_accounts?role=in.('+roles+')&is_active=eq.true&select=employee_id,name,role&order=name.asc').catch(()=>({_err:true}));_covPeople=!rows._err&&Array.isArray(rows)?rows:[];const sel=document.getElementById('cov-person');if(sel)sel.innerHTML='<option value="">— Select person —</option>'+_covPeople.map(p=>'<option value="'+escapeHtml(p.employee_id)+'">'+escapeHtml(p.name)+' · '+escapeHtml(p.role.replaceAll('_',' '))+'</option>').join('');_covSelectedAreas=[];await coverageAdminLoadAreas();}
 async function coverageAdminLoadPersonAssignment(){_covSelectedAreas=[];const emp=document.getElementById('cov-person').value;if(!emp)return coverageAdminLoadAreas();const rows=await coverageGetAssignments(document.getElementById('cov-date').value,document.getElementById('cov-venue').value),team=document.getElementById('cov-team').value,r=rows.find(x=>String(x.employee_id)===String(emp)&&x.team===team);if(r)_covSelectedAreas=(r.area_keys||[]).slice();await coverageAdminLoadAreas();}
 function coverageAdminToggleArea(k){if(_covSelectedAreas.includes(k))_covSelectedAreas=_covSelectedAreas.filter(x=>x!==k);else _covSelectedAreas.push(k);coverageAdminLoadAreas();}
 async function coverageAdminSaveAssignment(){const emp=document.getElementById('cov-person').value;if(!emp)return toast('Select a person','error');if(!_covSelectedAreas.length)return toast('Choose at least one coverage area','error');const p=_covPeople.find(x=>String(x.employee_id)===String(emp)),row={event_date:document.getElementById('cov-date').value,venue:document.getElementById('cov-venue').value,employee_id:emp,name:p?p.name:'',role:p?p.role:'',team:document.getElementById('cov-team').value,area_keys:_covSelectedAreas,direct_stands:[],notify_requests:true,source:'manual',updated_at:new Date().toISOString(),updated_by:(state.staffAccount&&state.staffAccount.name)||(state.user&&state.user.name)||'Admin'};const ok=await coverageSaveAssignment(row);if(ok){toast('✅ Game-day coverage saved');document.getElementById('cov-assign-status').textContent='✅ Saved '+_covSelectedAreas.length+' area(s)'+(coveragePreviewOnly()?' · preview only':'');await coverageAdminRenderCurrent();}else{document.getElementById('cov-assign-status').textContent='❌ Could not save'+(_coverageLastError?' · '+_coverageLastError:'');toast('Could not save coverage assignment','error');}}
@@ -19152,7 +19152,7 @@ async function warehouseCoverageInit(){const card=document.getElementById('wh-co
    _whCovPeople=[...best.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name)));}
   _whCovRoster=new Set(Array.isArray(roster)?roster.flatMap(r=>[key(r.name),'id:'+String(r.employee_id||'')]):[]);
   await whCovLoadSignedIn();
-  const sel=document.getElementById('whcov-person');if(sel)sel.innerHTML='<option value=""></option>'+_whCovPeople.map(p=>'<option value="'+escapeAttr(p.employee_id)+'">'+escapeHtml(p.name)+'</option>').join('');
+  const sel=document.getElementById('whcov-person');if(sel)sel.innerHTML='<option value=""></option>'+_whCovPeople.map(p=>'<option value="'+escapeHtml(p.employee_id)+'">'+escapeHtml(p.name)+'</option>').join('');
   whCovClose();
   await whCovLoadStandsList();await warehouseCoverageCurrent();}
 // Warehouse GROUPS — the simple way to split a big crew. Six fixed groups of
@@ -20995,7 +20995,7 @@ function bcBuildRowHtml(w, idx, npoMode, showStand) {
     </div>
   </div>`;
   if (!npoMode) {
-    const opts = (state._bcAllStands || []).filter(s => s !== w.stand).map(s => '<option value="' + escapeAttr(s) + '">' + escapeHtml(s) + '</option>').join('');
+    const opts = (state._bcAllStands || []).filter(s => s !== w.stand).map(s => '<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + '</option>').join('');
     html += `<div class="prem-move-row" id="bc-move-${idx}"><select class="form-input" onchange="bcMoveWorker(${idx},this.value)" style="margin:0;font-size:13px"><option value="">Move to…</option>${opts}</select></div>`;
     html += `<div id="bc-fb-form-${idx}" style="display:none;margin:0 12px 10px;border-top:1px solid var(--border);padding-top:10px">
       <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -21384,7 +21384,7 @@ function openMoveDialog() {
   document.getElementById('mv-info').textContent = `${w.name} (currently at ${w.stand})`;
   const stands = (state.bedCheckStands || []).map(s => s.stand).filter(s => s !== w.stand);
   const sel = document.getElementById('mv-target');
-  sel.innerHTML = '<option value="">— Select stand —</option>' + stands.map(s => `<option value="${escapeAttr(s)}">${s}</option>`).join('');
+  sel.innerHTML = '<option value="">— Select stand —</option>' + stands.map(s => `<option value="${escapeHtml(s)}">${s}</option>`).join('');
   document.getElementById('worker-actions-modal').style.display = 'none';
   document.getElementById('move-modal').style.display = 'flex';
 }
@@ -23350,7 +23350,7 @@ function chatRenderInbox() {
   if (!html) html = '<div class="empty"><div class="empty-icon">💬</div><p>No messages yet today.</p></div>';
   if (lvl === 'sup' || lvl === 'mgr') {
     const all = state._chatAllStands || [], leadSet = state._chatLeadStands || new Set();
-    const opt = x => '<option value="' + escapeAttr(x.name) + '">' + escapeHtml(x.name) + (leadSet.has(x.name) ? ' · lead on today' : '') + '</option>';
+    const opt = x => '<option value="' + escapeHtml(x.name) + '">' + escapeHtml(x.name) + (leadSet.has(x.name) ? ' · lead on today' : '') + '</option>';
     const withLead = all.filter(x => leadSet.has(x.name));
     const venues = [...new Set(all.map(x => x.venue))];
     const opts = (withLead.length ? '<optgroup label="Lead on today">' + withLead.map(opt).join('') + '</optgroup>' : '') +
@@ -23477,7 +23477,7 @@ async function chatOpenThread(stand) {
     document.getElementById('chat-sub').textContent = lead ? 'Only Supervisors and Managers · today' : food ? 'Food Manager · runners · Supervisors · Managers' : 'Warehouse Managers, Supervisors & runners · Managers';
     const si = document.getElementById('chat-stand'); if (si) { si.value = ''; si.placeholder = '📍 Which stand? (optional)'; }
     if (!chatIsGroupMember(stand) && sw) sw.style.display = 'none';
-    allVenueStands().then(all => { const dl = document.getElementById('chat-stand-list'); if (dl) dl.innerHTML = all.map(x => '<option value="' + escapeAttr(x.name) + '">').join(''); });
+    allVenueStands().then(all => { const dl = document.getElementById('chat-stand-list'); if (dl) dl.innerHTML = all.map(x => '<option value="' + escapeHtml(x.name) + '">').join(''); });
     chatGroupPeople(stand).then(p => { if (state._chatThread !== th) return; th.people = p; chatRenderTo(); chatRenderWho(); });
   }
   else chatPeopleFor(stand).then(p => { if (state._chatThread !== th) return; th.people = p; if (!th._toTouched) th.to = null; chatRenderTo(); chatRenderWho(); }).catch(()=>{});
@@ -23822,7 +23822,7 @@ async function chatRouteEdit(stand){
   _crEditing=stand;
   const p=_crResolved[stand]||await chatPeopleFor(stand,chatRouteDay());
   document.getElementById('cr-ed-stand').textContent=stand;
-  const opts=(l,autoLabel)=>{const cur=p.pinned&&p.pinned[l]&&p[l][0]?p[l][0].id:'';return '<option value="">'+autoLabel+'</option>'+_crPeople[l].map(x=>'<option value="'+escapeAttr(x.id)+'"'+(x.id===cur?' selected':'')+'>'+escapeHtml(chatNice(x.name))+(x.where?' · '+escapeHtml(x.where):x.role?' · '+escapeHtml(String(x.role).replace(/_/g,' ')):'')+'</option>').join('');};
+  const opts=(l,autoLabel)=>{const cur=p.pinned&&p.pinned[l]&&p[l][0]?p[l][0].id:'';return '<option value="">'+autoLabel+'</option>'+_crPeople[l].map(x=>'<option value="'+escapeHtml(x.id)+'"'+(x.id===cur?' selected':'')+'>'+escapeHtml(chatNice(x.name))+(x.where?' · '+escapeHtml(x.where):x.role?' · '+escapeHtml(String(x.role).replace(/_/g,' ')):'')+'</option>').join('');};
   const autoTxt=(l,none)=>'Automatic'+(p.pinned&&p.pinned[l]?'':' — '+(p[l]&&p[l].length?p[l].map(x=>chatNice(x.name)).slice(0,2).join(', '):none));
   document.getElementById('cr-lead').innerHTML=opts('lead',autoTxt('lead','nobody scheduled'));
   document.getElementById('cr-sup').innerHTML=opts('sup',autoTxt('sup','nobody scheduled'));
@@ -26646,7 +26646,7 @@ function premiumRenderCheckinsList() {
   const byLoc = {};
   _premScheduleRows.forEach(r => { (byLoc[r.location_name] = byLoc[r.location_name] || []).push(r); });
   const locNames = Object.keys(byLoc).sort();
-  const locOptions = _premLocations.map(l => '<option value="' + escapeAttr(l.name) + '">' + escapeHtml(l.name) + '</option>').join('');
+  const locOptions = _premLocations.map(l => '<option value="' + escapeHtml(l.name) + '">' + escapeHtml(l.name) + '</option>').join('');
   const searching = !!(q || _premCheckinFilter !== 'all');
 
   list.innerHTML = locNames.map(loc => {
@@ -26831,7 +26831,7 @@ function premiumOpenWalkin() {
   const form = document.getElementById('prem-walkin-form');
   const trigger = document.getElementById('prem-walkin-trigger');
   const sel = document.getElementById('prem-walkin-location');
-  if (sel) sel.innerHTML = '<option value="">Select location…</option>' + _premLocations.map(l => '<option value="' + escapeAttr(l.name) + '">' + escapeHtml(l.name) + '</option>').join('');
+  if (sel) sel.innerHTML = '<option value="">Select location…</option>' + _premLocations.map(l => '<option value="' + escapeHtml(l.name) + '">' + escapeHtml(l.name) + '</option>').join('');
   if (form) form.classList.add('open');
   if (trigger) trigger.style.display = 'none';
   document.getElementById('prem-walkin-search').focus();
@@ -29650,8 +29650,8 @@ async function whEditOpen(id) {
   _whEditItems = (Array.isArray(j.items) ? j.items : []).map(it => Object.assign({}, it));
   whSheet('<div style="font-weight:850;font-size:17px">✏️ Edit request</div><div style="font-size:12px;color:var(--text-2);margin:3px 0 10px">' + escapeHtml(row.stand) + ' · set a quantity to 0 to remove an item</div>' +
     (_whEditItems.length ? _whEditItems.map((it, i) => '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><div style="flex:1;font-size:13px">' + escapeHtml(it.itemName) + (it.pack ? ' <span style="opacity:.6;font-size:11px">' + escapeHtml(it.pack) + '</span>' : '') + '</div>' +
-      '<input class="form-input" type="number" min="0" step="1" inputmode="numeric" id="wh-edit-q-' + i + '" value="' + escapeAttr(String(it.qty || 0)) + '" style="width:80px;margin:0;text-align:center"></div>').join('') : '<div style="font-size:12px;color:var(--text-3)">No listed items.</div>') +
-    '<label class="form-label">Other / note to the stand</label><input class="form-input" id="wh-edit-other" value="' + escapeAttr(j.other || '') + '" style="margin:0 0 8px">' +
+      '<input class="form-input" type="number" min="0" step="1" inputmode="numeric" id="wh-edit-q-' + i + '" value="' + escapeHtml(String(it.qty || 0)) + '" style="width:80px;margin:0;text-align:center"></div>').join('') : '<div style="font-size:12px;color:var(--text-3)">No listed items.</div>') +
+    '<label class="form-label">Other / note to the stand</label><input class="form-input" id="wh-edit-other" value="' + escapeHtml(j.other || '') + '" style="margin:0 0 8px">' +
     '<button class="btn btn-primary" onclick="whEditSave(\'' + escapeAttr(String(id)) + '\')">Save changes</button>');
 }
 async function whEditSave(id) {
