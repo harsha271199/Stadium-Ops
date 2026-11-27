@@ -43,7 +43,7 @@ Reading stays as it is today. These rules cover **changes** (add / edit / remove
 1. **Warehouse login.** It now uses shared code 60000 + last name, not a PIN.
 2. **Tech and Premium employee logins.** The list still says "PIN" for these. Confirmed 11/27: nobody uses a PIN except Admin.
 3. **Multi-stand access** (staff_stand_access) is missing from the list. Examples: Krish on the West portables, Ebony on the east Santans, the market leads.
-4. **Leads and supervisors can give workers access to another stand** from My Team. The list implies only Admin grants access.
+4. **Leads and supervisors can give workers access to another stand** from My Team. The list implies only Admin grants access. Decided 11/27: keep it; leads and supervisors may give access when needed.
 5. **The Premium team list** (Terri, Yadzia and others, kept in app_settings) is missing. So are the extra premium managers beyond Nestor and Natasha.
 6. **Food manager, food runners and concession runner areas** are not in the list.
 7. **Month-end Count-In-only** at closed stands for leads and supervisors is not in the list.
