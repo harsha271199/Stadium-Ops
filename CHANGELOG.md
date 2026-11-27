@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-27-fix-170
+
+- **Yellow Dog copy-paste now lines up row for row.** On 11/21 only 2 of 52 stands pasted correctly: the rest slid by one or more rows, so counts landed on the wrong items. Three causes, all fixed:
+  - **Yellow Dog renamed items** ("CAN 19.2OZ DEVILS HALO AMBER" → "BEER - CAN 19.2OZ DEVILS HALO AMBER", "BOTTLE SODA 20OZ PEPSI" → "BOTTLED 20OZ PEPSI", "PORK/BEEF 5X1 HOTDOG" → "HOTDOG - PORK/BEEF 5X1", discontinued "zBEEF - …", BIB box sizes 3GAL ↔ 5GAL, Huss IPA). Items now match when the words are the same in any order without filler words, and only when that match is unique on both sides.
+  - **The app ignored the loaded PDF.** When the PDF differed from the stand's list by 3+ items it silently fell back to the app's older list. A PDF for the **same date** as the download is now always followed row for row: Yellow Dog items the app doesn't have paste as 0 in their place; app-only items go to "enter by hand" and never into the paste. A PDF from a **different date** still falls back, with a clear warning naming both dates.
+  - **Stand matching:** a stand Yellow Dog renamed ("334 San Tan Favorites" → "334 San Tan Burgers & Tenders", 442 Huss) matches when it is the only one with that number and letter on both sides and the names share a word.
+- The copy screen and CSV show Yellow Dog's own item name, with the app's name in grey when they differ.
+- Tested with the real 11/21 Yellow Dog PDF and 11/21 counts, using the app's own PDF reader: **45 of 45** stands with a Yellow Dog sheet line up exactly (was 2 of 52). The 7 stands with no Yellow Dog sheet (Bahama Bucks, StreetEats, 217P BarS Draft, 221P Taco Bar, 226P Beer Portable) are unchanged. An 11/7 download with the 11/21 PDF on the device falls back and shows the date warning. A DFA download with no PDF is unchanged (DFA 143 11/25: same 35/29 rows). No page errors.
+
 ## 2026-11-24 · database security step 1 (no app change, live build stays fix-169)
 
 - **Staff PINs are hidden from the public.** The website's public key can no longer read the `pin` column of `staff_accounts`. Names, IDs, roles and active flags still load. Sign-in checks PINs through `staff_pin_match` / `staff_accounts_safe`, which never return a PIN. The app has used only those checks since fix-156.

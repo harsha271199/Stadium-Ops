@@ -4801,7 +4801,7 @@
     Date.prototype[fn]=function(loc,opt){opt=Object.assign({timeZone:'America/Phoenix'},opt||{});return orig.call(this,loc,opt);};
   });
 })();
-const BUILD_TAG = '2026-11-21-fix-169';
+const BUILD_TAG = '2026-11-27-fix-170';
 const state = {
   user: null,
   attendance: 'not_started',
@@ -15044,13 +15044,30 @@ function ydNorm(v) { return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, 
 const YD_ALIAS = {
   CANDYMIKENIKEMEGA: 'CANDYMIKEANDIKEMEGAMIX', CANDYMIKENIKEORIGINAL: 'CANDYMIKEANDIKEORIGINAL', CANDYMIKENIKESOUR: 'CANDYMIKEANDIKESOUR',
   CANDYSWEDISHFISH: 'CANDYSWEEDISHREDFISH', CANDYSOURSPAGHETTI: 'CANDYSOURSGHETTI', CANDYGOLDBEARS: 'CANDYGUMMYBEARSGOLDEN',
-  GLOVESNITRLIEFOODSERVICEPOWDERFREESMALL: 'GLOVESNITRLIESMALL', POPCORNBAGASU85OZ: 'POPCORNBAGASU850Z'
+  GLOVESNITRLIEFOODSERVICEPOWDERFREESMALL: 'GLOVESNITRLIESMALL', POPCORNBAGASU85OZ: 'POPCORNBAGASU850Z',
+  // 11/21 Yellow Dog name for the Huss IPA can
+  BEERCANHUSSBREWINGDEVILSHALOIPA12192OZ: 'BEERCAN192OZHUSSHALOIPA'
 };
 function ydItemKey(v) { const k = ydNorm(v); return YD_ALIAS[k] || k; }
+// fix-170: Yellow Dog renames items between events ("CAN 19.2OZ DEVILS HALO
+// AMBER" → "BEER - CAN 19.2OZ DEVILS HALO AMBER", "BOTTLE SODA 20OZ PEPSI" →
+// "BOTTLED 20OZ PEPSI", "PORK/BEEF 5X1 HOTDOG" → "HOTDOG - PORK/BEEF 5X1",
+// discontinued "zBEEF - …"). Same words in any order, without the filler
+// words, = same item. Only used when the exact name finds nothing, and only
+// when it is unique on both sides.
+function ydLooseKey(v) {
+  let s = String(v || '').replace(/^z(?=[A-Z])/, '').toUpperCase();
+  // BIB syrup: Yellow Dog relabels the box size (PEPSI WILD CHERRY 3GAL ↔ 5GAL).
+  if (/^BIB\b/.test(s)) s = s.replace(/\b\d+(\.\d+)?\s*GAL\b/g, '');
+  const w = s.split(/[^A-Z0-9.]+/).filter(t => t && !/^(BEER|CAN|SODA|BOTTLE|BOTTLED|BTL|THE|AND)$/.test(t));
+  return w.sort().join(' ');
+}
+// Yellow Dog PDF event date (2026-11-21) — the copy only follows a PDF for its own date.
+function ydIsoDate(v) { const m = String(v || '').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[0] : ''; }
 function ydGetOrder(stand, tab) { try { const v = JSON.parse(localStorage.getItem(ydKey(stand, tab)) || 'null'); return Array.isArray(v) && v.length ? v : null; } catch (e) { return null; } }
 // Parses a Yellow Dog "Stand Sheet Pre-Event" PDF → { event, stands: { name: [{no,item,type}] } }
 async function ydParseStandSheetPdf(pdf) {
-  const out = {}; let event = '';
+  const out = {}; let event = '', date = '';
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p);
     const vp = page.getViewport({ scale: 1 });
@@ -15060,6 +15077,7 @@ async function ydParseStandSheetPdf(pdf) {
     const iN = strs.indexOf('Notes');
     if (iN < 0) continue;
     if (!event) event = strs[iN - 1] || '';
+    if (!date) { const dm = strs.find(x => /^\d{4}-\d{2}-\d{2}$/.test(x)); if (dm) date = dm; }
     const head = [];
     for (let k = iN + 1; k < strs.length && head.length < 4; k++) {
       if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(strs[k]) || /^\d{4}-\d{2}-\d{2}/.test(strs[k])) break;
@@ -15092,7 +15110,7 @@ async function ydParseStandSheetPdf(pdf) {
       if (item) list.push({ no: list.length + 1, item, type, unit, pack, onHand: col(200, 233), restock: col(235, 273), expStart: col(275, 306) });
     });
   }
-  return { event, stands: out };
+  return { event, date, stands: out };
 }
 // Yellow Dog stand sheet loaded from its PDF (per device). Its order is
 // exactly what Yellow Dog's Reconciliation / Non-Chargeables tabs show.
@@ -15117,7 +15135,7 @@ async function ydPdfPicked(inp) {
     const n = Object.keys(r.stands).length;
     if (!n) throw new Error('No stand sheets found — is this the Yellow Dog "Stand Sheet Pre-Event" PDF?');
     const compact = {}; Object.keys(r.stands).forEach(k => { compact[k] = r.stands[k].map(x => [x.item, x.type === 'Chargeable' ? 'C' : x.type === 'Supplies' ? 'S' : 'N']); });
-    localStorage.setItem('ydSheet', JSON.stringify({ event: r.event, file: f.name, at: new Date().toISOString(), stands: compact }));
+    localStorage.setItem('ydSheet', JSON.stringify({ event: r.event, date: r.date || '', file: f.name, at: new Date().toISOString(), stands: compact }));
     toast('✅ Yellow Dog sheet loaded — ' + n + ' stands');
   } catch (e) { toast((e && e.message) || 'Could not read that PDF', 'error'); if (st) st.textContent = '⚠️ ' + ((e && e.message) || 'Could not read that PDF'); return; }
   ydPasteOpen(state._ydIdx || 0);
@@ -15139,6 +15157,19 @@ function ydMapStand(appStand) {
   const num = invStandNum(appStand), fam = invFamily(appStand);
   const free = ydNames.filter(y => !exactTaken.has(y));
   const same = free.filter(y => invStandNum(y) === num && invFamily(y) === fam); if (same.length === 1) return same[0];
+  // fix-170: Yellow Dog renamed "334 San Tan Favorites" → "334 San Tan Burgers &
+  // Tenders" (442 too). Same number + same letter (P/M/B/T), and it is the only
+  // stand with that number on BOTH sides → same stand.
+  const suf = n => ((String(n).match(/^\s*\d+\s*([A-Za-z])?\b/) || [])[1] || '').toUpperCase();
+  if (num) {
+    const ydSame = free.filter(y => invStandNum(y) === num && suf(y) === suf(appStand));
+    const appSame = appNames.filter(a => invStandNum(a) === num && suf(a) === suf(appStand));
+    // …and the names share a real word ("SAN TAN", "HUSS HIDEOUT") — so 209P Fan
+    // Fuel never lands on 209P Beer Portable or a Bahama Bucks on a Beer Portable.
+    const words = n => new Set(String(n).toUpperCase().replace(/^\s*\d+\s*[A-Z]?\b/, '').split(/[^A-Z]+/).filter(w => w.length >= 3 && !/^(THE|AND|FAVORITES|BURGERS|TENDERS)$/.test(w)));
+    const shareWord = (x, y) => { const a = words(x); return [...words(y)].some(w => a.has(w)); };
+    if (ydSame.length === 1 && appSame.length <= 1 && shareWord(ydSame[0], appStand)) return ydSame[0];
+  }
   const fams = free.filter(y => invFamily(y) === fam && invStandNum(y));
   if (fams.length && num) { fams.sort((x, y) => Math.abs(invStandNum(x) - num) - Math.abs(invStandNum(y) - num)); if (Math.abs(invStandNum(fams[0]) - num) <= 2) return fams[0]; }
   return '';
@@ -15154,11 +15185,16 @@ function ydSplit(s) {
   const byName = {};
   // Prefer an item that actually has counts when two spellings exist.
   s.items.forEach(it => { const k = ydItemKey(it.itemName), o = byName[k]; if (!o || (!['countIn', 'waste', 'countOut'].some(f => ydNum(o[f]) !== 0) && ['countIn', 'waste', 'countOut'].some(f => ydNum(it[f]) !== 0))) byName[k] = it; });
+  // fix-170: renamed items (same words, any order, no filler words) — only
+  // when exactly one app item has that loose key.
+  const byLoose = {}, looseN = {};
+  Object.values(byName).forEach(it => { const lk = ydLooseKey(it.itemName); looseN[lk] = (looseN[lk] || 0) + 1; byLoose[lk] = it; });
+  const getIt = name => byName[ydItemKey(name)] || (looseN[ydLooseKey(name)] === 1 ? byLoose[ydLooseKey(name)] : undefined);
   // App order = the loaded sheet, row for row (a name listed twice — e.g.
   // PORK - PULLED SMOKED as Chargeable and as Non-Chargeable — keeps both rows).
   if (Array.isArray(s.sheetRows) && s.sheetRows.length) {
     const rowsOf = ch => s.sheetRows.filter(r => !r.isAddon && (ch ? r.ydType === 'Chargeable' : r.ydType !== 'Chargeable'))
-      .map(r => byName[ydItemKey(r.name)] || { itemName: r.name, missing: true });
+      .map(r => getIt(r.name) || { itemName: r.name, missing: true });
     g.charge = rowsOf(true); g.nonch = rowsOf(false);
   }
   const lists = {};
@@ -15170,28 +15206,28 @@ function ydSplit(s) {
     // 10/15: this phone still had an old PDF that matched DFA Market to the
     // 18-item "BEV MKT" sheet, so the download scrambled the market. If most
     // counted items are not on that PDF stand, use the app's sheet order.
-    const pdfKeys = new Set(lists.charge.concat(lists.nonch).map(ydItemKey));
+    const pdfNames = lists.charge.concat(lists.nonch);
+    const pdfHit = new Set(pdfNames.map(getIt).filter(Boolean));
     const counted = s.items.filter(it => !it.isAddon && ['countIn', 'waste', 'countOut'].some(f => ydNum(it[f]) !== 0));
-    if (counted.length >= 5 && counted.filter(it => pdfKeys.has(ydItemKey(it.itemName))).length / counted.length < 0.8) {
+    if (counted.length >= 5 && counted.filter(it => pdfHit.has(it)).length / counted.length < 0.8) {
       delete lists.charge; delete lists.nonch; g.source = 'app'; g.pdfMismatch = ys; g.ydStand = '';
     }
-    // 11/7: a PDF saved on this device from an EARLIER event (old order, items
-    // since dropped — e.g. BEEF - PITCHFORK DOG still on DFA 111) is older than
-    // the stand's list, which follows the latest Yellow Dog. If the PDF and the
-    // stand's list differ by more than a couple of items, follow the list.
-    if (lists.charge && Array.isArray(s.sheetRows) && s.sheetRows.length) {
-      const appKeys = new Set(s.sheetRows.filter(r => !r.isAddon).map(r => ydItemKey(r.name)));
-      const notOnList = [...pdfKeys].filter(k => !appKeys.has(k)).length, notOnPdf = [...appKeys].filter(k => !pdfKeys.has(k)).length;
-      if (notOnList + notOnPdf > Math.max(2, Math.round(appKeys.size * 0.05))) {
-        delete lists.charge; delete lists.nonch; g.source = 'app'; g.pdfStale = { ys, notOnList, notOnPdf, at: sh.at || '' }; g.ydStand = '';
-      }
+    // fix-170: a PDF for THIS date is followed row for row, always — items it
+    // lists that the app doesn't have become 0 rows in place, app-only items go
+    // to "enter by hand". (Before, a list that differed by 3+ items silently
+    // fell back to the app's older list, so pasted rows slid onto the wrong
+    // items — 41 of 52 stands on 11/21.) Only a PDF from ANOTHER date (11/7: an
+    // old PDF left on this phone) still falls back to the stand's list.
+    const pdfDate = ydIsoDate(sh.date || sh.event), dataDate = ydIsoDate(state.mgrInvData && state.mgrInvData.date);
+    if (lists.charge && pdfDate && dataDate && pdfDate !== dataDate) {
+      delete lists.charge; delete lists.nonch; g.source = 'app'; g.pdfStale = { ys, pdfDate, dataDate, at: sh.at || '' }; g.ydStand = '';
     }
   }
   ['charge', 'nonch'].forEach(tab => { const ord = ydGetOrder(s.stand, tab); if (ord) { lists[tab] = ord; g.custom[tab] = true; } });
   const used = new Set();
   ['charge', 'nonch'].forEach(tab => {
     if (!lists[tab]) { g[tab].forEach(it => used.add(it)); return; }
-    g[tab] = lists[tab].map(name => { const it = byName[ydItemKey(name)]; if (it && !used.has(it)) { used.add(it); return it; } return { itemName: name, missing: true }; });
+    g[tab] = lists[tab].map(name => { const it = getIt(name); if (it && !used.has(it)) { used.add(it); return ydItemKey(it.itemName) === ydItemKey(name) ? it : Object.assign({}, it, { ydName: name }); } return { itemName: name, missing: true }; });
   });
   // Counted in the app but not on the Yellow Dog list → enter by hand.
   // (Uncounted extras are skipped when Yellow Dog's own list is in use.)
@@ -15221,7 +15257,7 @@ function ydPasteOpen(idx) {
   const s = data.stands[idx], g = ydSplit(s);
   const th = 'padding:4px;font-size:10px;color:var(--text-2);text-align:right;white-space:nowrap';
   const td = 'padding:5px 4px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;font-weight:700';
-  const nm = it => '<td style="padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px' + (it.missing ? ';color:#DC2626' : '') + '">' + escapeHtml(it.itemName) + (it.missing ? ' <b>(not counted in app → 0)</b>' : '') + '</td>';
+  const nm = it => '<td style="padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px' + (it.missing ? ';color:#DC2626' : '') + '">' + escapeHtml(it.ydName || it.itemName) + (it.ydName ? ' <span style="color:var(--text-3)">(app: ' + escapeHtml(it.itemName) + ')</span>' : '') + (it.missing ? ' <b>(not counted in app → 0)</b>' : '') + '</td>';
   const ordBox = tab => '<details style="margin:6px 0"' + '><summary style="cursor:pointer;font-size:12px;color:var(--text-2)">' + (g.custom[tab] ? '✅ Using saved Yellow Dog order — change' : 'Rows don\'t line up with Yellow Dog? Match its order') + '</summary>' +
     '<div style="font-size:11px;color:var(--text-2);margin:4px 0">Paste the Description column from this Yellow Dog tab (one item per line, top to bottom). Saved on this device for this stand. Clear the box and save to go back to sheet order.</div>' +
     '<textarea id="yd-order-' + tab + '" class="form-input" rows="5" style="font-size:11px">' + escapeHtml((ydGetOrder(s.stand, tab) || []).join('\n')) + '</textarea>' +
@@ -15263,7 +15299,7 @@ function ydSheetHtml(s, g) {
     '<div style="font-size:11px;color:var(--text-2)">Yellow Dog sheet: <b>' + escapeHtml(sh.event || sh.file || '') + '</b> · ' + names.length + ' stands</div>' +
     '<label class="form-label" style="margin:6px 0 2px">Yellow Dog stand for ' + escapeHtml(s.stand) + '</label>' +
     '<select class="form-input" style="margin:0" onchange="ydMapSet(this.value)">' + opts + '</select>' +
-    (g.pdfStale ? '<div style="font-size:12px;color:#B45309;margin-top:6px;font-weight:700">⚠️ The Yellow Dog PDF saved on this device' + (g.pdfStale.at ? ' (loaded ' + new Date(g.pdfStale.at).toLocaleDateString() + ')' : '') + ' doesn\'t match ' + escapeHtml(s.stand) + '\'s current list: ' + g.pdfStale.notOnList + ' item(s) no longer on the list, ' + g.pdfStale.notOnPdf + ' not on the PDF. Using the stand\'s current list (it follows the latest Yellow Dog). Load this event\'s PDF to match it exactly.</div>'
+    (g.pdfStale ? '<div style="font-size:12px;color:#B45309;margin-top:6px;font-weight:700">⚠️ The Yellow Dog PDF on this device is for ' + escapeHtml(g.pdfStale.pdfDate) + ', but this download is ' + escapeHtml(g.pdfStale.dataDate) + '. Using the stand\'s own list, which may not line up. Load the ' + escapeHtml(g.pdfStale.dataDate) + ' Yellow Dog PDF to match it row for row.</div>'
       : cur ? '' : '<div style="font-size:11px;color:#DC2626;margin-top:4px">No Yellow Dog stand picked — rows follow the app sheet and may not line up.</div>') +
     '<div id="yd-pdf-status" style="font-size:11px;color:var(--text-3);margin-top:4px"></div>' +
     '<div style="display:flex;gap:6px">' + pick.replace('display:block;text-align:center', 'display:block;text-align:center;font-size:12px;padding:8px') + '<button class="btn btn-ghost" style="margin:6px 0 0;width:auto;font-size:12px;padding:8px" onclick="ydSheetClear()">Remove</button></div></div>';
@@ -15290,8 +15326,8 @@ function ydPasteCSV() {
   const mv = it => [rs(it), ydNum(it.s2sIn), ydNum(it.s2sOut)];
   data.stands.forEach(s => {
     const g = ydSplit(s), y = g.ydStand || '(app sheet order)';
-    g.charge.forEach((it, i) => { csv += [s.stand, y, 'Chargeables', i + 1, it.itemName, ydNum(it.countIn)].concat(mv(it), [ydNum(it.waste), ydNum(it.countOut)]).map(q).join(',') + '\n'; });
-    g.nonch.forEach((it, i) => { csv += [s.stand, y, 'Non-Chargeables & Supplies', i + 1, it.itemName, '', '', '', '', '', ydNum(it.countOut)].map(q).join(',') + '\n'; });
+    g.charge.forEach((it, i) => { csv += [s.stand, y, 'Chargeables', i + 1, it.ydName || it.itemName, ydNum(it.countIn)].concat(mv(it), [ydNum(it.waste), ydNum(it.countOut)]).map(q).join(',') + '\n'; });
+    g.nonch.forEach((it, i) => { csv += [s.stand, y, 'Non-Chargeables & Supplies', i + 1, it.ydName || it.itemName, '', '', '', '', '', ydNum(it.countOut)].map(q).join(',') + '\n'; });
     g.extra.forEach(it => { csv += [s.stand, y, 'NOT IN YELLOW DOG LIST - enter by hand', '', it.itemName, ydNum(it.countIn)].concat(mv(it), [ydNum(it.waste), ydNum(it.countOut)]).map(q).join(',') + '\n'; });
   });
   const a = document.createElement('a');
@@ -16053,7 +16089,7 @@ async function admYdPdfRead() {
     if (!ydStands.length) { st.style.color = '#DC2626'; st.textContent = '⚠️ No stand sheets found — is this the Yellow Dog "Stand Sheet Pre-Event (All Items)" PDF?'; return; }
     // Also feed the Yellow Dog copy-paste screen on this device.
     try { const compact = {}; ydStands.forEach(k => { compact[k] = r.stands[k].map(x => [x.item, x.type === 'Chargeable' ? 'C' : x.type === 'Supplies' ? 'S' : 'N']); });
-      localStorage.setItem('ydSheet', JSON.stringify({ event: r.event, file: f.name, at: new Date().toISOString(), stands: compact })); } catch (e) {}
+      localStorage.setItem('ydSheet', JSON.stringify({ event: r.event, date: r.date || '', file: f.name, at: new Date().toISOString(), stands: compact })); } catch (e) {}
     // App stands = every switched-on stand, by its official name — the name the
     // counting screen reads first (standDbCandidateNames2026). Old spellings
     // left in stand_sheets and stands that are turned off are not offered
