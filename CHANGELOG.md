@@ -4,6 +4,20 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-28-fix-175 · warehouse new look + one golf cart per person (UI redesign step 2)
+
+- **One golf cart per person.** A driver could take a second key while still holding one (only two people grabbing the *same* key was blocked). Now:
+  - **Server rule** (`sql/31_one_cart_per_person.sql`): the database refuses a second checked-out key for the same employee, so it also holds for phones still running an old copy of the app.
+  - **App:** while you hold a key, the other free keys are grey and say "🔒 Return Key N first" and can't be tapped; if someone gets through anyway they see "You already have Key N. Return it before you take another cart."
+  - Nothing else about carts changed: 12 questions on a cart's first use of the day, 4 after, 4 on return, problem reports.
+- **Warehouse + golf cart screens have the new look** (CSS only, scoped to warehouse screens): bigger "Right now" count tiles (Waiting / On the way / Overdue / To verify), rounded job cards with a strong red border when late and blue when it is your job, bigger Short / Can't fill buttons, segmented tabs, larger key tiles. Dark mode kept. No markup or logic changes to warehouse lists.
+- Tested on the test project with a made-up busy game (40 stock requests: 25 waiting, many overdue, 8 claimed, 7 delivered):
+  - Golf cart: repro of the bug on fix-174 (one driver held keys 1 and 2), then on fix-175 + server rule: second key refused (also with the old app), locked tiles shown, tapping a locked key does nothing, return then take another works, a second driver can take a different key, nobody can take a key in use — 10/10.
+  - Warehouse worker: tap job → sheet with items → On my way (claims all that stand's requests) → Finish delivery → confirm: delivery saved as confirmed and requests delivered — identical results on fix-174 and fix-175.
+  - Manager: every Manager Tools tile opens the same pane as on fix-174, no page errors.
+  - The 15 sign-in cases still pass.
+- **Undo:** app: fix-174 zip (or `backups/ui-before-redesign-fix-173/`). Server rule: `drop index if exists public.cart_keys_one_per_person;` (either alone is safe).
+
 ## 2026-11-28-fix-174 · new sign-in screen (UI redesign step 1)
 
 - **Sign-in page has the new look** from the approved design: thin red bar, "Stadium Ops · aramark · game day", big "Sign in", one card with an **Employee | NPO group** switch. No venue names, no "Welcome", no subcontractor box.
