@@ -4,6 +4,15 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-28-fix-174 · new sign-in screen (UI redesign step 1)
+
+- **Sign-in page has the new look** from the approved design: thin red bar, "Stadium Ops · aramark · game day", big "Sign in", one card with an **Employee | NPO group** switch. No venue names, no "Welcome", no subcontractor box.
+- Typing a shared ID shows a small hint: **60000** "Warehouse: type your last name", **70000** "Premium: type your last name", **50000** "Subcontractor stand: type your stand number or login word" (the second label still changes for 50000 as before).
+- The NPO form has the same look; the "Employee" tab goes back. Dark mode button is an icon now. Header sits below the Online pill so it no longer covers the dark-mode button.
+- **No sign-in logic changed**: same field IDs (`login-empid`, `login-lastname`, `npo-*`), same `doLogin()` / `doNpoLogin()` / `goNpoLogin()`, subcontractor QR auto-login untouched. Only `scLoginLabel()` gained the hint line.
+- Tested on the test project: the 15 sign-in cases from fix-173 (worker, wrong name, manager, warehouse 60000, premium 70000, tech, lead, admin ID + PIN, admin wrong PIN, NPO lead, pass, refresh, sign-out, no page errors) pass on fix-174 exactly as on fix-173; plus 15 tap-through cases on an iPhone-size screen (hints, typing + tapping Sign in, sign-out returns here, NPO tab and back, dark mode, no sideways scroll, build tag).
+- **Undo:** `backups/ui-before-redesign-fix-173/` (exact live files) or the fix-173 zip.
+
 ## 2026-11-27-fix-173 · security step 3a: server sign-in pass (no rules yet)
 
 - **At sign-in the app now also gets a pass from the server** (`issue_pass`, `sql/30_server_pass_step1.sql`). The server re-checks the same things the app checks: Admin ID + PIN; staff last-5 or shared code (60000 warehouse, 70000 premium, 90000 managers) + last name (same forgiving name match as the app); workers on today's / last night's schedule (leads and supervisors any day); NPO group PIN + roster member; 50000 subcontractor stand; bottle sellers switched on today. Wrong last name or PIN → no pass.
