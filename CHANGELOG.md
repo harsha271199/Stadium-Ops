@@ -4,6 +4,19 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-28-fix-177 · stand lead + supervisor home = the approved mockup (UI redesign step 3a)
+
+- **Stand lead and supervisor home** now follow the approved mockup:
+  - New header "aramark · Stand lead / Supervisor" with the game date, dark-mode and alerts buttons (the old purple header is hidden, not deleted).
+  - Stand card with a location pin, line icons on the 4 tiles (Checks, Requests, Food Safety, My Team / Team by Stand) and on the supervisor rows (All Stands Live, Stand Status, Stand Transfer Record).
+  - Start / Start break / Back from break / Leave this stand use line icons; the same functions run (`markStarted`, `markBreakStart`, `markBreakEnd`, `confirmLeave`).
+  - Runners line is now one slim row of chips (Warehouse · Food).
+  - The Online pill sits bottom-left on the home screen so it no longer covers the header.
+- **New: "Report an app problem"** at the bottom of home. Pick Something broke / Too slow / Confusing / Idea, type what happened, Send. It saves to the new table `app_problem_reports` (`sql/32_app_problem_reports.sql`, applied to live): the app can only **add** reports; nobody can read them with the public key — Admin reads them in Supabase.
+- Worker / NPO / subcontractor homes: same buttons as before, plus the Report button and the new header.
+- Tested on the test project: every home tile and supervisor row opens the same screen as fix-176 (lead 9/9, supervisor 12/12); Start → Start break → Back from break works; a report saves; sign-in 15 cases, warehouse worker job flow, golf cart rules and warehouse home all pass; no page errors. Live: one test report inserted (201), public read refused, test row deleted.
+- **Undo:** fix-176 zip. (The new table is harmless if left; to remove: `drop table public.app_problem_reports;`)
+
 ## 2026-11-28-fix-176 · warehouse manager/supervisor home = the approved mockup
 
 - fix-175 only restyled the old warehouse screens, so they still looked old. The warehouse **manager and supervisor** home is now built from the approved mockup (`docs/ui-redesign-mockups/Main.dc.html`):
