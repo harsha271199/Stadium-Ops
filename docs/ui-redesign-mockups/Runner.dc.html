@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Take a golf cart</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button,textarea{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <header style="display: flex; align-items: center; gap: 12px; padding: 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <button onClick="{{back}}" aria-label="Back" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; background: #FFFFFF; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 13px; font-weight: 600; color: #C8102E">Golf carts</span>
+      <span style="font-size: 20px; font-weight: 800">{{title}}</span>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px">
+
+    <sc-if value="{{isPick}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <sc-if value="{{holding}}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 14px; background: #FDF1E3; color: #8A4205"><span style="font-size: 14px; font-weight: 700; flex: 1">You have Cart {{mine}}. Return it before you take another one.</span><button onClick="{{goMine}}" style="min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: #8A4205; color: #FFFFFF; font-size: 13px; font-weight: 800; cursor: pointer">Return</button></div></sc-if>
+        <p style="margin: 0; font-size: 15px; color: #3A3F48">{{pickHint}}</p>
+        <sc-for list="{{carts}}" as="c" hint-placeholder-count="6">
+          <button onClick="{{c.pick}}" disabled="{{c.disabled}}" style="{{c.style}}">
+            <span style="{{c.badgeStyle}}">{{c.id}}</span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; text-align: left">
+              <span style="font-size: 16px; font-weight: 700; color: #16181D">Cart {{c.id}}</span>
+              <span style="font-size: 13px; color: #5B6270">{{c.sub}}</span>
+            </span>
+            <span style="font-size: 14px; font-weight: 700; color: {{c.color}}">{{c.label}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isCheck}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <p style="margin: 0; font-size: 15px; color: #3A3F48">{{checkIntro}}</p>
+        <sc-for list="{{checks}}" as="q" hint-placeholder-count="12">
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 14px">
+            <span style="font-size: 16px; font-weight: 700">{{q.text}}</span>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+              <button onClick="{{q.yes}}" aria-pressed="{{q.isYes}}" style="{{q.yesStyle}}">OK</button>
+              <button onClick="{{q.no}}" aria-pressed="{{q.isNo}}" style="{{q.noStyle}}">Issue</button>
+            </div>
+          </div>
+        </sc-for>
+        <sc-if value="{{anyNo}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px"><p role="alert" style="margin: 0; padding: 12px; border-radius: 12px; background: #FDECEE; color: #7A1020; font-size: 14px; font-weight: 600">{{issueText}}</p><textarea rows="3" placeholder="What’s wrong? (required)" style="padding: 12px; border: 1px solid #D5D8DE; border-radius: 12px; font-size: 16px; resize: none"></textarea></div>
+        </sc-if>
+        <button onClick="{{submitCheck}}" style="min-height: 52px; border: 0; border-radius: 14px; background: #C8102E; color: #FFFFFF; font-size: 16px; font-weight: 700; cursor: pointer">{{checkCta}}</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isOut}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 28px 16px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 18px; text-align: center">
+          <span style="width: 72px; height: 72px; border-radius: 20px; background: #FDF1E3; color: #8A4205; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800">{{cart}}</span>
+          <span style="font-size: 22px; font-weight: 800">You have Cart {{cart}}</span>
+          <span class="num" style="font-size: 15px; color: #5B6270">Since 2:31 PM · Safety check passed</span><span style="font-size: 13px; color: #8A4205; font-weight: 700">You can’t take another cart until this one is returned.</span>
+        </div>
+        <button onClick="{{returnCart}}" style="min-height: 56px; border: 0; border-radius: 14px; background: #16181D; color: #FFFFFF; font-size: 17px; font-weight: 700; cursor: pointer">Return Cart {{cart}}</button>
+        <button onClick="{{report}}" style="min-height: 52px; border: 1px solid #D5D8DE; border-radius: 14px; background: #FFFFFF; color: #8E0E22; font-size: 16px; font-weight: 700; cursor: pointer">Report a problem</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isReport}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <span style="font-size: 15px; font-weight: 700">What’s wrong with Cart {{cart}}?</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{problems}}" as="p" hint-placeholder-count="5">
+            <button onClick="{{p.pick}}" aria-pressed="{{p.on}}" style="{{p.style}}">{{p.label}}</button>
+          </sc-for>
+        </div>
+        <label for="note" style="font-size: 14px; font-weight: 600; color: #3A3F48">Anything else (optional)</label>
+        <textarea id="note" rows="3" placeholder="e.g. squeaks when turning left" style="padding: 12px; border: 1px solid #D5D8DE; border-radius: 12px; font-size: 16px; resize: none"></textarea>
+        <button style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border: 1px dashed #B9BEC7; border-radius: 14px; background: #FFFFFF; color: #16181D; font-size: 15px; font-weight: 600; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Add a photo
+        </button>
+        <button onClick="{{sendReport}}" style="min-height: 52px; border: 0; border-radius: 14px; background: #C8102E; color: #FFFFFF; font-size: 16px; font-weight: 700; cursor: pointer">Send to manager</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 32px 16px; text-align: center">
+        <span style="width: 64px; height: 64px; border-radius: 50%; background: #E8F5EC; display: flex; align-items: center; justify-content: center">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>
+        </span>
+        <span style="font-size: 20px; font-weight: 800">{{doneTitle}}</span>
+        <span style="font-size: 15px; color: #5B6270">{{doneText}}</span>
+        <button onClick="{{restart}}" style="margin-top: 8px; min-height: 48px; padding: 0 20px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 15px; font-weight: 600; cursor: pointer">Back to carts</button>
+      </div>
+    </sc-if>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: 'pick', cart: 2, mode: 'take', mine: null, answers: {}, problem: 'Brakes', done: '' };
+  }
+  renderVals() {
+    const s = this.state, holding = !!s.mine;
+    const C = [
+      { id: 1, st: 'out', sub: 'Jordan has it · since 1:10 PM' },
+      { id: 2, st: 'free', sub: 'First use today · 12 questions' },
+      { id: 3, st: 'repair', sub: 'Out of service · brakes weak' },
+      { id: 4, st: 'out', sub: 'Priya has it · since 2:05 PM' },
+      { id: 5, st: 'free', sub: 'Checked today · 4 questions' },
+      { id: 6, st: 'out', sub: 'Sam has it · since 12:50 PM' }
+    ].map(c => s.mine === c.id ? { ...c, st: 'mine', sub: 'You have this · tap to return' } : c);
+    const colors = { free: '#1D4FB8', out: '#8A4205', repair: '#8E0E22', mine: '#166534' };
+    const tints = { free: '#E6EDFB', out: '#FDF1E3', repair: '#FDECEE', mine: '#E8F5EC' };
+    const labels = { free: 'Take', out: 'In use', repair: 'Repair', mine: 'Yours' };
+    const carts = C.map(c => {
+      const can = (c.st === 'free' && !holding) || c.st === 'mine';
+      return { id: c.id, sub: c.sub, label: c.st === 'free' && holding ? 'Locked' : labels[c.st], color: colors[c.st], disabled: !can,
+        pick: () => { if (c.st === 'mine') this.setState({ step: 'out' }); else if (can) this.setState({ cart: c.id, mode: 'take', step: 'check', answers: {} }); },
+        badgeStyle: 'width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; flex-shrink: 0; color: ' + colors[c.st] + '; background: ' + tints[c.st],
+        style: 'display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 12px 14px; background: #FFFFFF; border-radius: 14px; text-align: left; ' + (can ? 'border: 2px solid ' + colors[c.st] + '; cursor: pointer' : 'border: 1px solid #E3E5E9; opacity: 0.6; cursor: not-allowed') };
+    });
+    const FULL = ['Tires inflated and in good condition', 'Horn works', 'Lights work', 'Steering', 'Brakes work', 'Battery plug in good condition', 'Seatbelts in good condition', 'Gauges work', 'Alarms work', 'No fluid leaks', 'Mirrors, if applicable', 'Body or other signs of damage'];
+    const QUICK = ['Brakes work', 'Tires & steering good', 'No new damage or fluid leaks', 'Lights, horn & seatbelt work'];
+    const full = s.mode === 'take' && s.cart === 2;
+    const Q = (full ? FULL : QUICK).map((t, i) => ['q' + i, t]);
+    const btn = (on, good) => 'min-height: 48px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; ' +
+      (on ? (good ? 'background: #166534; color: #FFFFFF; border: 2px solid #166534' : 'background: #B4122B; color: #FFFFFF; border: 2px solid #B4122B') : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE');
+    const checks = Q.map(([k, t]) => {
+      const a = s.answers[k];
+      return { text: t, isYes: a === 'y' ? 'true' : 'false', isNo: a === 'n' ? 'true' : 'false',
+        yes: () => this.setState({ answers: { ...s.answers, [k]: 'y' } }), no: () => this.setState({ answers: { ...s.answers, [k]: 'n' } }),
+        yesStyle: btn(a === 'y', true), noStyle: btn(a === 'n', false) };
+    });
+    const anyNo = Object.entries(s.answers).some(([k, v]) => v === 'n' && Q.some(q => q[0] === k));
+    const allAnswered = Q.every(([k]) => s.answers[k]);
+    const n = Q.length;
+    const P = ['Brakes', 'Battery', 'Flat tire', 'Damage', 'Other'];
+    const problems = P.map(p => ({ label: p, on: s.problem === p ? 'true' : 'false', pick: () => this.setState({ problem: p }),
+      style: 'min-height: 44px; padding: 8px 16px; border-radius: 999px; font-size: 15px; font-weight: 600; cursor: pointer; ' + (s.problem === p ? 'background: #16181D; color: #FFFFFF; border: 1px solid #16181D' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const titles = { pick: 'Take a cart', check: s.mode === 'return' ? 'Return check' : 'Safety check', out: 'Your cart', report: 'Report a problem', done: 'Done' };
+    const done = {
+      returned: ['Cart ' + s.cart + ' returned', 'Thanks. You can take a cart again.'],
+      returnedIssue: ['Cart ' + s.cart + ' returned with a problem', 'It’s out of service and your manager was told.'],
+      reported: ['Problem sent', 'Cart ' + s.cart + ' is out of service. Your manager can see the report.'],
+      flagged: ['Cart ' + s.cart + ' taken out of service', 'Your manager was told. Pick another cart.']
+    }[s.done] || ['', ''];
+    const submitCheck = () => {
+      if (!allAnswered) return;
+      if (s.mode === 'take') { if (anyNo) this.setState({ step: 'done', done: 'flagged' }); else this.setState({ step: 'out', mine: s.cart }); }
+      else this.setState({ step: 'done', done: anyNo ? 'returnedIssue' : 'returned', mine: null });
+    };
+    return {
+      title: titles[s.step], cart: s.cart, mine: s.mine, holding,
+      pickHint: holding ? 'Other carts are locked for you until you return yours.' : 'Tap a free cart. You answer a safety check before you get the key.',
+      goMine: () => this.setState({ step: 'out', cart: s.mine }),
+      isPick: s.step === 'pick', isCheck: s.step === 'check', isOut: s.step === 'out', isReport: s.step === 'report', isDone: s.step === 'done',
+      carts, checks, anyNo, problems,
+      checkIntro: s.mode === 'return' ? 'Returning Cart ' + s.cart + '. Same 4 questions: anything wrong after your drive?' : full ? 'First use of Cart ' + s.cart + ' today: all 12 questions.' : 'Cart ' + s.cart + ' was checked today: 4 quick questions.',
+      issueText: s.mode === 'return' ? 'An Issue puts Cart ' + s.cart + ' out of service and tells your manager.' : 'An Issue takes Cart ' + s.cart + ' out of service and tells your manager. Pick another cart.',
+      checkCta: !allAnswered ? 'Answer all ' + n + ' to continue' : s.mode === 'return' ? 'Submit & return the key' : anyNo ? 'Take it out of service' : 'Submit & take the key',
+      submitCheck,
+      returnCart: () => this.setState({ step: 'check', mode: 'return', answers: {} }),
+      report: () => this.setState({ step: 'report' }),
+      sendReport: () => this.setState({ step: 'done', done: 'reported', mine: null }),
+      restart: () => this.setState({ step: 'pick', answers: {} }),
+      back: () => this.setState({ step: s.step === 'report' || (s.step === 'check' && s.mode === 'return') ? 'out' : 'pick', answers: {} }),
+      doneTitle: done[0], doneText: done[1]
+    };
+  }
+}
+</script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button,textarea{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <header style="display: flex; align-items: center; gap: 12px; padding: 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <button onClick="{{back}}" aria-label="Back" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; background: #FFFFFF; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 13px; font-weight: 600; color: #C8102E">Golf carts</span>
+      <span style="font-size: 20px; font-weight: 800">{{title}}</span>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px">
+
+    <sc-if value="{{isPick}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <sc-if value="{{holding}}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 14px; background: #FDF1E3; color: #8A4205"><span style="font-size: 14px; font-weight: 700; flex: 1">You have Cart {{mine}}. Return it before you take another one.</span><button onClick="{{goMine}}" style="min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: #8A4205; color: #FFFFFF; font-size: 13px; font-weight: 800; cursor: pointer">Return</button></div></sc-if>
+        <p style="margin: 0; font-size: 15px; color: #3A3F48">{{pickHint}}</p>
+        <sc-for list="{{carts}}" as="c" hint-placeholder-count="6">
+          <button onClick="{{c.pick}}" disabled="{{c.disabled}}" style="{{c.style}}">
+            <span style="{{c.badgeStyle}}">{{c.id}}</span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; text-align: left">
+              <span style="font-size: 16px; font-weight: 700; color: #16181D">Cart {{c.id}}</span>
+              <span style="font-size: 13px; color: #5B6270">{{c.sub}}</span>
+            </span>
+            <span style="font-size: 14px; font-weight: 700; color: {{c.color}}">{{c.label}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isCheck}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <p style="margin: 0; font-size: 15px; color: #3A3F48">{{checkIntro}}</p>
+        <sc-for list="{{checks}}" as="q" hint-placeholder-count="12">
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 14px">
+            <span style="font-size: 16px; font-weight: 700">{{q.text}}</span>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+              <button onClick="{{q.yes}}" aria-pressed="{{q.isYes}}" style="{{q.yesStyle}}">OK</button>
+              <button onClick="{{q.no}}" aria-pressed="{{q.isNo}}" style="{{q.noStyle}}">Issue</button>
+            </div>
+          </div>
+        </sc-for>
+        <sc-if value="{{anyNo}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px"><p role="alert" style="margin: 0; padding: 12px; border-radius: 12px; background: #FDECEE; color: #7A1020; font-size: 14px; font-weight: 600">{{issueText}}</p><textarea rows="3" placeholder="What’s wrong? (required)" style="padding: 12px; border: 1px solid #D5D8DE; border-radius: 12px; font-size: 16px; resize: none"></textarea></div>
+        </sc-if>
+        <button onClick="{{submitCheck}}" style="min-height: 52px; border: 0; border-radius: 14px; background: #C8102E; color: #FFFFFF; font-size: 16px; font-weight: 700; cursor: pointer">{{checkCta}}</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isOut}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 28px 16px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 18px; text-align: center">
+          <span style="width: 72px; height: 72px; border-radius: 20px; background: #FDF1E3; color: #8A4205; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800">{{cart}}</span>
+          <span style="font-size: 22px; font-weight: 800">You have Cart {{cart}}</span>
+          <span class="num" style="font-size: 15px; color: #5B6270">Since 2:31 PM · Safety check passed</span><span style="font-size: 13px; color: #8A4205; font-weight: 700">You can’t take another cart until this one is returned.</span>
+        </div>
+        <button onClick="{{returnCart}}" style="min-height: 56px; border: 0; border-radius: 14px; background: #16181D; color: #FFFFFF; font-size: 17px; font-weight: 700; cursor: pointer">Return Cart {{cart}}</button>
+        <button onClick="{{report}}" style="min-height: 52px; border: 1px solid #D5D8DE; border-radius: 14px; background: #FFFFFF; color: #8E0E22; font-size: 16px; font-weight: 700; cursor: pointer">Report a problem</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isReport}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <span style="font-size: 15px; font-weight: 700">What’s wrong with Cart {{cart}}?</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{problems}}" as="p" hint-placeholder-count="5">
+            <button onClick="{{p.pick}}" aria-pressed="{{p.on}}" style="{{p.style}}">{{p.label}}</button>
+          </sc-for>
+        </div>
+        <label for="note" style="font-size: 14px; font-weight: 600; color: #3A3F48">Anything else (optional)</label>
+        <textarea id="note" rows="3" placeholder="e.g. squeaks when turning left" style="padding: 12px; border: 1px solid #D5D8DE; border-radius: 12px; font-size: 16px; resize: none"></textarea>
+        <button style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border: 1px dashed #B9BEC7; border-radius: 14px; background: #FFFFFF; color: #16181D; font-size: 15px; font-weight: 600; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Add a photo
+        </button>
+        <button onClick="{{sendReport}}" style="min-height: 52px; border: 0; border-radius: 14px; background: #C8102E; color: #FFFFFF; font-size: 16px; font-weight: 700; cursor: pointer">Send to manager</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 32px 16px; text-align: center">
+        <span style="width: 64px; height: 64px; border-radius: 50%; background: #E8F5EC; display: flex; align-items: center; justify-content: center">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>
+        </span>
+        <span style="font-size: 20px; font-weight: 800">{{doneTitle}}</span>
+        <span style="font-size: 15px; color: #5B6270">{{doneText}}</span>
+        <button onClick="{{restart}}" style="margin-top: 8px; min-height: 48px; padding: 0 20px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 15px; font-weight: 600; cursor: pointer">Back to carts</button>
+      </div>
+    </sc-if>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: 'pick', cart: 2, answers: {}, problem: 'Brakes', done: '' };
+  }
+  renderVals() {
+    const s = this.state;
+    const C = [
+      { id: 1, st: 'out', sub: 'Jordan has it' },
+      { id: 2, st: 'free', sub: 'Not checked today' },
+      { id: 3, st: 'repair', sub: 'Brakes weak, waiting for repair' },
+      { id: 4, st: 'out', sub: 'Priya has it' },
+      { id: 5, st: 'free', sub: 'Checked 12:40 PM' },
+      { id: 6, st: 'out', sub: 'Sam has it' }
+    ];
+    const colors = { free: '#1D4FB8', out: '#8A4205', repair: '#8E0E22' };
+    const tints = { free: '#E6EDFB', out: '#FDF1E3', repair: '#FDECEE' };
+    const labels = { free: 'Take', out: 'Out', repair: 'Repair' };
+    const carts = C.map(c => {
+      const free = c.st === 'free';
+      return { id: c.id, sub: c.sub, label: labels[c.st], color: colors[c.st], disabled: !free,
+        pick: () => { if (free) this.setState({ cart: c.id, step: c.id === 5 ? 'out' : 'check', answers: {} }); },
+        badgeStyle: 'width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; flex-shrink: 0; color: ' + colors[c.st] + '; background: ' + tints[c.st],
+        style: 'display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 12px 14px; background: #FFFFFF; border-radius: 14px; text-align: left; ' + (free ? 'border: 2px solid #1D4FB8; cursor: pointer' : 'border: 1px solid #E3E5E9; opacity: 0.72; cursor: not-allowed') };
+    });
+    const Q = [['brakes', 'Brakes stop the cart?'], ['battery', 'Battery over half?'], ['tires', 'Tires look OK?'], ['damage', 'No new damage?']];
+    const btn = (on, good) => 'min-height: 48px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; ' +
+      (on ? (good ? 'background: #1D4FB8; color: #FFFFFF; border: 2px solid #1D4FB8' : 'background: #B4122B; color: #FFFFFF; border: 2px solid #B4122B') : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE');
+    const checks = Q.map(([k, t]) => {
+      const a = s.answers[k];
+      return { text: t, isYes: a === 'y' ? 'true' : 'false', isNo: a === 'n' ? 'true' : 'false',
+        yes: () => this.setState({ answers: { ...s.answers, [k]: 'y' } }), no: () => this.setState({ answers: { ...s.answers, [k]: 'n' } }),
+        yesStyle: btn(a === 'y', true), noStyle: btn(a === 'n', false) };
+    });
+    const vals = Object.values(s.answers);
+    const anyNo = vals.includes('n');
+    const allAnswered = Q.every(([k]) => s.answers[k]);
+    const P = ['Brakes', 'Battery', 'Flat tire', 'Damage', 'Other'];
+    const problems = P.map(p => ({ label: p, on: s.problem === p ? 'true' : 'false', pick: () => this.setState({ problem: p }),
+      style: 'min-height: 44px; padding: 8px 16px; border-radius: 999px; font-size: 15px; font-weight: 600; cursor: pointer; ' + (s.problem === p ? 'background: #16181D; color: #FFFFFF; border: 1px solid #16181D' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const titles = { pick: 'Take a cart', check: 'Quick safety check', out: 'Your cart', report: 'Report a problem', done: 'Done' };
+    const done = {
+      returned: ['Cart ' + s.cart + ' returned', 'Thanks. It’s free for the next runner.'],
+      reported: ['Problem sent', 'Cart ' + s.cart + ' is out of service. Your manager can see the report.'],
+      flagged: ['Cart ' + s.cart + ' taken out of service', 'Your manager was told. Pick another cart.']
+    }[s.done] || ['', ''];
+    return {
+      title: titles[s.step], cart: s.cart,
+      isPick: s.step === 'pick', isCheck: s.step === 'check', isOut: s.step === 'out', isReport: s.step === 'report', isDone: s.step === 'done',
+      carts, checks, anyNo, problems,
+      checkCta: anyNo ? 'Take it out of service' : (allAnswered ? 'Take Cart ' + s.cart : 'Answer all 4 to continue'),
+      submitCheck: () => { if (anyNo) this.setState({ step: 'done', done: 'flagged' }); else if (allAnswered) this.setState({ step: 'out' }); },
+      returnCart: () => this.setState({ step: 'done', done: 'returned' }),
+      report: () => this.setState({ step: 'report' }),
+      sendReport: () => this.setState({ step: 'done', done: 'reported' }),
+      restart: () => this.setState({ step: 'pick', answers: {} }),
+      back: () => this.setState({ step: s.step === 'report' ? 'out' : 'pick', answers: s.step === 'check' ? {} : s.answers }),
+      doneTitle: done[0], doneText: done[1]
+    };
+  }
+}
+</script>
+</body>
+</html>

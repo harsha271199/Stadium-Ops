@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Count</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button,input,textarea{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+input:focus{outline:3px solid #F6C9D1;border-color:#C8102E}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <header style="display: flex; flex-direction: column; gap: 10px; padding: 12px 16px 12px; background: {{headBg}}; color: #FFFFFF">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <a href="Checks.dc.html" aria-label="Back to Checks" style="width: 44px; height: 44px; border: 1px solid rgba(255,255,255,0.35); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #FFFFFF"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 1px">
+        <span style="font-size: 13px; font-weight: 600; opacity: 0.85">DFA 143</span>
+        <span style="font-size: 21px; font-weight: 800">{{title}}</span>
+      </div>
+      <span class="num" style="font-size: 15px; font-weight: 800; padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,0.16)">{{doneN}} / {{totalN}}</span>
+    </div>
+    <div role="tablist" aria-label="Which count" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: rgba(0,0,0,0.18); border-radius: 12px">
+      <sc-for list="{{phases}}" as="p" hint-placeholder-count="3">
+        <button role="tab" onClick="{{p.pick}}" aria-selected="{{p.on}}" style="{{p.style}}">{{p.label}}</button>
+      </sc-for>
+    </div>
+    <div style="display: flex; gap: 4px">
+      <sc-for list="{{segBars}}" as="b" hint-placeholder-count="5">
+        <span title="{{b.title}}" style="{{b.track}}"><span style="{{b.fill}}"></span></span>
+      </sc-for>
+    </div>
+  </header>
+
+  <div style="display: flex; gap: 8px; padding: 10px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <label style="flex: 1; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input aria-label="Find an item" value="{{q}}" onInput="{{onQ}}" placeholder="Find: “coors 24”, “cl 24”, “gloves l”" style="flex: 1; min-width: 0; border: 0; outline: none; font-size: 16px">
+    </label>
+    <button onClick="{{toggleBlank}}" aria-pressed="{{blankOn}}" style="{{blankStyle}}">Only blanks</button>
+  </div>
+
+  <main style="flex: 1; overflow-y: auto; padding: 10px 16px 90px; display: flex; flex-direction: column; gap: 10px">
+    <sc-for list="{{sections}}" as="g" hint-placeholder-count="5">
+      <section style="{{g.box}}">
+        <button onClick="{{g.toggle}}" aria-expanded="{{g.open}}" style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; border: 0; background: transparent; cursor: pointer; text-align: left">
+          <span style="{{g.badge}}">
+            <sc-if value="{{g.done}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></sc-if>
+            <sc-if value="{{g.notDone}}" hint-placeholder-val="{{ true }}"><span class="num" style="font-size: 14px; font-weight: 800">{{g.leftN}}</span></sc-if>
+          </span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-size: 16px; font-weight: 800; color: #16181D">{{g.name}}</span>
+            <span class="num" style="font-size: 13px; font-weight: 600; color: {{g.subColor}}">{{g.sub}}</span>
+          </span>
+          <span style="{{g.chev}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+        </button>
+        <sc-if value="{{g.open}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; border-top: 1px solid #EEF0F3">
+            <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="6">
+              <div style="{{r.row}}">
+                <span class="num" style="width: 22px; font-size: 12px; font-weight: 800; color: #9AA0AA">{{r.no}}</span>
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+                  <span style="font-size: 15px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere">{{r.name}}</span>
+                  <span class="num" style="font-size: 12px; color: {{r.metaColor}}; font-weight: {{r.metaWeight}}">{{r.meta}}</span>
+                </span>
+                <input inputmode="decimal" enterkeyhint="next" aria-label="{{r.name}}" value="{{r.val}}" onInput="{{r.onVal}}" placeholder="–" style="{{r.input}}">
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </section>
+    </sc-for>
+    <sc-if value="{{showAdd}}" hint-placeholder-val="{{ false }}">
+      <section style="display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #FFFFFF; border: 2px dashed #9AA0AA; border-radius: 16px">
+        <span style="font-size: 15px; font-weight: 800">{{addTitle}}</span>
+        <input aria-label="New item name" value="{{addName}}" onInput="{{onAddName}}" placeholder="Item name, e.g. Celsius 12oz" style="min-height: 48px; padding: 0 12px; border: 1px solid #C9CDD4; border-radius: 12px; font-size: 16px">
+        <span style="font-size: 12px; font-weight: 800; color: #5B6270">GOES IN (we picked it for you, change if wrong)</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{addCats}}" as="c" hint-placeholder-count="5"><button onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="{{c.style}}">{{c.l}}</button></sc-for></div>
+        <span style="font-size: 12px; color: #5B6270">Saved for this stand: next time it is already in the list, in that section.</span>
+        <button onClick="{{addIt}}" style="min-height: 48px; border: 0; border-radius: 12px; background: #16181D; color: #FFFFFF; font-size: 15px; font-weight: 800; cursor: pointer">Add to {{addCat}}</button>
+      </section>
+    </sc-if>
+    <sc-if value="{{showAddLink}}" hint-placeholder-val="{{ true }}">
+      <button onClick="{{openAdd}}" style="min-height: 48px; border: 1px dashed #B9BEC7; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 700; cursor: pointer">+ Missing an item? Add it</button>
+    </sc-if>
+    <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 700; color: #3A3F48">Notes (optional)
+      <textarea rows="2" placeholder="e.g. 2 cases of Coors went to 216M" style="padding: 12px; border: 1px solid #D5D8DE; border-radius: 12px; font-size: 16px; resize: none"></textarea>
+    </label>
+  </main>
+
+  <sc-if value="{{hasBlank}}" hint-placeholder-val="{{ true }}">
+    <button onClick="{{jump}}" style="position: absolute; right: 16px; bottom: 118px; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 16px; border: 0; border-radius: 999px; background: #16181D; color: #FFFFFF; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 16px rgba(22,24,29,0.25)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>Next blank
+    </button>
+  </sc-if>
+
+  <div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 16px 16px; background: #FFFFFF; border-top: 1px solid #E3E5E9">
+    <span style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; color: #166534"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Saved on this phone as you type · safe to close</span>
+    <button style="{{submitStyle}}">{{submitLabel}}</button>
+    <span style="text-align: center; font-size: 11px; color: #5B6270">The download / report is in Yellow Dog sheet order.</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const v = {};
+    for (let i = 1; i <= 14; i++) v[i] = String([24, 36, 12, 48, 30, 18, 22, 40, 16, 12, 6, 9, 14, 20][i - 1]);
+    this.state = { phase: 'in', open: 'Beer & seltzer', q: '', blank: false, v, extra: [], adding: false, addName: '', addCat: '' };
+  }
+  items() {
+    const S = {
+      'Beer & seltzer': ['Coors Light 24oz can', 'Miller Lite 24oz can', 'Dos Equis 24oz can', 'Michelob Ultra 24oz can', 'Modelo Especial 24oz can', 'Devils Halo Lager 19.2oz', 'Devils Halo Amber 19.2oz', 'Huss Halo IPA 19.2oz', 'Topo Chico seltzer 24oz', 'White Claw 19.2oz', 'Truly 19.2oz', 'Coors Banquet 24oz', 'Blue Moon 24oz', 'Stella Artois 24oz'],
+      'Soda & water': ['Pepsi 20oz', 'Pepsi Zero 20oz', 'Mountain Dew 20oz', 'Diet Mountain Dew 20oz', 'Starry 20oz', 'Dr Pepper 20oz', 'Aquafina 20oz', 'Life Water 1L', 'Gatorade Red 20oz', 'Gatorade Blue Zero 20oz', 'Bubly 16oz', 'Lipton Iced Tea 20oz'],
+      'Food': ['Hot dog pork/beef 5x1', 'Bratwurst 6 in', 'Hamburger patty', 'Chicken tenders', 'Hot dog buns', 'Burger buns', 'Nacho chips bulk', 'Cheese dip cups', 'Jalapeño sliced', 'Pretzel jumbo', 'Popcorn bags 85oz', 'Kettle chips sea salt', 'Kettle chips jalapeño', 'Candy M&M peanut'],
+      'Cups, BIB & CO2': ['Cups 32oz souvenir', 'Cups 24oz plastic', 'Lids 24oz', 'BIB Pepsi 5gal', 'BIB Pepsi Zero 5gal', 'BIB Mountain Dew 5gal', 'BIB Starry 5gal', 'BIB Lemonade 5gal', 'BIB Dr Pepper 5gal', 'CO2 35#', 'CO2 20#'],
+      'Supplies': ['Gloves black · small', 'Gloves black · medium', 'Gloves black · large', 'Gloves black · XL', 'Napkin dispenser sleeves', 'Ketchup bag', 'Mustard bag', 'Relish bag', 'Hand soap foam', 'Trash liners 38x58', 'Towels wiper']
+    };
+    const out = []; let id = 0;
+    Object.keys(S).forEach(sec => S[sec].forEach((name, i) => { id++; const exp = (id * 7) % 31 + (sec === 'Supplies' || sec === 'Cups, BIB & CO2' ? 0 : 6); out.push({ id, sec, name, exp, cin: exp, add: id % 5 === 0 ? 12 : 0 }); }));
+    (this.state.extra || []).forEach(x => { id++; out.push({ id, sec: x.sec, name: x.name, exp: 0, cin: 0, add: 0, added: true }); });
+    return { S, out };
+  }
+  renderVals() {
+    const s = this.state, { S, out } = this.items();
+    const ph = s.phase, isOut = ph === 'out', isX = ph === 'xfer';
+    const filled = it => (s.v[it.id] || '') !== '';
+    const total = out.length, doneN = out.filter(filled).length;
+    const q = s.q.trim().toLowerCase();
+    const match = (name) => { if (!q) return true; const n = name.toLowerCase(), words = n.split(/[^a-z0-9]+/).filter(Boolean), ini = words.map(w => w[0]).join('');
+      return q.split(/\s+/).every(tok => words.some(w => w.startsWith(tok)) || ini.includes(tok) || n.includes(tok)); };
+    const P = { in: ['Count In', '#166534'], xfer: ['Transfer', '#163E91'], out: ['Count Out', '#7A0F22'] };
+    const secNames = Object.keys(S);
+    const sections = secNames.map(name => {
+      const items = out.filter(i => i.sec === name);
+      const left = items.filter(i => !filled(i)).length, done = left === 0;
+      const open = q ? items.some(i => match(i.name)) : s.open === name;
+      const rows = items.filter(i => match(i.name) && (!s.blank || !filled(i))).map(it => {
+        const val = s.v[it.id] || '', has = val !== '', n = parseFloat(val);
+        let meta = it.added ? 'Added by you · kept for this stand' : isOut ? 'In ' + it.cin + (it.add ? ' + added ' + it.add : '') : isX ? 'On hand ' + it.cin : 'Expected ' + it.exp;
+        let mc = '#5B6270', mw = 500;
+        if (has && !isNaN(n)) {
+          if (ph === 'in' && n !== it.exp) { meta = 'Expected ' + it.exp + ' · ' + (n > it.exp ? '+' : '') + (n - it.exp) + ' check'; mc = '#9A4A06'; mw = 800; }
+          if (isOut) { const used = it.cin + it.add - n; meta = used >= 0 ? meta + ' · used ' + used : 'More than you had · check'; mc = used >= 0 ? '#166534' : '#B4122B'; mw = 800; }
+        }
+        return { no: out.indexOf(it) + 1, name: it.name, val, meta, metaColor: mc, metaWeight: mw,
+          onVal: e => {
+            const nv = e.target.value.replace(/[^0-9.]/g, '');
+            const nextV = { ...s.v, [it.id]: nv };
+            const secDone = items.every(x => (nextV[x.id] || '') !== '');
+            const nextSec = secNames.find(sn => out.filter(x => x.sec === sn).some(x => (nextV[x.id] || '') === ''));
+            this.setState({ v: nextV, open: secDone && nextSec ? nextSec : s.open });
+          },
+          row: 'display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 8px 14px; border-bottom: 1px solid #F1F2F4; background: ' + (has ? '#FBFEFC' : '#FFFFFF'),
+          input: 'width: 76px; min-height: 48px; flex-shrink: 0; text-align: center; border-radius: 12px; font-size: 19px; font-weight: 800; color: #16181D; ' + (has ? 'border: 2px solid #16A34A; background: #F3FBF5' : 'border: 1px solid #C9CDD4; background: #FFFFFF') };
+      });
+      return { name, open, done, notDone: !done, leftN: left,
+        sub: done ? 'All ' + items.length + ' counted' : (items.length - left) + ' of ' + items.length + ' · ' + left + ' left',
+        subColor: done ? '#166534' : '#5B6270',
+        toggle: () => this.setState({ open: s.open === name ? '' : name }),
+        chev: 'display: flex; transform: rotate(' + (open ? 180 : 0) + 'deg)',
+        badge: 'width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; ' + (done ? 'background: #16A34A; color: #FFFFFF' : open ? 'background: ' + P[ph][1] + '; color: #FFFFFF' : 'background: #EEF0F3; color: #3A3F48'),
+        box: 'display: flex; flex-direction: column; background: #FFFFFF; border-radius: 16px; overflow: hidden; ' + (open ? 'border: 2px solid ' + P[ph][1] : done ? 'border: 1px solid #BFE3CB' : 'border: 1px solid #E3E5E9'),
+        rows };
+    }).filter(g => !q || g.rows.length);
+    const segBars = secNames.map(n => { const items = out.filter(i => i.sec === n), f = items.filter(filled).length;
+      return { title: n, track: 'flex: ' + items.length + '; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.25); overflow: hidden; display: block', fill: 'display: block; height: 100%; width: ' + (f / items.length * 100) + '%; background: #FFFFFF' }; });
+    const phases = Object.keys(P).map(k => { const on = ph === k; return { label: P[k][0], on: on ? 'true' : 'false', pick: () => this.setState({ phase: k }),
+      style: 'min-height: 40px; border: 0; border-radius: 9px; font-size: 14px; font-weight: 800; cursor: pointer; ' + (on ? 'background: #FFFFFF; color: ' + P[k][1] : 'background: transparent; color: #FFFFFF') }; });
+    const firstBlankSec = secNames.find(n => out.filter(i => i.sec === n).some(i => !filled(i)));
+    const left = total - doneN, ready = left === 0;
+    const noHits = !!q && sections.length === 0;
+    const guess = nm => { const x = nm.toLowerCase(); return /beer|seltzer|ipa|lager|ale|cider|claw|truly/.test(x) ? 'Beer & seltzer' : /soda|water|pepsi|dew|gatorade|tea|juice|celsius|energy|bubly|starry/.test(x) ? 'Soda & water' : /cup|lid|bib|co2|straw/.test(x) ? 'Cups, BIB & CO2' : /glove|napkin|bag|soap|liner|towel|foil|wrap|sanit/.test(x) ? 'Supplies' : 'Food'; };
+    const addName = s.adding ? s.addName : (noHits ? s.q : '');
+    const addCat = s.addCat || guess(addName);
+    const addCats = secNames.map(l => ({ l, on: addCat === l ? 'true' : 'false', pick: () => this.setState({ adding: true, addName, addCat: l }), style: 'min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (addCat === l ? 'background: #16181D; color: #FFFFFF; border: 0' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const addVals = { showAdd: s.adding || noHits, showAddLink: !s.adding && !noHits, addTitle: noHits ? 'No match for “' + s.q + '”. Add it to this stand?' : 'Add a missing item', addName, addCat, addCats,
+      onAddName: e => this.setState({ adding: true, addName: e.target.value, addCat: '' }), openAdd: () => this.setState({ adding: true, addName: '', addCat: '' }),
+      addIt: () => { if (!addName.trim()) return; this.setState({ extra: (s.extra || []).concat([{ name: addName.trim(), sec: addCat }]), adding: false, addName: '', addCat: '', q: '', open: addCat }); } };
+    return { ...addVals, headBg: P[ph][1], title: P[ph][0], phases, segBars, sections, doneN, totalN: total,
+      q: s.q, onQ: e => this.setState({ q: e.target.value }),
+      blankOn: s.blank ? 'true' : 'false', toggleBlank: () => this.setState({ blank: !s.blank }),
+      blankStyle: 'min-height: 44px; padding: 0 12px; border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; ' + (s.blank ? 'background: #16181D; color: #FFFFFF; border: 1px solid #16181D' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE'),
+      hasBlank: !ready, jump: () => this.setState({ open: firstBlankSec || s.open, q: '' }),
+      submitLabel: ready ? 'Submit ' + P[ph][0] : left + ' left to count',
+      submitStyle: 'width: 100%; min-height: 52px; border: 0; border-radius: 14px; font-size: 17px; font-weight: 800; cursor: pointer; ' + (ready ? 'background: #C8102E; color: #FFFFFF' : 'background: #F1F2F4; color: #5B6270') };
+  }
+}
+</script>
+</body>
+</html>

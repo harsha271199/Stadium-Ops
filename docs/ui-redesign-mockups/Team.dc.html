@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Team</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button,input,textarea{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <header style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 12px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <a href="Lead.dc.html" aria-label="Back" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 13px; font-weight: 600; color: #C8102E">{{stand}}</span>
+        <span style="font-size: 20px; font-weight: 800">{{title}}</span>
+      </div>
+      <button onClick="{{refresh}}" aria-label="Refresh team" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; border-radius: 12px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button>
+    </div>
+    <div role="group" aria-label="Mockup: view as" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px">
+      <sc-for list="{{views}}" as="v" hint-placeholder-count="2">
+        <button onClick="{{v.pick}}" aria-pressed="{{v.on}}" style="{{v.style}}">{{v.label}}</button>
+      </sc-for>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 12px 16px 96px; display: flex; flex-direction: column; gap: 10px">
+
+    <sc-if value="{{isSup}}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: 44px 1fr 44px; gap: 6px">
+        <button onClick="{{prevStand}}" aria-label="Previous stand" style="height: 56px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; font-size: 20px; cursor: pointer">‹</button>
+        <button onClick="{{openPicker}}" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 56px; padding: 0 14px; border: 2px solid #C8102E; border-radius: 12px; background: #FFFFFF; cursor: pointer; text-align: left">
+          <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 16px; font-weight: 800; color: #16181D">{{stand}}</span><span class="num" style="font-size: 12px; color: #5B6270">{{standMeta}}</span></span>
+          <span style="font-size: 13px; font-weight: 800; color: #C8102E">Change ▾</span>
+        </button>
+        <button onClick="{{nextStand}}" aria-label="Next stand" style="height: 56px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; font-size: 20px; cursor: pointer">›</button>
+      </div>
+    </sc-if>
+
+    <label style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; background: #FFFFFF; border: 1px solid #D5D8DE; border-radius: 12px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input aria-label="Find a person" value="{{q}}" onInput="{{onQ}}" placeholder="Find a person" style="flex: 1; min-width: 0; border: 0; outline: none; font-size: 16px; background: transparent; color: #16181D">
+    </label>
+
+    <div style="display: flex; gap: 6px; flex-wrap: wrap">
+      <sc-for list="{{filters}}" as="f" hint-placeholder-count="5">
+        <button onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="{{f.style}}">{{f.label}} <span class="num">{{f.n}}</span></button>
+      </sc-for>
+    </div>
+
+    <sc-for list="{{people}}" as="p" hint-placeholder-count="5">
+      <section style="display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; overflow: hidden">
+        <button onClick="{{p.toggle}}" aria-expanded="{{p.open}}" style="display: flex; align-items: flex-start; gap: 12px; min-height: 72px; padding: 12px 14px; border: 0; background: #FFFFFF; cursor: pointer; text-align: left">
+          <span style="{{p.avatar}}">{{p.initials}}</span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0">
+            <span style="font-size: 16px; font-weight: 800; color: #16181D; line-height: 1.25; overflow-wrap: anywhere">{{p.display}}</span>
+            <span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+              <span style="{{p.chipStyle}}">{{p.state}}</span>
+              <span class="num" style="font-size: 12px; color: #5B6270">{{p.role}} · {{p.since}}</span>
+            </span>
+          </span>
+          <span style="{{p.chev}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+        </button>
+        <sc-if value="{{p.open}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 4px 14px 14px; border-top: 1px solid #F1F2F4">
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding-top: 10px">
+              <sc-if value="{{p.canCheckIn}}" hint-placeholder-val="{{ true }}"><button onClick="{{p.checkIn}}" style="min-height: 48px; border: 0; border-radius: 12px; background: #166534; color: #FFFFFF; font-size: 14px; font-weight: 800; cursor: pointer">Check in · here now</button></sc-if>
+              <button onClick="{{p.absent}}" style="{{p.absentStyle}}">{{p.absentLabel}}</button>
+              <button onClick="{{p.brk}}" style="min-height: 48px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 700; cursor: pointer">{{p.breakLabel}}</button>
+              <button style="min-height: 48px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 700; cursor: pointer">Move to another stand</button>
+              <sc-if value="{{isSup}}" hint-placeholder-val="{{ false }}"><button style="min-height: 48px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #8E0E22; font-size: 14px; font-weight: 700; cursor: pointer">Clock out</button></sc-if>
+              <sc-if value="{{isLead}}" hint-placeholder-val="{{ true }}"><button onClick="{{p.access}}" aria-pressed="{{p.accessOn}}" style="{{p.accessStyle}}">{{p.accessLabel}}</button></sc-if>
+            </div>
+            <button onClick="{{p.toggleFb}}" style="align-self: flex-start; min-height: 36px; padding: 0 4px; border: 0; background: none; color: #5B6270; font-size: 13px; font-weight: 700; text-decoration: underline; cursor: pointer">{{p.fbLabel}}</button>
+            <sc-if value="{{p.fbOpen}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #F4F5F7; border-radius: 12px">
+              <span style="font-size: 13px; font-weight: 800">Feedback for {{p.first}}</span>
+              <div style="display: flex; gap: 6px">
+                <sc-for list="{{p.stars}}" as="st" hint-placeholder-count="5">
+                  <button onClick="{{st.pick}}" aria-label="{{st.label}}" style="width: 44px; height: 44px; border: 0; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="{{st.fill}}" stroke="{{st.stroke}}" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></svg>
+                  </button>
+                </sc-for>
+              </div>
+              <input aria-label="Feedback note" placeholder="Optional note, e.g. great with guests" style="min-height: 44px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 10px; font-size: 16px; background: #FFFFFF">
+              <button style="min-height: 44px; border: 0; border-radius: 10px; background: #16181D; color: #FFFFFF; font-size: 14px; font-weight: 700; cursor: pointer">Save feedback</button>
+            </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </section>
+    </sc-for>
+    <span style="margin-top: 4px; font-size: 13px; font-weight: 800; color: #5B6270">More</span>
+    <button style="display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; cursor: pointer; text-align: left"><span style="width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #163E91; background: #E6EDFB"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h14M14 6l6 6-6 6"/></svg></span><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800; color: #16181D">Move worker to another stand</span><span style="font-size: 13px; color: #5B6270">Pick the person, then their new stand</span></span></button>
+    <button style="display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; cursor: pointer; text-align: left"><span style="width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #6B4E16; background: #FBF1DE"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 20c0-3 3-5 6-5s6 2 6 5M14 15c3 0 6 2 6 5"/></svg></span><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800; color: #16181D">My NPO Group</span><span style="font-size: 13px; color: #5B6270">Roster and attendance for the NPO group at your stand</span></span></button>
+  </main>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 20px; background: #FFFFFF; border-top: 1px solid #E3E5E9">
+    <button onClick="{{openWalk}}" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border: 0; border-radius: 14px; background: #C8102E; color: #FFFFFF; font-size: 16px; font-weight: 800; cursor: pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add walk-in worker
+    </button>
+  </div>
+
+  <sc-if value="{{pickerOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; z-index: 25; background: rgba(22, 24, 29, 0.45); display: flex; flex-direction: column; justify-content: flex-end">
+      <button onClick="{{closePicker}}" aria-label="Close" style="height: 70px; flex-shrink: 0; border: 0; background: transparent; cursor: pointer"></button>
+      <section role="dialog" aria-label="Pick a stand" style="flex: 1; min-height: 0; background: #FFFFFF; border-radius: 22px 22px 0 0; padding: 16px 16px 0; display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 18px; font-weight: 800">Pick a stand <span class="num" style="font-size: 14px; color: #5B6270">({{standTotal}})</span></span>
+        <input value="{{sq}}" onInput="{{onSq}}" placeholder="Type a number or name: 212, nacho…" style="min-height: 48px; padding: 0 12px; border: 1px solid #C9CDD4; border-radius: 12px; font-size: 16px">
+        <div style="display: flex; gap: 6px"><sc-for list="{{pf}}" as="f" hint-placeholder-count="3"><button onClick="{{f.pick}}" style="{{f.style}}">{{f.l}}</button></sc-for></div>
+        <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-bottom: 16px">
+          <sc-for list="{{pGroups}}" as="g" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column">
+              <span style="padding: 10px 2px 4px; font-size: 12px; font-weight: 800; color: #5B6270; letter-spacing: .3px">{{g.area}}</span>
+              <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="4">
+                <button onClick="{{r.pick}}" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 0 12px; border: 0; border-bottom: 1px solid #F1F2F4; background: {{r.bg}}; cursor: pointer; text-align: left">
+                  <span style="font-size: 15px; font-weight: 800; color: #16181D">{{r.n}}</span>
+                  <span style="display: flex; align-items: center; gap: 6px"><span class="num" style="font-size: 13px; color: #5B6270">{{r.here}}</span><span style="{{r.chip}}">{{r.flag}}</span></span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{walkOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(22, 24, 29, 0.45); display: flex; flex-direction: column; justify-content: flex-end">
+      <button onClick="{{closeWalk}}" aria-label="Close" style="flex: 1; border: 0; background: transparent; cursor: pointer"></button>
+      <section role="dialog" aria-label="Add walk-in worker" style="background: #FFFFFF; border-radius: 22px 22px 0 0; padding: 18px 16px 28px; display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 18px; font-weight: 800">Add walk-in to {{stand}}</span>
+        <label for="wq" style="font-size: 13px; font-weight: 700; color: #3A3F48">Search for the person</label>
+        <input id="wq" placeholder="Start typing their name" style="min-height: 48px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 12px; font-size: 16px">
+        <span style="font-size: 13px; color: #5B6270; text-align: center">Not found? Add them by name and ID</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: #5B6270">Name (last, first)<input placeholder="Smith, John" style="min-height: 48px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 12px; font-size: 16px; color: #16181D"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: #5B6270">Employee ID<input inputmode="numeric" placeholder="32445678" style="min-height: 48px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 12px; font-size: 16px; color: #16181D"></label>
+        </div>
+        <button onClick="{{closeWalk}}" style="min-height: 52px; border: 0; border-radius: 14px; background: #C8102E; color: #FFFFFF; font-size: 16px; font-weight: 800; cursor: pointer">Add walk-in</button>
+      </section>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { view: 'lead', filter: 'all', q: '', open: 'Patel, Vatsal', walk: false, stand: 'DFA 143',
+      st: { 'Patel, Vatsal': 'working', 'Bhanushali, HimanshiChetan': 'working', 'Patil, Trupal': 'break', 'Jackson, Marcus': 'late', 'Saragadam, Maharshi': 'working', 'Devarajegowda, Rajashree': 'absent' },
+      access: {}, stars: { 'Patel, Vatsal': 4 }, fbOpen: '', picker: false, sq: '', pfilter: 'need' };
+  }
+  renderVals() {
+    const s = this.state, isSup = s.view === 'sup';
+    const P = [
+      ['Saragadam, Maharshi', 'Stand Lead', 'since 4:52 PM'], ['Patel, Vatsal', 'Student', 'since 4:58 PM'], ['Bhanushali, HimanshiChetan', 'Student', 'since 5:01 PM'],
+      ['Patil, Trupal', 'Student', 'break since 6:40 PM'], ['Jackson, Marcus', 'Stand Worker', 'shift 5:00 PM'], ['Devarajegowda, Rajashree', 'Student', 'marked absent 5:30 PM']
+    ];
+    const lab = { working: 'Working', break: 'On break', late: 'Not arrived', absent: 'Absent' };
+    const tone = { working: ['#166534', '#E8F5EC'], break: ['#163E91', '#E6EDFB'], late: ['#8A4205', '#FDF1E3'], absent: ['#8E0E22', '#FDECEE'] };
+    const chip = k => 'font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; color: ' + tone[k][0] + '; background: ' + tone[k][1];
+    const q = s.q.trim().toLowerCase();
+    const all = P.map(([name, role, since]) => ({ name, role, since, st: s.st[name] }));
+    const people = all.filter(p => (s.filter === 'all' || p.st === s.filter) && (!q || p.name.toLowerCase().includes(q))).map(p => {
+      const open = s.open === p.name, isAbs = p.st === 'absent', onBreak = p.st === 'break';
+      const accessOn = !!s.access[p.name];
+      const first = (p.name.split(',')[1] || p.name).trim().replace(/([a-z])([A-Z]).*/, '$1');
+      const rating = s.stars[p.name] || 0;
+      const split = x => x.trim().replace(/([a-z])([A-Z])/g, '$1 $2');
+      const parts = p.name.split(',');
+      const display = parts.length > 1 ? split(parts[1]) + ' ' + split(parts[0]) : split(p.name);
+      return { name: p.name, display, role: p.role, since: p.since, state: lab[p.st], chipStyle: chip(p.st), open, first,
+        chev: 'display: flex; margin-top: 10px; flex-shrink: 0; transform: rotate(' + (open ? 180 : 0) + 'deg)',
+        initials: p.name.split(',').reverse().map(x => x.trim()[0]).join(''),
+        avatar: 'width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex-shrink: 0; color: ' + tone[p.st][0] + '; background: ' + tone[p.st][1],
+        toggle: () => this.setState({ open: open ? '' : p.name }),
+        canCheckIn: p.st === 'late' || isAbs, checkIn: () => this.setState({ st: { ...s.st, [p.name]: 'working' } }),
+        fbOpen: s.fbOpen === p.name, toggleFb: () => this.setState({ fbOpen: s.fbOpen === p.name ? '' : p.name }), fbLabel: s.fbOpen === p.name ? 'Hide rating' : 'Rate ' + first + ' (optional)',
+        absentLabel: isAbs ? 'Undo absent' : 'Mark absent',
+        absentStyle: 'min-height: 48px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; ' + (isAbs ? 'border: 1px solid #D5D8DE; background: #FFFFFF; color: #16181D' : 'border: 1px solid #F3C9CF; background: #FDECEE; color: #8E0E22'),
+        absent: () => this.setState({ st: { ...s.st, [p.name]: isAbs ? 'late' : 'absent' } }),
+        breakLabel: onBreak ? 'End break' : 'Start break',
+        brk: () => this.setState({ st: { ...s.st, [p.name]: onBreak ? 'working' : 'break' } }),
+        accessOn: accessOn ? 'true' : 'false', accessLabel: accessOn ? 'Stand access: ON' : 'Give stand access',
+        accessStyle: 'min-height: 48px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; ' + (accessOn ? 'border: 1px solid #16A34A; background: #E8F5EC; color: #166534' : 'border: 1px solid #D5D8DE; background: #FFFFFF; color: #16181D'),
+        access: () => this.setState({ access: { ...s.access, [p.name]: !accessOn } }),
+        stars: [1, 2, 3, 4, 5].map(n => ({ label: n + ' star' + (n > 1 ? 's' : ''), fill: n <= rating ? '#F5A524' : 'none', stroke: n <= rating ? '#B7791F' : '#9AA0AA', pick: () => this.setState({ stars: { ...s.stars, [p.name]: n } }) }))
+      };
+    });
+    const fdefs = [['all', 'All'], ['working', 'Working'], ['break', 'On break'], ['late', 'Not arrived'], ['absent', 'Absent']];
+    const filters = fdefs.map(([k, l]) => {
+      const on = s.filter === k;
+      return { label: l, n: k === 'all' ? all.length : all.filter(p => p.st === k).length, on: on ? 'true' : 'false', pick: () => this.setState({ filter: k }),
+        style: 'min-height: 40px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; ' + (on ? 'background: #16181D; color: #FFFFFF; border: 1px solid #16181D' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') };
+    });
+    const views = [['lead', 'Stand lead'], ['sup', 'Supervisor']].map(([k, l]) => {
+      const on = s.view === k;
+      return { label: l, on: on ? 'true' : 'false', pick: () => this.setState({ view: k }),
+        style: 'min-height: 40px; border: 0; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; ' + (on ? 'background: #FFFFFF; color: #16181D; box-shadow: 0 1px 2px rgba(22,24,29,0.12)' : 'background: transparent; color: #3A3F48') };
+    });
+    const AREAS = { 'MAS · West Concourse': [['204P Fan Fuel Bev', 4, 4, ''], ['210 Fan Fuel Nacho', 3, 4, 'Short'], ['212P Beer Portable', 4, 5, ''], ['219 Cold Beer Cheeseburgers', 2, 5, 'Short'], ['226 Pitchfork Pizza', 5, 5, '']], 'MAS · East Concourse': [['216 Someburros SC', 3, 3, ''], ['216M Fan Fuel BevMKT', 0, 3, 'Not open'], ['232P Someburros SC', 2, 2, '']], 'MAS · Upper': [['401P Pizza', 3, 3, ''], ['408 Cold Beer', 1, 4, 'Short'], ['409P Someburros', 2, 2, '']], 'DFA': [['DFA 143', 5, 6, ''], ['DFA 111', 6, 7, ''], ['DFA 191', 3, 5, 'Short'], ['Market', 7, 7, ''], ['BEV MKT', 2, 2, ''], ['Venezia', 0, 1, 'Not open']] };
+    const flat = []; Object.entries(AREAS).forEach(([a, rows]) => rows.forEach(r => flat.push([a, ...r])));
+    const cur = flat.findIndex(r => r[1] === s.stand), curRow = flat[cur] || flat[0];
+    const sq = s.sq.trim().toLowerCase();
+    const pGroups = Object.entries(AREAS).map(([area, rows]) => ({ area, rows: rows.filter(([n, h, of, f]) => (!sq || n.toLowerCase().includes(sq)) && (s.pfilter !== 'need' || sq || f)).map(([n, h, of, f]) => ({ n, here: h + '/' + of + ' here', flag: f || 'OK', bg: n === s.stand ? '#FDECEE' : '#FFFFFF',
+      chip: 'font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; ' + (f === 'Short' ? 'color: #8A4205; background: #FDF1E3' : f ? 'color: #3A3F48; background: #EEF0F3' : 'color: #166534; background: #E8F5EC'),
+      pick: () => this.setState({ stand: n, picker: false, sq: '' }) })) })).filter(g => g.rows.length);
+    const needN = flat.filter(r => r[4]).length;
+    const pf = [['need', 'Needs attention ' + needN], ['all', 'All ' + flat.length]].map(([k, l]) => ({ l, pick: () => this.setState({ pfilter: k }), style: 'min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (s.pfilter === k ? 'background: #16181D; color: #FFFFFF; border: 0' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const go = d => () => { const n = flat[(cur + d + flat.length) % flat.length][1]; this.setState({ stand: n }); };
+    const pickVals = { pickerOpen: s.picker, openPicker: () => this.setState({ picker: true }), closePicker: () => this.setState({ picker: false }), sq: s.sq, onSq: e => this.setState({ sq: e.target.value }), pf, pGroups, standTotal: '60 on a big game · ' + flat.length + ' in this mockup',
+      standMeta: curRow[0] + ' · ' + curRow[2] + '/' + curRow[3] + ' here' + (curRow[4] ? ' · ' + curRow[4] : ''), prevStand: go(-1), nextStand: go(1) };
+    return { ...pickVals, views, isSup, isLead: true, title: isSup ? 'Team by Stand' : 'My Team', stand: s.stand, filters, people, q: s.q,
+      onQ: e => this.setState({ q: e.target.value }), refresh: () => {},
+      walkOpen: s.walk, openWalk: () => this.setState({ walk: true }), closeWalk: () => this.setState({ walk: false }) };
+  }
+}
+</script>
+</body>
+</html>

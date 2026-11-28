@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Every option checklist</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>body{margin:0} button{font-family:inherit}</style>
+</helmet>
+<div style="width: 100%; min-height: 100%; box-sizing: border-box; padding: 28px; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; display: flex; flex-direction: column; gap: 16px">
+  <div style="display: flex; flex-direction: column; gap: 4px">
+    <span style="font-size: 13px; font-weight: 800; color: #C8102E">CHECKLIST · TODAY’S APP → NEW MOCKUP</span>
+    <span style="font-size: 26px; font-weight: 800">Every option in the live app, and where to find it here</span>
+    <span style="font-size: 14px; color: #5B6270">Pick a role. Each row is a button or screen that exists in the app today. “Board” is the phone on this canvas; “Tab” is the dark picker button at the top of that phone.</span>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 6px">
+    <sc-for list="{{roles}}" as="r" hint-placeholder-count="9"><button onClick="{{r.pick}}" aria-pressed="{{r.on}}" style="{{r.style}}">{{r.l}} <span style="opacity: .7">{{r.n}}</span></button></sc-for>
+  </div>
+  <div style="background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; overflow: hidden">
+    <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr 110px; gap: 12px; padding: 10px 16px; background: #EEF0F3; font-size: 12px; font-weight: 800; color: #5B6270"><span>OPTION IN TODAY’S APP</span><span>BOARD</span><span>TAB</span><span>STATUS</span></div>
+    <sc-for list="{{rows}}" as="x" hint-placeholder-count="12">
+      <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr 110px; gap: 12px; padding: 11px 16px; border-top: 1px solid #F1F2F4; align-items: center; font-size: 14px">
+        <span style="font-weight: 700">{{x.o}}</span><span>{{x.b}}</span><span style="color: #5B6270">{{x.t}}</span><span style="{{x.chip}}">{{x.s}}</span>
+      </div>
+    </sc-for>
+  </div>
+  <span style="font-size: 13px; color: #5B6270">Not redesigned on purpose: Photo check-in (not used).</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1100,"height":1300}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { r: 'lead' }; }
+  renderVals() {
+    const D = {
+      lead: ['Stand lead', [
+        ['Game-day card + View full details', 'Stand lead home', 'top card'], ['Start / Count In (red button)', 'Stand lead home', 'red button'], ['Checks box (each row opens its checklist / count / wastage)', 'Checks behind boxes', '—'], ['Requests box', 'Requests', '—'],
+        ['My Stand Order (stock + food + IT)', 'More screens · Stand forms', 'My Stand Order'], ['Report IT', 'Stand forms', 'Report IT'], ['Request status / My IT tickets', 'Stand forms', 'Request status'],
+        ['Team by Stand / My Team', 'My Team', '—'], ['Add walk-in', 'My Team', 'Add walk-in'], ['Move worker to another stand', 'My Team', 'More'], ['My NPO Group', 'My Team', 'More'], ['Food Safety (temps, sanitizer)', 'Food Safety', '—'],
+        ['Count In / Transfer / Count Out (smart search, add missing item to its section)', 'Count', '—'], ['Checklist Opening / During / Closing', 'Stand forms', 'Checklist'], ['Wastage', 'Stand forms', 'Wastage'], ['Give stock to a stand', 'Stand forms', 'Give stock'], ['Incoming transfers', 'Stand forms', 'Incoming'],
+        ['Refund', 'Stand forms', 'Refund'], ['Maintenance', 'Stand forms', 'Maintenance'], ['Stand Requests (this stand)', 'Requests', 'Open now'], ['Requests hub: Give stock, Incoming, Refund, Report IT, Maintenance, Force Restock / Add Stock Myself', 'Requests', 'bottom list'], 
+        ['Chat (floating button)', 'Chat', 'Lead · stand chat'], ['Call / emergency numbers', 'Chat', 'Floating button'], ['Report an app problem', 'Stand lead home', 'bottom'], ['Sign-in help & QR (subcontractor stands only)', 'Supervisor detail', 'Sign-in help & QR']]],
+      crew: ['Stand worker', [['Worker home', 'Stand forms', 'Worker home'], ['Portable upgrade', 'Stand forms', 'Worker home'], ['Checklist', 'Stand forms', 'Checklist'], ['My Stand Order', 'Stand forms', 'My Stand Order'], ['Report IT', 'Stand forms', 'Report IT'], ['Chat with lead', 'Chat', 'Lead · stand chat'], ['Call / emergency', 'Chat', 'Floating button']]],
+      sup: ['Supervisor', [
+        ['Same home as lead + working stand', 'Supervisor', '—'], ['All Stands Live', 'Supervisor detail', 'All Stands Live'], ['Stand Status (all checks)', 'Supervisor detail', 'Stand Status'], ['All stock requests', 'Supervisor detail', 'All requests'],
+        ['Stock for another stand (category chips, urgency)', 'Supervisor detail', 'Stock for another stand'], ['Stand detail (absent / move)', 'Supervisor detail', 'Stand detail'], ['Stand Transfer Record', 'Supervisor detail', 'Transfer record'], ['Supervisor refunds', 'Supervisor detail', 'Refunds'],
+        ['All Requests, Give restock access, Pending Refunds', 'Requests', 'Supervisor rows'], ['My Stands / All Stands switch', 'Supervisor detail', 'Stand Status · Transfer record'], ['Give stand access from My Team', 'My Team', 'Supervisor switch'], ['Clock out a worker', 'My Team', 'Supervisor switch'], ['Checkout & Inventory Tracker', 'Manager Tools inside', 'Checkout & Inventory'], ['Alerts check', 'Supervisor detail', 'Alerts check'], ['Chat inbox (all my stands)', 'Chat', 'Supervisor inbox'], ['Sign-in help & QR (subcontractor stands only)', 'Supervisor detail', 'Sign-in help & QR']]],
+      mgr: ['Manager / Support mgr', [
+        ['Manager home (phone)', 'Manager', 'Manager / Support mgr'], ['Laptop / tablet view', 'Manager laptop', '—'], ['Manager home: Team / Stock / Food / IT counts, Overdue, + New request', 'Manager laptop', 'Home'], ['Team view: All stands / Workers / NPO / Premium, Moves, CSV / PDF', 'Manager laptop', 'Team'], ['Inventory: date, CSV, printable, Yellow Dog copy, warehouse counts, ledger', 'Manager Tools inside', 'Inventory'], ['Transfers: confirm received (locks)', 'Manager Tools inside', 'Transfers'], ['Reports: worker feedback CSV/PDF, checklists with issues, stock/IT for a stand, kitchen queue', 'Manager Tools inside', 'Reports'], ['Time sheet: employee + NPO, tip CSV, break sheet, Premium check-ins', 'Manager Tools inside', 'Time sheet'],
+        ['Refunds: approve / deny, season CSV', 'Manager Tools inside', 'Refunds'], ['Maintenance: Open / In progress / Resolved / All', 'Manager Tools inside', 'Maintenance'], ['Runner coverage: food + warehouse runners, add runner', 'Manager Tools inside', 'Runner coverage'], ['Golf cart full log', 'Manager Tools inside', 'Golf cart log'], ['Checkout & Inventory Tracker (box received, missing counts, remind all)', 'Manager Tools inside', 'Checkout & Inventory'], ['Game-day info', 'Supervisor detail', 'Game-day info'], ['Game-Day Feedback (managers)', 'Manager laptop', 'Home'], ['Chat', 'Chat', 'Supervisor inbox']]],
+      admin: ['Admin', [['/manager sign-in (ID + PIN)', 'Admin setup', 'Admin PIN'], ['Game day', 'Admin setup', 'Game day'], ['People & logins (Access Center, stand self-login, NPO groups)', 'Admin setup', 'People & logins'], ['Add login, New PIN, Save access, Refresh staff', 'Admin setup', 'People & logins'], ['Open Food / Warehouse Manager as Admin', 'Admin setup', 'People & logins'], ['Load saved game info, Clear for new game', 'Admin setup', 'Game day'], ['Football plan, name matches, area mapping, chat routing, multi-stand lead', 'Admin setup', 'Who covers what'], ['Warehouse roster upload, walk-in & check-in, golf cart drivers', 'Admin setup', 'Warehouse crew'], ['Make subcontractor stand', 'Admin setup', 'Stands'], ['Yellow Dog PDF, upload inventory, roll counts forward', 'Admin setup', 'Uploads'], ['Who covers what (+ chat routing)', 'Admin setup', 'Who covers what'], ['Warehouse crew', 'Admin setup', 'Warehouse crew'], ['Stands (+ subcontractor logins)', 'Admin setup', 'Stands'], ['Uploads (schedule, stand sheets)', 'Admin setup', 'Uploads'], ['Everything a manager has', 'Manager laptop', 'Admin']]],
+      wh: ['Warehouse', [
+        ['Manager home: Today / Deliveries / Carts / Team', 'Warehouse manager', '—'], ['Send runner', 'Warehouse manager', 'Today'], ['Close out the game', 'Warehouse manager', 'menu'], ['Worker jobs: Claim → On my way → Delivered', 'Warehouse worker', '—'], ['Golf cart: one cart per person, 12 questions first use / 4 after, return check, problem', 'My cart', '—'], ['Warehouse manager menu: restock access, quick drop, request stock, transfers, approvals, assign, stock report, cart history', 'Warehouse manager', 'menu / Carts'],
+        ['Supervisor: To deliver / Transfers / Requests', 'Warehouse tools', 'Supervisor view'], ['Create Transfer (stand, MAS ⇄ DFA, upload CSV)', 'Warehouse tools', 'Create transfer'], ['Approvals (sign / send back)', 'Warehouse tools', 'Approvals'], ['Force Stock (scan QR)', 'Warehouse tools', 'Force stock'],
+        ['Assign & Team', 'Warehouse tools', 'Assign & Team'], ['Restock access', 'Warehouse tools', 'Restock access'], ['Stand Transfer Report (CSV)', 'Warehouse tools', 'Stand report'], ['Stand QR codes', 'Warehouse tools', 'Stand QR codes'], ['Chat with stands + team', 'Chat', 'Warehouse runner']]],
+      food: ['Food / IT', [['Food runner jobs', 'Food & IT', 'Food runner'], ['Food manager board', 'Food & IT', 'Food manager'], ['Food Team chat', 'Chat', 'Warehouse runner (same layout)'], ['IT tech jobs / Available / Resolved', 'Food & IT', 'IT tech'], ['Checkout & Inventory Tracker', 'Manager Tools inside', 'Checkout & Inventory']]],
+      npo: ['NPO / Subcontractor', [['NPO sign-in (group, PIN, name)', 'Sign in', 'NPO switch'], ['Install app banner', 'Sign in (laptop / tablet)', 'bottom'], ['Pick stand', 'NPO & subcontractor', 'NPO pick stand'], ['NPO lead home', 'NPO & subcontractor', 'NPO lead home'], ['NPO roster (here / not here, walk-in)', 'NPO & subcontractor', 'NPO roster'], ['Subcontractor Count In / Out', 'NPO & subcontractor', 'Subcontractor home']]],
+      prem: ['Premium', [['Premium manager home', 'Premium manager', '—'], ['Check-ins by location (date, search, filters, role groups)', 'Premium manager', 'Check-ins'], ['Present / absent / move / 👍👎 feedback per person', 'Premium manager', '⋯ on a person'], ['Add walk-in (name, 8-digit ID, location, role)', 'Premium manager', 'Check-ins'], ['Premium roster + tools (locations, assign)', 'Premium manager', 'bottom'], ['Tag (location + bottle, then scan in a row)', 'Bottle Tracker', 'Tag'], ['Move / Sell (sold at) / Empty (+ paper-list empty)', 'Bottle Tracker', 'Move · Sell · Empty'], ['Scan barcode, Read number (camera), type last 3, which-roll pick, Undo', 'Bottle Tracker', 'any scan tab'], ['Who can sell today (switches, all on/off)', 'Bottle Tracker', 'Sell (manager)'], ['Bottles list: open, emptied today, open from earlier + Void with reason', 'Bottle Tracker', 'Bottles'], ['Look up history + download CSV (manager only)', 'Bottle Tracker', 'Look up'], ['Setup ① Bottle list (add, upload, download CSV)', 'Bottle Tracker', 'Setup → 1 · Bottles'], ['Setup ② Dymo labels (size, which numbers, test, print)', 'Bottle Tracker', 'Setup → 2 · Labels'], ['Setup ③ Sticker rolls (add, switch on/off)', 'Bottle Tracker', 'Setup → 3 · Rolls'], ['Saved on this phone / waiting for signal', 'Bottle Tracker', 'bottom'], ['Seller view (Sell only; no Look up, no CSV; not-switched-on message)', 'Bottle Tracker', 'Seller / Seller, not on'], ['Premium employee home', 'Premium employee', '—'], ['App QR (bottom-left)', 'Premium manager', '—']]]
+    };
+    const s = this.state, OK = 'justify-self: start; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; color: #166534; background: #E8F5EC';
+    const roles = Object.entries(D).map(([k, [l, rows]]) => ({ l, n: rows.length, on: s.r === k ? 'true' : 'false', pick: () => this.setState({ r: k }), style: 'min-height: 40px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 800; cursor: pointer; ' + (s.r === k ? 'background: #16181D; color: #FFFFFF; border: 0' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const B = { 'Stand lead home': 'Stand lead', 'Checks behind boxes': 'Lead: Checks', 'Requests': 'Lead: Requests', 'More screens · Stand forms': 'Worker home & stand forms', 'Stand forms': 'Worker home & stand forms', 'My Team': 'Lead: My Team', 'Food Safety': 'Lead: Food Safety', 'Count': 'Lead: Count In / Transfer / Count Out', 'Supervisor detail': 'Supervisor & manager detail screens', 'Chat': 'Chat & floating button', 'Manager': 'Manager / Support manager', 'Manager laptop': 'Manager … (laptop & tablet)', 'Manager Tools inside': 'Manager Tools: every tool inside', 'Admin setup': 'Admin PIN & Admin Setup', 'Warehouse worker': 'Warehouse worker: jobs', 'My cart': 'Warehouse worker: my cart', 'Warehouse tools': 'Warehouse supervisor & manager tools', 'Food & IT': 'Food runner, food manager, IT tech', 'Bottle Tracker': 'Premium: Bottle Tracker', 'Sign in': 'Sign in (phone)' };
+    const rows = D[s.r][1].map(([o, b0, t]) => ({ o, b: B[b0] || b0, t, s: 'In mockup', chip: OK }));
+    return { roles, rows };
+  }
+}
+</script>
+</body>
+</html>

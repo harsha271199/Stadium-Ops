@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Warehouse worker</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 16px 12px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 13px; font-weight: 600; color: #C8102E">Warehouse</span>
+      <span style="font-size: 20px; font-weight: 800">Hi Alex</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px">
+      <span class="num" style="font-size: 13px; font-weight: 700; color: #8A4205; background: #FDF1E3; padding: 6px 10px; border-radius: 999px">Cart 5</span>
+      <span class="num" style="font-size: 13px; font-weight: 700; color: #166534; background: #E8F5EC; padding: 6px 10px; border-radius: 999px">{{doneN}} done</span>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+
+    <sc-if value="{{hasJob}}" hint-placeholder-val="{{ true }}">
+      <section style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: #FFFFFF; border: 2px solid #16181D; border-radius: 18px">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+          <span style="font-size: 13px; font-weight: 700; color: #5B6270">Your job</span>
+          <span class="num" style="{{job.timeStyle}}">{{job.timeText}}</span>
+        </div>
+        <span style="font-size: 22px; font-weight: 800">{{job.stand}}</span>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <sc-for list="{{job.items}}" as="it" hint-placeholder-count="2">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; background: #F4F5F7; border-radius: 10px">
+              <span style="font-size: 15px; font-weight: 600">{{it.name}}</span>
+              <span class="num" style="font-size: 15px; font-weight: 800">{{it.qty}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <span style="font-size: 13px; color: #5B6270">Asked by {{job.by}} · {{job.where}}</span>
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+          <sc-for list="{{steps}}" as="st" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <span style="{{st.barStyle}}"></span>
+              <span style="font-size: 12px; font-weight: {{st.weight}}; color: {{st.color}}">{{st.label}}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <button onClick="{{next}}" style="min-height: 56px; border: 0; border-radius: 14px; background: #C8102E; color: #FFFFFF; font-size: 17px; font-weight: 800; cursor: pointer">{{nextLabel}}</button>
+        <div style="display: flex; gap: 8px">
+          <button style="flex: 1; min-height: 44px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 600; cursor: pointer">Call stand</button>
+          <button onClick="{{giveBack}}" style="flex: 1; min-height: 44px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 600; cursor: pointer">Can’t do it</button>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{justDelivered}}" hint-placeholder-val="{{ false }}">
+      <p role="status" style="margin: 0; padding: 14px; background: #E8F5EC; border-radius: 14px; color: #166534; font-size: 15px; font-weight: 700">Delivered to 212P Beer Portable. Nice, that’s {{doneN}} today.</p>
+    </sc-if>
+
+    <section style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: baseline; justify-content: space-between">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 700">Open jobs</h2>
+        <span style="font-size: 13px; color: #5B6270">Your area first · late on top</span>
+      </div>
+      <sc-for list="{{open}}" as="o" hint-placeholder-count="4">
+        <div style="{{o.cardStyle}}">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+            <span style="display: flex; align-items: center; gap: 8px; min-width: 0">
+              <span style="font-size: 16px; font-weight: 700">{{o.stand}}</span>
+              <sc-if value="{{o.urgent}}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; font-weight: 800; color: #FFFFFF; background: #B4122B; padding: 3px 7px; border-radius: 6px">URGENT</span></sc-if>
+            </span>
+            <span class="num" style="{{o.timeStyle}}">{{o.timeText}}</span>
+          </div>
+          <span style="font-size: 14px">{{o.items}}</span>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+            <span style="font-size: 13px; color: #5B6270">{{o.kind}} · {{o.area}}</span>
+            <button onClick="{{o.claim}}" disabled="{{o.blocked}}" style="{{o.btnStyle}}">{{o.btnLabel}}</button>
+          </div>
+        </div>
+      </sc-for>
+      <sc-if value="{{noOpen}}" hint-placeholder-val="{{ false }}">
+        <p style="margin: 0; padding: 14px; text-align: center; color: #5B6270; font-size: 15px">No open jobs. You’ll get an alert when one comes in.</p>
+      </sc-if>
+    </section>
+  </main>
+
+  <nav aria-label="Main" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: #FFFFFF; border-top: 1px solid #E3E5E9; padding: 6px 4px 18px">
+    <button aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 56px; border: 0; background: none; cursor: pointer; color: #16181D; font-size: 12px; font-weight: 700">
+      <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 30px; border-radius: 999px; background: #FDECEE; color: #C8102E"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
+      Jobs
+    </button>
+    <a href="Runner.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 56px; text-decoration: none; color: #5B6270; font-size: 12px; font-weight: 500; padding-top: 0">
+      <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 30px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h10l2 7H4z"/><path d="M4 12h15v4H4z"/><circle cx="7" cy="18" r="2"/><circle cx="16" cy="18" r="2"/><path d="M15 5l3-2"/></svg></span>
+      My cart
+    </a>
+    <button style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 56px; border: 0; background: none; cursor: pointer; color: #5B6270; font-size: 12px; font-weight: 500">
+      <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 30px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+      Quick Drop
+    </button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { job: 1, step: 0, claimed: [], done: 5, flash: false };
+  }
+  renderVals() {
+    const s = this.state;
+    const J = {
+      1: { stand: '212P Beer Portable', items: [{ name: 'Coors Light 24oz', qty: '3 cases' }], by: 'Stand lead', where: 'East concourse, sec 212', urgent: true, over: 4 },
+      3: { stand: '219 Cold Beer Cheeseburgers', items: [{ name: 'CO2 35#', qty: '1 tank' }], by: 'Supervisor', where: 'North, sec 219', urgent: true, over: 0, wait: 9 },
+      4: { stand: '210 Fan Fuel Nacho', items: [{ name: 'Cheese cups', qty: '1 case' }], by: 'Force restock', where: 'East, sec 210', urgent: false, over: 0, wait: 3 },
+      9: { stand: '207P Fan Fuel Bev', items: [{ name: 'Aquafina 20oz', qty: '2 cases' }, { name: 'Life Water 1L', qty: '1 case' }], by: 'Stand lead', where: 'West, sec 207', urgent: false, over: 0, wait: 1 }
+    };
+    const job = s.job ? J[s.job] : null;
+    const stepNames = ['Claimed', 'On my way', 'Delivered'];
+    const steps = stepNames.map((l, i) => ({ label: l, weight: i <= s.step ? 700 : 500, color: i <= s.step ? '#16181D' : '#5B6270',
+      barStyle: 'height: 6px; border-radius: 3px; background: ' + (i <= s.step ? '#C8102E' : '#E3E5E9') }));
+    const open = [
+      { id: 3, stand: '219 Cold Beer Cheeseburgers', items: 'CO2 35# ×1', urgent: true, kind: 'Request', area: 'Your area', wait: 9 },
+      { id: 4, stand: '210 Fan Fuel Nacho', items: 'Cheese cups ×1 case', urgent: false, kind: 'Force restock', area: 'Your area', wait: 3 },
+      { id: 9, stand: '207P Fan Fuel Bev', items: 'Aquafina ×2, Life Water ×1', urgent: false, kind: 'Transfer', area: 'West side', wait: 1 }
+    ].filter(o => o.id !== s.job && !s.claimed.includes(o.id)).map(o => {
+      const blocked = !!s.job;
+      return { ...o, blocked,
+        timeText: 'waiting ' + o.wait + ' min', timeStyle: 'font-size: 13px; font-weight: 700; color: ' + (o.wait >= 8 ? '#B4122B' : '#9A4A06'),
+        btnLabel: blocked ? 'Finish yours first' : 'Claim',
+        claim: () => { if (!blocked) this.setState({ job: o.id, step: 0, flash: false }); },
+        cardStyle: 'display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: #FFFFFF; border-radius: 14px; ' + (o.wait >= 8 ? 'border: 2px solid #B4122B' : 'border: 1px solid #E3E5E9'),
+        btnStyle: 'min-height: 44px; padding: 0 16px; border-radius: 10px; font-size: 14px; font-weight: 700; ' + (blocked ? 'background: #EEF0F3; color: #5B6270; border: 0; cursor: not-allowed' : 'background: #16181D; color: #FFFFFF; border: 0; cursor: pointer') };
+    });
+    const nextLabels = ['I’m on my way', 'Delivered', ''];
+    return {
+      doneN: s.done, hasJob: !!job, justDelivered: s.flash && !job,
+      job: job ? { ...job, timeText: job.over ? job.over + ' min late' : 'due in ' + (20 - (job.wait || 0)) + ' min',
+        timeStyle: 'font-size: 13px; font-weight: 700; color: ' + (job.over ? '#B4122B' : '#5B6270') } : { items: [] },
+      steps, nextLabel: nextLabels[s.step] || 'Delivered',
+      next: () => { if (s.step < 1) this.setState({ step: s.step + 1 }); else this.setState({ job: null, step: 0, done: s.done + 1, flash: true, claimed: [...s.claimed, s.job] }); },
+      giveBack: () => this.setState({ job: null, step: 0, flash: false }),
+      open, noOpen: open.length === 0
+    };
+  }
+}
+</script>
+</body>
+</html>

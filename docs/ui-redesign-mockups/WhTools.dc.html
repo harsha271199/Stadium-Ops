@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Warehouse tools</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button,input,select{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+.card{display:flex;flex-direction:column;gap:10px;padding:14px;background:#FFFFFF;border:1px solid #E3E5E9;border-radius:16px}
+.hint{font-size:13px;color:#5B6270;line-height:1.45}
+.ghost{min-height:46px;border:1px solid #D5D8DE;border-radius:12px;background:#FFFFFF;color:#16181D;font-size:14px;font-weight:700;cursor:pointer}
+.primary{min-height:54px;border:0;border-radius:14px;background:#C8102E;color:#FFFFFF;font-size:16px;font-weight:800;cursor:pointer}
+.in{min-height:50px;padding:0 14px;border:1px solid #C9CDD4;border-radius:12px;font-size:16px;color:#16181D;background:#FFFFFF}
+.f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:#3A3F48}
+.sec{font-size:13px;font-weight:800;color:#5B6270}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <div style="display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px; background: #16181D">
+    <sc-for list="{{screens}}" as="sc" hint-placeholder-count="8">
+      <button onClick="{{sc.pick}}" aria-pressed="{{sc.on}}" style="{{sc.style}}">{{sc.label}}</button>
+    </sc-for>
+  </div>
+
+  <header style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <span style="width: 44px; height: 44px; border: 1px solid #E3E5E9; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></span>
+    <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 600; color: #C8102E">{{kicker}}</span><span style="font-size: 20px; font-weight: 800">{{title}}</span></span>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+
+    <sc-if value="{{is.sup}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div role="tablist" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px">
+          <sc-for list="{{supTabs}}" as="t" hint-placeholder-count="3"><button role="tab" onClick="{{t.pick}}" aria-selected="{{t.on}}" style="{{t.style}}">{{t.label}} <span class="num">{{t.n}}</span></button></sc-for>
+        </div>
+        <sc-for list="{{supRows}}" as="r" hint-placeholder-count="4">
+          <div style="{{r.card}}">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 16px; font-weight: 800">{{r.stand}}</span><span style="{{r.chip}}">{{r.status}}</span></div>
+            <span style="font-size: 14px">{{r.items}}</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span class="num hint">{{r.meta}}</span><button style="min-height: 40px; padding: 0 14px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; font-size: 13px; font-weight: 800; cursor: pointer">{{r.btn}}</button></div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.create}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+          <sc-for list="{{createModes}}" as="m" hint-placeholder-count="2"><button onClick="{{m.pick}}" aria-pressed="{{m.on}}" style="{{m.style}}"><span style="font-size: 15px; font-weight: 800">{{m.t}}</span><span style="font-size: 12px; opacity: 0.85">{{m.s}}</span></button></sc-for>
+        </div>
+        <sc-if value="{{cm.stand}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <span class="sec">1 · Pick a stand</span>
+            <select class="in"><option>212P Beer Portable</option><option>204P Fan Fuel Beverage MKT</option><option>216M Fan Fuel BevMKT</option></select>
+            <span class="sec">2 · What it needs (cases)</span>
+            <section class="card" style="gap: 4px; padding: 6px 14px">
+              <sc-for list="{{tfItems}}" as="it" hint-placeholder-count="3">
+                <div style="display: flex; align-items: center; gap: 10px; min-height: 56px; border-bottom: 1px solid #F1F2F4">
+                  <span style="flex: 1; font-size: 15px; font-weight: 700">{{it.name}}</span>
+                  <button onClick="{{it.minus}}" aria-label="Less" style="width: 42px; height: 42px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; font-size: 20px; cursor: pointer">−</button>
+                  <span class="num" style="{{it.qs}}">{{it.q}}</span>
+                  <button onClick="{{it.plus}}" aria-label="More" style="width: 42px; height: 42px; border: 0; border-radius: 10px; background: #16181D; color: #FFFFFF; font-size: 20px; cursor: pointer">+</button>
+                </div>
+              </sc-for>
+              <button class="ghost" style="border: 0; color: #1D4FB8">+ Add another item</button>
+            </section>
+            <span class="sec">3 · Who delivers it?</span>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <sc-for list="{{who}}" as="w" hint-placeholder-count="3"><button onClick="{{w.pick}}" aria-pressed="{{w.on}}" style="{{w.style}}"><span style="{{w.radio}}"></span><span style="display: flex; flex-direction: column; gap: 2px; align-items: flex-start"><span style="font-weight: 800">{{w.t}}</span><span style="font-size: 12px; color: #5B6270">{{w.s}}</span></span></button></sc-for>
+            </div>
+            <button class="primary">Create transfer · {{tfTotal}} cases</button>
+            <button class="ghost">Upload CSV &amp; create many transfers</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{cm.wh}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <label class="f">From → to<select class="in"><option>MAS Warehouse → DFA Warehouse</option><option>DFA Warehouse → MAS Warehouse</option></select></label>
+            <button class="primary">Start warehouse transfer</button>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.approve}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="hint">Deliveries waiting on you. Check items arrived, then sign. Something wrong? Send it back to the runner.</span>
+        <sc-for list="{{approvals}}" as="a" hint-placeholder-count="2">
+          <section class="card">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 800">{{a.stand}}</span><span class="num hint">{{a.meta}}</span></span><span style="{{a.chip}}">{{a.status}}</span></div>
+            <span style="font-size: 14px">{{a.items}}</span>
+            <sc-if value="{{a.open}}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <input class="in" placeholder="Type your name to sign">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"><button onClick="{{a.back}}" class="ghost" style="color: #8E0E22">Not delivered · send back</button><button onClick="{{a.ok}}" class="ghost" style="background: #166534; color: #FFFFFF; border: 0">Verify &amp; approve</button></div>
+              </div>
+            </sc-if>
+          </section>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.force}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <button style="position: relative; height: 150px; border: 0; border-radius: 16px; background: #16181D; color: #FFFFFF; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px">
+          <span style="position: absolute; inset: 22px 70px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 12px"></span>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M21 14v7h-7"/></svg>
+          <span style="font-size: 15px; font-weight: 800">Scan the stand’s QR code</span>
+        </button>
+        <section class="card">
+          <div style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 16px; font-weight: 800">212P Beer Portable</span><span style="font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; color: #166534; background: #E8F5EC">Opened by scan</span></div>
+          <span class="sec">Open requests from this stand</span>
+          <span style="font-size: 14px; font-weight: 700">Coors Light 24oz ×3 cases · 14 min late</span>
+          <span class="sec">Add cases straight to the stand</span>
+          <sc-for list="{{forceItems}}" as="it" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; gap: 10px; min-height: 52px; border-top: 1px solid #F1F2F4">
+              <span style="flex: 1; font-size: 15px; font-weight: 700">{{it.name}}</span>
+              <button onClick="{{it.minus}}" aria-label="Less" style="width: 42px; height: 42px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; font-size: 20px; cursor: pointer">−</button>
+              <span class="num" style="{{it.qs}}">{{it.q}}</span>
+              <button onClick="{{it.plus}}" aria-label="More" style="width: 42px; height: 42px; border: 0; border-radius: 10px; background: #16181D; color: #FFFFFF; font-size: 20px; cursor: pointer">+</button>
+            </div>
+          </sc-for>
+          <button class="primary" style="background: #166534">Mark delivered</button>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.team}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="hint">Who delivers where today. Pick people, then an area or a single stand, then Save.</span>
+        <section class="card" style="gap: 4px; padding: 6px 14px">
+          <sc-for list="{{crew}}" as="c" hint-placeholder-count="5">
+            <button onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="display: flex; align-items: center; gap: 12px; min-height: 60px; border: 0; border-bottom: 1px solid #F1F2F4; background: none; cursor: pointer; text-align: left">
+              <span style="{{c.box}}"><sc-if value="{{c.sel}}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></sc-if></span>
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800; color: #16181D">{{c.name}}</span><span style="font-size: 12px; color: #5B6270">{{c.area}}</span></span>
+            </button>
+          </sc-for>
+        </section>
+        <span class="sec">Area (number = people already there)</span>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+          <sc-for list="{{areas}}" as="a" hint-placeholder-count="6"><button onClick="{{a.pick}}" aria-pressed="{{a.on}}" style="{{a.style}}"><span>{{a.name}}</span><span class="num" style="font-weight: 800">{{a.n}}</span></button></sc-for>
+        </div>
+        <label class="f">Or one stand (optional)<select class="in"><option>None</option><option>216 Someburros SC</option><option>232P Someburros SC</option></select></label>
+        <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px"><button class="ghost" style="color: #8E0E22">Take off all stands</button><button class="primary" style="min-height: 46px; font-size: 15px">Save for {{selN}} people</button></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.restock}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="hint">Let scheduled workers do Force Restock today (scan a stand and add cases). Turns off at the end of the stadium day.</span>
+        <section class="card" style="gap: 4px; padding: 6px 14px">
+          <sc-for list="{{restock}}" as="x" hint-placeholder-count="4">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 60px; border-bottom: 1px solid #F1F2F4">
+              <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800">{{x.name}}</span><span style="font-size: 12px; color: #5B6270">{{x.stand}}</span></span>
+              <button onClick="{{x.toggle}}" role="switch" aria-checked="{{x.on}}" style="{{x.track}}"><span style="{{x.knob}}"></span></button>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.report}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <span class="hint">Everything delivered to each stand, logged waste, and stock moved between stands.</span>
+        <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end"><label class="f">Date<input class="in" type="date" value="2026-11-29"></label><button class="ghost" style="min-height: 50px; padding: 0 16px">Today</button></div>
+        <label class="f">Stand (optional)<input class="in" placeholder="Blank for every stand"></label>
+        <section class="card" style="gap: 6px">
+          <span class="sec">Preview · today</span>
+          <sc-for list="{{reportRows}}" as="r" hint-placeholder-count="3"><div style="display: flex; justify-content: space-between; gap: 8px; min-height: 40px; align-items: center; border-top: 1px solid #F1F2F4"><span style="font-size: 14px; font-weight: 700">{{r.s}}</span><span class="num hint">{{r.v}}</span></div></sc-for>
+        </section>
+        <button class="primary" style="background: #16181D">Download report (CSV)</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.qr}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <span class="hint">Print, cut out, and tape one at each stand. Scanning opens that stand’s stocking screen straight away.</span>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+          <sc-for list="{{qrs}}" as="q" hint-placeholder-count="4">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: #FFFFFF; border: 1px dashed #B9BEC7; border-radius: 14px">
+              <svg width="86" height="86" viewBox="0 0 21 21" aria-hidden="true"><rect width="21" height="21" fill="#FFFFFF"/><path d="M0 0h7v7H0zM14 0h7v7h-7zM0 14h7v7H0z" fill="#16181D"/><path d="M1 1h5v5H1zM15 1h5v5h-5zM1 15h5v5H1z" fill="#FFFFFF"/><path d="M2 2h3v3H2zM16 2h3v3h-3zM2 16h3v3H2zM9 1h2v2H9zM8 4h3v2H8zM9 8h4v2H9zM14 9h2v3h-2zM10 12h2v3h-2zM14 14h3v2h-3zM17 17h3v3h-3zM12 17h2v3h-2z" fill="#16181D"/></svg>
+              <span style="font-size: 13px; font-weight: 800; text-align: center">{{q}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"><button class="ghost">Make QR codes</button><button class="primary" style="min-height: 46px; font-size: 15px">Print / save PDF</button></div>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { scr: 'sup', st: 'deliver', cm: 'stand', who: 'open', q: { a: 3, b: 1, c: 0 }, f: { a: 0, b: 2, c: 0 }, appr: {}, sel: { a: true, c: true }, area: 'West Portables', rs: { a: true } }; }
+  renderVals() {
+    const s = this.state, go = k => () => this.setState({ scr: k });
+    const S = [['sup', 'Supervisor view'], ['create', 'Create transfer'], ['approve', 'Approvals'], ['force', 'Force stock'], ['team', 'Assign & Team'], ['restock', 'Restock access'], ['report', 'Stand report'], ['qr', 'Stand QR codes']];
+    const screens = S.map(([k, l]) => ({ label: l, on: s.scr === k ? 'true' : 'false', pick: go(k), style: 'flex-shrink: 0; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 0; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; ' + (s.scr === k ? 'background: #FFFFFF; color: #16181D' : 'background: #33363D; color: #FFFFFF') }));
+    const is = {}; S.forEach(([k]) => is[k] = s.scr === k);
+    const chip = (c, b) => 'font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; color: ' + c + '; background: ' + b;
+    const card = late => 'display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: #FFFFFF; border-radius: 16px; ' + (late ? 'border: 2px solid #B4122B' : 'border: 1px solid #E3E5E9');
+    const supTabs = [['deliver', 'To deliver', 4], ['tf', 'Transfers', 7], ['req', 'Requests', 9]].map(([k, l, n]) => ({ label: l, n, on: s.st === k ? 'true' : 'false', pick: () => this.setState({ st: k }), style: 'min-height: 42px; border: 0; border-radius: 9px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (s.st === k ? 'background: #FFFFFF; color: #16181D; box-shadow: 0 1px 2px rgba(0,0,0,0.12)' : 'background: transparent; color: #3A3F48') }));
+    const SR = { deliver: [['212P Beer Portable', 'Coors Light ×3 cases', 'Late 14 min', true, 'Request · you', 'On my way'], ['204P Fan Fuel Bev', 'Dos Equis ×2 cases', 'Claimed', false, 'Request · you', 'On my way']],
+      tf: [['216M Fan Fuel BevMKT', 'Life Water ×2, Aquafina ×1', 'On the way', false, 'Transfer · Jordan', 'Details'], ['408 Cold Beer', 'Miller Lite ×2', 'Waiting approval', false, 'Transfer · Priya', 'Approve'], ['MAS → DFA Warehouse', 'Pepsi BIB ×6', 'Draft', false, 'Warehouse ↔ Warehouse', 'Open']],
+      req: [['219 Cold Beer Cheeseburgers', 'CO2 35# ×1', 'Waiting 9 min', true, 'Stock request · URGENT', 'Assign'], ['210 Fan Fuel Nacho', 'Cheese cups ×1', 'Waiting 3 min', false, 'Force restock', 'Assign']] }[s.st];
+    const tone = t => /Late|URGENT|Waiting 9/.test(t) ? chip('#8E0E22', '#FDECEE') : /On the way|Claimed/.test(t) ? chip('#8A4205', '#FDF1E3') : /approval/.test(t) ? chip('#163E91', '#E6EDFB') : chip('#3A3F48', '#EEF0F3');
+    const supRows = SR.map(([stand, items, status, late, meta, btn]) => ({ stand, items, status, meta, btn, chip: tone(status), card: card(late) }));
+    const createModes = [['stand', 'Stand transfer', 'Any stand · you or a runner delivers'], ['wh', 'Warehouse ↔ Warehouse', 'MAS ⇄ DFA']].map(([k, t, sub]) => ({ t, s: sub, on: s.cm === k ? 'true' : 'false', pick: () => this.setState({ cm: k }),
+      style: 'display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 76px; padding: 10px 12px; border-radius: 14px; cursor: pointer; text-align: left; ' + (s.cm === k ? 'background: #16181D; color: #FFFFFF; border: 0' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const qs = n => 'min-width: 30px; text-align: center; font-size: 19px; font-weight: 800; color: ' + (n ? '#16181D' : '#C9CDD4');
+    const stepper = (key, k, name) => ({ name, q: s[key][k], qs: qs(s[key][k]), plus: () => this.setState({ [key]: { ...s[key], [k]: s[key][k] + 1 } }), minus: () => this.setState({ [key]: { ...s[key], [k]: Math.max(0, s[key][k] - 1) } }) });
+    const tfItems = [stepper('q', 'a', 'Coors Light 24oz'), stepper('q', 'b', 'Aquafina 20oz'), stepper('q', 'c', 'Ice bags')];
+    const forceItems = [stepper('f', 'a', 'Coors Light 24oz'), stepper('f', 'b', 'Dos Equis 24oz'), stepper('f', 'c', 'Topo Chico 24oz')];
+    const who = [['me', 'Me', 'I’ll take it now'], ['person', 'Someone specific', 'Pick a runner · they get an alert'], ['open', 'Leave open', 'Any runner can claim it']].map(([k, t, sub]) => ({ t, s: sub, on: s.who === k ? 'true' : 'false', pick: () => this.setState({ who: k }),
+      radio: 'width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; box-sizing: border-box; ' + (s.who === k ? 'border: 6px solid #C8102E' : 'border: 2px solid #9AA0AA'),
+      style: 'display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px; border-radius: 14px; background: #FFFFFF; cursor: pointer; text-align: left; ' + (s.who === k ? 'border: 2px solid #C8102E' : 'border: 1px solid #D5D8DE') }));
+    const A = [['408 Cold Beer Cheeseburgers', 'Miller Lite ×2 cases', 'Delivered by Priya · 7:12 PM'], ['216M Fan Fuel BevMKT', 'Life Water ×2 · Aquafina ×1', 'Delivered by Jordan · 7:20 PM']];
+    const approvals = A.map(([stand, items, meta], i) => { const st = s.appr[i];
+      return { stand, items, meta, open: !st, status: st === 'ok' ? 'Approved' : st === 'back' ? 'Sent back' : 'Needs you', chip: st === 'ok' ? chip('#166534', '#E8F5EC') : st === 'back' ? chip('#8E0E22', '#FDECEE') : chip('#163E91', '#E6EDFB'),
+        ok: () => this.setState({ appr: { ...s.appr, [i]: 'ok' } }), back: () => this.setState({ appr: { ...s.appr, [i]: 'back' } }) }; });
+    const C = [['a', 'Jordan Lee', 'East Concourse'], ['b', 'Priya Shah', 'West Concourse'], ['c', 'Sam Ortiz', 'Not assigned'], ['d', 'Alex Kim', 'Warehouse'], ['e', 'Riley Chen', 'Upper deck']];
+    const crew = C.map(([k, name, area]) => { const on = !!s.sel[k]; return { name, area, sel: on, on: on ? 'true' : 'false', pick: () => this.setState({ sel: { ...s.sel, [k]: !on } }),
+      box: 'width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; ' + (on ? 'background: #C8102E' : 'border: 2px solid #9AA0AA; box-sizing: border-box') }; });
+    const areas = [['West Portables', 1], ['East Concourse', 2], ['West Concourse', 1], ['Upper West', 0], ['Upper East / Huss', 1], ['Inferno', 0]].map(([name, n]) => ({ name, n, on: s.area === name ? 'true' : 'false', pick: () => this.setState({ area: name }),
+      style: 'display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 52px; padding: 0 12px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; text-align: left; ' + (s.area === name ? 'background: #16181D; color: #FFFFFF; border: 0' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const R = [['a', 'Vatsal Patel', 'DFA 143'], ['b', 'Himanshi Bhanushali', 'DFA 143'], ['c', 'Giovanni Vargas', 'DFA 191'], ['d', 'Leah Hiraeth', 'DFA 111']];
+    const restock = R.map(([k, name, stand]) => { const on = !!s.rs[k]; return { name, stand, on: on ? 'true' : 'false', toggle: () => this.setState({ rs: { ...s.rs, [k]: !on } }),
+      track: 'position: relative; width: 52px; height: 32px; border: 0; border-radius: 16px; cursor: pointer; flex-shrink: 0; background: ' + (on ? '#16A34A' : '#C9CDD4'),
+      knob: 'position: absolute; top: 3px; left: ' + (on ? 23 : 3) + 'px; width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF' }; });
+    const titles = { sup: 'Warehouse', create: 'Create transfer', approve: 'Approvals', force: 'Force stock', team: 'Assign & Team', restock: 'Restock access', report: 'Stand transfer report', qr: 'Stand QR codes' };
+    return { screens, is, kicker: s.scr === 'sup' ? 'Warehouse supervisor' : 'Warehouse · manager tools', title: titles[s.scr],
+      supTabs, supRows, createModes, cm: { stand: s.cm === 'stand', wh: s.cm === 'wh' }, tfItems, tfTotal: s.q.a + s.q.b + s.q.c, who, approvals, forceItems, crew, areas, selN: Object.values(s.sel).filter(Boolean).length, restock,
+      reportRows: [{ s: '212P Beer Portable', v: '9 cases in · 0 waste' }, { s: '204P Fan Fuel Bev', v: '6 cases in · 2 moved out' }, { s: '216M Fan Fuel BevMKT', v: '4 cases in · 1 waste' }],
+      qrs: ['212P Beer Portable', '204P Fan Fuel Bev', '216 Someburros SC', '232P Someburros SC'] };
+  }
+}
+</script>
+</body>
+</html>

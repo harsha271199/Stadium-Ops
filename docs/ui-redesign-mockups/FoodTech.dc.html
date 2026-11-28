@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Food team and tech</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button,input,textarea{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+.card{display:flex;flex-direction:column;gap:10px;padding:14px;background:#FFFFFF;border:1px solid #E3E5E9;border-radius:16px}
+.hint{font-size:13px;color:#5B6270;line-height:1.45}
+.ghost{min-height:44px;border:1px solid #D5D8DE;border-radius:12px;background:#FFFFFF;color:#16181D;font-size:14px;font-weight:700;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <div style="display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px; background: #16181D">
+    <sc-for list="{{screens}}" as="sc" hint-placeholder-count="3">
+      <button onClick="{{sc.pick}}" aria-pressed="{{sc.on}}" style="{{sc.style}}">{{sc.label}}</button>
+    </sc-for>
+  </div>
+
+  <header style="display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+      <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700; color: {{accent}}">{{kicker}}</span><span style="font-size: 20px; font-weight: 800">{{title}}</span></span>
+      <span class="num" style="font-size: 13px; font-weight: 700; color: #166534; background: #E8F5EC; padding: 6px 10px; border-radius: 999px">Live</span>
+    </div>
+    <div role="tablist" style="{{tabGrid}}">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+        <button role="tab" onClick="{{t.pick}}" aria-selected="{{t.on}}" style="{{t.style}}">{{t.label}} <span class="num" style="{{t.nStyle}}">{{t.n}}</span></button>
+      </sc-for>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 10px">
+    <sc-if value="{{hasMine}}" hint-placeholder-val="{{ false }}">
+      <section style="display: flex; flex-direction: column; gap: 10px; padding: 16px; background: #FFFFFF; border: 2px solid #16181D; border-radius: 18px">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span class="hint" style="font-weight: 800">{{mine.kicker}}</span><span class="num" style="{{mine.timeStyle}}">{{mine.time}}</span></div>
+        <span style="font-size: 21px; font-weight: 800">{{mine.stand}}</span>
+        <span style="font-size: 15px; font-weight: 700">{{mine.items}}</span>
+        <span class="hint">{{mine.where}}</span>
+        <div style="{{mine.stepGrid}}">
+          <sc-for list="{{mine.steps}}" as="sp" hint-placeholder-count="4"><span style="display: flex; flex-direction: column; gap: 4px"><span style="{{sp.bar}}"></span><span style="font-size: 11px; font-weight: 700; color: {{sp.color}}">{{sp.label}}</span></span></sc-for>
+        </div>
+        <sc-if value="{{mine.needNote}}" hint-placeholder-val="{{ false }}"><textarea rows="2" placeholder="What did you do? e.g. restarted POS 3, printer cable reseated" style="padding: 12px; border: 1px solid #C9CDD4; border-radius: 12px; font-size: 16px; resize: none"></textarea></sc-if>
+        <button onClick="{{mine.next}}" style="{{mine.btnStyle}}">{{mine.btn}}</button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"><button class="ghost">Call stand</button><button onClick="{{mine.giveBack}}" class="ghost">Give it back</button></div>
+      </section>
+    </sc-if>
+    <sc-if value="{{hasDoneMsg}}" hint-placeholder-val="{{ false }}"><p role="status" style="margin: 0; padding: 12px 14px; background: #E8F5EC; border-radius: 14px; color: #166534; font-size: 15px; font-weight: 700">{{doneMsg}}</p></sc-if>
+
+    <sc-if value="{{isBoard}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+          <sc-for list="{{kpi}}" as="k" hint-placeholder-count="4"><div style="display: flex; flex-direction: column; gap: 2px; padding: 10px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 12px"><span class="num" style="font-size: 22px; font-weight: 800; color: {{k.c}}">{{k.n}}</span><span style="font-size: 11px; font-weight: 700; color: #3A3F48">{{k.l}}</span></div></sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <span style="font-size: 13px; font-weight: 800; color: #5B6270">{{listTitle}}</span>
+    <sc-for list="{{list}}" as="r" hint-placeholder-count="4">
+      <div style="{{r.card}}">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+          <span style="display: flex; align-items: center; gap: 8px; min-width: 0"><span style="font-size: 16px; font-weight: 800">{{r.stand}}</span><sc-if value="{{r.urgent}}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; font-weight: 800; color: #FFFFFF; background: #B4122B; padding: 3px 7px; border-radius: 6px">URGENT</span></sc-if></span>
+          <span class="num" style="{{r.timeStyle}}">{{r.time}}</span>
+        </div>
+        <span style="font-size: 14px; font-weight: 600">{{r.items}}</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+          <span style="{{r.chip}}">{{r.status}}</span>
+          <sc-if value="{{r.hasBtn}}" hint-placeholder-val="{{ true }}"><button onClick="{{r.act}}" style="{{r.btnStyle}}">{{r.btn}}</button></sc-if>
+        </div>
+      </div>
+    </sc-for>
+    <sc-if value="{{isTech}}" hint-placeholder-val="{{ false }}">
+      <button class="ghost" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px">Checkout &amp; Inventory Tracker</button>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { scr: 'runner', tab: 'jobs', step: 1, mine: true, flash: '', board: {} }; }
+  renderVals() {
+    const s = this.state;
+    const S = [['runner', 'Food runner'], ['fmgr', 'Food manager'], ['tech', 'IT tech']];
+    const screens = S.map(([k, l]) => ({ label: l, on: s.scr === k ? 'true' : 'false', pick: () => this.setState({ scr: k, tab: k === 'fmgr' ? 'new' : 'jobs', step: 1, mine: true, flash: '' }), style: 'flex-shrink: 0; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 0; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; ' + (s.scr === k ? 'background: #FFFFFF; color: #16181D' : 'background: #33363D; color: #FFFFFF') }));
+    const chip = (c, b) => 'font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; color: ' + c + '; background: ' + b;
+    const btnCss = (bg) => 'min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: ' + bg + '; color: #FFFFFF; font-size: 14px; font-weight: 800; cursor: pointer';
+    const card = late => 'display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: #FFFFFF; border-radius: 16px; ' + (late ? 'border: 2px solid #B4122B' : 'border: 1px solid #E3E5E9');
+    const timeCss = late => 'font-size: 13px; font-weight: 800; color: ' + (late ? '#B4122B' : '#5B6270');
+    const isRun = s.scr === 'runner', isF = s.scr === 'fmgr', isT = s.scr === 'tech';
+    const accent = isT ? '#163E91' : '#8A4205';
+    const tabDefs = isRun ? [['jobs', 'My job', s.mine ? 1 : 0], ['avail', 'Available', 3]] : isF ? [['new', 'New', 3], ['cook', 'Cooking', 2], ['ready', 'Ready', 1], ['runners', 'Runners', 4]] : [['jobs', 'My jobs', s.mine ? 1 : 0], ['avail', 'Available', 4], ['other', 'Other games', 1], ['done', 'Resolved', 12]];
+    const tabs = tabDefs.map(([k, l, n]) => { const on = s.tab === k; return { label: l, n, on: on ? 'true' : 'false', pick: () => this.setState({ tab: k, flash: '' }),
+      nStyle: 'font-size: 12px; font-weight: 800; padding: 1px 7px; border-radius: 999px; ' + (on ? 'background: rgba(255,255,255,0.25)' : 'background: #EEF0F3'),
+      style: 'display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 0 6px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (on ? 'background: ' + accent + '; color: #FFFFFF; border: 1px solid ' + accent : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }; });
+    const stepsFood = ['Claimed', 'Picked up', 'On the way', 'Delivered'], stepsIt = ['Claimed', 'On my way', 'Fixed'];
+    const stepsN = isT ? stepsIt : stepsFood;
+    const mine = isT
+      ? { kicker: 'Your ticket', time: 'opened 6 min ago', stand: '212P Beer Portable', items: 'POS handheld · POS 2 won’t print receipts', where: 'West portables · reported by Esther T.', late: false }
+      : { kicker: 'Your delivery', time: '4 min late', stand: '226 Pitchfork Pizza', items: 'Pizza ×6 (pepperoni 4, cheese 2)', where: 'West concourse, sec 226 · pick up at Kitchen 2', late: true };
+    const stepBtn = isT ? ['I’m on my way', 'Mark fixed'] : ['Picked up from kitchen', 'I’m on my way', 'Delivered'];
+    const lastStep = stepsN.length - 1;
+    const mineV = { ...mine, timeStyle: timeCss(mine.late),
+      stepGrid: 'display: grid; grid-template-columns: repeat(' + stepsN.length + ', minmax(0, 1fr)); gap: 6px',
+      steps: stepsN.map((l, i) => ({ label: l, color: i < s.step ? '#16181D' : '#5B6270', bar: 'display: block; height: 6px; border-radius: 3px; background: ' + (i < s.step ? '#16A34A' : '#E3E5E9') })),
+      needNote: isT && s.step === lastStep, btn: stepBtn[s.step - 1] || 'Done',
+      btnStyle: 'min-height: 56px; border: 0; border-radius: 14px; background: ' + (isT ? '#1D4FB8' : '#C8102E') + '; color: #FFFFFF; font-size: 17px; font-weight: 800; cursor: pointer',
+      next: () => { if (s.step < lastStep) this.setState({ step: s.step + 1 }); else this.setState({ mine: false, step: 1, flash: isT ? 'Ticket marked fixed. 212P can see it.' : 'Delivered to 226 Pitchfork Pizza.' }); },
+      giveBack: () => this.setState({ mine: false, step: 1, flash: '' }) };
+    let list = [], listTitle = '';
+    if (isRun || isT) {
+      const avail = isT
+        ? [['403M Fan Fuel BevMKT', 'Self checkout frozen on lane 2', 'URGENT · stopped', true, '9 min', true], ['219 Cold Beer Cheeseburgers', 'POS tablet: card reader declines', 'Soon', false, '5 min', false], ['204 Pitchfork Pizza', 'TV / menu board blank', 'Normal', false, '3 min', false], ['140 Inferno Favorites', 'POS menu missing nachos', 'Normal', false, '1 min', false]]
+        : [['140 Inferno Favorites', 'Chicken tenders ×20', 'Ready at kitchen', true, 'waiting 9 min', true], ['232 Fan Fuel Nacho', 'Nacho cheese ×2 pans', 'Ready at kitchen', false, 'waiting 3 min', false], ['438 Huss Hideout', 'Hot dogs ×30', 'Being made', false, 'ready in 6 min', false]];
+      const showTab = s.tab === 'avail' || (s.tab === 'jobs' && !s.mine);
+      listTitle = s.tab === 'other' ? 'Open tickets from other games' : s.tab === 'done' ? 'Resolved today' : 'Available · oldest and urgent first';
+      if (s.tab === 'done') list = [['212P Beer Portable', 'POS handheld won’t print', 'Fixed 6:12 PM · restarted', false, '', false]].map(r => ({ stand: r[0], items: r[1], status: r[2], urgent: false, time: '', timeStyle: timeCss(false), chip: chip('#166534', '#E8F5EC'), hasBtn: false, card: card(false) }));
+      else if (s.tab === 'other') list = [['DFA 111', 'POS tablet slow (from 11/25)', 'Open', false, '2 days', false]].map(r => ({ stand: r[0], items: r[1], status: r[2], urgent: false, time: r[4], timeStyle: timeCss(false), chip: chip('#8A4205', '#FDF1E3'), hasBtn: true, btn: 'Claim', btnStyle: btnCss('#16181D'), act: () => {}, card: card(false) }));
+      else if (showTab || s.tab === 'jobs') list = avail.map(([stand, items, status, urgent, time, late]) => ({ stand, items, status, urgent, time, timeStyle: timeCss(late), chip: urgent && isT ? chip('#FFFFFF', '#B4122B') : status.startsWith('Ready') ? chip('#166534', '#E8F5EC') : chip('#3A3F48', '#EEF0F3'),
+        hasBtn: true, btn: s.mine ? 'Finish yours first' : 'Claim', btnStyle: s.mine ? 'min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: #EEF0F3; color: #5B6270; font-size: 13px; font-weight: 800' : btnCss('#16181D'),
+        act: () => { if (!s.mine) this.setState({ mine: true, step: 1, tab: 'jobs', flash: '' }); }, card: card(late) }));
+    } else {
+      const F = { new: [['212P Beer Portable', 'Hot dogs ×24', 'New · 2 min', true, false], ['204 Pitchfork Pizza', 'Pizza ×4 cheese', 'New · 5 min', false, true], ['408 Cold Beer', 'Burgers ×12', 'New · 1 min', false, false]],
+        cook: [['226 Pitchfork Pizza', 'Pizza ×6', 'Cooking · ready 6:58', false, false], ['232 Fan Fuel Nacho', 'Nacho cheese ×2 pans', 'Cooking · ready 7:02', false, false]],
+        ready: [['140 Inferno Favorites', 'Tenders ×20', 'Ready · waiting 9 min', false, true]],
+        runners: [] }[s.tab] || [];
+      listTitle = s.tab === 'runners' ? 'Food runners today' : { new: 'New requests · start cooking', cook: 'Cooking now', ready: 'Ready · needs a runner' }[s.tab];
+      list = s.tab === 'runners'
+        ? [['Hrishikesh C.', 'Santan + Huss', 'Delivering to 226', '#163E91', '#E6EDFB'], ['Adit S.', 'East side', 'Free', '#166534', '#E8F5EC'], ['Shivam G.', 'West side', 'Free', '#166534', '#E8F5EC'], ['Rahul B.', 'West side', 'On break', '#3A3F48', '#EEF0F3']].map(([n, a, st, c, b]) => ({ stand: n, items: a, status: st, urgent: false, time: '', timeStyle: '', chip: chip(c, b), hasBtn: st === 'Free', btn: 'Send a job', btnStyle: btnCss('#16181D'), act: () => {}, card: card(false) }))
+        : F.map(([stand, items, status, urgent, late]) => {
+          const done = s.board[stand];
+          const next = { new: 'Start cooking', cook: 'Mark ready', ready: 'Assign runner' }[s.tab];
+          return { stand, items, status: done ? 'Moved on' : status, urgent, time: '', timeStyle: '', chip: done ? chip('#166534', '#E8F5EC') : late ? chip('#8E0E22', '#FDECEE') : chip('#3A3F48', '#EEF0F3'),
+            hasBtn: !done, btn: next, btnStyle: btnCss(s.tab === 'new' ? '#8A4205' : s.tab === 'cook' ? '#166534' : '#16181D'),
+            act: () => this.setState({ board: { ...s.board, [stand]: true } }), card: card(late && !done) }; });
+    }
+    const hasMine = (isRun || isT) && s.tab === 'jobs' && s.mine;
+    return { screens, accent, kicker: isT ? 'IT Support · all stadium' : isF ? 'Food delivery · kitchen' : 'Food delivery · runner',
+      title: isT ? 'Hi Ray' : isF ? 'Kitchen board' : 'Hi Adit', tabs,
+      tabGrid: 'display: grid; grid-template-columns: repeat(' + tabDefs.length + ', minmax(0, 1fr)); gap: 6px',
+      hasMine, mine: mineV, hasDoneMsg: !!s.flash && !s.mine, doneMsg: s.flash,
+      isBoard: isF, kpi: [{ n: '3', l: 'New', c: '#16181D' }, { n: '2', l: 'Cooking', c: '#8A4205' }, { n: '1', l: 'Ready', c: '#166534' }, { n: '2', l: 'Late', c: '#B4122B' }],
+      list, listTitle, isTech: isT };
+  }
+}
+</script>
+</body>
+</html>

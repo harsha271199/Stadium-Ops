@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Warehouse manager</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 16px 12px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+      <span style="font-size: 13px; font-weight: 600; color: #C8102E">Warehouse</span>
+      <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.01em">{{title}}</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px">
+      <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #166534; background: #E8F5EC; padding: 6px 10px; border-radius: 999px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #16A34A"></span>Live</span>
+      <button onClick="{{openMenu}}" aria-label="Menu" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; background: #FFFFFF; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+
+    <sc-if value="{{isToday}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <p style="margin: 0; font-size: 14px; color: #5B6270">Football · Sat 11/29 · 7:42 PM · busiest hour</p>
+
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+          <sc-for list="{{tiles}}" as="t" hint-placeholder-count="4">
+            <button onClick="{{t.go}}" style="{{t.style}}">
+              <span class="num" style="font-size: 26px; font-weight: 800; color: {{t.color}}">{{t.n}}</span>
+              <span style="font-size: 12px; font-weight: 700; color: {{t.labelColor}}">{{t.label}}</span>
+            </button>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 14px">
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 13px; font-weight: 600; color: #5B6270">Typical delivery today</span>
+            <span class="num" style="font-size: 20px; font-weight: 800">26 min <span style="font-size: 14px; font-weight: 600; color: #5B6270">goal 20</span></span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px">
+            <span style="font-size: 13px; font-weight: 600; color: #5B6270">Wait to claim</span>
+            <span class="num" style="font-size: 20px; font-weight: 800; color: #9A4A06">11 min</span>
+          </div>
+        </div>
+
+        <section style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <h2 style="margin: 0; font-size: 16px; font-weight: 700">Get someone on these</h2>
+            <button onClick="{{goLate}}" style="border: 0; background: none; color: #1D4FB8; font-size: 14px; font-weight: 600; cursor: pointer; padding: 8px 0; min-height: 44px">See all</button>
+          </div>
+          <sc-for list="{{urgentList}}" as="d" hint-placeholder-count="3">
+            <div style="{{d.cardStyle}}">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <span style="font-size: 16px; font-weight: 700">{{d.stand}}</span>
+                <span class="num" style="{{d.timeStyle}}">{{d.timeText}}</span>
+              </div>
+              <span style="font-size: 14px">{{d.items}}</span>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <span style="font-size: 13px; color: #5B6270">{{d.whoText}}</span>
+                <button onClick="{{d.assign}}" style="min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: #C8102E; color: #FFFFFF; font-size: 14px; font-weight: 700; cursor: pointer">{{d.assignLabel}}</button>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{noUrgent}}" hint-placeholder-val="{{ false }}">
+            <p style="margin: 0; padding: 14px; background: #E8F5EC; border-radius: 14px; color: #166534; font-size: 15px; font-weight: 600">Everything is claimed and on time.</p>
+          </sc-if>
+        </section>
+
+        <button onClick="{{goCarts}}" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 12px 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 14px; cursor: pointer; text-align: left">
+          <span style="width: 36px; height: 36px; border-radius: 10px; background: #FDF1E3; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9A4A06" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>
+          </span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 15px; font-weight: 700; color: #16181D">Carts: 2 free, 3 out, 1 repair</span>
+            <span style="font-size: 13px; color: #5B6270">Cart 3 brakes weak · reported 2:14 PM</span>
+          </span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+
+        <section style="display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 14px">
+          <h2 style="margin: 0; font-size: 16px; font-weight: 700">After the game</h2>
+          <p style="margin: 0; font-size: 14px; color: #3A3F48">{{closeText}}</p>
+          <button onClick="{{closeOut}}" style="min-height: 48px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 15px; font-weight: 700; cursor: pointer">{{closeLabel}}</button>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isDeliv}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <sc-for list="{{filters}}" as="f" hint-placeholder-count="5">
+            <button onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="{{f.style}}">{{f.label}} <span class="num">{{f.n}}</span></button>
+          </sc-for>
+        </div>
+        <sc-for list="{{shown}}" as="d" hint-placeholder-count="4">
+          <div style="{{d.cardStyle}}">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+              <span style="display: flex; align-items: center; gap: 8px; min-width: 0">
+                <span style="font-size: 16px; font-weight: 700">{{d.stand}}</span>
+                <sc-if value="{{d.urgent}}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; font-weight: 800; color: #FFFFFF; background: #B4122B; padding: 3px 7px; border-radius: 6px">URGENT</span></sc-if>
+              </span>
+              <span style="{{d.chipStyle}}">{{d.status}}</span>
+            </div>
+            <span style="font-size: 14px">{{d.items}}</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: #5B6270">
+              <span>{{d.kind}} · {{d.whoText}}</span>
+              <span class="num" style="{{d.timeStyle}}">{{d.timeText}}</span>
+            </div>
+            <sc-if value="{{d.open}}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{d.assign}}" style="min-height: 44px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 700; cursor: pointer">{{d.assignLabel}}</button>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{noneShown}}" hint-placeholder-val="{{ false }}">
+          <p style="margin: 24px 0; text-align: center; font-size: 15px; color: #5B6270">Nothing here right now.</p>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isCarts}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; gap: 12px; font-size: 13px; color: #5B6270; flex-wrap: wrap">
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #1D4FB8"></span>{{cartCounts.free}} free</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #D97706"></span>{{cartCounts.out}} out</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #B4122B"></span>{{cartCounts.repair}} repair</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <sc-for list="{{carts}}" as="c" hint-placeholder-count="6">
+            <button onClick="{{c.pick}}" aria-pressed="{{c.sel}}" style="{{c.cardStyle}}">
+              <span style="display: flex; align-items: center; justify-content: space-between; width: 100%">
+                <span style="font-size: 18px; font-weight: 800; color: #16181D">Cart {{c.id}}</span>
+                <span style="{{c.dotStyle}}"></span>
+              </span>
+              <span style="font-size: 14px; font-weight: 700; color: {{c.color}}">{{c.label}}</span>
+              <span class="num" style="font-size: 13px; color: #5B6270">{{c.sub}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <section style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px">
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 800">Cart {{sel.id}}</h2>
+            <span style="font-size: 14px; font-weight: 700; color: {{sel.color}}">{{sel.label}}</span>
+          </div>
+          <p style="margin: 0; font-size: 14px">{{sel.detail}}</p>
+          <sc-if value="{{sel.hasIssue}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; gap: 12px; padding: 12px; background: #FDECEE; border-radius: 12px">
+              <div style="width: 64px; height: 64px; border-radius: 10px; background: #F3C9CF; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7A1020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Photo of the problem"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 4px">
+                <span style="font-size: 14px; font-weight: 700; color: #7A1020">{{sel.issue}}</span>
+                <span style="font-size: 13px; color: #7A1020">{{sel.issueBy}}</span>
+              </div>
+            </div>
+          </sc-if>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <button onClick="{{sel.primary}}" style="flex: 1 1 140px; min-height: 48px; border: 0; border-radius: 12px; background: #C8102E; color: #FFFFFF; font-size: 15px; font-weight: 700; cursor: pointer">{{sel.primaryLabel}}</button>
+            <button onClick="{{openHistory}}" style="flex: 1 1 140px; min-height: 48px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 15px; font-weight: 600; cursor: pointer">{{sel.secondaryLabel}}</button>
+          </div>
+          <h3 style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #5B6270">Today</h3>
+          <sc-for list="{{sel.log}}" as="l" hint-placeholder-count="3">
+            <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 8px 0; border-top: 1px solid #EEF0F3">
+              <span>{{l.what}}</span><span class="num" style="color: #5B6270">{{l.at}}</span>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isTeam}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <p style="margin: 0 0 4px; font-size: 14px; color: #5B6270">10 runners working · 1 on break · 61 deliveries done</p>
+        <sc-for list="{{team}}" as="p" hint-placeholder-count="6">
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 14px">
+            <span style="width: 40px; height: 40px; border-radius: 50%; background: #EEF0F3; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #3A3F48; flex-shrink: 0">{{p.initials}}</span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span style="font-size: 15px; font-weight: 700">{{p.name}}</span>
+              <span class="num" style="font-size: 13px; color: #5B6270">{{p.area}} · {{p.done}} done</span>
+            </span>
+            <span style="{{p.chipStyle}}">{{p.state}}</span>
+          </div>
+        </sc-for>
+        <button style="margin-top: 8px; min-height: 48px; border: 1px dashed #B9BEC7; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 15px; font-weight: 600; cursor: pointer">Add temp worker</button>
+      </div>
+    </sc-if>
+
+  </main>
+
+  <nav aria-label="Main" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #FFFFFF; border-top: 1px solid #E3E5E9; padding: 6px 4px 18px">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+      <button onClick="{{t.pick}}" aria-current="{{t.current}}" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 56px; border: 0; background: none; cursor: pointer; padding: 6px 0; color: {{t.color}}; font-size: 12px; font-weight: {{t.weight}}">
+        <span style="{{t.pillStyle}}">
+          <sc-if value="{{t.isToday}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></sc-if>
+          <sc-if value="{{t.isDeliv}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></sc-if>
+          <sc-if value="{{t.isCarts}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h10l2 7H4z"/><path d="M4 12h15v4H4z"/><circle cx="7" cy="18" r="2"/><circle cx="16" cy="18" r="2"/><path d="M15 5l3-2"/></svg></sc-if>
+          <sc-if value="{{t.isTeam}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.6c2.6.3 4.4 2.1 5 5.4"/></svg></sc-if>
+        </span>
+        <sc-if value="{{t.hasBadge}}" hint-placeholder-val="{{ false }}"><span class="num" style="position: absolute; top: 2px; left: 54%; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: #B4122B; color: #FFFFFF; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center">{{t.badge}}</span></sc-if>
+        {{t.label}}
+      </button>
+    </sc-for>
+  </nav>
+
+  <sc-if value="{{pickerOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(22, 24, 29, 0.45); display: flex; flex-direction: column; justify-content: flex-end">
+      <button onClick="{{closePicker}}" aria-label="Close" style="flex: 1; border: 0; background: transparent; cursor: pointer"></button>
+      <section role="dialog" aria-label="Pick a runner" style="background: #FFFFFF; border-radius: 22px 22px 0 0; padding: 18px 16px 28px; display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 800">Send a runner to {{pickFor}}</h2>
+        <p style="margin: 0 0 4px; font-size: 14px; color: #5B6270">Closest free runners first. They get an alert.</p>
+        <sc-for list="{{runners}}" as="r" hint-placeholder-count="4">
+          <button onClick="{{r.pick}}" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 12px; border: 1px solid #E3E5E9; border-radius: 12px; background: #FFFFFF; cursor: pointer; text-align: left">
+            <span style="width: 36px; height: 36px; border-radius: 50%; background: #EEF0F3; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #3A3F48">{{r.initials}}</span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 15px; font-weight: 700; color: #16181D">{{r.name}}</span>
+              <span style="font-size: 13px; color: #5B6270">{{r.where}}</span>
+            </span>
+            <span style="{{r.chipStyle}}">{{r.state}}</span>
+          </button>
+        </sc-for>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(22, 24, 29, 0.45); display: flex; justify-content: flex-end">
+      <button onClick="{{closeMenu}}" aria-label="Close menu" style="flex: 1; border: 0; background: transparent; cursor: pointer"></button>
+      <nav aria-label="Manager menu" style="width: 300px; height: 100%; box-sizing: border-box; background: #FFFFFF; padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto">
+        <span style="padding: 0 8px 8px; font-size: 18px; font-weight: 800">Wanda · Warehouse manager</span>
+        <sc-for list="{{menu}}" as="m" hint-placeholder-count="8">
+          <sc-if value="{{m.isHead}}" hint-placeholder-val="{{ false }}"><span style="padding: 14px 8px 4px; font-size: 13px; font-weight: 700; color: #5B6270">{{m.label}}</span></sc-if>
+          <sc-if value="{{m.isItem}}" hint-placeholder-val="{{ true }}"><button onClick="{{m.go}}" style="min-height: 48px; padding: 0 8px; border: 0; border-radius: 10px; background: none; color: #16181D; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer">{{m.label}}</button></sc-if>
+        </sc-for>
+      </nav>
+    </div>
+  </sc-if>
+  <sc-if value="{{panelOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; background: #F4F5F7">
+      <header style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+        <button onClick="{{closePanel}}" aria-label="Back" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; border-radius: 12px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 600; color: #C8102E">Warehouse manager</span><span style="font-size: 20px; font-weight: 800">{{panelTitle}}</span></span>
+      </header>
+      <div style="flex: 1; overflow-y: auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+
+        <sc-if value="{{pn.history}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; gap: 0; padding: 4px 14px">
+            <sc-for list="{{histRows}}" as="h" hint-placeholder-count="5"><div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 54px; border-top: 1px solid #F1F2F4"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 800">{{h.a}}</span><span style="font-size: 12px; color: #5B6270">{{h.b}}</span></span><span class="num" style="{{h.chip}}">{{h.t}}</span></div></sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{pn.restock}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; color: #5B6270; line-height: 1.45">Switch on who can do Force Restock today (scan a stand, add cases). Turns off at the end of the stadium day.</span>
+            <input placeholder="Search scheduled workers" style="min-height: 48px; padding: 0 12px; border: 1px solid #C9CDD4; border-radius: 12px; font-size: 16px; background: #FFFFFF; box-sizing: border-box; width: 100%">
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; gap: 0; padding: 4px 14px">
+              <sc-for list="{{rsRows}}" as="x" hint-placeholder-count="5"><div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 54px; border-top: 1px solid #F1F2F4"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800">{{x.n}}</span><span style="font-size: 12px; color: #5B6270">{{x.s}}</span></span><button onClick="{{x.toggle}}" role="switch" aria-checked="{{x.on}}" style="{{x.track}}"><span style="{{x.knob}}"></span></button></div></sc-for>
+            </div>
+            <span class="num" style="font-size: 13px; font-weight: 700; color: #166534">{{rsN}} people have restock access today</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{pn.drop}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <button onClick="{{scanStand}}" style="height: 130px; border: 0; border-radius: 16px; background: #16181D; color: #FFFFFF; font-size: 15px; font-weight: 800; cursor: pointer">Scan the stand’s QR code</button>
+            <sc-if value="{{scanned}}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px">
+                <span style="font-size: 16px; font-weight: 800">212P Beer Portable</span>
+                <span style="font-size: 13px; color: #8E0E22; font-weight: 700">Open request: Coors Light ×3 · 14 min late</span>
+                <sc-for list="{{pItems}}" as="it" hint-placeholder-count="3"><div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 54px; border-top: 1px solid #F1F2F4"><span style="flex: 1; font-size: 15px; font-weight: 700">{{it.name}}</span><button onClick="{{it.minus}}" aria-label="Less" style="width: 42px; height: 42px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; font-size: 20px; cursor: pointer">−</button><span class="num" style="min-width: 30px; text-align: center; font-size: 19px; font-weight: 800">{{it.q}}</span><button onClick="{{it.plus}}" aria-label="More" style="width: 42px; height: 42px; border: 0; border-radius: 10px; background: #16181D; color: #FFFFFF; font-size: 20px; cursor: pointer">+</button></div></sc-for>
+                <button onClick="{{dropDone}}" style="min-height: 52px; border: 0; border-radius: 14px; background: #C8102E; color: #FFFFFF; font-size: 16px; font-weight: 800; cursor: pointer; background: #166534">{{dropLabel}}</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{pn.request}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 700; color: #3A3F48">Stand<select style="min-height: 48px; padding: 0 12px; border: 1px solid #C9CDD4; border-radius: 12px; font-size: 16px; background: #FFFFFF; box-sizing: border-box; width: 100%"><option>219 Cold Beer Cheeseburgers</option><option>212P Beer Portable</option><option>DFA 111 Hot Dogs</option></select></label>
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; gap: 0; padding: 4px 14px"><sc-for list="{{pItems}}" as="it" hint-placeholder-count="3"><div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 54px; border-top: 1px solid #F1F2F4"><span style="flex: 1; font-size: 15px; font-weight: 700">{{it.name}}</span><button onClick="{{it.minus}}" aria-label="Less" style="width: 42px; height: 42px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; font-size: 20px; cursor: pointer">−</button><span class="num" style="min-width: 30px; text-align: center; font-size: 19px; font-weight: 800">{{it.q}}</span><button onClick="{{it.plus}}" aria-label="More" style="width: 42px; height: 42px; border: 0; border-radius: 10px; background: #16181D; color: #FFFFFF; font-size: 20px; cursor: pointer">+</button></div></sc-for><input placeholder="Not on the list? Type it and Add" style="min-height: 48px; padding: 0 12px; border: 1px solid #C9CDD4; border-radius: 12px; font-size: 16px; background: #FFFFFF; box-sizing: border-box; width: 100%; margin: 10px 0"></div>
+            <span style="font-size: 13px; font-weight: 800; color: #5B6270">How urgent</span>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px"><sc-for list="{{urg}}" as="u" hint-placeholder-count="3"><button onClick="{{u.pick}}" style="{{u.style}}">{{u.l}}</button></sc-for></div>
+            <span style="font-size: 13px; font-weight: 800; color: #5B6270">Needed by</span>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px"><sc-for list="{{eta}}" as="u" hint-placeholder-count="4"><button onClick="{{u.pick}}" style="{{u.style}}">{{u.l}}</button></sc-for></div>
+            <button onClick="{{sendReq}}" style="min-height: 52px; border: 0; border-radius: 14px; background: #C8102E; color: #FFFFFF; font-size: 16px; font-weight: 800; cursor: pointer">{{reqLabel}}</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{pn.create}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{createOpts}}" as="c" hint-placeholder-count="3"><button style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; text-align: left; cursor: pointer"><span style="font-size: 16px; font-weight: 800">{{c.t}}</span><span style="font-size: 13px; color: #5B6270">{{c.s}}</span></button></sc-for>
+            <button style="min-height: 44px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 700; cursor: pointer">Upload CSV &amp; create many transfers</button>
+            <span style="font-size: 12px; color: #5B6270">Full step-by-step screens are on the “Warehouse supervisor &amp; manager tools” board.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{pn.all}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; gap: 6px; overflow-x: auto"><sc-for list="{{tfFilters}}" as="f" hint-placeholder-count="4"><button onClick="{{f.pick}}" style="{{f.style}}">{{f.l}}</button></sc-for></div>
+            <sc-for list="{{tfList}}" as="r" hint-placeholder-count="4"><div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; gap: 6px"><div style="display: flex; justify-content: space-between; gap: 8px; align-items: center"><span style="font-size: 15px; font-weight: 800">{{r.s}}</span><span style="{{r.chip}}">{{r.st}}</span></div><span style="font-size: 14px">{{r.i}}</span><span class="num" style="font-size: 12px; color: #5B6270">{{r.m}}</span></div></sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{pn.approvals}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{apList}}" as="a" hint-placeholder-count="2"><div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px"><div style="display: flex; justify-content: space-between; gap: 8px; align-items: center"><span style="font-size: 15px; font-weight: 800">{{a.s}}</span><span style="{{a.chip}}">{{a.st}}</span></div><span style="font-size: 14px">{{a.i}}</span><sc-if value="{{a.open}}" hint-placeholder-val="{{ true }}"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"><button onClick="{{a.back}}" style="min-height: 44px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 700; cursor: pointer; color: #8E0E22">Send back</button><button onClick="{{a.ok}}" style="min-height: 44px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 700; cursor: pointer; background: #166534; color: #FFFFFF; border: 0">Verify &amp; approve</button></div></sc-if></div></sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{pn.assign}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; color: #5B6270">Pick people, then an area or a stand, then Save. Full version is on the warehouse tools board.</span>
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; gap: 0; padding: 4px 14px"><sc-for list="{{asList}}" as="x" hint-placeholder-count="4"><button onClick="{{x.pick}}" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 54px; border-top: 1px solid #F1F2F4; border-left: 0; border-right: 0; border-bottom: 0; background: none; cursor: pointer; text-align: left"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800">{{x.n}}</span><span style="font-size: 12px; color: #5B6270">{{x.a}}</span></span><span style="{{x.box}}"></span></button></sc-for></div>
+            <select style="min-height: 48px; padding: 0 12px; border: 1px solid #C9CDD4; border-radius: 12px; font-size: 16px; background: #FFFFFF; box-sizing: border-box; width: 100%"><option>Area: West Portables (1 there)</option><option>Area: East Concourse (2 there)</option><option>One stand: 216 Someburros SC</option></select>
+            <button style="min-height: 52px; border: 0; border-radius: 14px; background: #C8102E; color: #FFFFFF; font-size: 16px; font-weight: 800; cursor: pointer">Save</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{pn.report}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; color: #5B6270">Everything delivered to each stand, logged waste, and stock moved between stands.</span>
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px"><input type="date" value="2026-11-29" style="min-height: 48px; padding: 0 12px; border: 1px solid #C9CDD4; border-radius: 12px; font-size: 16px; background: #FFFFFF; box-sizing: border-box; width: 100%"><button style="min-height: 44px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 700; cursor: pointer">Today</button></div>
+            <input placeholder="Stand (blank = every stand)" style="min-height: 48px; padding: 0 12px; border: 1px solid #C9CDD4; border-radius: 12px; font-size: 16px; background: #FFFFFF; box-sizing: border-box; width: 100%">
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; gap: 0; padding: 4px 14px"><sc-for list="{{repRows}}" as="r" hint-placeholder-count="3"><div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 54px; border-top: 1px solid #F1F2F4"><span style="font-size: 14px; font-weight: 700">{{r.s}}</span><span class="num" style="font-size: 12px; color: #5B6270">{{r.v}}</span></div></sc-for></div>
+            <button style="min-height: 52px; border: 0; border-radius: 14px; background: #C8102E; color: #FFFFFF; font-size: 16px; font-weight: 800; cursor: pointer; background: #16181D">Download report (CSV)</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'today', filter: 'late', cart: 3, fixed: false, picker: null, assigned: {}, menu: false, closed: false, panel: null, rs: { a: true, c: true }, q: { a: 3, b: 0, c: 1 }, scanned: false, dropped: false, urg: 'Normal', eta: 20, reqSent: false, tff: 'open', ap: {}, as: { a: true } };
+  }
+  chip(kind) {
+    const m = {
+      waiting: ['#3A3F48', '#EEF0F3'], late: ['#8E0E22', '#FDECEE'], claimed: ['#163E91', '#E6EDFB'], moving: ['#8A4205', '#FDF1E3'],
+      done: ['#166534', '#E8F5EC'], free: ['#163E91', '#E6EDFB'], brk: ['#3A3F48', '#EEF0F3']
+    }[kind];
+    return 'font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; color: ' + m[0] + '; background: ' + m[1];
+  }
+  renderVals() {
+    const s = this.state;
+    const D = [
+      { id: 1, stand: '212P Beer Portable', items: 'Coors Light 24oz ×3 cases', st: 'late', over: 14, urgent: true, kind: 'Stock request' },
+      { id: 2, stand: '204P Fan Fuel Bev', items: 'Dos Equis 24oz ×2 cases, Aquafina ×1', st: 'late', over: 6, urgent: true, kind: 'Stock request' },
+      { id: 3, stand: '219 Cold Beer Cheeseburgers', items: 'CO2 35# ×1', st: 'waiting', wait: 9, urgent: true, kind: 'Stock request' },
+      { id: 4, stand: '210 Fan Fuel Nacho', items: 'Cheese cups ×1 case', st: 'waiting', wait: 3, urgent: false, kind: 'Force restock' },
+      { id: 5, stand: '216M Fan Fuel Bev', items: 'Life Water 1L ×2 cases', st: 'moving', who: 'Jordan', eta: 4, kind: 'Transfer' },
+      { id: 6, stand: '408 Cold Beer Cheeseburgers', items: 'Miller Lite 24oz ×2 cases', st: 'moving', who: 'Priya', eta: 7, kind: 'Stock request' },
+      { id: 7, stand: '140 Inferno', items: 'Cups 32oz ×2 sleeves', st: 'claimed', who: 'Sam', eta: 12, kind: 'Stock request' },
+      { id: 8, stand: '111 DFA', items: 'Gatorade Red ×1 case', st: 'done', who: 'Jordan', took: 18, kind: 'Stock request' }
+    ];
+    const label = { waiting: 'Waiting', late: 'Late', claimed: 'Claimed', moving: 'On the way', done: 'Delivered' };
+    const deliv = D.map(d => {
+      const who = s.assigned[d.id];
+      const st = who && (d.st === 'late' || d.st === 'waiting') ? 'claimed' : d.st;
+      const isLate = st === 'late';
+      const open = st === 'late' || st === 'waiting';
+      const timeText = isLate ? d.over + ' min late' : st === 'waiting' ? 'waiting ' + d.wait + ' min' : st === 'done' ? 'took ' + d.took + ' min' : who ? 'just sent' : 'due in ' + d.eta + ' min';
+      return { ...d, st, status: label[st], open, chipStyle: this.chip(st),
+        whoText: who ? who + ' (sent by you)' : (d.who || 'No one yet'),
+        timeText, timeStyle: 'font-size: 13px; font-weight: 700; color: ' + (isLate ? '#B4122B' : st === 'waiting' ? '#9A4A06' : '#5B6270'),
+        assignLabel: open ? 'Send runner' : 'Change runner',
+        assign: () => this.setState({ picker: d.id }),
+        cardStyle: 'display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: #FFFFFF; border-radius: 14px; ' + (isLate ? 'border: 2px solid #B4122B' : 'border: 1px solid #E3E5E9') };
+    });
+    const cnt = k => deliv.filter(d => d.st === k).length;
+    const counts = { late: cnt('late') + 4, waiting: cnt('waiting') + 2, moving: cnt('moving') + cnt('claimed') + 4, done: 61 };
+    const tdef = [
+      ['late', 'Late', '#B4122B', '#8E0E22', 'late'], ['waiting', 'Waiting', '#9A4A06', '#5B6270', 'waiting'],
+      ['moving', 'Moving', '#163E91', '#5B6270', 'moving'], ['done', 'Done', '#166534', '#5B6270', 'done']
+    ];
+    const tiles = tdef.map(([k, l, c, lc, f]) => ({ n: counts[k], label: l, color: c, labelColor: lc,
+      go: () => this.setState({ tab: 'deliv', filter: f }),
+      style: 'display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px; border-radius: 14px; cursor: pointer; text-align: left; ' + (k === 'late' && counts.late ? 'background: #FDECEE; border: 1px solid #F3C9CF' : 'background: #FFFFFF; border: 1px solid #E3E5E9') }));
+    const urgentList = deliv.filter(d => d.open).sort((a, b) => (b.st === 'late') - (a.st === 'late')).slice(0, 3);
+
+    const fdefs = [['late', 'Late'], ['waiting', 'Waiting'], ['claimed', 'Claimed'], ['moving', 'On the way'], ['done', 'Delivered']];
+    const filters = fdefs.map(([k, l]) => {
+      const on = s.filter === k;
+      return { label: l, n: cnt(k), on: on ? 'true' : 'false', pick: () => this.setState({ filter: k }),
+        style: 'min-height: 40px; padding: 8px 14px; border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer; ' + (on ? 'background: #16181D; color: #FFFFFF; border: 1px solid #16181D' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') };
+    });
+    const shown = deliv.filter(d => d.st === s.filter);
+
+    const R = [
+      { name: 'Alex Kim', where: 'At warehouse · Cart 5', st: 'free', state: 'Free' },
+      { name: 'Riley Chen', where: 'Near 212P · on foot', st: 'free', state: 'Free' },
+      { name: 'Sam Ortiz', where: '140 Inferno · 1 delivery', st: 'claimed', state: 'Busy' },
+      { name: 'Jordan Lee', where: '216M · 1 delivery', st: 'moving', state: 'Busy' }
+    ];
+    const pickD = D.find(d => d.id === s.picker);
+    const runners = R.map(r => ({ ...r, initials: r.name.split(' ').map(x => x[0]).join(''), chipStyle: this.chip(r.st),
+      pick: () => this.setState({ assigned: { ...s.assigned, [s.picker]: r.name.split(' ')[0] }, picker: null }) }));
+
+    const C = [
+      { id: 1, st: 'out', who: 'Jordan', since: '6:52 PM' },
+      { id: 2, st: 'free', checked: 'Checked 4:40 PM' },
+      { id: 3, st: s.fixed ? 'free' : 'repair', issue: 'Brakes weak, pulls left', issueBy: 'Reported by Priya · 2:14 PM' },
+      { id: 4, st: 'out', who: 'Priya', since: '7:20 PM' },
+      { id: 5, st: 'free', checked: 'Not checked today' },
+      { id: 6, st: 'out', who: 'Sam', since: '7:31 PM' }
+    ];
+    const colors = { free: '#1D4FB8', out: '#9A4A06', repair: '#B4122B' };
+    const labels = { free: 'Free', out: 'Out', repair: 'Needs repair' };
+    const carts = C.map(c => {
+      const sel = s.cart === c.id;
+      return { id: c.id, label: labels[c.st], color: colors[c.st], sel: sel ? 'true' : 'false',
+        sub: c.st === 'out' ? c.who + ' since ' + c.since : c.st === 'repair' ? 'Out of service' : c.checked,
+        pick: () => this.setState({ cart: c.id }),
+        dotStyle: 'width: 12px; height: 12px; border-radius: 50%; background: ' + colors[c.st],
+        cardStyle: 'display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px; min-height: 104px; background: #FFFFFF; border-radius: 14px; cursor: pointer; text-align: left; ' + (sel ? 'border: 2px solid #16181D' : 'border: 1px solid #E3E5E9') };
+    });
+    const sc = C.find(c => c.id === s.cart) || C[0];
+    const sel = { id: sc.id, label: labels[sc.st], color: colors[sc.st], hasIssue: sc.st === 'repair', issue: sc.issue || '', issueBy: sc.issueBy || '',
+      detail: sc.st === 'out' ? 'With ' + sc.who + ' since ' + sc.since + '. Safety check passed.' : sc.st === 'repair' ? 'Out of service. Runners can’t take it until it’s marked fixed.' : (sc.issue ? 'Marked fixed by you. Ready to use.' : 'Parked at the warehouse. ' + sc.checked + '.'),
+      primaryLabel: sc.st === 'repair' ? 'Mark fixed' : sc.st === 'out' ? 'Mark returned' : 'Take out of service',
+      secondaryLabel: 'See history',
+      primary: () => { if (sc.id === 3) this.setState({ fixed: !s.fixed }); },
+      log: sc.st === 'out' ? [{ what: 'Taken by ' + sc.who, at: sc.since }, { what: 'Safety check: all yes', at: sc.since }] : sc.st === 'repair' ? [{ what: 'Problem reported', at: '2:14 PM' }, { what: 'Returned by Priya', at: '2:12 PM' }] : [{ what: 'Returned by Sam', at: '4:40 PM' }] };
+    const cartCounts = { free: C.filter(c => c.st === 'free').length, out: C.filter(c => c.st === 'out').length, repair: C.filter(c => c.st === 'repair').length };
+
+    const team = [
+      { name: 'Jordan Lee', area: 'East side · Cart 1', st: 'moving', state: 'Delivering', done: 9 },
+      { name: 'Priya Shah', area: 'West side · Cart 4', st: 'moving', state: 'Delivering', done: 8 },
+      { name: 'Sam Ortiz', area: 'North side · Cart 6', st: 'claimed', state: 'Picking', done: 7 },
+      { name: 'Alex Kim', area: 'Warehouse', st: 'free', state: 'Free', done: 5 },
+      { name: 'Riley Chen', area: 'Upper deck', st: 'free', state: 'Free', done: 6 },
+      { name: 'Taylor Brooks', area: 'South side', st: 'brk', state: 'On break', done: 4 }
+    ].map(p => ({ ...p, initials: p.name.split(' ').map(x => x[0]).join(''), chipStyle: this.chip(p.st) }));
+
+    const lateN = counts.late;
+    const tabsDef = [['today', 'Today'], ['deliv', 'Deliveries'], ['carts', 'Carts'], ['team', 'Team']];
+    const tabs = tabsDef.map(([k, l]) => {
+      const on = s.tab === k;
+      const badge = k === 'deliv' ? lateN : k === 'carts' ? cartCounts.repair : 0;
+      return { label: l, current: on ? 'page' : 'false', pick: () => this.setState({ tab: k }),
+        isToday: k === 'today', isDeliv: k === 'deliv', isCarts: k === 'carts', isTeam: k === 'team',
+        hasBadge: badge > 0, badge,
+        color: on ? '#16181D' : '#5B6270', weight: on ? 700 : 500,
+        pillStyle: 'display: flex; align-items: center; justify-content: center; width: 56px; height: 30px; border-radius: 999px; ' + (on ? 'background: #FDECEE; color: #C8102E' : 'background: transparent') };
+    });
+    const titles = { today: 'Today', deliv: 'Deliveries', carts: 'Golf carts', team: 'Team' };
+    const GO = { 'Give restock access': 'restock', 'Quick Drop (scan stand QR)': 'drop', 'Request stock for a stand': 'request', 'Create transfer': 'create', 'All transfers': 'all', 'Approvals': 'approvals', 'Assign areas & stands': 'assign', 'Stock report': 'report' };
+    const menu = [
+      { label: 'Game day', isHead: true }, { label: 'Give restock access', isItem: true }, { label: 'Quick Drop (scan stand QR)', isItem: true }, { label: 'Request stock for a stand', isItem: true },
+      { label: 'Transfers', isHead: true }, { label: 'Create transfer', isItem: true }, { label: 'All transfers', isItem: true }, { label: 'Approvals', isItem: true },
+      { label: 'Plan', isHead: true }, { label: 'Assign areas & stands', isItem: true }, { label: 'Stock report', isItem: true },
+      { label: 'This phone', isHead: true }, { label: 'Alerts: on', isItem: true }, { label: 'Dark mode', isItem: true }, { label: 'Sign out', isItem: true }
+    ].map(m => ({ ...m, isHead: !!m.isHead, isItem: !!m.isItem, go: () => { const k = GO[m.label]; if (k) this.setState({ menu: false, panel: k }); } }));
+
+    const pk = s.panel;
+    const PT = { history: 'Cart ' + s.cart + ' history', restock: 'Give restock access', drop: 'Quick Drop', request: 'Request stock for a stand', create: 'Create transfer', all: 'All transfers', approvals: 'Approvals', assign: 'Assign areas & stands', report: 'Stand transfer report' };
+    const pn = {}; Object.keys(PT).forEach(k => pn[k] = pk === k);
+    const pch = (c, b) => 'font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; color: ' + c + '; background: ' + b;
+    const histRows = [['Took key · safety check all OK', 'Priya · 12 questions (first use)', '11:02 AM', pch('#163E91', '#E6EDFB')], ['Returned · no issues', 'Priya', '1:40 PM', pch('#166534', '#E8F5EC')], ['Took key · 4 questions OK', 'Jordan', '1:58 PM', pch('#163E91', '#E6EDFB')], ['Problem: brakes weak, pulls left', 'Reported by Jordan', '2:14 PM', pch('#8E0E22', '#FDECEE')], ['Out of service', 'Auto after problem report', '2:14 PM', pch('#8A4205', '#FDF1E3')]].map(([a, b, t, chip]) => ({ a, b, t, chip }));
+    const RS = [['a', 'Vatsal Patel', 'Scheduled · DFA 143'], ['b', 'Himanshi Bhanushali', 'Scheduled · DFA 143'], ['c', 'Giovanni Vargas', 'Scheduled · DFA 191'], ['d', 'Leah Hiraeth', 'Scheduled · DFA 111'], ['e', 'Maya Rodriguez', 'Scheduled · 212P']];
+    const rsRows = RS.map(([k, n, st]) => { const on = !!s.rs[k]; return { n, s: st, on: on ? 'true' : 'false', toggle: () => this.setState({ rs: { ...s.rs, [k]: !on } }), track: 'position: relative; width: 52px; height: 32px; border: 0; border-radius: 16px; cursor: pointer; flex-shrink: 0; background: ' + (on ? '#16A34A' : '#C9CDD4'), knob: 'position: absolute; top: 3px; left: ' + (on ? 23 : 3) + 'px; width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF' }; });
+    const step = (k, name) => ({ name, q: s.q[k], plus: () => this.setState({ q: { ...s.q, [k]: s.q[k] + 1 } }), minus: () => this.setState({ q: { ...s.q, [k]: Math.max(0, s.q[k] - 1) } }) });
+    const pItems = [step('a', 'Coors Light 24oz (cases)'), step('b', 'Ice (bags)'), step('c', 'CO2 35#')];
+    const seg = (on) => 'min-height: 46px; border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (on ? 'background: #16181D; color: #FFFFFF; border: 0' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE');
+    const urg = ['Normal', 'Soon', 'URGENT'].map(l => ({ l, pick: () => this.setState({ urg: l }), style: seg(s.urg === l) }));
+    const eta = [[15, '15m'], [20, '20m'], [30, '30m'], [0, 'No deadline']].map(([v, l]) => ({ l, pick: () => this.setState({ eta: v }), style: seg(s.eta === v) }));
+    const TF = [['204P → 216M', 'Life Water ×2, Aquafina ×1', 'On the way', 'open', 'Jordan · 6:40 PM', pch('#8A4205', '#FDF1E3')], ['MAS → DFA Warehouse', 'Pepsi BIB ×6', 'Waiting approval', 'appr', 'Riley · 5:10 PM', pch('#163E91', '#E6EDFB')], ['212P → 210', 'Coors Light ×1', 'Open', 'open', 'Not claimed · 7:10 PM', pch('#8E0E22', '#FDECEE')], ['DFA 111 → DFA 143', 'Buns ×2 trays', 'Done', 'done', 'Approved 7:25 PM', pch('#166534', '#E8F5EC')]];
+    const tfFilters = [['open', 'All open'], ['appr', 'Waiting approval'], ['done', 'Done'], ['all', 'Everything']].map(([k, l]) => ({ l, pick: () => this.setState({ tff: k }), style: 'flex-shrink: 0; min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; ' + (s.tff === k ? 'background: #16181D; color: #FFFFFF; border: 0' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const tfList = TF.filter(r => s.tff === 'all' || r[3] === s.tff).map(([st, i, stl, , m, chip]) => ({ s: st, i, st: stl, m, chip }));
+    const apList = [['408 Cold Beer', 'Miller Lite ×2 · delivered by Priya 7:12 PM'], ['216M Fan Fuel BevMKT', 'Life Water ×2 · Aquafina ×1 · Jordan 7:20 PM']].map(([st, i], j) => { const v = s.ap[j]; return { s: st, i, open: !v, st: v === 'ok' ? 'Approved' : v === 'back' ? 'Sent back' : 'Needs you', chip: v === 'ok' ? pch('#166534', '#E8F5EC') : v === 'back' ? pch('#8E0E22', '#FDECEE') : pch('#163E91', '#E6EDFB'), ok: () => this.setState({ ap: { ...s.ap, [j]: 'ok' } }), back: () => this.setState({ ap: { ...s.ap, [j]: 'back' } }) }; });
+    const asList = [['a', 'Jordan Lee', 'East Concourse'], ['b', 'Priya Shah', 'West Concourse'], ['c', 'Sam Ortiz', 'Not assigned'], ['d', 'Alex Kim', 'Warehouse']].map(([k, n, a]) => { const on = !!s.as[k]; return { n, a, pick: () => this.setState({ as: { ...s.as, [k]: !on } }), box: 'width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0; box-sizing: border-box; ' + (on ? 'background: #C8102E' : 'border: 2px solid #9AA0AA') }; });
+    const repRows = [{ s: '212P Beer Portable', v: '9 cases in · 0 waste' }, { s: '204P Fan Fuel Bev', v: '6 in · 2 moved out' }, { s: '216M Fan Fuel BevMKT', v: '4 in · 1 waste' }];
+    const createOpts = [{ t: 'Self transfer', s: 'Any stand · you deliver it yourself' }, { t: 'Warehouse ↔ Warehouse', s: 'MAS ⇄ DFA' }, { t: 'Build a transfer', s: 'Pick a stand, set what it needs, choose who delivers: you, someone specific, or open to claim' }];
+    const panelVals = { panelOpen: !!pk, panelTitle: PT[pk] || '', pn, closePanel: () => this.setState({ panel: null }), openHistory: () => this.setState({ panel: 'history' }),
+      histRows, rsRows, rsN: Object.values(s.rs).filter(Boolean).length, pItems, scanned: s.scanned, scanStand: () => this.setState({ scanned: true }), dropDone: () => this.setState({ dropped: true }), dropLabel: s.dropped ? 'Delivered ✓ · stand can see it' : 'Mark delivered',
+      urg, eta, sendReq: () => this.setState({ reqSent: true }), reqLabel: s.reqSent ? 'Sent to warehouse ✓' : 'Send to warehouse', createOpts, tfFilters, tfList, apList, asList, repRows };
+
+    return {
+      ...panelVals,
+      title: titles[s.tab], tabs, menu,
+      isToday: s.tab === 'today', isDeliv: s.tab === 'deliv', isCarts: s.tab === 'carts', isTeam: s.tab === 'team',
+      tiles, urgentList, noUrgent: urgentList.length === 0,
+      filters, shown, noneShown: shown.length === 0,
+      carts, cartCounts, sel, team, runners,
+      pickerOpen: !!s.picker, pickFor: pickD ? pickD.stand : '',
+      closePicker: () => this.setState({ picker: null }),
+      menuOpen: s.menu, openMenu: () => this.setState({ menu: true }), closeMenu: () => this.setState({ menu: false }),
+      closeText: s.closed ? 'Done. 6 open requests were closed and marked "not delivered", so tonight’s report is right.' : (lateN + counts.waiting) + ' requests still open. Close them when the game ends so they don’t sit open overnight.',
+      closeLabel: s.closed ? 'Closed' : 'Close out the game',
+      closeOut: () => this.setState({ closed: true }),
+      goLate: () => this.setState({ tab: 'deliv', filter: 'late' }),
+      goCarts: () => this.setState({ tab: 'carts', cart: 3 })
+    };
+  }
+}
+</script>
+</body>
+</html>

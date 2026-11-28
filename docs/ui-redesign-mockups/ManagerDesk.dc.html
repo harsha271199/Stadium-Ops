@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Manager desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button,input,select{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: stretch; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D">
+
+  <nav aria-label="Main" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 20px 14px; background: #FFFFFF; border-right: 1px solid #E3E5E9">
+    <span style="padding: 0 8px 12px; font-size: 20px; font-weight: 800; letter-spacing: -0.01em">aramark <span style="font-size: 13px; font-weight: 700; color: #C8102E">Stadium Ops</span></span>
+    <div role="group" aria-label="Mockup: view as" style="display: flex; flex-direction: column; gap: 4px; padding: 4px; background: #F4F5F7; border-radius: 12px; margin-bottom: 8px">
+      <sc-for list="{{roles}}" as="r" hint-placeholder-count="3">
+        <button onClick="{{r.pick}}" aria-pressed="{{r.on}}" style="{{r.style}}">{{r.label}}</button>
+      </sc-for>
+    </div>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="5">
+      <button onClick="{{n.pick}}" aria-current="{{n.current}}" style="{{n.style}}">
+        <span style="display: flex; align-items: center; gap: 10px">
+          <sc-if value="{{n.isHome}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></sc-if>
+          <sc-if value="{{n.isReq}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></sc-if>
+          <sc-if value="{{n.isTeam}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.6c2.6.3 4.4 2.1 5 5.4"/></svg></sc-if>
+          <sc-if value="{{n.isTools}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg></sc-if>
+          <sc-if value="{{n.isAdmin}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></sc-if>
+          <span>{{n.label}}</span>
+        </span>
+        <sc-if value="{{n.hasBadge}}" hint-placeholder-val="{{ false }}"><span class="num" style="font-size: 12px; font-weight: 800; color: #FFFFFF; background: #B4122B; padding: 2px 8px; border-radius: 999px">{{n.badge}}</span></sc-if>
+      </button>
+    </sc-for>
+    <div style="flex: 1"></div>
+    <button style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px dashed #B9BEC7; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 700; cursor: pointer; text-align: left">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B2A86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6V4h8v2"/><rect x="5" y="6" width="14" height="14" rx="6"/><path d="M12 10v6M5 12H2M22 12h-3"/></svg>Report an app problem
+    </button>
+    <button style="min-height: 44px; padding: 0 12px; border: 0; background: none; color: #3A3F48; font-size: 14px; font-weight: 600; text-align: left; cursor: pointer">Sign out · {{who}}</button>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; box-sizing: border-box; padding: 24px clamp(16px, 3vw, 40px) 40px; display: flex; flex-direction: column; gap: 18px">
+
+    <header style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 18px 20px; background: #7A0F22; color: #FFFFFF; border-radius: 20px">
+      <span style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 13px; font-weight: 700; color: #F6C9D1">{{roleLabel}} · Game day · Mountain America</span>
+        <span style="font-size: 24px; font-weight: 800">{{pageTitle}}</span>
+      </span>
+      <span class="num" style="font-size: 14px; font-weight: 700; padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.14)">Football · Sat 11/29 · 7:42 PM</span>
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #F6C9D1">Stand
+        <select aria-label="Working stand" style="min-height: 42px; padding: 0 12px; border: 0; border-radius: 10px; font-size: 14px; font-weight: 700; color: #16181D; background: #FFFFFF"><option>All stands</option><option>216M Fan Fuel BevMKT</option><option>204 Pitchfork Pizza</option></select>
+      </label>
+    </header>
+
+    <sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 18px">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+          <sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+            <button onClick="{{k.go}}" style="display: flex; flex-direction: column; gap: 4px; padding: 16px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; cursor: pointer; text-align: left">
+              <span class="num" style="font-size: 30px; font-weight: 800; color: {{k.color}}">{{k.n}}</span>
+              <span style="font-size: 14px; font-weight: 800">{{k.label}}</span>
+              <span class="num" style="font-size: 13px; color: #5B6270">{{k.sub}}</span>
+            </button>
+          </sc-for>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px">
+          <sc-for list="{{tiles}}" as="t" hint-placeholder-count="4">
+            <button style="display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; min-height: 150px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; cursor: pointer; text-align: left">
+              <span style="{{t.iconStyle}}">
+                <sc-if value="{{t.isChecks}}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v2h6V3M9 11l2 2 4-4M9 17h6"/></svg></sc-if>
+                <sc-if value="{{t.isReq}}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></sc-if>
+                <sc-if value="{{t.isFood}}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z"/><path d="M12 10v6"/></svg></sc-if>
+                <sc-if value="{{t.isTeam}}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.6c2.6.3 4.4 2.1 5 5.4"/></svg></sc-if>
+              </span>
+              <span style="font-size: 17px; font-weight: 800">{{t.title}}</span>
+              <span style="font-size: 13px; color: #5B6270">{{t.sub}}</span>
+              <span class="num" style="{{t.tagStyle}}">{{t.tag}}</span>
+            </button>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+          <section style="flex: 3 1 460px; min-width: 0; display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; overflow: hidden">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 16px 18px 10px">
+              <h2 style="margin: 0; font-size: 17px; font-weight: 800">Stands that need attention</h2>
+              <span style="font-size: 13px; color: #5B6270">6 of 54 stands</span>
+            </div>
+            <div style="overflow-x: auto">
+              <table style="width: 100%; min-width: 520px; border-collapse: collapse; font-size: 14px">
+                <thead><tr style="text-align: left; color: #5B6270; font-size: 12px"><th style="padding: 8px 18px; font-weight: 700">Stand</th><th style="padding: 8px; font-weight: 700">Area</th><th style="padding: 8px; font-weight: 700">Problem</th><th style="padding: 8px; font-weight: 700">Who</th><th style="padding: 8px 18px; font-weight: 700; text-align: right">Staff</th></tr></thead>
+                <tbody>
+                  <sc-for list="{{attention}}" as="a" hint-placeholder-count="6">
+                    <tr style="border-top: 1px solid #F1F2F4">
+                      <td style="padding: 12px 18px; font-weight: 800">{{a.stand}}</td>
+                      <td style="padding: 12px 8px; color: #3A3F48">{{a.area}}</td>
+                      <td style="padding: 12px 8px"><span style="{{a.chip}}">{{a.problem}}</span></td>
+                      <td style="padding: 12px 8px; color: #3A3F48">{{a.who}}</td>
+                      <td class="num" style="padding: 12px 18px; text-align: right; font-weight: 700">{{a.staff}}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section style="flex: 2 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px">
+            <div style="display: flex; align-items: baseline; justify-content: space-between">
+              <h2 style="margin: 0; font-size: 17px; font-weight: 800">Need action now</h2>
+              <span class="num" style="font-size: 13px; color: #B4122B; font-weight: 700">{{overdueN}} overdue</span>
+            </div>
+            <sc-for list="{{overdue}}" as="o" hint-placeholder-count="4">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #F1F2F4">
+                <span style="{{o.kindStyle}}">{{o.kind}}</span>
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+                  <span style="font-size: 14px; font-weight: 800">{{o.stand}}</span>
+                  <span style="font-size: 13px; color: #5B6270">{{o.items}}</span>
+                </span>
+                <span class="num" style="font-size: 13px; font-weight: 800; color: #B4122B; white-space: nowrap">{{o.late}}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{hasMoreOver}}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{moreOver}}" style="min-height: 44px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; font-size: 14px; font-weight: 800; cursor: pointer">{{moreOverLabel}}</button>
+            </sc-if>
+          </section>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isReqs}}" hint-placeholder-val="{{ false }}">
+      <section style="display: flex; flex-direction: column; gap: 12px; padding: 18px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
+          <sc-for list="{{reqFilters}}" as="f" hint-placeholder-count="4">
+            <button onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="{{f.style}}">{{f.label}} <span class="num">{{f.n}}</span></button>
+          </sc-for>
+          <span style="flex: 1"></span>
+          <button style="min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: #C8102E; color: #FFFFFF; font-size: 14px; font-weight: 800; cursor: pointer">New request for a stand</button>
+        </div>
+        <div style="overflow-x: auto">
+          <table style="width: 100%; min-width: 620px; border-collapse: collapse; font-size: 14px">
+            <thead><tr style="text-align: left; color: #5B6270; font-size: 12px"><th style="padding: 8px; font-weight: 700">Type</th><th style="padding: 8px; font-weight: 700">Stand</th><th style="padding: 8px; font-weight: 700">Items</th><th style="padding: 8px; font-weight: 700">Status</th><th style="padding: 8px; font-weight: 700">Runner / tech</th><th style="padding: 8px; font-weight: 700; text-align: right">Age</th></tr></thead>
+            <tbody>
+              <sc-for list="{{reqRows}}" as="r" hint-placeholder-count="6">
+                <tr style="border-top: 1px solid #F1F2F4">
+                  <td style="padding: 12px 8px"><span style="{{r.kindStyle}}">{{r.kind}}</span></td>
+                  <td style="padding: 12px 8px; font-weight: 800">{{r.stand}}</td>
+                  <td style="padding: 12px 8px; color: #3A3F48">{{r.items}}</td>
+                  <td style="padding: 12px 8px"><span style="{{r.chip}}">{{r.status}}</span></td>
+                  <td style="padding: 12px 8px; color: #3A3F48">{{r.who}}</td>
+                  <td class="num" style="padding: 12px 8px; text-align: right; font-weight: 700; color: {{r.ageColor}}">{{r.age}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{isTeam}}" hint-placeholder-val="{{ false }}">
+      <section style="display: flex; flex-direction: column; gap: 12px; padding: 18px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
+          <sc-for list="{{teamTabs}}" as="f" hint-placeholder-count="4">
+            <button style="{{f.style}}">{{f.label}}</button>
+          </sc-for>
+          <span style="flex: 1"></span>
+          <button style="min-height: 44px; padding: 0 14px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; font-size: 14px; font-weight: 700; cursor: pointer">Moves</button>
+          <button style="min-height: 44px; padding: 0 14px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; font-size: 14px; font-weight: 700; cursor: pointer">CSV</button>
+          <button style="min-height: 44px; padding: 0 14px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; font-size: 14px; font-weight: 700; cursor: pointer">PDF</button>
+          <button style="min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: #C8102E; color: #FFFFFF; font-size: 14px; font-weight: 800; cursor: pointer">Add walk-in</button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px">
+          <sc-for list="{{standCards}}" as="c" hint-placeholder-count="8">
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid #E3E5E9; border-radius: 14px">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <span style="font-size: 15px; font-weight: 800">{{c.stand}}</span>
+                <span class="num" style="{{c.chip}}">{{c.staff}}</span>
+              </div>
+              <span style="display: block; height: 6px; border-radius: 3px; background: #EEF0F3; overflow: hidden"><span style="{{c.bar}}"></span></span>
+              <span style="font-size: 13px; color: #5B6270">Lead: {{c.lead}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{isTools}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px">
+          <sc-for list="{{tools}}" as="t" hint-placeholder-count="8">
+            <button onClick="{{t.pick}}" style="{{t.style}}">
+              <span style="display: flex; align-items: center; justify-content: space-between; width: 100%">
+                <span style="font-size: 16px; font-weight: 800">{{t.label}}</span>
+                <sc-if value="{{t.hasN}}" hint-placeholder-val="{{ false }}"><span class="num" style="{{t.nStyle}}">{{t.n}}</span></sc-if>
+              </span>
+              <span style="font-size: 13px; color: #5B6270">{{t.sub}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{showRefunds}}" hint-placeholder-val="{{ true }}">
+          <section style="display: flex; flex-direction: column; gap: 10px; padding: 18px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
+              <h2 style="margin: 0; font-size: 17px; font-weight: 800">Refunds to review</h2>
+              <button style="min-height: 40px; padding: 0 14px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer">Download season CSV</button>
+            </div>
+            <sc-for list="{{refunds}}" as="r" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid #F1F2F4">
+                <span style="flex: 1 1 240px; display: flex; flex-direction: column; gap: 2px">
+                  <span style="font-size: 15px; font-weight: 800">{{r.stand}} · <span class="num">{{r.amount}}</span></span>
+                  <span style="font-size: 13px; color: #5B6270">{{r.reason}} · asked by {{r.by}} · {{r.when}}</span>
+                </span>
+                <span style="{{r.chip}}">{{r.status}}</span>
+                <sc-if value="{{r.pending}}" hint-placeholder-val="{{ true }}">
+                  <span style="display: flex; gap: 8px">
+                    <button onClick="{{r.approve}}" style="min-height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: #166534; color: #FFFFFF; font-size: 13px; font-weight: 800; cursor: pointer">Approve</button>
+                    <button onClick="{{r.deny}}" style="min-height: 40px; padding: 0 14px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; color: #8E0E22; font-size: 13px; font-weight: 800; cursor: pointer">Deny</button>
+                  </span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </section>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isAdmin}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px">
+          <sc-for list="{{adminSections}}" as="a" hint-placeholder-count="6">
+            <button onClick="{{a.pick}}" style="{{a.style}}">
+              <span style="{{a.iconStyle}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.path}}"/></svg></span>
+              <span style="font-size: 16px; font-weight: 800">{{a.label}}</span>
+              <span style="font-size: 13px; color: #5B6270">{{a.sub}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{showPeople}}" hint-placeholder-val="{{ true }}">
+          <section style="display: flex; flex-direction: column; gap: 12px; padding: 18px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+              <h2 style="margin: 0; font-size: 17px; font-weight: 800; flex: 1 1 200px">Access Center</h2>
+              <input aria-label="Search name or employee ID" placeholder="Search name or employee ID" style="flex: 1 1 220px; min-height: 44px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 10px; font-size: 15px">
+              <select aria-label="Role" style="min-height: 44px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 10px; font-size: 14px"><option>All roles</option><option>Managers</option><option>Warehouse</option><option>Premium</option><option>Food</option><option>Tech</option></select>
+              <button style="min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: #C8102E; color: #FFFFFF; font-size: 14px; font-weight: 800; cursor: pointer">Add login</button>
+            </div>
+            <div style="overflow-x: auto">
+              <table style="width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px">
+                <thead><tr style="text-align: left; color: #5B6270; font-size: 12px"><th style="padding: 8px; font-weight: 700">Name</th><th style="padding: 8px; font-weight: 700">ID</th><th style="padding: 8px; font-weight: 700">Role</th><th style="padding: 8px; font-weight: 700">Sign-in</th><th style="padding: 8px; font-weight: 700">Status</th><th style="padding: 8px"></th></tr></thead>
+                <tbody>
+                  <sc-for list="{{access}}" as="u" hint-placeholder-count="5">
+                    <tr style="border-top: 1px solid #F1F2F4">
+                      <td style="padding: 12px 8px; font-weight: 800">{{u.name}}</td>
+                      <td class="num" style="padding: 12px 8px; color: #3A3F48">{{u.id}}</td>
+                      <td style="padding: 12px 8px"><span style="{{u.roleChip}}">{{u.role}}</span></td>
+                      <td style="padding: 12px 8px; color: #3A3F48">{{u.how}}</td>
+                      <td style="padding: 12px 8px"><span style="{{u.statusChip}}">{{u.status}}</span></td>
+                      <td style="padding: 12px 8px; text-align: right"><button style="min-height: 36px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 8px; background: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer">Edit</button></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </sc-if>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { role: 'mgr', page: 'home', reqF: 'all', tool: 'Refunds', adm: 'People & logins', moreOver: false, ref: {} }; }
+  renderVals() {
+    const s = this.state, isAdm = s.role === 'adm', isMgr = s.role === 'mgr' || isAdm;
+    const tone = { ok: ['#166534', '#E8F5EC'], warn: ['#8A4205', '#FDF1E3'], bad: ['#8E0E22', '#FDECEE'], info: ['#163E91', '#E6EDFB'], gray: ['#3A3F48', '#EEF0F3'] };
+    const chip = t => 'font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; color: ' + tone[t][0] + '; background: ' + tone[t][1];
+    const kindT = { Stock: 'bad', Food: 'warn', IT: 'info' };
+    const kindS = k => 'font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; flex-shrink: 0; color: ' + tone[kindT[k]][0] + '; background: ' + tone[kindT[k]][1];
+    const icon = (c, b) => 'width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: ' + c + '; background: ' + b;
+    const roles = [['mgr', 'Manager'], ['sup', 'Support manager'], ['adm', 'Admin']].map(([k, l]) => {
+      const on = s.role === k;
+      return { label: l, on: on ? 'true' : 'false', pick: () => this.setState({ role: k, page: (k !== 'adm' && s.page === 'admin') ? 'home' : s.page }),
+        style: 'min-height: 36px; border: 0; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; ' + (on ? 'background: #FFFFFF; color: #16181D; box-shadow: 0 1px 2px rgba(22,24,29,0.12)' : 'background: transparent; color: #3A3F48') };
+    });
+    const navDef = [['home', 'Home', 0], ['reqs', 'Requests', 9], ['team', 'Team', 0], ['tools', isMgr ? 'Manager Tools' : 'Tools', 0]].concat(isAdm ? [['admin', 'Admin Setup', 0]] : []);
+    const nav = navDef.map(([k, l, b]) => {
+      const on = s.page === k;
+      return { label: l, current: on ? 'page' : 'false', hasBadge: b > 0, badge: b, pick: () => this.setState({ page: k }),
+        isHome: k === 'home', isReq: k === 'reqs', isTeam: k === 'team', isTools: k === 'tools', isAdmin: k === 'admin',
+        style: 'display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 0 12px; border: 0; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; text-align: left; ' + (on ? 'background: #FDECEE; color: #8E0E22' : 'background: transparent; color: #16181D') };
+    });
+    const kpis = [
+      { n: '212', label: 'Working', sub: 'of 231 scheduled', color: '#16181D', go: () => this.setState({ page: 'team' }) },
+      { n: '19', label: 'Not here', sub: '6 stands short', color: '#9A4A06', go: () => this.setState({ page: 'team' }) },
+      { n: '9', label: 'Overdue requests', sub: 'Stock and Food past ETA', color: '#B4122B', go: () => this.setState({ page: 'reqs' }) },
+      { n: '4', label: 'Missing checks', sub: 'opening checklist / Count In', color: '#B4122B', go: () => {} }
+    ];
+    const tiles = [
+      { title: 'Checks', sub: 'Opening · Count In · During · Count Out · Closing', tag: '4 stands missing', tagStyle: chip('bad') + '; margin-top: auto', isChecks: true, iconStyle: icon('#163E91', '#E6EDFB') },
+      { title: 'Requests', sub: 'Stock · Force Stock · Food · IT', tag: '9 late', tagStyle: chip('bad') + '; margin-top: auto', isReq: true, iconStyle: icon('#C8102E', '#FDECEE') },
+      { title: 'Food Safety', sub: 'Temps · Sanitizer · Holding', tag: '7 temps due', tagStyle: chip('warn') + '; margin-top: auto', isFood: true, iconStyle: icon('#8A4205', '#FDF1E3') },
+      { title: 'My Team', sub: 'Active · Present/Absent · Breaks · all stands', tag: '212 of 231 here', tagStyle: chip('warn') + '; margin-top: auto', isTeam: true, iconStyle: icon('#166534', '#E8F5EC') }
+    ];
+    const attention = [
+      ['216 Someburros SC', 'West Concourse', 'No Count In', 'bad', 'No lead scheduled', '0/0'],
+      ['232P Someburros SC', 'East Concourse', 'Not started', 'bad', 'Subcontractor', '0/0'],
+      ['212P Beer Portable', 'West Portables', 'Short staffed', 'warn', 'Sup: Esther T.', '2/4'],
+      ['221P Taco Bar', 'Food Trucks / BBQ', 'No opening checklist', 'bad', 'Lead: Taylor B.', '3/3'],
+      ['204 Pitchfork Pizza', 'West Concourse', 'Temp due 6:30', 'warn', 'Lead: Jordan L.', '7/8'],
+      ['334 San Tan Favorites', 'Upper West', 'Short staffed', 'warn', 'Sup: Ebony S.', '3/5']
+    ].map(([stand, area, problem, t, who, staff]) => ({ stand, area, problem, who, staff, chip: chip(t) }));
+    const O = [['Stock', '212P Beer Portable', 'Coors Light 24oz ×3 cases', '14 min late'], ['Food', '226 Pitchfork Pizza', 'Pizza ×6', '9 min late'], ['Stock', '204P Fan Fuel Bev', 'Dos Equis ×2 cases', '6 min late'], ['Stock', '219 Cold Beer Cheeseburgers', 'CO2 35# ×1', '5 min late'], ['Food', '140 Inferno Favorites', 'Tenders ×20', '4 min late'], ['Stock', '408 Cold Beer Cheeseburgers', 'Miller Lite ×2 cases', '2 min late']];
+    const overdueAll = O.map(([kind, stand, items, late]) => ({ kind, stand, items, late, kindStyle: kindS(kind) }));
+    const overdue = s.moreOver ? overdueAll : overdueAll.slice(0, 4);
+    const R = [['Stock', '212P Beer Portable', 'Coors Light 24oz ×3 cases', 'Waiting', 'bad', 'No one yet', '18 min', true], ['Food', '226 Pitchfork Pizza', 'Pizza ×6', 'Being made', 'warn', 'Kitchen', '13 min', true], ['IT', '403M Fan Fuel BevMKT', 'Self-checkout frozen', 'Tech coming', 'info', 'Tech: Ray', '6 min', false], ['Stock', '216M Fan Fuel BevMKT', 'Life Water ×2 cases', 'On the way', 'warn', 'Jordan', '4 min', false], ['Stock', '140 Inferno Favorites', 'Cups 32oz ×2 sleeves', 'Claimed', 'info', 'Sam', '2 min', false], ['IT', '212P Beer Portable', 'POS handheld won’t print', 'Fixed', 'ok', 'Tech: Ray', 'done', false]];
+    const reqRowsAll = R.map(([kind, stand, items, status, t, who, age, late]) => ({ kind, stand, items, status, who, age, chip: chip(t), kindStyle: kindS(kind), ageColor: late ? '#B4122B' : '#3A3F48' }));
+    const reqRows = s.reqF === 'all' ? reqRowsAll : reqRowsAll.filter(r => r.kind === s.reqF);
+    const fChip = on => 'min-height: 40px; padding: 6px 14px; border-radius: 999px; font-size: 14px; font-weight: 700; cursor: pointer; ' + (on ? 'background: #16181D; color: #FFFFFF; border: 1px solid #16181D' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE');
+    const reqFilters = [['all', 'All'], ['Stock', 'Stock'], ['Food', 'Food'], ['IT', 'IT']].map(([k, l]) => ({ label: l, n: k === 'all' ? reqRowsAll.length : reqRowsAll.filter(r => r.kind === k).length, on: s.reqF === k ? 'true' : 'false', pick: () => this.setState({ reqF: k }), style: fChip(s.reqF === k) }));
+    const teamTabs = ['All stands', 'Workers', 'NPO', 'Premium'].map((l, i) => ({ label: l, style: fChip(i === 0) }));
+    const standCards = [['204 Pitchfork Pizza', 7, 8, 'Jordan L.'], ['212P Beer Portable', 2, 4, 'Esther T.'], ['216M Fan Fuel BevMKT', 5, 5, 'Rajashree D.'], ['219 Cold Beer Cheeseburgers', 5, 8, 'Gabriel B.'], ['226 Pitchfork Pizza', 8, 8, 'Kayla L.'], ['334 San Tan Favorites', 3, 5, 'Ebony S.'], ['403M Fan Fuel BevMKT', 4, 4, 'Tricia W.'], ['438 Huss Hideout Favorites', 6, 7, 'Amanda L.']].map(([stand, h, n, lead]) => {
+      const p = Math.round(h / n * 100), t = p >= 100 ? 'ok' : p >= 75 ? 'warn' : 'bad';
+      return { stand, lead, staff: h + '/' + n, chip: chip(t), bar: 'display: block; height: 100%; width: ' + p + '%; background: ' + (t === 'ok' ? '#16A34A' : t === 'warn' ? '#D97706' : '#B4122B') };
+    });
+    const nS = t => 'font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px; ' + 'color: ' + tone[t][0] + '; background: ' + tone[t][1];
+    const toolDef = [['Inventory', 'Counts · print · ledger'], ['Transfers', 'Review transfer status', '20 pending', 'warn'], ['Reports', 'Feedback · checklists'], ['Time sheet', 'Breaks · tip export · Premium'], ['Refunds', 'Supervisor completions · records', '8', 'bad', true], ['Maintenance', 'Open facility issues', '1', 'warn'], ['Runner coverage', 'Who covers each stand'], ['Game-Day Feedback', 'Compliment, concern, or issue'], ['Sign-in help & QR', 'App QR · subcontractor sign-in words'], ['Checkout & Inventory Tracker', 'Count In / Count Out · boxes at the exit', '', '', true]];
+    const tools = toolDef.filter(t => isMgr || !t[4]).map(([label, sub, n, t]) => {
+      const on = s.tool === label;
+      return { label, sub, hasN: !!n, n, nStyle: n ? nS(t) : '', pick: () => this.setState({ tool: label }),
+        style: 'display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 96px; padding: 14px 16px; background: #FFFFFF; border-radius: 16px; cursor: pointer; text-align: left; ' + (on ? 'border: 2px solid #16181D' : 'border: 1px solid #E3E5E9') };
+    });
+    const RF = [[1, '219 Cold Beer Cheeseburgers', '$14.50', 'Charged twice', 'Gabriel B.', 'today 6:48 PM'], [2, '204 Pitchfork Pizza', '$11.00', 'Wrong order', 'Jordan L.', 'today 6:20 PM'], [3, '212P Beer Portable', '$16.00', 'Spilled at handoff', 'Esther T.', '11/21']];
+    const refunds = RF.map(([id, stand, amount, reason, by, when]) => {
+      const st = s.ref[id] || 'pending';
+      return { stand, amount, reason, by, when, pending: st === 'pending', status: st === 'pending' ? 'Waiting' : st === 'ok' ? 'Approved' : 'Denied', chip: chip(st === 'pending' ? 'warn' : st === 'ok' ? 'ok' : 'bad'),
+        approve: () => this.setState({ ref: { ...s.ref, [id]: 'ok' } }), deny: () => this.setState({ ref: { ...s.ref, [id]: 'no' } }) };
+    });
+    const admDef = [
+      ['Game day', 'Game info staff see · start a new game', 'M3 10h18M8 3v4M16 3v4M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z', 'bad'],
+      ['People & logins', 'Access Center · stand self-login · NPO groups', 'M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M17 11a2.5 2.5 0 1 0 0-5M16.5 14.6c2.6.3 4.4 2.1 5 5.4', 'ok'],
+      ['Who covers what', 'Coverage plan · chat routing · multi-stand leads', 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', 'info'],
+      ['Warehouse crew', 'Roster upload · walk-in & check-in', 'M3 7h11v9H3zM14 10h4l3 3v3h-7zM7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4z', 'warn'],
+      ['Stands', 'Create stands · subcontractor logins', 'M4 10h16l-1.5-5h-13zM5 10v10h14V10M9 20v-5h6v5', 'gray'],
+      ['Uploads', 'Schedule · Yellow Dog stand sheets', 'M12 15V3M7 8l5-5 5 5M4 17v3h16v-3', 'info']
+    ];
+    const adminSections = admDef.map(([label, sub, path, t]) => {
+      const on = s.adm === label;
+      return { label, sub, path, pick: () => this.setState({ adm: label }), iconStyle: icon(tone[t][0], tone[t][1]),
+        style: 'display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 140px; padding: 16px; background: #FFFFFF; border-radius: 16px; cursor: pointer; text-align: left; ' + (on ? 'border: 2px solid #16181D' : 'border: 1px solid #E3E5E9') };
+    });
+    const access = [['Hernandez, Nestor', '•••90000', 'Premium manager', 'info', '70000 + last name', 'Active', 'ok'], ['Teo, Esther', '•••35506', 'Support manager', 'gray', '90000 + last name', 'Active', 'ok'], ['Warehouse, temp walk-in', '•••55555', 'Warehouse employee', 'warn', '60000 + last name', 'Active', 'ok'], ['Runner, food', '•••88001', 'Food runner', 'bad', 'Last 5 + last name', 'Active', 'ok'], ['Old account', '•••00002', 'Manager', 'gray', '90000 + last name', 'Off', 'bad']].map(([name, id, role, rt, how, status, stt]) => ({ name, id, role, how, status, roleChip: chip(rt), statusChip: chip(stt) }));
+    const titles = { home: 'Game day board', reqs: 'Requests · all stadium', team: 'Team · all stands', tools: isMgr ? 'Manager Tools' : 'Tools', admin: 'Admin Setup' };
+    return {
+      roles, nav, who: isAdm ? 'Admin' : isMgr ? 'Mia (Manager)' : 'Hank (Support manager)', roleLabel: isAdm ? 'Admin' : isMgr ? 'Manager' : 'Support manager',
+      pageTitle: titles[s.page] || 'Game day board',
+      isHome: s.page === 'home', isReqs: s.page === 'reqs', isTeam: s.page === 'team', isTools: s.page === 'tools', isAdmin: s.page === 'admin' && isAdm,
+      kpis, tiles, attention, overdue, overdueN: overdueAll.length, hasMoreOver: overdueAll.length > 4,
+      moreOver: () => this.setState({ moreOver: !s.moreOver }), moreOverLabel: s.moreOver ? 'Show less' : 'Show ' + (overdueAll.length - 4) + ' more',
+      reqFilters, reqRows, teamTabs, standCards, tools, showRefunds: s.tool === 'Refunds' && isMgr, refunds,
+      adminSections, showPeople: s.adm === 'People & logins', access
+    };
+  }
+}
+</script>
+</body>
+</html>

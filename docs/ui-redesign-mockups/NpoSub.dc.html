@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NPO and subcontractor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button,input{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+.card{display:flex;flex-direction:column;gap:12px;padding:16px;background:#FFFFFF;border:1px solid #E3E5E9;border-radius:18px}
+.hint{font-size:13px;color:#5B6270;line-height:1.45}
+.ghost{min-height:48px;border:1px solid #D5D8DE;border-radius:12px;background:#FFFFFF;color:#16181D;font-size:15px;font-weight:700;cursor:pointer}
+.in{min-height:52px;padding:0 14px;border:1px solid #C9CDD4;border-radius:12px;font-size:16px;color:#16181D;background:#FFFFFF}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <div style="display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px; background: #16181D">
+    <sc-for list="{{screens}}" as="sc" hint-placeholder-count="4">
+      <button onClick="{{sc.pick}}" aria-pressed="{{sc.on}}" style="{{sc.style}}">{{sc.label}}</button>
+    </sc-for>
+  </div>
+
+  <header style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <sc-if value="{{hasBack}}" hint-placeholder-val="{{ false }}"><button onClick="{{back}}" aria-label="Back" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; border-radius: 12px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button></sc-if>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+      <span style="font-size: 13px; font-weight: 700; color: {{kickerColor}}">{{kicker}}</span>
+      <span style="font-size: 20px; font-weight: 800">{{title}}</span>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+
+    <sc-if value="{{is.pick}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div class="card" style="gap: 6px"><span style="font-size: 18px; font-weight: 800">Hi Nora</span><span class="hint">Boosters Club covers more than one stand. Pick where you are right now.</span></div>
+        <sc-for list="{{npoStands}}" as="n" hint-placeholder-count="3">
+          <button onClick="{{n.pick}}" style="display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 12px 16px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; cursor: pointer; text-align: left">
+            <span style="width: 44px; height: 44px; border-radius: 12px; background: #FDECEE; color: #8E0E22; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h16l-1.5-5h-13zM5 10v10h14V10M9 20v-5h6v5"/></svg></span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 17px; font-weight: 800">{{n.name}}</span><span class="hint">{{n.sub}}</span></span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+        </sc-for>
+        <button class="ghost">Wrong group? Go back</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.home}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <section class="card">
+          <span style="font-size: 15px; color: #5B6270">Hi Nora</span>
+          <span style="font-size: 20px; font-weight: 800; margin-top: -8px">Nora Lead</span>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; background: #F4F5F7; border-radius: 12px">
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 800; color: #5B6270">Your stand</span><span style="font-size: 18px; font-weight: 800">{{npoStand}}</span></span>
+            <span style="font-size: 12px; font-weight: 800; color: #8E0E22; background: #FDECEE; padding: 5px 10px; border-radius: 999px">NPO Lead · Boosters Club</span>
+          </div>
+          <span class="hint">NPO groups don’t clock in or out here. Mark who’s here in My NPO Group.</span>
+        </section>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <sc-for list="{{npoTiles}}" as="t" hint-placeholder-count="4">
+            <button onClick="{{t.go}}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px; min-height: 140px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; cursor: pointer; text-align: left">
+              <span style="{{t.ic}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.path}}"/></svg></span>
+              <span style="font-size: 17px; font-weight: 800">{{t.title}}</span>
+              <span class="hint">{{t.sub}}</span>
+              <span class="num" style="{{t.tagStyle}}">{{t.tag}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.roster}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div class="card" style="gap: 8px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 16px; font-weight: 800">Approved roster</span><span class="num hint">{{hereN}} of {{rosterN}} here</span></div>
+          <span style="display: flex; height: 8px; border-radius: 4px; background: #EEF0F3; overflow: hidden"><span style="{{rbar}}"></span></span>
+          <span class="hint">Tap Here or Not here for each person. Only people on your group’s list can work.</span>
+        </div>
+        <sc-for list="{{roster}}" as="p" hint-placeholder-count="6">
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <span style="{{p.av}}">{{p.ini}}</span>
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 800; overflow-wrap: anywhere">{{p.name}}</span><span class="hint" style="font-size: 12px">{{p.note}}</span></span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+              <button onClick="{{p.here}}" style="{{p.hereStyle}}">Here</button>
+              <button onClick="{{p.away}}" style="{{p.awayStyle}}">Not here</button>
+            </div>
+          </div>
+        </sc-for>
+        <button class="ghost" style="border-style: dashed">+ Add a walk-in member to the list</button>
+        <button class="ghost">Refresh roster</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.sub}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <section class="card">
+          <span style="font-size: 15px; color: #5B6270">Signed in as</span>
+          <span style="font-size: 20px; font-weight: 800; margin-top: -8px">Subcontractor crew · Ana</span>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; background: #F4F5F7; border-radius: 12px">
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 800; color: #5B6270">Your stand</span><span style="font-size: 18px; font-weight: 800">232P Someburros SC</span></span>
+            <span style="font-size: 12px; font-weight: 800; color: #3A3F48; background: #FFFFFF; border: 1px solid #E3E5E9; padding: 5px 10px; border-radius: 999px">Subcontractor</span>
+          </div>
+          <span style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #FDF1E3; border-radius: 12px; font-size: 13px; font-weight: 700; color: #8A4205">Wrong stand? Sign out and type your stand number again.</span>
+        </section>
+        <span style="font-size: 13px; font-weight: 800; color: #5B6270">Tonight’s counts</span>
+        <sc-for list="{{subCounts}}" as="c" hint-placeholder-count="2">
+          <button style="{{c.card}}">
+            <span style="{{c.ic}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8"/></svg></span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 17px; font-weight: 800">{{c.title}}</span><span class="hint">{{c.sub}}</span></span>
+            <span style="{{c.tagStyle}}">{{c.tag}}</span>
+          </button>
+        </sc-for>
+        <button style="display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 12px 16px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; cursor: pointer; text-align: left">
+          <span style="width: 44px; height: 44px; border-radius: 12px; background: #FDECEE; color: #C8102E; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg></span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 17px; font-weight: 800">Requests</span><span class="hint">Stock from the warehouse · IT</span></span>
+        </button>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { scr: 'pick', stand: '408 Cold Beer Cheeseburgers', att: { a: 'here', b: 'here', c: '', d: 'away', e: 'here', f: '' } }; }
+  renderVals() {
+    const s = this.state, go = k => () => this.setState({ scr: k });
+    const S = [['pick', 'NPO: pick stand'], ['home', 'NPO lead home'], ['roster', 'NPO group roster'], ['sub', 'Subcontractor home']];
+    const screens = S.map(([k, l]) => ({ label: l, on: s.scr === k ? 'true' : 'false', pick: go(k), style: 'flex-shrink: 0; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 0; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; ' + (s.scr === k ? 'background: #FFFFFF; color: #16181D' : 'background: #33363D; color: #FFFFFF') }));
+    const is = {}; S.forEach(([k]) => is[k] = s.scr === k);
+    const npoStands = [['408 Cold Beer Cheeseburgers', 'Main stand · you run attendance'], ['405P Stinger SC', 'Portable · members can sign in themselves'], ['404P Bahamas Buck SC', 'Portable · members can sign in themselves']].map(([name, sub]) => ({ name, sub, pick: () => this.setState({ stand: name, scr: 'home' }) }));
+    const ic = (c, b) => 'width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: ' + c + '; background: ' + b;
+    const tag = t => 'font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; margin-top: auto; ' + (t === 'ok' ? 'color: #166534; background: #E8F5EC' : t === 'bad' ? 'color: #8E0E22; background: #FDECEE' : 'color: #8A4205; background: #FDF1E3');
+    const R = [['a', 'Nora Lead', 'Group lead'], ['b', 'Ned Member', ''], ['c', 'Priya Volunteer', ''], ['d', 'Sam Helper', 'Called out sick'], ['e', 'Alex Parent', ''], ['f', 'Jamie Student', '16+ · no alcohol sales']];
+    const hereN = Object.values(s.att).filter(v => v === 'here').length;
+    const npoTiles = [
+      { title: 'My NPO Group', sub: 'Who’s here · approved roster', tag: hereN + ' of ' + R.length + ' here', tagStyle: tag('warn'), path: 'M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M17 11a2.5 2.5 0 1 0 0-5M16.5 14.6c2.6.3 4.4 2.1 5 5.4', ic: ic('#166534', '#E8F5EC'), go: go('roster') },
+      { title: 'Checks', sub: 'Opening · Count In · During · Count Out · Closing', tag: 'Next: Count In', tagStyle: tag('warn'), path: 'M9 3h6v2H9zM5 5h14v16H5zM9 11l2 2 4-4M9 17h6', ic: ic('#163E91', '#E6EDFB'), go: () => {} },
+      { title: 'Requests', sub: 'Stock · IT · Refund · Maint', tag: '1 on the way', tagStyle: tag('ok'), path: 'M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8', ic: ic('#C8102E', '#FDECEE'), go: () => {} },
+      { title: 'Food Safety', sub: 'Temps · Sanitizer · Holding', tag: 'Temp due 6:30', tagStyle: tag('bad'), path: 'M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0zM12 10v6', ic: ic('#8A4205', '#FDF1E3'), go: () => {} }
+    ];
+    const tone = { here: ['#166534', '#E8F5EC'], away: ['#8E0E22', '#FDECEE'], '': ['#3A3F48', '#EEF0F3'] };
+    const roster = R.map(([k, name, note]) => { const a = s.att[k] || '';
+      const b = (on, c, bg) => 'min-height: 48px; border-radius: 12px; font-size: 15px; font-weight: 800; cursor: pointer; ' + (on ? 'background: ' + bg + '; color: ' + c + '; border: 2px solid ' + c : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE');
+      return { name, note: note || (a === 'here' ? 'Marked here' : a === 'away' ? 'Marked not here' : 'Not marked yet'), ini: name.split(' ').map(x => x[0]).join(''),
+        av: 'width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0; color: ' + tone[a][0] + '; background: ' + tone[a][1],
+        here: () => this.setState({ att: { ...s.att, [k]: 'here' } }), away: () => this.setState({ att: { ...s.att, [k]: 'away' } }),
+        hereStyle: b(a === 'here', '#166534', '#E8F5EC'), awayStyle: b(a === 'away', '#8E0E22', '#FDECEE') }; });
+    const sc = (title, sub, t, tg) => ({ title, sub, tag: tg, tagStyle: tag(t).replace('margin-top: auto; ', ''),
+      card: 'display: flex; align-items: center; gap: 14px; min-height: 80px; padding: 12px 16px; background: #FFFFFF; border-radius: 16px; cursor: pointer; text-align: left; ' + (t === 'bad' ? 'border: 2px solid #C8102E' : 'border: 1px solid #E3E5E9'),
+      ic: ic(t === 'ok' ? '#FFFFFF' : '#166534', t === 'ok' ? '#16A34A' : '#E8F5EC') });
+    const kick = { pick: ['NPO · Boosters Club', '#8E0E22'], home: ['NPO · Boosters Club', '#8E0E22'], roster: [s.stand, '#8E0E22'], sub: ['Subcontractor', '#3A3F48'] }[s.scr];
+    return { screens, is, kicker: kick[0], kickerColor: kick[1],
+      title: { pick: 'Which stand?', home: 'Home', roster: 'My NPO Group', sub: 'Home' }[s.scr],
+      hasBack: s.scr === 'roster', back: go('home'), npoStands, npoStand: s.stand, npoTiles, roster, hereN, rosterN: R.length,
+      rbar: 'display: block; height: 100%; width: ' + (hereN / R.length * 100) + '%; background: #16A34A',
+      subCounts: [sc('Count In', 'Before you sell · 13 items', 'ok', 'Done 5:12 PM'), sc('Count Out', 'After your last sale', 'bad', 'Do after close')] };
+  }
+}
+</script>
+</body>
+</html>

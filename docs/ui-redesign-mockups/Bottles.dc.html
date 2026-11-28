@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bottle Tracker</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button,input,select{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+.card{display:flex;flex-direction:column;gap:10px;padding:14px;background:#FFFFFF;border:1px solid #E3E5E9;border-radius:18px}
+.lbl{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:#3A3F48}
+.in{min-height:50px;padding:0 14px;border:1px solid #C9CDD4;border-radius:12px;font-size:16px;background:#FFFFFF;color:#16181D;box-sizing:border-box;width:100%}
+.hint{font-size:13px;color:#5B6270;line-height:1.45}
+.ghost{min-height:44px;padding:0 12px;border:1px solid #D5D8DE;border-radius:12px;background:#FFFFFF;color:#16181D;font-size:14px;font-weight:700;cursor:pointer}
+.go{min-height:54px;border:0;border-radius:14px;background:#6B4E16;color:#FFFFFF;font-size:16px;font-weight:800;cursor:pointer}
+.step{width:26px;height:26px;border-radius:50%;background:#6B4E16;color:#FFFFFF;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:50px;border-top:1px solid #F1F2F4}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <header style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 10px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <a href="PremiumMgr.dc.html" aria-label="Back" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 13px; font-weight: 700; color: #6B4E16">Premium · {{who}}</span>
+        <span style="font-size: 20px; font-weight: 800">Bottle Tracker</span>
+      </div>
+    </div>
+    <div role="group" aria-label="Mockup: view as" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px">
+      <sc-for list="{{views}}" as="v" hint-placeholder-count="3"><button onClick="{{v.pick}}" aria-pressed="{{v.on}}" style="{{v.style}}">{{v.label}}</button></sc-for>
+    </div>
+    <div role="tablist" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="7"><button role="tab" onClick="{{t.pick}}" aria-selected="{{t.on}}" style="{{t.style}}">{{t.label}}</button></sc-for>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+
+    <sc-if value="{{sellOff}}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 14px; border-radius: 16px; background: #FDF1E3; color: #8A4205; font-size: 14px; font-weight: 700; line-height: 1.45">Bottle selling is not switched on for you today. Ask your Premium manager to turn it on in Bottle Tracker → Sell.</div>
+    </sc-if>
+
+    <!-- Sell: manager decides who may sell -->
+    <sc-if value="{{isSellMgr}}" hint-placeholder-val="{{ false }}">
+      <section class="card" style="gap: 4px">
+        <div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 16px; font-weight: 800">Who can sell today</span><span class="num hint">{{sellOnN}} on</span></div>
+        <div style="display: flex; gap: 6px; padding: 6px 0"><button onClick="{{allOn}}" class="ghost" style="min-height: 36px; font-size: 13px">All suite attendants on</button><button onClick="{{allOff}}" class="ghost" style="min-height: 36px; font-size: 13px">All off</button></div>
+        <sc-for list="{{sellers}}" as="x" hint-placeholder-count="4">
+          <div class="row"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 800">{{x.name}}</span><span style="font-size: 12px; color: #5B6270">{{x.loc}}</span></span><button onClick="{{x.toggle}}" role="switch" aria-checked="{{x.on}}" style="{{x.track}}"><span style="{{x.knob}}"></span></button></div>
+        </sc-for>
+        <input class="in" placeholder="Add someone by name or ID" style="margin-top: 6px">
+      </section>
+    </sc-if>
+
+    <!-- Scan screens: Tag / Move / Sell / Empty / Look up -->
+    <sc-if value="{{hasScan}}" hint-placeholder-val="{{ true }}">
+      <section class="card">
+        <span style="font-size: 16px; font-weight: 800">{{scanTitle}}</span>
+        <span class="hint">{{scanHint}}</span>
+        <sc-if value="{{isTag}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <label class="lbl">1 · Location<select class="in"><option>Premium Warehouse</option><option>Suites 1–8</option><option>Club Chill bar</option><option>Founders Club</option></select></label>
+            <label class="lbl">2 · Bottle<select class="in"><option>TITO'S VODKA 1L</option><option>CASAMIGOS BLANCO 750ML</option><option>CROWN ROYAL 1L</option></select></label>
+            <span class="lbl" style="margin-top: 2px">3 · Stick the labels on, then scan one after another</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{isMove}}" hint-placeholder-val="{{ false }}"><label class="lbl">Move to<select class="in"><option>Suite 12</option><option>Club Chill bar</option><option>Founders Club</option><option>Premium Warehouse</option></select></label></sc-if>
+        <sc-if value="{{isSell}}" hint-placeholder-val="{{ false }}"><label class="lbl">Sold at<select class="in"><option>Suite 12</option><option>Suite 14</option><option>Loge box 3</option></select></label></sc-if>
+
+        <button onClick="{{scanOne}}" style="position: relative; height: 140px; border: 0; border-radius: 14px; background: #1E1A16; color: #F4C97A; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px">
+          <span style="position: absolute; inset: 20px 48px; border: 2px dashed rgba(244,201,122,0.6); border-radius: 10px"></span>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"/></svg>
+          <span style="font-size: 15px; font-weight: 800; color: #FFFFFF">Tap to scan the Dymo barcode</span>
+          <span style="font-size: 12px; color: #E9DCC8">Beeps on each scan · keeps the camera open</span>
+        </button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+          <button onClick="{{readNum}}" class="ghost" style="display: flex; align-items: center; justify-content: center; gap: 6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Read number</button>
+          <input class="in" inputmode="numeric" placeholder="Type number or last 3" style="min-height: 44px; font-size: 15px">
+        </div>
+        <span class="hint" style="font-size: 12px">No Dymo label yet? “Read number” reads the sticker with the camera.</span>
+        <sc-if value="{{ask}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: #FBF1DE">
+            <span style="font-size: 14px; font-weight: 800; color: #6B4E16">“…042” is on two rolls. Which one?</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap"><sc-for list="{{rollPick}}" as="r" hint-placeholder-count="2"><button onClick="{{r.pick}}" class="ghost" style="display: flex; align-items: center; gap: 6px"><span style="{{r.dot}}"></span>{{r.label}}</button></sc-for></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{hasLog}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 0; border-radius: 12px; background: #E8F5EC; padding: 4px 12px">
+            <div class="row" style="border-top: 0; min-height: 40px"><span style="font-size: 13px; font-weight: 800; color: #166534">{{logN}} scanned this time</span><button onClick="{{undo}}" class="ghost" style="min-height: 34px; font-size: 13px; color: #166534; border-color: #BFE3CB">Undo last</button></div>
+            <sc-for list="{{log}}" as="l" hint-placeholder-count="2"><div class="row" style="min-height: 38px; border-top-color: #CFEBD9"><span class="num" style="font-size: 14px; font-weight: 700; color: #166534">{{l.t}}</span><span class="num" style="font-size: 12px; color: #166534">{{l.at}}</span></div></sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px dashed #B9BEC7; border-radius: 12px">
+            <span style="font-size: 14px; font-weight: 800">Went out on the paper list, before the app?</span>
+            <select class="in"><option>Which bottle…</option><option>CROWN ROYAL 1L</option></select>
+            <select class="in"><option>Which location…</option><option>Suite 12</option></select>
+            <button class="ghost">Record as empty</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{isLook}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 0">
+            <div class="row" style="border-top: 0"><span style="display: flex; flex-direction: column; gap: 2px"><span class="num" style="font-size: 18px; font-weight: 800">Pink #3000142</span><span class="hint">TITO'S VODKA 1L</span></span><span style="font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; color: #6B4E16; background: #FBF1DE">Open · Suite 12</span></div>
+            <sc-for list="{{history}}" as="h" hint-placeholder-count="5"><div class="row" style="min-height: 44px; justify-content: flex-start"><span style="{{h.dot}}"></span><span style="flex: 1; font-size: 14px; font-weight: 600">{{h.what}}</span><span class="num" style="font-size: 12px; color: #5B6270">{{h.at}}</span></div></sc-for>
+          </div>
+          <button class="ghost">Download all history (CSV)</button>
+        </sc-if>
+      </section>
+    </sc-if>
+
+    <!-- Bottles list -->
+    <sc-if value="{{isList}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{listKpi}}" as="k" hint-placeholder-count="3"><div style="{{k.style}}"><span class="num" style="font-size: 22px; font-weight: 800">{{k.n}}</span><span style="font-size: 12px; font-weight: 700">{{k.l}}</span></div></sc-for>
+        </div>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <span style="font-size: 15px; font-weight: 800; padding: 10px 0 6px">Open bottles</span>
+          <sc-for list="{{openList}}" as="o" hint-placeholder-count="4"><div class="row" style="min-height: 56px"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 14px; font-weight: 800">{{o.loc}}</span><span style="font-size: 12px; color: #5B6270">{{o.what}}</span></span><span class="num" style="font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; color: #6B4E16; background: #FBF1DE">{{o.n}}</span></div></sc-for>
+        </section>
+        <section class="card" style="gap: 0; padding: 4px 14px; border: 2px solid #D97706">
+          <span style="font-size: 15px; font-weight: 800; padding: 10px 0 2px; color: #8A4205">Open from earlier events</span>
+          <span class="hint" style="padding-bottom: 6px">Find the bottle, or void it with the reason if it’s gone.</span>
+          <sc-for list="{{oldOpen}}" as="o" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid #F1F2F4">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="display: flex; flex-direction: column; gap: 2px"><span class="num" style="font-size: 14px; font-weight: 800; color: #8A4205">{{o.no}}</span><span style="font-size: 12px; color: #5B6270">{{o.what}}</span></span><sc-if value="{{o.live}}" hint-placeholder-val="{{ true }}"><button onClick="{{o.voidIt}}" class="ghost" style="min-height: 36px; font-size: 13px; color: #8E0E22">Void…</button></sc-if><sc-if value="{{o.gone}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; font-weight: 800; color: #8E0E22">Voided · broken</span></sc-if></div>
+              <sc-if value="{{o.asking}}" hint-placeholder-val="{{ false }}"><div style="display: grid; grid-template-columns: 1fr auto; gap: 6px"><input class="in" placeholder="Reason: broken, lost, wrong bottle…" style="min-height: 42px; font-size: 14px"><button onClick="{{o.confirm}}" class="ghost" style="min-height: 42px; background: #8E0E22; color: #FFFFFF; border: 0">Void</button></div></sc-if>
+            </div>
+          </sc-for>
+        </section>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <span style="font-size: 15px; font-weight: 800; padding: 10px 0 6px">Emptied today</span>
+          <sc-for list="{{emptied}}" as="o" hint-placeholder-count="3"><div class="row"><span class="num" style="font-size: 14px; font-weight: 700">{{o.a}}</span><span class="num hint" style="font-size: 12px">{{o.b}}</span></div></sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- Setup -->
+    <sc-if value="{{isSetup}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <section class="card" style="gap: 6px; background: #2B2118; border: 0; color: #FFFFFF">
+          <span style="font-size: 15px; font-weight: 800; color: #F4C97A">Set up in 3 steps + selling</span>
+          <sc-for list="{{steps}}" as="st" hint-placeholder-count="4"><div style="display: flex; align-items: center; gap: 10px; min-height: 34px"><span style="{{st.dot}}">{{st.mark}}</span><span style="font-size: 14px; font-weight: 600">{{st.t}}</span></div></sc-for>
+        </section>
+
+        <div role="tablist" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px">
+          <sc-for list="{{setTabs}}" as="t" hint-placeholder-count="3"><button role="tab" onClick="{{t.pick}}" aria-selected="{{t.on}}" style="{{t.style}}">{{t.l}}</button></sc-for>
+        </div>
+
+        <sc-if value="{{set.cat}}" hint-placeholder-val="{{ true }}">
+          <section class="card">
+            <div style="display: flex; align-items: center; gap: 10px"><span class="step">1</span><span style="font-size: 16px; font-weight: 800">Bottle list <span class="num" style="color: #5B6270">({{catN}})</span></span></div>
+            <span class="hint">Write each bottle the same way every time: BRAND + KIND + SIZE, e.g. TITO'S VODKA 1L.</span>
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px"><input class="in" placeholder="New bottle, e.g. TITO'S VODKA 1L"><button onClick="{{catAdd}}" class="go" style="min-height: 50px; padding: 0 18px">Add</button></div>
+            <input class="in" placeholder="Filter the list" style="min-height: 44px; font-size: 14px">
+            <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{cat}}" as="c" hint-placeholder-count="5"><span style="display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 12px; border-radius: 999px; background: #FBF1DE; color: #6B4E16; font-size: 13px; font-weight: 800">{{c.n}}<button onClick="{{c.rm}}" aria-label="Remove" style="width: 24px; height: 24px; border: 0; border-radius: 50%; background: #FFFFFF; color: #6B4E16; cursor: pointer">×</button></span></sc-for></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"><button class="ghost">Upload list (CSV)</button><button class="ghost">Download list (CSV)</button></div>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{set.lab}}" hint-placeholder-val="{{ false }}">
+          <section class="card">
+            <div style="display: flex; align-items: center; gap: 10px"><span class="step">2</span><span style="font-size: 16px; font-weight: 800">Dymo barcode labels</span></div>
+            <span class="hint">Each label = a barcode + the same number as a sticker from your rolls. Stick it next to that sticker; from then on just scan it.</span>
+            <label class="lbl">Label size<select class="in" style="font-size: 14px"><option>Dymo 30336 · 1" × 2-1/8" (small)</option><option>Dymo 30334 · 2-1/4" × 1-1/4"</option><option>Dymo 30252 · 1-1/8" × 3-1/2" (address)</option><option>Dymo 30332 · 1" × 1" square (QR)</option><option>Dymo 30336 · 2 small QR per label</option></select></label>
+            <span class="lbl">Which numbers?</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap"><sc-for list="{{labRolls}}" as="r" hint-placeholder-count="4"><button onClick="{{r.pick}}" aria-pressed="{{r.on}}" style="{{r.style}}"><span style="{{r.dot}}"></span>{{r.label}}</button></sc-for></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"><label class="lbl">From<input class="in num" value="{{labFrom}}"></label><label class="lbl">How many<input class="in num" inputmode="numeric" value="30"></label></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px; border: 1px dashed #B9BEC7; border-radius: 12px; background: #FFFFFF">
+              <span style="font-size: 11px; font-weight: 800; color: #5B6270">EACH LABEL LOOKS LIKE THIS</span>
+              <svg width="200" height="34" viewBox="0 0 200 34" aria-hidden="true"><g fill="#16181D"><rect x="0" width="3" height="34"/><rect x="6" width="1" height="34"/><rect x="10" width="4" height="34"/><rect x="17" width="2" height="34"/><rect x="22" width="1" height="34"/><rect x="26" width="3" height="34"/><rect x="32" width="1" height="34"/><rect x="36" width="2" height="34"/><rect x="41" width="4" height="34"/><rect x="48" width="1" height="34"/><rect x="52" width="3" height="34"/><rect x="58" width="2" height="34"/><rect x="63" width="1" height="34"/><rect x="67" width="4" height="34"/><rect x="74" width="2" height="34"/><rect x="79" width="1" height="34"/><rect x="83" width="3" height="34"/><rect x="89" width="1" height="34"/><rect x="93" width="2" height="34"/><rect x="98" width="4" height="34"/><rect x="105" width="1" height="34"/><rect x="109" width="3" height="34"/><rect x="115" width="2" height="34"/><rect x="120" width="1" height="34"/><rect x="124" width="4" height="34"/><rect x="131" width="2" height="34"/><rect x="136" width="1" height="34"/><rect x="140" width="3" height="34"/><rect x="146" width="1" height="34"/><rect x="150" width="2" height="34"/><rect x="155" width="4" height="34"/><rect x="162" width="1" height="34"/><rect x="166" width="3" height="34"/><rect x="172" width="2" height="34"/><rect x="177" width="1" height="34"/><rect x="181" width="4" height="34"/><rect x="188" width="2" height="34"/><rect x="193" width="1" height="34"/><rect x="197" width="3" height="34"/></g></svg>
+              <span class="num" style="font-size: 16px; font-weight: 800; letter-spacing: 1px">{{labFrom}}</span>
+              <span style="font-size: 10px; font-weight: 800; color: #5B6270">ARAMARK PREMIUM · {{labRollName}}</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px"><button class="ghost">Test 1 label</button><button class="go" style="min-height: 46px; font-size: 15px">Print labels</button></div>
+            <span class="hint" style="font-size: 12px">Pick the Dymo printer and the same size in the print window. Test first, then scan it in Look up. A label jammed? Print that number again.</span>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{set.rolls}}" hint-placeholder-val="{{ false }}">
+          <section class="card" style="gap: 4px">
+            <div style="display: flex; align-items: center; gap: 10px; padding-bottom: 6px"><span class="step">3</span><span style="font-size: 16px; font-weight: 800">Sticker rolls</span></div>
+            <span class="hint" style="padding-bottom: 6px">The app tracks the number; the colour is just a name. New tape? Add its first and last number and it works right away.</span>
+            <sc-for list="{{rollList}}" as="r" hint-placeholder-count="4">
+              <div class="row" style="{{r.rowStyle}}"><span style="display: flex; align-items: center; gap: 10px"><span style="{{r.dot}}"></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 800">{{r.name}}</span><span class="num hint" style="font-size: 12px">{{r.range}}</span></span></span><button onClick="{{r.toggle}}" class="ghost" style="min-height: 36px; font-size: 12px">{{r.btn}}</button></div>
+            </sc-for>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding: 12px; border-radius: 12px; background: #F4F5F7">
+              <span style="font-size: 14px; font-weight: 800">Add a new roll</span>
+              <span class="hint" style="font-size: 12px">Look at the first and last sticker on the tape (or the box label).</span>
+              <input class="in" placeholder="Colour or name, e.g. Yellow">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"><input class="in num" inputmode="numeric" placeholder="First number"><input class="in num" inputmode="numeric" placeholder="Last number"></div>
+              <button onClick="{{rollAdd}}" class="go" style="min-height: 48px; font-size: 15px">Add roll</button>
+            </div>
+          </section>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <section style="{{outboxStyle}}">
+      <div style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 14px; font-weight: 800">Saved on this phone</span><button onClick="{{toggleNet}}" style="{{outChip}}">{{outLabel}}</button></div>
+      <span style="font-size: 12px; color: #5B6270">{{outText}}</span>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: 'mgr', tab: 'tag', log: [], ask: false, sell: { a: true, b: true, c: false, d: false }, sub: 'cat', labRoll: 'next', cat: ["TITO'S VODKA 1L", 'CASAMIGOS BLANCO 750ML', 'CROWN ROYAL 1L', 'PATRON SILVER 750ML', 'JAMESON 1L'], rollsOff: { 3: true }, voids: {}, offline: false, extraRolls: 0 }; }
+  renderVals() {
+    const s = this.state, isMgr = s.view === 'mgr';
+    const allTabs = [['tag', 'Tag'], ['move', 'Move'], ['sell', 'Sell'], ['empty', 'Empty'], ['list', 'Bottles'], ['look', 'Look up'], ['setup', 'Setup']];
+    const T = isMgr ? allTabs : [['sell', 'Sell a bottle']];
+    const tab = T.some(t => t[0] === s.tab) ? s.tab : T[0][0];
+    const tabs = T.map(([k, l]) => { const on = tab === k; return { label: l, on: on ? 'true' : 'false', pick: () => this.setState({ tab: k, log: [], ask: false }),
+      style: 'flex-shrink: 0; min-height: 40px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; ' + (on ? 'background: #6B4E16; color: #FFFFFF; border: 1px solid #6B4E16' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }; });
+    const views = [['mgr', 'Premium manager'], ['sel', 'Seller'], ['off', 'Seller, not on']].slice(0, 3).map(([k, l]) => { const on = s.view === k; return { label: l, on: on ? 'true' : 'false', pick: () => this.setState({ view: k, tab: k === 'mgr' ? 'tag' : 'sell', log: [] }),
+      style: 'min-height: 38px; border: 0; border-radius: 9px; font-size: 12px; font-weight: 700; cursor: pointer; ' + (on ? 'background: #FFFFFF; color: #16181D; box-shadow: 0 1px 2px rgba(22,24,29,0.12)' : 'background: transparent; color: #3A3F48') }; });
+    const sellOff = s.view === 'off' && tab === 'sell';
+    const RC = [['Pink', '#EC4899', '3000001–3000500'], ['Green', '#10B981', '4100001–4100500'], ['Blue', '#3B82F6', '5200001–5201000'], ['Printed (old)', '#9AA0AA', '3000001–3000120']];
+    const dot = c => 'width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; background: ' + c;
+    const scanTitle = { tag: 'Tag new bottles', move: 'Move bottles', sell: 'Sell a bottle', empty: 'Scan empties', look: 'Look up a sticker' }[tab] || '';
+    const scanHint = { tag: 'Pick where and which bottle once, then scan every label in a row. Each beep is saved.', move: 'Pick where they’re going, then scan each sticker. Every move is kept in the bottle’s history.', sell: 'Guest bought a whole bottle? Pick where it was sold, then scan it.', empty: 'Empties came back? Scan each sticker, then peel it off.', look: 'Scan or type any sticker to see who tagged it, where it went, and when it came back.' }[tab] || '';
+    const verb = { tag: 'tagged · TITO\'S 1L', move: '→ Suite 12', sell: 'sold · Suite 12', empty: 'EMPTY · peel it off', look: '' }[tab];
+    const n0 = 3000142 + s.log.length;
+    const scanOne = () => tab === 'look' ? null : this.setState({ log: [{ t: 'Pink #' + n0 + ' ' + verb, at: 'now' }].concat(s.log), ask: false });
+    const log = s.log.slice(0, 4);
+    const sellers = [['a', 'Jorge Martinez', 'Suites 1–8'], ['b', 'Maria Garcia', 'Suites 17–24'], ['c', 'Terri Nguyen', 'Suites 9–16'], ['d', 'Ana Ruiz', 'Loge boxes']].map(([k, name, loc]) => { const on = !!s.sell[k]; return { name, loc, on: on ? 'true' : 'false', toggle: () => this.setState({ sell: { ...s.sell, [k]: !on } }),
+      track: 'position: relative; width: 52px; height: 32px; border: 0; border-radius: 16px; cursor: pointer; flex-shrink: 0; background: ' + (on ? '#16A34A' : '#C9CDD4'), knob: 'position: absolute; top: 3px; left: ' + (on ? 23 : 3) + 'px; width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF' }; });
+    const history = [['Tagged by Natasha · Premium Warehouse', '3:12 PM', '#9AA0AA'], ['Moved to Suite 12', '4:05 PM', '#3B82F6'], ['Sold by Jorge · Suite 12', '6:22 PM', '#16A34A'], ['Number read by camera · confirmed', '6:22 PM', '#6B4E16'], ['Still open', '—', '#D97706']].map(([what, at, c]) => ({ what, at, dot: dot(c) }));
+    const kpi = (c, b) => 'display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 14px; color: ' + c + '; background: ' + b;
+    const listKpi = [{ n: 19, l: 'Open', style: kpi('#6B4E16', '#FBF1DE') }, { n: 18, l: 'Sold today', style: kpi('#166534', '#E8F5EC') }, { n: 3, l: 'From earlier', style: kpi('#8A4205', '#FDF1E3') }];
+    const openList = [['Suites 1–8', "TITO'S ×3 · CASAMIGOS ×2 · CROWN ×1", '6'], ['Suites 9–16', "TITO'S ×2 · PATRON ×2", '4'], ['Club Chill bar', 'CASAMIGOS ×4 · JAMESON ×3', '7'], ['Founders Club', 'CROWN ×2', '2']].map(([loc, what, n]) => ({ loc, what, n }));
+    const oldOpen = [['Pink #3000088', 'CROWN ROYAL 1L · Suite 4 · 11/21'], ['Green #4100017', 'PATRON 750ML · Club Chill · 11/21'], ['Pink #3000101', "TITO'S 1L · Founders · 11/14"]].map(([no, what], i) => { const v = s.voids[i]; return { no, what, live: !v, asking: v === 'ask', gone: v === 'done',
+      voidIt: () => this.setState({ voids: { ...s.voids, [i]: 'ask' } }), confirm: () => this.setState({ voids: { ...s.voids, [i]: 'done' } }) }; }).map(o => ({ ...o, live: !o.asking && !o.gone }));
+    const emptied = [{ a: "Pink #3000131 · TITO'S 1L", b: 'Suite 12 · 9:40 PM' }, { a: 'Green #4100044 · CASAMIGOS', b: 'Club Chill · 9:52 PM' }, { a: 'Pink #3000077 · paper list', b: 'Suite 3 · 10:05 PM' }];
+    const stepDot = on => 'width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; ' + (on ? 'background: #16A34A; color: #FFFFFF' : 'background: rgba(255,255,255,.15); color: #F4C97A');
+    const steps = [['Bottle list: add your bottles once', s.cat.length > 0], ['Print Dymo labels with your sticker numbers', false], ['Tag: pick location + bottle, stick labels, scan', false], ['Let suite attendants sell (Sell tab)', Object.values(s.sell).some(Boolean)]].map(([t, on], i) => ({ t, dot: stepDot(on), mark: on ? '✓' : String(i + 1) }));
+    const setTabs = [['cat', '1 · Bottles'], ['lab', '2 · Labels'], ['rolls', '3 · Rolls']].map(([k, l]) => ({ l, on: s.sub === k ? 'true' : 'false', pick: () => this.setState({ sub: k }), style: 'min-height: 42px; border: 0; border-radius: 9px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (s.sub === k ? 'background: #FFFFFF; color: #16181D; box-shadow: 0 1px 2px rgba(0,0,0,0.12)' : 'background: transparent; color: #3A3F48') }));
+    const cat = s.cat.map((n, i) => ({ n, rm: () => this.setState({ cat: s.cat.filter((_, j) => j !== i) }) }));
+    const LR = [['next', 'Next unused', '#6B4E16'], ['Pink', 'Pink', '#EC4899'], ['Green', 'Green', '#10B981'], ['out', 'All already out', '#D97706']];
+    const labRolls = LR.map(([k, l, c]) => ({ label: l, on: s.labRoll === k ? 'true' : 'false', pick: () => this.setState({ labRoll: k }), dot: dot(c),
+      style: 'display: flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; ' + (s.labRoll === k ? 'background: #16181D; color: #FFFFFF; border: 1px solid #16181D' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const labFrom = { next: '3000143', Pink: '3000001', Green: '4100001', out: '3000088' }[s.labRoll];
+    const labRollName = { next: 'PINK', Pink: 'PINK', Green: 'GREEN', out: 'MIXED' }[s.labRoll];
+    const allRolls = RC.concat(Array.from({ length: s.extraRolls }, () => ['Yellow', '#EAB308', '6300001–6300500']));
+    const rollList = allRolls.map(([name, c, range], i) => { const off = !!s.rollsOff[i]; return { name, range: range + (off ? ' · switched off' : ''), dot: dot(c), btn: off ? 'Switch on' : 'Switch off', rowStyle: off ? 'opacity: .55' : '', toggle: () => this.setState({ rollsOff: { ...s.rollsOff, [i]: !off } }) }; });
+    const off = s.offline;
+    return { who: isMgr ? 'Natasha' : 'Jorge', views, tabs, sellOff,
+      isSellMgr: isMgr && tab === 'sell', hasScan: ['tag', 'move', 'sell', 'empty', 'look'].includes(tab) && !sellOff,
+      isTag: tab === 'tag', isMove: tab === 'move', isSell: tab === 'sell', isEmpty: tab === 'empty', isLook: tab === 'look', isList: tab === 'list', isSetup: tab === 'setup',
+      scanTitle, scanHint, scanOne, readNum: () => this.setState({ ask: true }), ask: s.ask,
+      rollPick: RC.slice(0, 2).map(([l, c]) => ({ label: l + ' #…042', dot: dot(c), pick: () => this.setState({ ask: false, log: [{ t: l + ' #' + (l === 'Pink' ? '3000042' : '4100042') + ' ' + verb, at: 'now' }].concat(s.log) }) })),
+      hasLog: s.log.length > 0 && tab !== 'look', logN: s.log.length, log, undo: () => this.setState({ log: s.log.slice(1) }),
+      sellers, sellOnN: Object.values(s.sell).filter(Boolean).length, allOn: () => this.setState({ sell: { a: true, b: true, c: true, d: true } }), allOff: () => this.setState({ sell: { a: false, b: false, c: false, d: false } }),
+      history, listKpi, openList, oldOpen, emptied, steps, setTabs, set: { cat: s.sub === 'cat', lab: s.sub === 'lab', rolls: s.sub === 'rolls' },
+      cat, catN: s.cat.length, catAdd: () => this.setState({ cat: s.cat.concat(['NEW BOTTLE 750ML']) }), labRolls, labFrom, labRollName, rollList, rollAdd: () => this.setState({ extraRolls: s.extraRolls + 1 }),
+      outboxStyle: 'display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: #FFFFFF; border-radius: 16px; ' + (off ? 'border: 2px solid #D97706' : 'border: 1px solid #E3E5E9'),
+      outChip: 'border: 0; cursor: pointer; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; ' + (off ? 'color: #8A4205; background: #FDF1E3' : 'color: #166534; background: #E8F5EC'),
+      outLabel: off ? '3 waiting for signal' : 'All sent', outText: off ? 'No signal. Keep scanning; these send by themselves when signal comes back.' : 'If the signal drops, scans wait here and send by themselves. (Tap the chip to preview.)', toggleNet: () => this.setState({ offline: !off }) };
+  }
+}
+</script>
+</body>
+</html>
