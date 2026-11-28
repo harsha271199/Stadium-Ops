@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chat and floating button</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+.hint{font-size:13px;color:#5B6270;line-height:1.45}
+.sec{font-size:12px;font-weight:800;color:#5B6270;letter-spacing:.3px}
+.chipb{flex-shrink:0;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid #D5D8DE;background:#FFFFFF;font-size:13px;font-weight:800;color:#16181D;cursor:pointer;white-space:nowrap}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <div style="display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px; background: #16181D">
+    <sc-for list="{{screens}}" as="sc" hint-placeholder-count="4">
+      <button onClick="{{sc.pick}}" aria-pressed="{{sc.on}}" style="{{sc.style}}">{{sc.label}}</button>
+    </sc-for>
+  </div>
+
+  <!-- 1. Lead home with the floating buttons -->
+  <sc-if value="{{is.fab}}" hint-placeholder-val="{{ true }}">
+    <div style="flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden">
+      <div style="padding: 14px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9"><span style="font-size: 13px; font-weight: 700; color: #C8102E">Stand lead · 212P Beer Portable</span><div style="font-size: 20px; font-weight: 800">Hi Maya</div></div>
+      <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+        <div style="padding: 14px; border-radius: 16px; background: #7A0F22; color: #FFFFFF"><div style="font-size: 12px; font-weight: 700; opacity: .8">Today’s game</div><div style="font-size: 18px; font-weight: 800">Sun Devils vs. Wildcats · 7:30 PM</div></div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+          <sc-for list="{{tiles}}" as="t" hint-placeholder-count="4"><div style="height: 92px; border-radius: 16px; background: #FFFFFF; border: 1px solid #E3E5E9; padding: 12px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between"><span style="font-size: 15px; font-weight: 800">{{t.l}}</span><span style="{{t.chip}}">{{t.s}}</span></div></sc-for>
+        </div>
+        <span class="hint" style="text-align: center">Home screen stays exactly the same. Only the floating buttons change.</span>
+      </div>
+
+      <sc-if value="{{peek}}" hint-placeholder-val="{{ true }}">
+        <div style="position: absolute; right: 14px; bottom: 150px; width: 270px; padding: 12px; border-radius: 16px; background: #FFFFFF; box-shadow: 0 8px 28px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; align-items: center; gap: 8px"><span style="width: 30px; height: 30px; border-radius: 50%; background: #E6EDFB; color: #163E91; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center">JL</span><span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 800">Jordan · warehouse</span><span style="font-size: 12px; color: #5B6270">just now</span></span><button onClick="{{closePeek}}" aria-label="Hide" style="border: 0; background: none; font-size: 18px; color: #5B6270; cursor: pointer">×</button></div>
+          <span style="font-size: 14px; font-weight: 600">Ice is on the cart, 3 min out</span>
+          <div style="display: flex; gap: 6px"><button onClick="{{quickThanks}}" class="chipb" style="min-height: 36px">👍 Thanks</button><button onClick="{{openLead}}" class="chipb" style="min-height: 36px; background: #16181D; color: #FFFFFF; border: 0">Open chat</button></div>
+        </div>
+      </sc-if>
+
+      <button aria-label="Call or emergency" style="position: absolute; right: 14px; bottom: 82px; width: 50px; height: 50px; border-radius: 50%; border: 2px solid #C8102E; background: #FFFFFF; color: #C8102E; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 12px rgba(0,0,0,.18); cursor: pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></button>
+      <button onClick="{{openLead}}" style="position: absolute; right: 14px; bottom: 18px; height: 54px; padding: 0 18px; border-radius: 999px; border: 0; background: #C8102E; color: #FFFFFF; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; box-shadow: 0 0 0 6px rgba(200,16,46,.16), 0 6px 18px rgba(200,16,46,.35); cursor: pointer">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>Chat<span class="num" style="min-width: 22px; height: 22px; border-radius: 999px; background: #FFFFFF; color: #C8102E; font-size: 12px; display: flex; align-items: center; justify-content: center">2</span>
+      </button>
+    </div>
+  </sc-if>
+
+  <!-- 2. Lead stand chat -->
+  <sc-if value="{{is.lead}}" hint-placeholder-val="{{ false }}">
+    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+      <header style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+        <button onClick="{{goFab}}" aria-label="Back" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; border-radius: 12px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 18px; font-weight: 800">212P Beer Portable</span><span style="font-size: 12px; color: #5B6270">Your stand chat · today only</span></span>
+      </header>
+      <div style="display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+        <sc-for list="{{people}}" as="p" hint-placeholder-count="4">
+          <div style="flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; background: #F4F5F7">
+            <span style="{{p.av}}">{{p.ini}}</span>
+            <span style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 800">{{p.n}}</span><span style="font-size: 11px; color: #5B6270">{{p.r}}</span></span>
+          </div>
+        </sc-for>
+      </div>
+
+      <main style="flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px">
+        <sc-for list="{{thread}}" as="m" hint-placeholder-count="5">
+          <div style="{{m.wrap}}">
+            <span style="font-size: 11px; font-weight: 800; color: #5B6270">{{m.who}}</span>
+            <sc-if value="{{m.isText}}" hint-placeholder-val="{{ true }}"><span style="{{m.bubble}}">{{m.t}}</span></sc-if>
+            <sc-if value="{{m.isReq}}" hint-placeholder-val="{{ false }}">
+              <div style="width: 270px; padding: 12px; border-radius: 16px; background: #FFFFFF; border: 2px solid #163E91; display: flex; flex-direction: column; gap: 8px">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 12px; font-weight: 800; color: #163E91">STOCK REQUEST → WAREHOUSE</span><span class="num" style="font-size: 11px; color: #5B6270">{{m.time}}</span></div>
+                <span style="font-size: 16px; font-weight: 800">{{m.t}}</span>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px">
+                  <sc-for list="{{m.steps}}" as="st" hint-placeholder-count="4"><span style="display: flex; flex-direction: column; gap: 4px"><span style="{{st.bar}}"></span><span style="{{st.lbl}}">{{st.l}}</span></span></sc-for>
+                </div>
+                <span style="font-size: 12px; font-weight: 700; color: #3A3F48">{{m.sub}}</span>
+              </div>
+            </sc-if>
+            <span style="{{m.seenStyle}}">{{m.seen}}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{noAnswer}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #FDF1E3; color: #8A4205">
+            <span style="flex: 1; font-size: 13px; font-weight: 700">No answer from Krish in 3 min</span>
+            <button onClick="{{escalate}}" class="chipb" style="min-height: 36px; border: 0; background: #8A4205; color: #FFFFFF">Send to manager</button>
+          </div>
+        </sc-if>
+      </main>
+
+      <div style="padding: 10px 16px 14px; background: #FFFFFF; border-top: 1px solid #E3E5E9; display: flex; flex-direction: column; gap: 8px">
+        <span class="sec">NEED SOMETHING? ONE TAP SENDS A REAL REQUEST</span>
+        <div style="display: flex; gap: 6px; overflow-x: auto">
+          <sc-for list="{{needs}}" as="n" hint-placeholder-count="6"><button onClick="{{n.send}}" class="chipb" style="{{n.style}}">{{n.l}}</button></sc-for>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px"><span class="sec">TO</span>
+          <sc-for list="{{toChips}}" as="c" hint-placeholder-count="3"><button onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="{{c.style}}">{{c.l}}</button></sc-for>
+        </div>
+        <div style="display: flex; gap: 8px">
+          <input placeholder="Type a message" style="flex: 1; min-height: 48px; padding: 0 14px; border: 1px solid #C9CDD4; border-radius: 12px; font-size: 16px">
+          <button onClick="{{sendText}}" aria-label="Send" style="width: 48px; height: 48px; flex-shrink: 0; border: 0; border-radius: 12px; background: #C8102E; color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l16-8-6 16-2-7z"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 3. Warehouse runner -->
+  <sc-if value="{{is.wh}}" hint-placeholder-val="{{ false }}">
+    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+      <header style="padding: 12px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9"><span style="font-size: 13px; font-weight: 700; color: #C8102E">Warehouse · Jordan</span><div style="font-size: 20px; font-weight: 800">Messages</div></header>
+      <main style="flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px">
+        <div style="padding: 12px 14px; border-radius: 16px; background: #16181D; color: #FFFFFF; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 12px; font-weight: 800; color: #FFC72C">PINNED · WAREHOUSE TEAM</span>
+          <span style="font-size: 14px; font-weight: 600">Beer fridge key is with Riley at dock 2.</span>
+          <span style="font-size: 12px; opacity: .7">Riley (manager) · 6:05 PM</span>
+        </div>
+        <span class="sec">STANDS TALKING TO YOU</span>
+        <sc-for list="{{whThreads}}" as="t" hint-placeholder-count="3">
+          <div style="{{t.card}}">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 15px; font-weight: 800">{{t.s}}</span><span style="{{t.chip}}">{{t.st}}</span></div>
+            <span style="font-size: 14px">“{{t.last}}”</span>
+            <span class="num hint" style="font-size: 12px">{{t.m}}</span>
+            <div style="display: flex; gap: 6px; overflow-x: auto">
+              <sc-for list="{{t.replies}}" as="r" hint-placeholder-count="4"><button onClick="{{r.send}}" class="chipb" style="min-height: 38px">{{r.l}}</button></sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </main>
+    </div>
+  </sc-if>
+
+  <!-- 4. Supervisor inbox -->
+  <sc-if value="{{is.sup}}" hint-placeholder-val="{{ false }}">
+    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0">
+      <header style="padding: 12px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9"><span style="font-size: 13px; font-weight: 700; color: #C8102E">Supervisor · Krish · 14 stands</span><div style="font-size: 20px; font-weight: 800">Chat</div></header>
+      <main style="flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px">
+        <div role="tablist" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px">
+          <sc-for list="{{supTabs}}" as="t" hint-placeholder-count="3"><button role="tab" onClick="{{t.pick}}" aria-selected="{{t.on}}" style="{{t.style}}">{{t.l}}</button></sc-for>
+        </div>
+        <sc-for list="{{supRows}}" as="r" hint-placeholder-count="4">
+          <div style="{{r.card}}">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800">{{r.s}}</span><span style="font-size: 12px; color: #5B6270">{{r.who}}</span></span><span class="num" style="{{r.chip}}">{{r.wait}}</span></div>
+            <span style="font-size: 14px">“{{r.last}}”</span>
+            <sc-if value="{{r.open}}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; gap: 6px; overflow-x: auto">
+                <sc-for list="{{r.replies}}" as="q" hint-placeholder-count="4"><button onClick="{{q.send}}" class="chipb" style="{{q.style}}">{{q.l}}</button></sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{r.done}}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; font-weight: 800; color: #166534">✓ You: {{r.reply}}</span></sc-if>
+          </div>
+        </sc-for>
+        <div style="padding: 12px 14px; border-radius: 14px; background: #E6EDFB; color: #163E91; font-size: 13px; font-weight: 700; line-height: 1.45">“Make it a stock request” turns a chat like “need popcorn” into a real warehouse request for that stand, so it stops sitting in chat.</div>
+      </main>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { scr: 'fab', peek: true, to: 'wh', msgs: null, step: 2, esc: false, whDone: {}, st: 'need', supDone: {} }; }
+  base() { return [
+    { k: 'text', who: 'Krish · supervisor', t: 'Halo not on POS yet, fixing now', me: false, time: '5:57 PM' },
+    { k: 'text', who: 'You', t: 'Thanks. Also running low on ice', me: true, seen: 'Seen by Krish' },
+    { k: 'req', who: 'You', t: 'Ice ×10 bags', time: '7:12 PM', me: true },
+    { k: 'text', who: 'Jordan · warehouse', t: 'Ice is on the cart, 3 min out', me: false } ]; }
+  renderVals() {
+    const s = this.state, msgs = s.msgs || this.base();
+    const S = [['fab', 'Floating button'], ['lead', 'Lead · stand chat'], ['wh', 'Warehouse runner'], ['sup', 'Supervisor inbox']];
+    const screens = S.map(([k, l]) => ({ label: l, on: s.scr === k ? 'true' : 'false', pick: () => this.setState({ scr: k }), style: 'flex-shrink: 0; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 0; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; ' + (s.scr === k ? 'background: #FFFFFF; color: #16181D' : 'background: #33363D; color: #FFFFFF') }));
+    const is = {}; S.forEach(([k]) => is[k] = s.scr === k);
+    const chip = (c, b) => 'align-self: flex-start; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; color: ' + c + '; background: ' + b;
+    const OK = chip('#166534', '#E8F5EC'), WARN = chip('#8A4205', '#FDF1E3'), BAD = chip('#8E0E22', '#FDECEE'), INFO = chip('#163E91', '#E6EDFB');
+    const tiles = [['Checks', '3 of 7 done', WARN], ['Requests', '1 on the way', INFO], ['My Team', '4 of 5 here', OK], ['Food Safety', 'Due 6:00 PM', BAD]].map(([l, st, c]) => ({ l, s: st, chip: c }));
+    const av = (c, b) => 'width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: ' + c + '; background: ' + b;
+    const people = [['KM', 'Krish', 'Supervisor · online', '#166534', '#E8F5EC'], ['JL', 'Jordan', 'Warehouse runner', '#163E91', '#E6EDFB'], ['RC', 'Riley', 'Manager', '#8A4205', '#FDF1E3'], ['CN', 'Chris', 'Your crew', '#3A3F48', '#EEF0F3']].map(([ini, n, r, c, b]) => ({ ini, n, r, av: av(c, b) }));
+    const STEPS = ['Sent', 'Claimed', 'On the way', 'Delivered'];
+    const thread = msgs.map(m => ({ who: m.who, t: m.t, time: m.time || '', isText: m.k === 'text', isReq: m.k === 'req',
+      wrap: 'display: flex; flex-direction: column; gap: 3px; ' + (m.me ? 'align-items: flex-end' : 'align-items: flex-start'),
+      bubble: 'max-width: 270px; padding: 10px 12px; border-radius: 16px; font-size: 15px; line-height: 1.4; ' + (m.me ? 'background: #16181D; color: #FFFFFF; border-bottom-right-radius: 4px' : 'background: #FFFFFF; border: 1px solid #E3E5E9; border-bottom-left-radius: 4px'),
+      steps: STEPS.map((l, i) => ({ l, bar: 'height: 6px; border-radius: 3px; background: ' + (i <= (m.step != null ? m.step : s.step) ? '#163E91' : '#E3E5E9'), lbl: 'font-size: 10px; font-weight: 800; color: ' + (i <= (m.step != null ? m.step : s.step) ? '#163E91' : '#9AA0AA') })),
+      sub: (m.step != null ? m.step : s.step) >= 2 ? 'Jordan has it · auto-updates here' : 'Waiting for a runner to claim it',
+      seen: m.seen || '', seenStyle: 'font-size: 11px; font-weight: 700; color: #166534; ' + (m.seen ? '' : 'display: none') }));
+    const add = m => this.setState({ msgs: msgs.concat([m]) });
+    const toN = { wh: 'Warehouse', sup: 'Supervisor', mgr: 'Manager' };
+    const needs = [['Ice', 'Ice ×5 bags'], ['CO2', 'CO2 35# ×1'], ['Cups', 'Cups 24oz ×1 sleeve'], ['Wrappers', 'Hot dog wrappers ×1 box'], ['Change / cash', 'Change run'], ['People', 'Need 1 more person']].map(([l, t]) => ({ l: '+ ' + l, style: 'border: 1px solid #B9C6E8; color: #163E91',
+      send: () => add({ k: 'req', who: 'You', t, time: 'now', me: true, step: 0 }) }));
+    const toChips = Object.entries(toN).map(([k, l]) => ({ l, on: s.to === k ? 'true' : 'false', pick: () => this.setState({ to: k }), style: 'min-height: 34px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 800; cursor: pointer; ' + (s.to === k ? 'background: #16181D; color: #FFFFFF; border: 0' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const WH = [['219 Cold Beer Cheeseburgers', 'Possible to get 10 bags of ice?', 'Request: Ice ×10 · waiting 6 min', 'Not claimed', BAD, true], ['408 Cold Beer', 'Our CO2 is completely out', 'Request: CO2 35# ×1 · you claimed', 'Claimed', WARN, false], ['226 Pitchfork Pizza', 'Need a box of hot dog wrappers', 'Request: Wrappers ×1 · delivered 7:51', 'Done', OK, false]];
+    const whThreads = WH.map(([st, last, m, status, c, late], i) => { const done = s.whDone[i]; return { s: st, last, m: done ? 'You: ' + done : m, st: done ? 'Replied' : status, chip: done ? OK : c,
+      card: 'display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: #FFFFFF; border-radius: 16px; ' + (late && !done ? 'border: 2px solid #B4122B' : 'border: 1px solid #E3E5E9'),
+      replies: ['On my way', '5 min', 'Out of stock', 'Call me'].map(l => ({ l, send: () => this.setState({ whDone: { ...s.whDone, [i]: l } }) })) }; });
+    const SR = [['210 Fan Fuel Nacho', 'Lead · Ana', 'Need popcorn', '9 min'], ['203P Game Day', 'Crew · Leo', 'Miss Vickie’s chips and bread needed', '6 min'], ['104P Beer Portable', 'Crew · Sam', 'Any team lead to beer portable 4', '2 min']];
+    const supTabs = [['need', 'Needs answer ' + SR.filter((_, i) => !s.supDone[i]).length], ['all', 'All stands'], ['team', 'Leaders']].map(([k, l]) => ({ l, on: s.st === k ? 'true' : 'false', pick: () => this.setState({ st: k }), style: 'min-height: 42px; border: 0; border-radius: 9px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (s.st === k ? 'background: #FFFFFF; color: #16181D; box-shadow: 0 1px 2px rgba(0,0,0,0.12)' : 'background: transparent; color: #3A3F48') }));
+    const supRows = SR.map(([st, who, last, wait], i) => { const d = s.supDone[i]; return { s: st, who, last, wait: d ? 'Answered' : 'Waiting ' + wait, chip: d ? OK : i === 0 ? BAD : WARN, open: !d, done: !!d, reply: d || '',
+      card: 'display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: #FFFFFF; border-radius: 16px; ' + (!d && i === 0 ? 'border: 2px solid #B4122B' : 'border: 1px solid #E3E5E9'),
+      replies: [['Make it a stock request', true], ['On my way', false], ['Sending help', false], ['Got it 👍', false]].map(([l, hi]) => ({ l, style: hi ? 'border: 0; background: #163E91; color: #FFFFFF' : '', send: () => this.setState({ supDone: { ...s.supDone, [i]: hi ? 'Made a stock request → warehouse' : l } }) })) }; })
+      .sort((a, b) => a.done - b.done);
+    return { screens, is, tiles, peek: s.peek, closePeek: () => this.setState({ peek: false }), quickThanks: () => this.setState({ peek: false, msgs: msgs.concat([{ k: 'text', who: 'You', t: '👍 Thanks', me: true, seen: 'Seen by Jordan' }]) }),
+      openLead: () => this.setState({ scr: 'lead', peek: false }), goFab: () => this.setState({ scr: 'fab' }), people, thread, needs, toChips,
+      sendText: () => add({ k: 'text', who: 'You → ' + toN[s.to], t: 'Can someone check tap 2?', me: true, seen: s.to === 'sup' ? '' : 'Delivered' }),
+      noAnswer: s.to === 'sup' && !s.esc && msgs.some(m => m.who === 'You → Supervisor'), escalate: () => this.setState({ esc: true, msgs: msgs.concat([{ k: 'text', who: 'You → Manager', t: 'No answer from supervisor: Can someone check tap 2?', me: true, seen: 'Seen by Riley' }]) }),
+      whThreads, supTabs, supRows };
+  }
+}
+</script>
+</body>
+</html>

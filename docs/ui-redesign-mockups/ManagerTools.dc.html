@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Manager tools inside</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,input,select{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+.card{display:flex;flex-direction:column;gap:10px;padding:14px;background:#FFFFFF;border:1px solid #E3E5E9;border-radius:16px}
+.hint{font-size:13px;color:#5B6270;line-height:1.45}
+.ghost{min-height:44px;padding:0 12px;border:1px solid #D5D8DE;border-radius:12px;background:#FFFFFF;color:#16181D;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.dark{background:#16181D;color:#FFFFFF;border:0}
+.in{min-height:46px;padding:0 12px;border:1px solid #C9CDD4;border-radius:12px;font-size:15px;background:#FFFFFF;box-sizing:border-box;width:100%}
+.sec{font-size:12px;font-weight:800;color:#5B6270;letter-spacing:.3px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:50px;border-top:1px solid #F1F2F4}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <div style="display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px; background: #16181D">
+    <sc-for list="{{screens}}" as="sc" hint-placeholder-count="9"><button onClick="{{sc.pick}}" aria-pressed="{{sc.on}}" style="{{sc.style}}">{{sc.label}}</button></sc-for>
+  </div>
+
+  <header style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <span style="width: 44px; height: 44px; border: 1px solid #E3E5E9; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></span>
+    <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 600; color: #C8102E">{{kicker}}</span><span style="font-size: 20px; font-weight: 800">{{title}}</span></span>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+
+    <!-- Checkout & Inventory Tracker -->
+    <sc-if value="{{is.track}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="hint">Every stand’s Count In, Count Out and whether its stock box was received.</span>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+          <sc-for list="{{trKpi}}" as="k" hint-placeholder-count="4"><div style="{{k.style}}"><span class="num" style="font-size: 20px; font-weight: 800">{{k.n}}</span><span style="font-size: 11px; font-weight: 700; line-height: 1.2">{{k.l}}</span></div></sc-for>
+        </div>
+        <div style="display: flex; gap: 6px; overflow-x: auto">
+          <sc-for list="{{trFilters}}" as="f" hint-placeholder-count="5"><button onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="{{f.style}}">{{f.l}}</button></sc-for>
+        </div>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <sc-for list="{{trRows}}" as="r" hint-placeholder-count="5">
+            <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid #F1F2F4">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 15px; font-weight: 800">{{r.s}}</span><button onClick="{{r.remind}}" class="ghost" style="min-height: 34px; font-size: 12px">{{r.rem}}</button></div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap"><span style="{{r.boxC}}">{{r.box}}</span><span style="{{r.inC}}">{{r.inL}}</span><span style="{{r.outC}}">{{r.outL}}</span></div>
+            </div>
+          </sc-for>
+        </section>
+        <button onClick="{{remindAll}}" class="ghost dark" style="min-height: 52px; font-size: 15px">{{remindAllL}}</button>
+      </div>
+    </sc-if>
+
+    <!-- Inventory -->
+    <sc-if value="{{is.inv}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: end"><input class="in" type="date" value="2026-11-29"><button class="ghost">Today</button><button class="ghost dark">Load</button></div>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <div class="row" style="border-top: 0; min-height: 34px"><span class="sec">STAND</span><span class="sec" style="display: grid; grid-template-columns: 52px 52px 60px; text-align: right"><span>Start</span><span>Out</span><span>Gap</span></span></div>
+          <sc-for list="{{invRows}}" as="r" hint-placeholder-count="5"><div class="row"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 800">{{r.s}}</span><span class="hint" style="font-size: 12px">{{r.n}} items counted</span></span><span class="num" style="display: grid; grid-template-columns: 52px 52px 60px; text-align: right; font-size: 14px; font-weight: 700"><span>{{r.a}}</span><span>{{r.b}}</span><span style="{{r.gapC}}">{{r.g}}</span></span></div></sc-for>
+        </section>
+        <div class="g2"><button class="ghost">Download CSV (Yellow Dog order)</button><button class="ghost">Printable view</button></div>
+        <button class="ghost">Yellow Dog copy-paste (sheet order)</button>
+        <span class="sec" style="margin-top: 4px">WAREHOUSE & LEDGER</span>
+        <div class="g2"><button class="ghost">View warehouse counts</button><button class="ghost">Export counts (CSV)</button></div>
+        <button class="ghost">Load stock ledger & summary</button>
+        <div class="g2"><button class="ghost">Raw ledger (CSV)</button><button class="ghost">Summary (CSV)</button></div>
+      </div>
+    </sc-if>
+
+    <!-- Transfers -->
+    <sc-if value="{{is.tf}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; align-items: center"><span class="hint">Stand-to-stand transfers today.</span><button class="ghost" style="min-height: 36px; font-size: 13px">Refresh</button></div>
+        <sc-for list="{{tfRows}}" as="r" hint-placeholder-count="3">
+          <section class="card" style="gap: 6px">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 15px; font-weight: 800">{{r.route}}</span><span style="{{r.chip}}">{{r.st}}</span></div>
+            <span style="font-size: 14px">{{r.items}}</span>
+            <span class="num hint" style="font-size: 12px">{{r.m}}</span>
+            <sc-if value="{{r.can}}" hint-placeholder-val="{{ true }}"><button onClick="{{r.ok}}" class="ghost dark">Confirm received · locks the record</button></sc-if>
+          </section>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- Reports -->
+    <sc-if value="{{is.rep}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <section class="card">
+          <span style="font-size: 15px; font-weight: 800">Worker feedback (from leads & supervisors)</span>
+          <sc-for list="{{fbRows}}" as="r" hint-placeholder-count="3"><div class="row"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 800">{{r.n}}</span><span class="hint" style="font-size: 12px">{{r.note}}</span></span><span style="{{r.chip}}">{{r.r}}</span></div></sc-for>
+          <div class="g2"><button class="ghost">Feedback CSV</button><button class="ghost">Feedback PDF</button></div>
+        </section>
+        <section class="card">
+          <span style="font-size: 15px; font-weight: 800">Stand checklists today · with issues</span>
+          <sc-for list="{{clRows}}" as="r" hint-placeholder-count="3"><div class="row"><span style="font-size: 14px; font-weight: 700">{{r.s}}</span><span style="{{r.chip}}">{{r.v}}</span></div></sc-for>
+          <button class="ghost">Download checklists CSV</button>
+        </section>
+        <span class="sec">DO IT FOR A STAND</span>
+        <div class="g2"><button class="ghost">Request stock for a stand</button><button class="ghost">Report IT for a stand</button></div>
+        <button class="ghost">Open kitchen queue</button>
+      </div>
+    </sc-if>
+
+    <!-- Time sheet -->
+    <sc-if value="{{is.time}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px"><input class="in" type="date" value="2026-11-29"><button class="ghost dark">Load time sheet</button></div>
+        <div role="tablist" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px">
+          <sc-for list="{{tsTabs}}" as="t" hint-placeholder-count="2"><button role="tab" onClick="{{t.pick}}" aria-selected="{{t.on}}" style="{{t.style}}">{{t.l}}</button></sc-for>
+        </div>
+        <section class="card" style="gap: 0; padding: 4px 12px">
+          <div class="row" style="border-top: 0; min-height: 32px"><span class="sec">NAME</span><span class="sec" style="display: grid; grid-template-columns: 56px 56px 56px 40px; text-align: right"><span>In</span><span>Break</span><span>Out</span><span>Hrs</span></span></div>
+          <sc-for list="{{tsRows}}" as="r" hint-placeholder-count="4"><div class="row"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 13px; font-weight: 800">{{r.n}}</span><span class="hint" style="font-size: 11px">{{r.s}}</span></span><span class="num" style="display: grid; grid-template-columns: 56px 56px 56px 40px; text-align: right; font-size: 12px; font-weight: 700"><span>{{r.i}}</span><span>{{r.b}}</span><span>{{r.o}}</span><span>{{r.h}}</span></span></div></sc-for>
+        </section>
+        <div class="g2"><button class="ghost">Tip sheet (CSV)</button><button class="ghost">Printable break sheet</button></div>
+        <span class="sec">PREMIUM</span>
+        <div class="g2"><button class="ghost">Premium check-ins CSV</button><button class="ghost">Premium check-ins PDF</button></div>
+      </div>
+    </sc-if>
+
+    <!-- Refunds -->
+    <sc-if value="{{is.ref}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="hint">Supervisors go to the stand, finish the refund and record the reference. You give the final OK.</span>
+        <sc-for list="{{refRows}}" as="r" hint-placeholder-count="3">
+          <section class="card" style="gap: 6px">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800">{{r.s}}</span><span class="num hint" style="font-size: 12px">{{r.m}}</span></span><span class="num" style="font-size: 18px; font-weight: 800">{{r.amt}}</span></div>
+            <span style="font-size: 14px">{{r.why}}</span>
+            <sc-if value="{{r.open}}" hint-placeholder-val="{{ true }}"><div class="g2"><button onClick="{{r.deny}}" class="ghost" style="color: #8E0E22">Deny</button><button onClick="{{r.ok}}" class="ghost" style="background: #166534; color: #FFFFFF; border: 0">Approve</button></div></sc-if>
+            <sc-if value="{{r.done}}" hint-placeholder-val="{{ false }}"><span style="{{r.chip}}">{{r.st}}</span></sc-if>
+          </section>
+        </sc-for>
+        <button class="ghost">Download all refunds (season) CSV</button>
+      </div>
+    </sc-if>
+
+    <!-- Maintenance -->
+    <sc-if value="{{is.mnt}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div role="tablist" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px">
+          <sc-for list="{{mTabs}}" as="t" hint-placeholder-count="4"><button role="tab" onClick="{{t.pick}}" aria-selected="{{t.on}}" style="{{t.style}}">{{t.l}}</button></sc-for>
+        </div>
+        <sc-for list="{{mRows}}" as="r" hint-placeholder-count="3">
+          <section class="card" style="gap: 6px">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 15px; font-weight: 800">{{r.s}}</span><span style="{{r.chip}}">{{r.st}}</span></div>
+            <span style="font-size: 14px">{{r.t}}</span>
+            <span class="num hint" style="font-size: 12px">{{r.m}}</span>
+            <div class="g2"><button onClick="{{r.prog}}" class="ghost" style="min-height: 38px; font-size: 13px">In progress</button><button onClick="{{r.fix}}" class="ghost" style="min-height: 38px; font-size: 13px; background: #166534; color: #FFFFFF; border: 0">Resolved</button></div>
+          </section>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- Runner coverage -->
+    <sc-if value="{{is.run}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="hint">Runners sign in with last 5 of ID + last name (Food) or 60000 + last name (Warehouse).</span>
+        <input class="in" placeholder="Search runners or areas">
+        <sc-for list="{{runGroups}}" as="g" hint-placeholder-count="2">
+          <section class="card" style="gap: 0; padding: 4px 14px">
+            <span class="sec" style="padding: 10px 0 4px">{{g.t}}</span>
+            <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="3"><div class="row"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 800">{{r.n}}</span><span class="hint" style="font-size: 12px">{{r.a}}</span></span><select aria-label="Area" style="min-height: 38px; border: 1px solid #D5D8DE; border-radius: 10px; font-size: 13px; background: #FFFFFF"><option>{{r.a}}</option><option>East side</option><option>West side</option><option>Upper deck</option></select></div></sc-for>
+          </section>
+        </sc-for>
+        <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px"><input class="in" placeholder="Name or ID"><button class="ghost dark">Add runner</button></div>
+      </div>
+    </sc-if>
+
+    <!-- Golf cart log -->
+    <sc-if value="{{is.cart}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <button class="ghost dark">Load full cart log (last 50)</button>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <sc-for list="{{cartRows}}" as="r" hint-placeholder-count="5"><div class="row"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 800">{{r.c}} · {{r.w}}</span><span class="hint" style="font-size: 12px">{{r.d}}</span></span><span class="num" style="{{r.chip}}">{{r.t}}</span></div></sc-for>
+        </section>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { scr: 'track', f: 'all', rem: {}, remAll: false, tfOk: {}, ts: 'emp', rf: {}, mt: 'open', mst: {} }; }
+  renderVals() {
+    const s = this.state;
+    const S = [['track', 'Checkout & Inventory'], ['inv', 'Inventory'], ['tf', 'Transfers'], ['rep', 'Reports'], ['time', 'Time sheet'], ['ref', 'Refunds'], ['mnt', 'Maintenance'], ['run', 'Runner coverage'], ['cart', 'Golf cart log']];
+    const screens = S.map(([k, l]) => ({ label: l, on: s.scr === k ? 'true' : 'false', pick: () => this.setState({ scr: k }), style: 'flex-shrink: 0; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 0; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; ' + (s.scr === k ? 'background: #FFFFFF; color: #16181D' : 'background: #33363D; color: #FFFFFF') }));
+    const is = {}; S.forEach(([k]) => is[k] = s.scr === k);
+    const chip = (c, b) => 'align-self: flex-start; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; color: ' + c + '; background: ' + b;
+    const OK = chip('#166534', '#E8F5EC'), WARN = chip('#8A4205', '#FDF1E3'), BAD = chip('#8E0E22', '#FDECEE'), INFO = chip('#163E91', '#E6EDFB'), GREY = chip('#3A3F48', '#EEF0F3');
+    const kpi = (c, b) => 'display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; border-radius: 12px; color: ' + c + '; background: ' + b;
+    const tab = on => 'min-height: 40px; border: 0; border-radius: 9px; font-size: 12px; font-weight: 800; cursor: pointer; ' + (on ? 'background: #FFFFFF; color: #16181D; box-shadow: 0 1px 2px rgba(0,0,0,0.12)' : 'background: transparent; color: #3A3F48');
+    // tracker
+    const TR = [['212P Beer Portable', true, true, false], ['204P Fan Fuel Bev', false, true, false], ['219 Cold Beer Cheeseburgers', true, false, false], ['DFA 111 Hot Dogs', true, true, true], ['216M Fan Fuel BevMKT', false, false, false]];
+    const trKpi = [{ n: 2, l: 'Box not received', style: kpi('#8E0E22', '#FDECEE') }, { n: 2, l: 'Missing Count In', style: kpi('#8A4205', '#FDF1E3') }, { n: 4, l: 'Missing Count Out', style: kpi('#163E91', '#E6EDFB') }, { n: 3, l: 'Box received', style: kpi('#166534', '#E8F5EC') }];
+    const FL = [['all', 'All stands'], ['nobox', 'Box not received'], ['in', 'Missing Count In'], ['out', 'Missing Count Out'], ['got', 'Received']];
+    const trFilters = FL.map(([k, l]) => ({ l, on: s.f === k ? 'true' : 'false', pick: () => this.setState({ f: k }), style: 'flex-shrink: 0; min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; ' + (s.f === k ? 'background: #16181D; color: #FFFFFF; border: 0' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const pass = ([, box, cin, cout]) => s.f === 'all' || (s.f === 'nobox' && !box) || (s.f === 'got' && box) || (s.f === 'in' && !cin) || (s.f === 'out' && !cout);
+    const trRows = TR.filter(pass).map(([st, box, cin, cout]) => { const r = s.rem[st] || s.remAll; return { s: st, box: box ? 'Box received' : 'Box not received', boxC: box ? OK : BAD, inL: cin ? 'Count In ✓' : 'No Count In', inC: cin ? OK : WARN, outL: cout ? 'Count Out ✓' : 'No Count Out', outC: cout ? OK : INFO, rem: r ? 'Reminded' : 'Remind', remind: () => this.setState({ rem: { ...s.rem, [st]: true } }) }; });
+    // inventory
+    const invRows = [['212P Beer Portable', 42, 318, 296, 0], ['204P Fan Fuel Bev', 38, 240, 211, -4], ['DFA 111 Hot Dogs', 22, 160, 133, 0], ['219 Cold Beer Cheeseburgers', 51, 402, 377, 6]].map(([st, n, a, b, g]) => ({ s: st, n, a, b, g: g === 0 ? '0' : (g > 0 ? '+' : '') + g, gapC: 'font-weight: 800; color: ' + (g === 0 ? '#166534' : '#8E0E22') }));
+    // transfers
+    const TF = [['204P → 216M', 'Life Water ×2, Aquafina ×1', 'Sent 6:40 PM by Chris · received by Ana'], ['212P → 210', 'Coors Light ×1 case', 'Sent 7:10 PM · not confirmed yet'], ['DFA 111 → DFA 143', 'Buns ×2 trays', 'Confirmed & locked 7:25 PM']];
+    const tfRows = TF.map(([route, items, m], i) => { const done = i === 2 || s.tfOk[i]; return { route, items, m: s.tfOk[i] ? 'Confirmed & locked just now' : m, can: !done && i === 0, st: done ? 'Locked' : i === 1 ? 'Waiting' : 'Received', chip: done ? OK : i === 1 ? WARN : INFO, ok: () => this.setState({ tfOk: { ...s.tfOk, [i]: true } }) }; });
+    // reports
+    const fbRows = [['Chris Nguyen', 'Fast on register, great with guests', '👍 Good', OK], ['Leo Park', 'Left early without telling lead', '👎 Needs work', BAD], ['Ana Ruiz', 'Helped 204P when short', '👍 Good', OK]].map(([n, note, r, c]) => ({ n, note, r, chip: c }));
+    const clRows = [['212P Closing', 'All done', OK], ['219 Opening', '⚠ 2 issues', WARN], ['408 During', 'Missing', BAD]].map(([st, v, c]) => ({ s: st, v, chip: c }));
+    // time sheet
+    const tsTabs = [['emp', 'Employee stands'], ['npo', 'NPO stands (group tips)']].map(([k, l]) => ({ l, on: s.ts === k ? 'true' : 'false', pick: () => this.setState({ ts: k }), style: tab(s.ts === k) }));
+    const tsRows = (s.ts === 'emp' ? [['Nguyen, Chris', '212P · Worker', '4:55', '7:02–7:32', '10:04', '4.6'], ['Rodriguez, Maya', '212P · Lead', '4:30', '—', '10:20', '5.8'], ['Park, Leo', '219 · Worker', '5:10', '6:50–7:10', '9:15', '3.8']] : [['Tempe Rotary', '210 · 14 people', '4:45', '—', '10:10', '76.0'], ['ASU Band Parents', '226 · 9 people', '5:00', '—', '10:00', '45.0']]).map(([n, st, i, b, o, h]) => ({ n, s: st, i, b, o, h }));
+    // refunds
+    const RF = [['204P Fan Fuel Bev', 'Sup Krish · done 6:58 PM · ref A1192', '$13.00', 'Wrong beer poured'], ['219 Cold Beer Cheeseburgers', 'Sup Esther · done 7:12 PM · ref A1201', '$15.50', 'Burger cold'], ['DFA 111 Hot Dogs', 'Sup Ravi · done 7:40 PM · ref D0331', '$7.00', 'Double charge']];
+    const refRows = RF.map(([st, m, amt, why], i) => { const v = s.rf[i]; return { s: st, m, amt, why, open: !v, done: !!v, st: v === 'ok' ? 'Approved' : 'Denied', chip: v === 'ok' ? OK : BAD, ok: () => this.setState({ rf: { ...s.rf, [i]: 'ok' } }), deny: () => this.setState({ rf: { ...s.rf, [i]: 'no' } }) }; });
+    // maintenance
+    const MT = [['open', 'Open'], ['in_progress', 'In progress'], ['resolved', 'Resolved'], ['all', 'All']];
+    const mTabs = MT.map(([k, l]) => ({ l, on: s.mt === k ? 'true' : 'false', pick: () => this.setState({ mt: k }), style: tab(s.mt === k) }));
+    const MR = [['226 Pitchfork Pizza', 'Refrigeration · walk-in cooler not cold', 'Urgent · 6:12 PM · Lead Sam'], ['204P Fan Fuel Bev', 'Plumbing · sink draining slow', 'Soon · 5:40 PM · Lead Chris'], ['408 Cold Beer', 'Electrical · outlet by register dead', 'Normal · 4:55 PM · Lead Ana']];
+    const mRows = MR.map(([st, t, m], i) => { const v = s.mst[i] || 'open'; return { s: st, t, m, v, st: v === 'open' ? 'Open' : v === 'in_progress' ? 'In progress' : 'Resolved', chip: v === 'open' ? BAD : v === 'in_progress' ? WARN : OK, prog: () => this.setState({ mst: { ...s.mst, [i]: 'in_progress' } }), fix: () => this.setState({ mst: { ...s.mst, [i]: 'resolved' } }) }; }).filter(r => s.mt === 'all' || r.v === s.mt);
+    const runGroups = [{ t: 'FOOD RUNNERS · 4', rows: [['Hrishikesh C.', 'Santan + Huss'], ['Adit S.', 'East side'], ['Shivam G.', 'West side']] }, { t: 'WAREHOUSE RUNNERS · 3', rows: [['Jordan Lee', 'East Concourse'], ['Priya Shah', 'West Concourse'], ['Alex Kim', 'Upper deck']] }].map(g => ({ t: g.t, rows: g.rows.map(([n, a]) => ({ n, a })) }));
+    const cartRows = [['Cart 5', 'Alex', 'Took key · safety check all yes', '6:40 PM', INFO], ['Cart 4', 'Priya', 'Problem: brakes weak, pulls left', '2:14 PM', BAD], ['Cart 1', 'Jordan', 'Return confirmed', '1:58 PM', OK], ['Cart 6', 'Sam', 'Return requested', '1:40 PM', WARN]].map(([c, w, d, t, ch]) => ({ c, w, d, t, chip: ch }));
+    return { screens, is, kicker: 'Manager Tools', title: Object.fromEntries(S)[s.scr], trKpi, trFilters, trRows, remindAll: () => this.setState({ remAll: true }), remindAllL: s.remAll ? 'Reminder sent to every stand shown' : 'Remind every stand shown',
+      invRows, tfRows, fbRows, clRows, tsTabs, tsRows, refRows, mTabs, mRows, runGroups, cartRows };
+  }
+}
+</script>
+</body>
+</html>

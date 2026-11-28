@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Premium manager</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button,input{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <span style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 13px; font-weight: 700; color: #6B4E16">Premium</span>
+      <span style="font-size: 20px; font-weight: 800">Hi Natasha</span>
+    </span>
+    <div style="display: flex; gap: 8px">
+      <button aria-label="Light or dark mode" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; background: #FFFFFF; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>
+      <button aria-label="Sign out" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; background: #FFFFFF; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10"/></svg></button>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 14px 16px 84px; display: flex; flex-direction: column; gap: 12px">
+
+    <section style="display: flex; align-items: center; gap: 12px; padding: 14px; background: #2B2118; color: #FFFFFF; border-radius: 18px">
+      <span style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,214,140,0.16); color: #F4C97A; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+        <span style="font-size: 12px; font-weight: 700; color: #F4C97A">Game day · Premium</span>
+        <span style="font-size: 17px; font-weight: 800">Football · Sat, Nov 29</span>
+        <span class="num" style="font-size: 13px; color: #E9DCC8">Suites open 4:00 PM · kickoff 6:00</span>
+      </span>
+      <button style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #F4C97A; color: #2B2118; font-size: 14px; font-weight: 800; cursor: pointer">Details</button>
+    </section>
+
+    <a href="Bottles.dc.html" style="display: flex; align-items: center; gap: 14px; min-height: 88px; padding: 14px 16px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 18px; text-decoration: none; color: #16181D">
+      <span style="width: 52px; height: 52px; border-radius: 14px; background: #FBF1DE; color: #6B4E16; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4v4l1.5 2.5A4 4 0 0 1 16 10.6V20a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-9.4a4 4 0 0 1 .5-2.1L10 6z"/><path d="M8 13h8"/></svg></span>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0">
+        <span style="font-size: 17px; font-weight: 800">Bottle Tracker</span>
+        <span style="font-size: 13px; color: #5B6270">Tag · move · sell · scan empties · what’s open where</span>
+        <span style="display: flex; gap: 6px; flex-wrap: wrap">
+          <span class="num" style="font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px; color: #6B4E16; background: #FBF1DE">42 open</span>
+          <span class="num" style="font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px; color: #166534; background: #E8F5EC">18 sold today</span>
+          <span class="num" style="font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px; color: #8E0E22; background: #FDECEE">3 not returned</span>
+        </span>
+      </span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </a>
+
+    <section style="display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 18px">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+        <span style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 17px; font-weight: 800">Check-ins</span>
+          <span class="num" style="font-size: 13px; color: #5B6270">{{presentN}} present · {{totalN}} on today’s list</span>
+        </span>
+        <span style="display: flex; gap: 6px">
+          <button style="min-height: 40px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer">CSV</button>
+          <button style="min-height: 40px; padding: 0 12px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer">PDF</button>
+        </span>
+      </div>
+      <span style="display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #EEF0F3"><span style="{{barP}}"></span><span style="{{barA}}"></span></span>
+      <div style="display: flex; gap: 6px; flex-wrap: wrap">
+        <sc-for list="{{filters}}" as="f" hint-placeholder-count="4">
+          <button onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="{{f.style}}">{{f.label}} <span class="num">{{f.n}}</span></button>
+        </sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px"><input type="date" value="2026-11-29" style="min-height: 44px; padding: 0 10px; border: 1px solid #C9CDD4; border-radius: 10px; font-size: 14px"><input placeholder="Find a person…" style="min-height: 44px; padding: 0 12px; border: 1px solid #C9CDD4; border-radius: 10px; font-size: 15px"></div>
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+        <div style="display: flex; flex-direction: column; border: 1px solid #E3E5E9; border-radius: 14px; overflow: hidden">
+          <button onClick="{{g.toggle}}" aria-expanded="{{g.open}}" style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 12px; border: 0; background: #FBF7F0; cursor: pointer; text-align: left">
+            <span style="width: 34px; height: 34px; border-radius: 10px; background: #FBF1DE; color: #6B4E16; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800; color: #16181D">{{g.loc}}</span><span style="display: flex; height: 5px; width: 120px; border-radius: 3px; overflow: hidden; background: #EEF0F3"><span style="{{g.bar}}"></span></span></span>
+            <span class="num" style="{{g.chip}}">{{g.count}}</span>
+            <span style="{{g.chev}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+          </button>
+          <sc-if value="{{g.open}}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; flex-direction: column; padding: 0 12px 6px">
+              <sc-for list="{{g.rows}}" as="p" hint-placeholder-count="3">
+                <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-top: 1px solid #F1F2F4">
+                  <span style="{{p.headStyle}}">{{p.head}}</span>
+                  <div style="display: flex; align-items: center; gap: 10px">
+                    <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 800; overflow-wrap: anywhere">{{p.name}}</span><span class="num" style="font-size: 12px; color: #5B6270">{{p.meta}}</span></span>
+                    <button onClick="{{p.present}}" aria-label="Present" style="{{p.pStyle}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></button>
+                    <button onClick="{{p.absent}}" aria-label="Absent" style="{{p.aStyle}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+                    <button onClick="{{p.more}}" aria-label="Move or feedback" style="width: 42px; height: 42px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; cursor: pointer; font-size: 18px; font-weight: 800">⋯</button>
+                  </div>
+                  <sc-if value="{{p.open}}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 10px; background: #F4F5F7">
+                      <select style="min-height: 42px; padding: 0 10px; border: 1px solid #C9CDD4; border-radius: 10px; font-size: 14px; background: #FFFFFF"><option>Move to…</option><option>Suites 9–16</option><option>Club Chill</option><option>Founders Club</option></select>
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px"><button onClick="{{p.good}}" style="{{p.goodStyle}}">👍 Good</button><button onClick="{{p.bad}}" style="{{p.badStyle}}">👎 Needs work</button></div>
+                      <input placeholder="Optional note" style="min-height: 40px; padding: 0 10px; border: 1px solid #C9CDD4; border-radius: 10px; font-size: 14px">
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+      <button style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border: 0; border-radius: 14px; background: #6B4E16; color: #FFFFFF; font-size: 15px; font-weight: 800; cursor: pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add walk-in worker
+      </button>
+      <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px dashed #B9BEC7; border-radius: 12px"><span style="font-size: 12px; font-weight: 800; color: #5B6270">WALK-IN · shows on the list as Present right away</span><input placeholder="Search for the person, or Last, First" style="min-height: 44px; padding: 0 12px; border: 1px solid #C9CDD4; border-radius: 10px; font-size: 15px"><input inputmode="numeric" placeholder="Employee ID (full 8 digits if you have it)" style="min-height: 44px; padding: 0 12px; border: 1px solid #C9CDD4; border-radius: 10px; font-size: 15px"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px"><select style="min-height: 44px; border: 1px solid #C9CDD4; border-radius: 10px; font-size: 14px; background: #FFFFFF"><option>Location</option><option>Suites 1–8</option></select><input placeholder="Role (optional)" style="min-height: 44px; padding: 0 10px; border: 1px solid #C9CDD4; border-radius: 10px; font-size: 14px"></div></div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 18px; overflow: hidden">
+      <button onClick="{{toggleRoster}}" aria-expanded="{{rosterOpen}}" style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; border: 0; background: #FFFFFF; cursor: pointer; text-align: left">
+        <span style="width: 40px; height: 40px; border-radius: 12px; background: #E6EDFB; color: #163E91; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 16px; font-weight: 800; color: #16181D">Premium roster</span>
+          <span style="font-size: 13px; color: #5B6270">Who’s assigned where · 9 locations</span>
+        </span>
+        <span style="{{rosterChev}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </button>
+      <sc-if value="{{rosterOpen}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; border-top: 1px solid #F1F2F4">
+          <sc-for list="{{roster}}" as="r" hint-placeholder-count="4">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 6px 14px; border-bottom: 1px solid #F4F5F7">
+              <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+                <span style="font-size: 14px; font-weight: 800">{{r.loc}}</span>
+                <span style="font-size: 12px; color: #5B6270">{{r.people}}</span>
+              </span>
+              <span class="num" style="{{r.chip}}">{{r.n}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </section>
+
+    <section style="display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 18px; overflow: hidden">
+      <button onClick="{{toggleTools}}" aria-expanded="{{toolsOpen}}" style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; border: 0; background: #FFFFFF; cursor: pointer; text-align: left">
+        <span style="width: 40px; height: 40px; border-radius: 12px; background: #EEF0F3; color: #3A3F48; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 16px; font-weight: 800; color: #16181D">Premium tools</span>
+          <span style="font-size: 13px; color: #5B6270">Locations · Assign people</span>
+        </span>
+        <span style="{{toolsChev}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </button>
+      <sc-if value="{{toolsOpen}}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0 14px 14px">
+          <button style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 76px; padding: 12px; border: 1px solid #E3E5E9; border-radius: 12px; background: #FFFFFF; cursor: pointer; text-align: left"><span style="font-size: 14px; font-weight: 800">Premium locations</span><span style="font-size: 12px; color: #5B6270">Add suite, club and location names</span></button>
+          <button style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 76px; padding: 12px; border: 1px solid #E3E5E9; border-radius: 12px; background: #FFFFFF; cursor: pointer; text-align: left"><span style="font-size: 14px; font-weight: 800">Assign people</span><span style="font-size: 12px; color: #5B6270">Who works which location</span></button>
+        </div>
+      </sc-if>
+    </section>
+
+    <button style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; background: #FFFFFF; border: 1px dashed #B9BEC7; border-radius: 16px; cursor: pointer; text-align: left">
+      <span style="width: 36px; height: 36px; border-radius: 10px; background: #F3EAFB; color: #5B2A86; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6V4h8v2"/><rect x="5" y="6" width="14" height="14" rx="6"/><path d="M12 10v6M5 12H2M22 12h-3"/></svg></span>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800; color: #16181D">Report an app problem</span><span style="font-size: 13px; color: #5B6270">Something broken, slow or confusing? Tell us.</span></span>
+    </button>
+  </main>
+  <button aria-label="App QR code" style="position: absolute; left: 14px; bottom: 18px; height: 48px; padding: 0 16px; border-radius: 999px; border: 2px solid #6B4E16; background: #FFFFFF; color: #6B4E16; font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 8px; box-shadow: 0 3px 12px rgba(0,0,0,.18); cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M21 14v7h-7"/></svg>App QR</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'all', more: false, roster: false, tools: false,
+      st: { a: 'present', b: 'present', c: 'none', d: 'absent', e: 'present', f: 'none', g: 'present' } };
+  }
+  renderVals() {
+    const s = this.state;
+    const P = [['a', 'Jorge Martinez', 'Suite attendant', 'Suites 1–8'], ['b', 'Yadzia Lopez', 'Bartender', 'Club Chill'], ['c', 'Terri Nguyen', 'Suite attendant', 'Suites 9–16'], ['d', 'Sam Patel', 'Runner', 'Club Chill'], ['e', 'Maria Garcia', 'Suite attendant', 'Suites 17–24'], ['f', 'Chris Brown', 'Bartender', 'Founders Club'], ['g', 'Ana Ruiz', 'Server', 'Loge boxes']];
+    const tone = { present: ['#166534', '#E8F5EC'], absent: ['#8E0E22', '#FDECEE'], none: ['#8A4205', '#FDF1E3'] };
+    const lab = { present: 'Present', absent: 'Absent', none: 'Not checked in' };
+    const chip = k => 'font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; color: ' + tone[k][0] + '; background: ' + tone[k][1];
+    const all = P.map(([k, name, role, loc]) => ({ k, name, role, loc, st: s.st[k] }));
+    const filtered = all.filter(p => s.filter === 'all' || p.st === s.filter).sort((a, b) => (a.st === 'none' ? -1 : 0) - (b.st === 'none' ? -1 : 0));
+    const RG = r => /attendant|server/i.test(r) ? 'Suite staff' : /bartender/i.test(r) ? 'Bar' : 'Support';
+    const open = s.open || { 'Suites 1–8': true, 'Club Chill': true };
+    const bx = (on, c, b) => 'width: 42px; height: 42px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; ' + (on ? 'border: 0; background: ' + c + '; color: #FFFFFF' : 'border: 1px solid #D5D8DE; background: #FFFFFF; color: ' + c);
+    const fbB = on => 'min-height: 40px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (on ? 'border: 0; background: #16181D; color: #FFFFFF' : 'border: 1px solid #D5D8DE; background: #FFFFFF; color: #16181D');
+    const locs = [...new Set(all.map(p => p.loc))].sort();
+    const searching = s.filter !== 'all';
+    const groups = locs.map(loc => { const inLoc = all.filter(p => p.loc === loc); const rowsF = filtered.filter(p => p.loc === loc); const pres = inLoc.filter(p => p.st === 'present').length; const isOpen = searching || !!open[loc]; let last = '';
+      const rows = rowsF.map(p => { const g = RG(p.role), head = g !== last ? g : ''; last = g; const fb = (s.fb || {})[p.k]; return { name: p.name, meta: p.role + ' · ' + (p.time || '4:00–11:30 PM'), head, headStyle: head ? 'font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #6B4E16' : 'display: none',
+        present: () => this.setState({ st: { ...s.st, [p.k]: 'present' } }), absent: () => this.setState({ st: { ...s.st, [p.k]: 'absent' } }), pStyle: bx(p.st === 'present', '#166534'), aStyle: bx(p.st === 'absent', '#8E0E22'),
+        open: s.rowOpen === p.k, more: () => this.setState({ rowOpen: s.rowOpen === p.k ? null : p.k }), good: () => this.setState({ fb: { ...(s.fb || {}), [p.k]: 'good' } }), bad: () => this.setState({ fb: { ...(s.fb || {}), [p.k]: 'bad' } }), goodStyle: fbB(fb === 'good'), badStyle: fbB(fb === 'bad') }; });
+      return { loc, rows, show: rowsF.length > 0, open: isOpen, toggle: () => this.setState({ open: { ...open, [loc]: !open[loc] } }), count: pres + '/' + inLoc.length,
+        chip: 'font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; ' + (pres === inLoc.length ? 'color: #166534; background: #E8F5EC' : 'color: #8A4205; background: #FDF1E3'),
+        bar: 'width: ' + Math.round(pres / inLoc.length * 100) + '%; background: #16A34A', chev: 'display: flex; transform: rotate(' + (isOpen ? 180 : 0) + 'deg)' }; }).filter(g => g.show);
+    const cnt = k => all.filter(p => p.st === k).length;
+    const fdefs = [['all', 'All', all.length], ['none', 'Not checked in', cnt('none')], ['present', 'Present', cnt('present')], ['absent', 'Absent', cnt('absent')]];
+    const filters = fdefs.map(([k, l, n]) => ({ label: l, n, on: s.filter === k ? 'true' : 'false', pick: () => this.setState({ filter: k, more: false }),
+      style: 'min-height: 38px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; ' + (s.filter === k ? 'background: #16181D; color: #FFFFFF; border: 1px solid #16181D' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const pct = n => (n / all.length * 100).toFixed(1) + '%';
+    const roster = [['Suites 1–8', 'Jorge M. · 1 runner', '2/2', 'ok'], ['Suites 9–16', 'Terri N. · not checked in', '0/1', 'warn'], ['Club Chill', 'Yadzia L. · Sam P. (absent)', '1/2', 'warn'], ['Founders Club', 'Chris B. · not checked in', '0/1', 'warn']].map(([loc, people, n, t]) => ({ loc, people, n, chip: 'font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; ' + (t === 'ok' ? 'color: #166534; background: #E8F5EC' : 'color: #8A4205; background: #FDF1E3') }));
+    const chev = o => 'display: flex; transform: rotate(' + (o ? 180 : 0) + 'deg)';
+    return { groups, filters, presentN: cnt('present'), totalN: all.length,
+      barP: 'width: ' + pct(cnt('present')) + '; background: #16A34A', barA: 'width: ' + pct(cnt('absent')) + '; background: #B4122B',
+      roster, rosterOpen: s.roster, toggleRoster: () => this.setState({ roster: !s.roster }), rosterChev: chev(s.roster),
+      toolsOpen: s.tools, toggleTools: () => this.setState({ tools: !s.tools }), toolsChev: chev(s.tools) };
+  }
+}
+</script>
+</body>
+</html>

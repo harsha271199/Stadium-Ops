@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Requests</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1D4FB8}a:hover{color:#163E91}
+button{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <header style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <a href="Lead.dc.html" aria-label="Back" style="width: 44px; height: 44px; border: 1px solid #E3E5E9; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 13px; font-weight: 600; color: #C8102E">DFA 143</span>
+      <span style="font-size: 20px; font-weight: 800">Requests</span>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+
+    <button style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 0; border-radius: 18px; background: #C8102E; color: #FFFFFF; cursor: pointer; text-align: left">
+      <span style="display: flex; align-items: center; gap: 12px">
+        <span style="width: 48px; height: 48px; border-radius: 14px; background: rgba(255,255,255,0.16); display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 19px; font-weight: 800">My Stand Order</span>
+          <span style="font-size: 13px; color: #FBE3E7">Stock, Food and IT in one screen</span>
+        </span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </span>
+      <span style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+        <span style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,0.14)"><span style="font-size: 14px; font-weight: 800">Stock</span><span style="font-size: 11px; color: #FBE3E7">Drinks, snacks, ice → Warehouse</span></span>
+        <span style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,0.14)"><span style="font-size: 14px; font-weight: 800">Food</span><span style="font-size: 11px; color: #FBE3E7">Hot food → Kitchen</span></span>
+        <span style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,0.14)"><span style="font-size: 14px; font-weight: 800">IT / Fix</span><span style="font-size: 11px; color: #FBE3E7">Something broken → IT</span></span>
+      </span>
+    </button>
+
+    <section style="display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px">
+      <div style="display: flex; align-items: baseline; justify-content: space-between">
+        <span style="font-size: 15px; font-weight: 800">Open now</span>
+        <span class="num" style="font-size: 13px; color: #5B6270">{{openN}} waiting on others</span>
+      </div>
+      <sc-for list="{{open}}" as="r" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #F8F9FA; border-radius: 12px">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+            <span style="{{r.kindStyle}}">{{r.kind}}</span>
+            <span style="{{r.chipStyle}}">{{r.status}}</span>
+          </div>
+          <span style="font-size: 15px; font-weight: 700; line-height: 1.3">{{r.items}}</span>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px">
+            <sc-for list="{{r.steps}}" as="sp" hint-placeholder-count="3">
+              <span style="display: flex; flex-direction: column; gap: 4px"><span style="{{sp.bar}}"></span><span style="font-size: 11px; font-weight: 700; color: {{sp.color}}">{{sp.label}}</span></span>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+            <span class="num" style="font-size: 13px; color: {{r.detailColor}}; font-weight: 600">{{r.detail}}</span>
+            <button onClick="{{r.remind}}" style="{{r.remindStyle}}">{{r.remindLabel}}</button>
+          </div>
+        </div>
+      </sc-for>
+      <sc-if value="{{hasMore}}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{toggleMore}}" aria-expanded="{{showAll}}" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border: 1px solid #D5D8DE; border-radius: 12px; background: #FFFFFF; color: #16181D; font-size: 14px; font-weight: 800; cursor: pointer">
+          <span>{{moreLabel}}</span>
+          <span style="{{moreChev}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+        </button>
+      </sc-if>
+      <span style="font-size: 12px; color: #5B6270">Still waiting? Tap Remind instead of sending the same request again.</span>
+    </section>
+
+    <section style="display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; overflow: hidden">
+      <button onClick="{{toggleDone}}" aria-expanded="{{doneOpen}}" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; border: 0; background: #FFFFFF; cursor: pointer; text-align: left">
+        <span style="width: 36px; height: 36px; border-radius: 10px; background: #E8F5EC; color: #166534; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 15px; font-weight: 800">Done today</span>
+          <span class="num" style="font-size: 13px; color: #5B6270">{{doneSummary}}</span>
+        </span>
+        <span style="{{chev}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </button>
+      <sc-if value="{{doneOpen}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; border-top: 1px solid #F1F2F4">
+          <sc-for list="{{done}}" as="d" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 14px; border-bottom: 1px solid #F4F5F7">
+              <span style="{{d.kindStyle}}">{{d.kind}}</span>
+              <span style="flex: 1; font-size: 14px; font-weight: 600; min-width: 0">{{d.items}}</span>
+              <span class="num" style="font-size: 12px; color: #5B6270; white-space: nowrap">{{d.at}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </section>
+
+    <span style="margin-top: 4px; font-size: 13px; font-weight: 800; color: #5B6270">More requests · stand to stand, IT, maintenance (supervisor rows marked)</span>
+    <sc-for list="{{rows}}" as="w" hint-placeholder-count="9">
+      <button style="display: flex; align-items: center; gap: 12px; min-height: 76px; padding: 12px 14px; background: #FFFFFF; border: 1px solid #E3E5E9; border-radius: 16px; cursor: pointer; text-align: left">
+        <span style="{{w.iconStyle}}">
+          <sc-if value="{{w.isGive}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h12M12 6l6 6-6 6"/><path d="M20 4v16"/></svg></sc-if>
+          <sc-if value="{{w.isIn}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg></sc-if>
+          <sc-if value="{{w.isRefund}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg></sc-if>
+          <sc-if value="{{w.isOther}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{w.path}}"/></svg></sc-if>
+        </span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0">
+          <span style="font-size: 16px; font-weight: 800; color: #16181D">{{w.title}}</span>
+          <span style="font-size: 13px; color: #5B6270">{{w.sub}}</span>
+        </span>
+        <sc-if value="{{w.hasTag}}" hint-placeholder-val="{{ false }}"><span class="num" style="{{w.tagStyle}}">{{w.tag}}</span></sc-if>
+      </button>
+    </sc-for>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { doneOpen: false, reminded: {}, showAll: false }; }
+  renderVals() {
+    const s = this.state;
+    const icon = (c, b) => 'width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: ' + c + '; background: ' + b;
+    const chip = (c, b) => 'font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; color: ' + c + '; background: ' + b;
+    const kindCss = { Stock: ['#8E0E22', '#FDECEE'], Food: ['#8A4205', '#FDF1E3'], IT: ['#163E91', '#E6EDFB'] };
+    const kind = k => 'font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; flex-shrink: 0; color: ' + kindCss[k][0] + '; background: ' + kindCss[k][1];
+    const stepNames = { Stock: ['Sent', 'On the way', 'Delivered'], Food: ['Sent', 'Being made', 'Delivered'], IT: ['Sent', 'Tech coming', 'Fixed'] };
+    const O = [
+      { id: 1, kind: 'Stock', items: 'Dos Equis 24oz ×2 cases, Aquafina 20oz ×1 case', st: 2, status: 'On the way', detail: 'Jordan · due in 6 min', late: false, c: ['#8A4205', '#FDF1E3'] },
+      { id: 2, kind: 'Food', items: 'Hot dogs ×24', st: 1, status: 'Waiting', detail: 'Sent 14 min ago · 4 min late', late: true, c: ['#8E0E22', '#FDECEE'] },
+      { id: 3, kind: 'Stock', items: 'Ice ×6 bags', st: 1, status: 'Waiting', detail: 'Sent 3 min ago', late: false, c: ['#3A3F48', '#EEF0F3'] },
+      { id: 4, kind: 'IT', items: 'Menu board TV is blank', st: 2, status: 'Tech coming', detail: 'Tech on the way · sent 8 min ago', late: false, c: ['#163E91', '#E6EDFB'] },
+      { id: 5, kind: 'Stock', items: 'Cups 32oz ×2 sleeves', st: 1, status: 'Waiting', detail: 'Sent 1 min ago', late: false, c: ['#3A3F48', '#EEF0F3'] }
+    ].sort((a, b) => (b.late - a.late) || (b.st - a.st));
+    const MAX = 2;
+    const allOpen = O.map(r => {
+      const rem = !!s.reminded[r.id];
+      return { kind: r.kind, items: r.items, status: r.status, detail: rem ? 'Reminder sent just now' : r.detail,
+        detailColor: rem ? '#166534' : r.late ? '#B4122B' : '#5B6270',
+        chipStyle: chip(r.c[0], r.c[1]), kindStyle: kind(r.kind),
+        steps: stepNames[r.kind].map((label, i) => ({ label, color: i < r.st ? '#16181D' : '#5B6270', bar: 'display: block; height: 6px; border-radius: 3px; background: ' + (i < r.st ? '#16A34A' : '#E3E5E9') })),
+        remindLabel: rem ? 'Reminded' : 'Remind',
+        remind: () => this.setState({ reminded: { ...s.reminded, [r.id]: true } }),
+        remindStyle: 'min-height: 40px; padding: 0 14px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (rem ? 'border: 1px solid #BFE3CB; background: #E8F5EC; color: #166534' : r.late ? 'border: 0; background: #C8102E; color: #FFFFFF' : 'border: 1px solid #D5D8DE; background: #FFFFFF; color: #16181D') };
+    });
+    const open = s.showAll ? allOpen : allOpen.slice(0, MAX);
+    const extra = allOpen.length - MAX;
+    const done = [
+      { kind: 'Stock', items: 'Ice ×4 bags', at: 'Delivered 6:20 PM' },
+      { kind: 'IT', items: 'POS handheld won’t print', at: 'Fixed 6:12 PM' },
+      { kind: 'Stock', items: 'Cups 32oz ×2 sleeves', at: 'Delivered 5:31 PM' }
+    ].map(d => ({ ...d, kindStyle: kind(d.kind) }));
+    const rows = [
+      { title: 'Give Stock to Another Stand', sub: 'Send items to any stand, they confirm when it arrives', isGive: true, iconStyle: icon('#163E91', '#E6EDFB'), hasTag: false },
+      { title: 'Incoming Transfers', sub: 'Confirm stock another stand sent you', isIn: true, iconStyle: icon('#166534', '#E8F5EC'), hasTag: true, tag: '1 to confirm', tagStyle: chip('#FFFFFF', '#C8102E') },
+      { title: 'Refund Assistance', sub: 'Notify a supervisor to come help', isRefund: true, iconStyle: icon('#8A4205', '#FDF1E3'), hasTag: false },
+      { title: 'Report IT Issue', sub: 'POS · tablet · TV · network (also inside My Stand Order)', isOther: true, path: 'M3 5h18v11H3zM8 20h8M12 16v4', iconStyle: icon('#163E91', '#E6EDFB'), hasTag: false },
+      { title: 'Maintenance Issue', sub: 'Plumbing · electrical · structural · refrigeration', isOther: true, path: 'M14 6a4 4 0 0 0-5 5L3 17l4 4 6-6a4 4 0 0 0 5-5l-3 3-3-1-1-3z', iconStyle: icon('#3A3F48', '#EEF0F3'), hasTag: false },
+      { title: 'Force Restock / Add Stock Myself', sub: 'Shows only when you have restock access today', isOther: true, path: 'M13 2L4 14h7l-1 8 9-12h-7z', iconStyle: icon('#8A4205', '#FDF1E3'), hasTag: true, tag: 'If allowed', tagStyle: chip('#8A4205', '#FDF1E3') },
+      { title: 'All Requests · today', sub: 'Stock · Food · IT across all stands', isOther: true, path: 'M4 6h16M4 12h16M4 18h10', iconStyle: icon('#163E91', '#E6EDFB'), hasTag: true, tag: 'Supervisor', tagStyle: chip('#FFFFFF', '#16181D') },
+      { title: 'Give restock access', sub: 'Let a scheduled worker do Force Restock today', isOther: true, path: 'M13 2L4 14h7l-1 8 9-12h-7z', iconStyle: icon('#166534', '#E8F5EC'), hasTag: true, tag: 'Supervisor', tagStyle: chip('#FFFFFF', '#16181D') },
+      { title: 'Pending Refunds', sub: 'Go to the stand · complete · record reference', isOther: true, path: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', iconStyle: icon('#8A4205', '#FDF1E3'), hasTag: true, tag: 'Supervisor · 3', tagStyle: chip('#FFFFFF', '#16181D') }
+    ];
+    return { open, openN: allOpen.length, done, doneOpen: s.doneOpen, rows,
+      hasMore: extra > 0, showAll: s.showAll,
+      moreLabel: s.showAll ? 'Show less' : 'Show ' + extra + ' more open',
+      toggleMore: () => this.setState({ showAll: !s.showAll }),
+      moreChev: 'display: flex; transform: rotate(' + (s.showAll ? 180 : 0) + 'deg)',
+      doneSummary: '2 stock delivered · 1 IT fixed',
+      toggleDone: () => this.setState({ doneOpen: !s.doneOpen }),
+      chev: 'display: flex; transform: rotate(' + (s.doneOpen ? 180 : 0) + 'deg)' };
+  }
+}
+</script>
+</body>
+</html>

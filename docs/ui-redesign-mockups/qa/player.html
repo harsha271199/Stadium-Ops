@@ -1,0 +1,43 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#ddd}</style></head><body><div id="root"></div>
+<script>
+const f = new URLSearchParams(location.search).get('f');
+window.__errors = [];
+window.addEventListener('error', e => window.__errors.push(String(e.message)));
+class DCLogic { constructor(p){ this.props = p || {}; } setState(o){ Object.assign(this.state, o); window.__render(); } }
+(async () => {
+  const src = await (await fetch('/project/' + f)).text();
+  const helmet = (src.match(/<helmet>([\s\S]*?)<\/helmet>/) || [,''])[1];
+  document.head.insertAdjacentHTML('beforeend', helmet.replace(/<link[^>]*fonts[^>]*>/g, ''));
+  let tpl = (src.match(/<x-dc>([\s\S]*?)<\/x-dc>/) || [,''])[1].replace(/<helmet>[\s\S]*?<\/helmet>/, '');
+  const m = src.match(/<script type="text\/x-dc"[^>]*>([\s\S]*?)<\/script>/);
+  let comp = null;
+  if (m) { const C = new Function('DCLogic', m[1] + '\nreturn Component;')(DCLogic); comp = new C({}); }
+  const t = document.createElement('template'); t.innerHTML = tpl;
+  const get = (path, scope) => { path = path.trim(); if (path === 'true') return true; if (path === 'false') return false;
+    const [h, ...rest] = path.split('.'); let v; for (let i = scope.length - 1; i >= 0; i--) if (scope[i] && h in scope[i]) { v = scope[i][h]; break; }
+    for (const r of rest) v = v == null ? undefined : v[r]; return v; };
+  const interp = (s, scope) => s.replace(/\{\{([^}]+)\}\}/g, (_, p) => { const v = get(p, scope); return v == null ? '' : String(v); });
+  const isHole = s => /^\s*\{\{[^}]+\}\}\s*$/.test(s);
+  function build(node, scope, out, ns) {
+    if (node.nodeType === 3) { out.appendChild(document.createTextNode(interp(node.nodeValue, scope))); return; }
+    if (node.nodeType !== 1) return;
+    const tag = node.tagName.toLowerCase();
+    if (tag === 'sc-for') { const list = get(node.getAttribute('list').replace(/[{}]/g, ''), scope) || []; const as = node.getAttribute('as');
+      list.forEach(item => node.childNodes.forEach(c => build(c, scope.concat([{ [as]: item }]), out, ns))); return; }
+    if (tag === 'sc-if') { if (get(node.getAttribute('value').replace(/[{}]/g, ''), scope)) node.childNodes.forEach(c => build(c, scope, out, ns)); return; }
+    if (tag === 'dc-import') { const fr = document.createElement('iframe'); fr.src = '/qa/player.html?f=' + node.getAttribute('name') + '.dc.html'; fr.style.cssText = 'width:390px;height:844px;border:0'; out.appendChild(fr); return; }
+    const isSvg = ns || tag === 'svg'; const el = isSvg ? document.createElementNS('http://www.w3.org/2000/svg', node.tagName) : document.createElement(tag);
+    for (const a of node.attributes) {
+      if (a.name.startsWith('hint-')) continue;
+      if (a.name.startsWith('on') && isHole(a.value)) { const fn = get(a.value.replace(/[{}]/g, ''), scope); if (typeof fn === 'function') el.addEventListener(a.name.slice(2).toLowerCase(), e => { if (tag === 'a') e.preventDefault(); fn(e); }); else el.setAttribute('data-deadhandler', a.value); continue; }
+      if (isHole(a.value)) { const v = get(a.value.replace(/[{}]/g, ''), scope); if (v === false || v == null || v === 'false' && a.name === 'disabled') continue; if (a.name === 'value') { el.value = String(v); el.setAttribute('value', String(v)); continue; } if (a.name === 'disabled' && (v === false || v === 'false')) continue; el.setAttribute(a.name, v === true ? '' : String(v)); continue; }
+      el.setAttribute(a.name, interp(a.value, scope));
+    }
+    if (tag === 'a') el.addEventListener('click', e => e.preventDefault());
+    node.childNodes.forEach(c => build(c, scope, el, isSvg)); out.appendChild(el);
+  }
+  window.__render = () => { const vals = comp ? comp.renderVals() : {}; const root = document.getElementById('root'); const frag = document.createDocumentFragment(); t.content.childNodes.forEach(c => build(c, [vals], frag)); root.innerHTML = ''; root.appendChild(frag); };
+  try { window.__render(); } catch (e) { window.__errors.push('render: ' + e.message); }
+  window.__ready = true;
+})();
+</script></body></html>

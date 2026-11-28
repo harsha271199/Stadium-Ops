@@ -1,0 +1,382 @@
+{
+ "v": 3,
+ "attachments": {},
+ "boards": {
+  "Artboard-ssxm.dc.html": {
+   "h": 600,
+   "handmade": true,
+   "page": "page-598c77",
+   "title": "Artboard 1",
+   "w": 800,
+   "x": 0,
+   "y": 0
+  },
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Warehouse manager (tap the tabs)",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Runner.dc.html": {
+   "x": 940,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Warehouse worker: my cart",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Worker.dc.html": {
+   "x": 470,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Warehouse worker: jobs",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Lead.dc.html": {
+   "x": 0,
+   "y": 1190,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Stand lead",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Supervisor.dc.html": {
+   "x": 470,
+   "y": 1190,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Supervisor",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Manager.dc.html": {
+   "x": 940,
+   "y": 1190,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Manager / Support manager",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Checks.dc.html": {
+   "x": 0,
+   "y": 2380,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Lead: Checks",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Requests.dc.html": {
+   "x": 470,
+   "y": 2380,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Lead: Requests",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "FoodSafety.dc.html": {
+   "x": 940,
+   "y": 2380,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Lead: Food Safety",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Team.dc.html": {
+   "x": 1410,
+   "y": 2380,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Lead: My Team / Supervisor: Team by Stand",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "LoginPhone.dc.html": {
+   "x": 0,
+   "y": 3570,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Sign in (phone)",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Login.dc.html": {
+   "x": 470,
+   "y": 3570,
+   "w": 1280,
+   "h": 800,
+   "page": "page-1",
+   "title": "Sign in (laptop / tablet)",
+   "is_interactive": true,
+   "expand": "fill"
+  },
+  "ManagerDesk.dc.html": {
+   "x": 0,
+   "y": 4534,
+   "w": 1280,
+   "h": 900,
+   "page": "page-1",
+   "title": "Manager / Support manager / Admin (laptop & tablet)",
+   "is_interactive": true,
+   "expand": "fill"
+  },
+  "PremiumMgr.dc.html": {
+   "x": 0,
+   "y": 5777,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Premium manager",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Bottles.dc.html": {
+   "x": 470,
+   "y": 5777,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Premium: Bottle Tracker (manager / seller)",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "PremiumEmp.dc.html": {
+   "x": 940,
+   "y": 5777,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Premium employee / bottle seller",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Count.dc.html": {
+   "x": 1880,
+   "y": 2380,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Lead: Count In / Transfer / Count Out",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "StandForms.dc.html": {
+   "x": 0,
+   "y": 6964,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Worker home & stand forms (11 screens)",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "NpoSub.dc.html": {
+   "x": 470,
+   "y": 6964,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "NPO & subcontractor (4 screens)",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "FoodTech.dc.html": {
+   "x": 940,
+   "y": 6964,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Food runner, food manager, IT tech",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "WhTools.dc.html": {
+   "x": 1410,
+   "y": 6964,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Warehouse supervisor & manager tools",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "SupDetail.dc.html": {
+   "x": 1880,
+   "y": 6964,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Supervisor & manager detail screens",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "AdminSetup.dc.html": {
+   "x": 2350,
+   "y": 6964,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Admin PIN & Admin Setup",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Chat.dc.html": {
+   "x": 1410,
+   "y": 1190,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Chat & floating button (lead, warehouse, supervisor)",
+   "is_interactive": true,
+   "radius": 28
+  },
+  "Coverage.dc.html": {
+   "x": 1880,
+   "y": 0,
+   "w": 1100,
+   "h": 1600,
+   "page": "page-1",
+   "title": "START HERE: every option checklist",
+   "is_interactive": true,
+   "radius": 16
+  },
+  "ManagerTools.dc.html": {
+   "x": 1360,
+   "y": 4534,
+   "w": 390,
+   "h": 844,
+   "page": "page-1",
+   "title": "Manager Tools: every tool inside (9 screens)",
+   "is_interactive": true,
+   "radius": 28
+  }
+ },
+ "createdOnFiles": {
+  "at": "2026-11-27T18:49:15.282Z",
+  "v": 1
+ },
+ "designSystems": [],
+ "launch": {
+  "view": "canvas",
+  "page": "page-1"
+ },
+ "notes": {
+  "n1": {
+   "x": 1410,
+   "y": 0,
+   "w": 340,
+   "page": "page-1",
+   "fill": "orange",
+   "text": "Mockup only: made-up names and numbers. Manager: tap the tabs, the counts, Send runner, the menu. Worker: claim a job, tap On my way, then Delivered. My cart: pick a cart, answer the 4 checks, then return it or report a problem."
+  },
+  "t2": {
+   "x": 0,
+   "y": 967,
+   "text": "Concessions: lead, supervisor, managers",
+   "kind": "title1",
+   "maxW": 1800,
+   "page": "page-1"
+  },
+  "t1": {
+   "x": 0,
+   "y": -260,
+   "text": "Warehouse",
+   "kind": "title1",
+   "maxW": 1330,
+   "page": "page-1"
+  },
+  "t3": {
+   "x": 0,
+   "y": 2157,
+   "text": "Lead & supervisor screens behind the boxes",
+   "kind": "title1",
+   "maxW": 2270,
+   "page": "page-1"
+  },
+  "t4": {
+   "x": 0,
+   "y": 3347,
+   "text": "Sign in, managers & admin (phone + laptop)",
+   "kind": "title1",
+   "maxW": 1750,
+   "page": "page-1"
+  },
+  "t5": {
+   "x": 0,
+   "y": 5554,
+   "text": "Premium",
+   "kind": "title1",
+   "maxW": 1330,
+   "page": "page-1"
+  },
+  "t6": {
+   "x": 0,
+   "y": 6741,
+   "text": "More screens (use the dark picker at the top of each)",
+   "kind": "title1",
+   "maxW": 2740,
+   "page": "page-1"
+  }
+ },
+ "order": [
+  "Artboard-ssxm.dc.html",
+  "Main.dc.html",
+  "Worker.dc.html",
+  "Runner.dc.html",
+  "Lead.dc.html",
+  "Supervisor.dc.html",
+  "Manager.dc.html",
+  "Checks.dc.html",
+  "Requests.dc.html",
+  "FoodSafety.dc.html",
+  "Team.dc.html",
+  "LoginPhone.dc.html",
+  "Login.dc.html",
+  "ManagerDesk.dc.html",
+  "PremiumMgr.dc.html",
+  "Bottles.dc.html",
+  "PremiumEmp.dc.html",
+  "Count.dc.html",
+  "StandForms.dc.html",
+  "NpoSub.dc.html",
+  "FoodTech.dc.html",
+  "WhTools.dc.html",
+  "SupDetail.dc.html",
+  "AdminSetup.dc.html",
+  "Coverage.dc.html",
+  "Chat.dc.html",
+  "ManagerTools.dc.html"
+ ],
+ "pages": [
+  {
+   "id": "page-1",
+   "name": "Page 1"
+  },
+  {
+   "id": "page-598c77",
+   "name": "Page 2"
+  }
+ ],
+ "title": "Warehouse Manager Redesign"
+}

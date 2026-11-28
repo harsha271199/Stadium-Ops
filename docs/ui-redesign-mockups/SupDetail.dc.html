@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Supervisor detail screens</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,input,select,textarea{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+main > *, main > * > *{flex-shrink:0}
+.card{display:flex;flex-direction:column;gap:10px;padding:14px;background:#FFFFFF;border:1px solid #E3E5E9;border-radius:16px}
+.hint{font-size:13px;color:#5B6270;line-height:1.45}
+.ghost{min-height:46px;border:1px solid #D5D8DE;border-radius:12px;background:#FFFFFF;color:#16181D;font-size:14px;font-weight:700;cursor:pointer}
+.primary{min-height:54px;border:0;border-radius:14px;background:#C8102E;color:#FFFFFF;font-size:16px;font-weight:800;cursor:pointer}
+.in{min-height:50px;padding:0 14px;border:1px solid #C9CDD4;border-radius:12px;font-size:16px;color:#16181D;background:#FFFFFF;box-sizing:border-box;width:100%}
+.f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:#3A3F48}
+.sec{font-size:13px;font-weight:800;color:#5B6270}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:52px;border-top:1px solid #F1F2F4}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Public Sans', system-ui, sans-serif; color: #16181D; overflow: hidden">
+
+  <div style="display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px; background: #16181D">
+    <sc-for list="{{screens}}" as="sc" hint-placeholder-count="13">
+      <button onClick="{{sc.pick}}" aria-pressed="{{sc.on}}" style="{{sc.style}}">{{sc.label}}</button>
+    </sc-for>
+  </div>
+
+  <header style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E5E9">
+    <span style="width: 44px; height: 44px; border: 1px solid #E3E5E9; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16181D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></span>
+    <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 600; color: #C8102E">{{kicker}}</span><span style="font-size: 20px; font-weight: 800">{{title}}</span></span>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+
+    <sc-if value="{{is.live}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{liveKpi}}" as="k" hint-placeholder-count="3"><div style="{{k.style}}"><span class="num" style="font-size: 24px; font-weight: 800">{{k.n}}</span><span style="font-size: 12px; font-weight: 700">{{k.l}}</span></div></sc-for>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px"><sc-for list="{{venues}}" as="v" hint-placeholder-count="2"><button onClick="{{v.pick}}" style="{{v.style}}">{{v.l}}</button></sc-for></div>
+        <div style="display: flex; gap: 6px; overflow-x: auto">
+          <sc-for list="{{areaChips}}" as="a" hint-placeholder-count="5"><button onClick="{{a.pick}}" aria-pressed="{{a.on}}" style="{{a.style}}">{{a.l}}</button></sc-for>
+        </div>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <sc-for list="{{liveRows}}" as="r" hint-placeholder-count="6">
+            <div class="row" style="min-height: 60px">
+              <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800">{{r.s}}</span><span class="num hint" style="font-size: 12px">{{r.m}}</span></span>
+              <span style="{{r.chip}}">{{r.st}}</span>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.status}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px"><button style="min-height: 38px; border: 0; border-radius: 9px; background: #FFFFFF; font-size: 13px; font-weight: 800; box-shadow: 0 1px 2px rgba(0,0,0,.12)">My stands</button><button style="min-height: 38px; border: 0; border-radius: 9px; background: transparent; font-size: 13px; font-weight: 800; color: #3A3F48">All stands</button></div>
+        <span class="hint">Every stand’s checks for today. Tap a stand to see what’s missing.</span>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <div class="row" style="border-top: 0; min-height: 34px"><span class="sec">Stand</span><span class="sec" style="display: grid; grid-template-columns: repeat(4, 34px); gap: 4px; text-align: center"><span>In</span><span>Open</span><span>Food</span><span>Out</span></span></div>
+          <sc-for list="{{statusRows}}" as="r" hint-placeholder-count="7">
+            <div class="row">
+              <span style="font-size: 14px; font-weight: 800">{{r.s}}</span>
+              <span style="display: grid; grid-template-columns: repeat(4, 34px); gap: 4px">
+                <sc-for list="{{r.dots}}" as="d" hint-placeholder-count="4"><span aria-label="{{d.l}}" style="{{d.style}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{d.path}}"/></svg></span></sc-for>
+              </span>
+            </div>
+          </sc-for>
+        </section>
+        <span class="hint">Green = done · Red = late / missed · Grey = not yet due</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.allreq}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div role="tablist" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px">
+          <sc-for list="{{reqTabs}}" as="t" hint-placeholder-count="4"><button role="tab" onClick="{{t.pick}}" aria-selected="{{t.on}}" style="{{t.style}}">{{t.l}}</button></sc-for>
+        </div>
+        <sc-for list="{{reqRows}}" as="r" hint-placeholder-count="4">
+          <div style="{{r.card}}">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 15px; font-weight: 800">{{r.s}}</span><span style="{{r.chip}}">{{r.st}}</span></div>
+            <span style="font-size: 14px">{{r.what}}</span>
+            <span class="num hint" style="font-size: 12px">{{r.m}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.other}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <span class="hint">Order stock for a stand you’re not working at. It goes to the warehouse like a normal request.</span>
+        <label class="f">Which stand?<select class="in"><option>219 Cold Beer Cheeseburgers</option><option>212P Beer Portable</option></select></label>
+        <span class="sec">What kind? (tap any)</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px"><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Beer</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Soda</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Water</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Wine</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Liquor</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Ice</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Cups</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Lids</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Napkins</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Gloves</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Snacks</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Condiments</button><button class="ghost" style="min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px">Other</button></div>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <sc-for list="{{otherItems}}" as="it" hint-placeholder-count="3">
+            <div class="row" style="min-height: 58px">
+              <span style="flex: 1; font-size: 15px; font-weight: 700">{{it.name}}</span>
+              <button onClick="{{it.minus}}" aria-label="Less" style="width: 42px; height: 42px; border: 1px solid #D5D8DE; border-radius: 10px; background: #FFFFFF; font-size: 20px; cursor: pointer">−</button>
+              <span class="num" style="{{it.qs}}">{{it.q}}</span>
+              <button onClick="{{it.plus}}" aria-label="More" style="width: 42px; height: 42px; border: 0; border-radius: 10px; background: #16181D; color: #FFFFFF; font-size: 20px; cursor: pointer">+</button>
+            </div>
+          </sc-for>
+        </section>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"><button class="ghost">Normal</button><button class="ghost" style="border: 2px solid #C8102E; color: #8E0E22">Urgent</button></div>
+        <button class="primary">Send to warehouse</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.stand}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <section class="card" style="background: #7A0F22; border: 0; color: #FFFFFF">
+          <span style="font-size: 13px; font-weight: 700; opacity: 0.8">Stand detail</span>
+          <span style="font-size: 20px; font-weight: 800">212P Beer Portable</span>
+          <span class="num" style="font-size: 13px; opacity: 0.9">Lead: Maya R. · 4 of 5 here · Count In done 4:52 PM</span>
+          <span style="font-size: 12px; opacity: 0.85; line-height: 1.4">Opens when you tap a stand in All Stands Live. Fix who is here: check people in, mark no-shows, or move someone to a stand that is short.</span>
+        </section>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <sc-for list="{{standPeople}}" as="p" hint-placeholder-count="5">
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-top: 1px solid #F1F2F4">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 15px; font-weight: 800">{{p.n}}</span><span style="{{p.chip}}">{{p.st}}</span></div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px"><button onClick="{{p.checkin}}" class="ghost" style="{{p.ciStyle}}">{{p.ciLabel}}</button><button onClick="{{p.toggle}}" class="ghost" style="min-height: 40px; font-size: 13px">{{p.btn}}</button><button onClick="{{p.move}}" class="ghost" style="min-height: 40px; font-size: 13px">Move to…</button></div>
+            </div>
+          </sc-for>
+        </section>
+        <sc-if value="{{moving}}" hint-placeholder-val="{{ false }}">
+          <section class="card" style="border: 2px solid #163E91">
+            <span style="font-size: 15px; font-weight: 800">Move {{movingName}} to</span>
+            <select class="in"><option>204P Fan Fuel Bev</option><option>219 Cold Beer Cheeseburgers</option><option>408 Cold Beer</option></select>
+            <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px"><button onClick="{{cancelMove}}" class="ghost">Cancel</button><button onClick="{{cancelMove}}" class="primary" style="min-height: 46px; font-size: 15px; background: #163E91">Move now</button></div>
+          </section>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.record}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px"><button style="min-height: 38px; border: 0; border-radius: 9px; background: #FFFFFF; font-size: 13px; font-weight: 800; box-shadow: 0 1px 2px rgba(0,0,0,.12)">My stands</button><button style="min-height: 38px; border: 0; border-radius: 9px; background: transparent; font-size: 13px; font-weight: 800; color: #3A3F48">All stands</button></div>
+        <span class="hint">What came in and went out of each stand today.</span>
+        <sc-for list="{{recRows}}" as="r" hint-placeholder-count="3">
+          <section class="card" style="gap: 6px">
+            <span style="font-size: 15px; font-weight: 800">{{r.s}}</span>
+            <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+              <span style="display: flex; flex-direction: column; padding: 8px; border-radius: 10px; background: #E8F5EC; color: #166534"><span class="num" style="font-size: 18px; font-weight: 800">{{r.in}}</span><span style="font-size: 11px; font-weight: 700">cases in</span></span>
+              <span style="display: flex; flex-direction: column; padding: 8px; border-radius: 10px; background: #E6EDFB; color: #163E91"><span class="num" style="font-size: 18px; font-weight: 800">{{r.mv}}</span><span style="font-size: 11px; font-weight: 700">moved out</span></span>
+              <span style="display: flex; flex-direction: column; padding: 8px; border-radius: 10px; background: #FDECEE; color: #8E0E22"><span class="num" style="font-size: 18px; font-weight: 800">{{r.w}}</span><span style="font-size: 11px; font-weight: 700">waste</span></span>
+            </div>
+          </section>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.refund}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="hint">Refunds sent by leads. A manager gives the final OK.</span>
+        <sc-for list="{{refunds}}" as="r" hint-placeholder-count="3">
+          <section class="card">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800">{{r.s}}</span><span class="num hint" style="font-size: 12px">{{r.m}}</span></span><span class="num" style="font-size: 20px; font-weight: 800">{{r.amt}}</span></div>
+            <span style="font-size: 14px">{{r.why}}</span>
+            <sc-if value="{{r.open}}" hint-placeholder-val="{{ true }}">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"><button onClick="{{r.deny}}" class="ghost" style="color: #8E0E22">Deny</button><button onClick="{{r.ok}}" class="ghost" style="background: #166534; color: #FFFFFF; border: 0">Send to manager</button></div>
+            </sc-if>
+            <sc-if value="{{r.done}}" hint-placeholder-val="{{ false }}"><span style="{{r.chip}}">{{r.st}}</span></sc-if>
+          </section>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.info}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <section class="card" style="background: #7A0F22; border: 0; color: #FFFFFF; gap: 6px">
+          <span style="font-size: 13px; font-weight: 700; opacity: 0.85">Today’s game</span>
+          <span style="font-size: 22px; font-weight: 800">Sun Devils vs. Wildcats</span>
+          <span class="num" style="font-size: 14px">Kickoff 7:30 PM · Gates 5:30 PM · Expected 52,000</span>
+        </section>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <sc-for list="{{infoRows}}" as="r" hint-placeholder-count="5"><div class="row"><span class="hint" style="font-weight: 700">{{r.k}}</span><span class="num" style="font-size: 14px; font-weight: 800; text-align: right">{{r.v}}</span></div></sc-for>
+        </section>
+        <section class="card"><span class="sec">Notes from the manager</span><span style="font-size: 14px; line-height: 1.5">Alcohol cut-off end of 3rd quarter. Clear bag policy. Heat: hand out water to staff every hour.</span></section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.fb}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <span class="hint">How did today go? Takes 30 seconds. Managers read every one.</span>
+        <sc-for list="{{fbQs}}" as="q" hint-placeholder-count="3">
+          <section class="card" style="gap: 8px">
+            <span style="font-size: 15px; font-weight: 800">{{q.t}}</span>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px">
+              <sc-for list="{{q.opts}}" as="o" hint-placeholder-count="5"><button onClick="{{o.pick}}" aria-pressed="{{o.on}}" style="{{o.style}}">{{o.n}}</button></sc-for>
+            </div>
+          </section>
+        </sc-for>
+        <label class="f">Anything we should fix next game?<textarea class="in" rows="3" style="padding: 12px 14px" placeholder="Optional"></textarea></label>
+        <button class="primary">Send feedback</button>
+        <button class="ghost">Open full feedback form ↗ (compliment, concern, issue)</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.qr}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <section class="card" style="align-items: center; text-align: center">
+          <svg width="150" height="150" viewBox="0 0 21 21" aria-hidden="true"><rect width="21" height="21" fill="#FFFFFF"/><path d="M0 0h7v7H0zM14 0h7v7h-7zM0 14h7v7H0z" fill="#16181D"/><path d="M1 1h5v5H1zM15 1h5v5h-5zM1 15h5v5H1z" fill="#FFFFFF"/><path d="M2 2h3v3H2zM16 2h3v3h-3zM2 16h3v3H2zM9 1h2v2H9zM8 4h3v2H8zM9 8h4v2H9zM14 9h2v3h-2zM10 12h2v3h-2zM14 14h3v2h-3zM17 17h3v3h-3zM12 17h2v3h-2z" fill="#16181D"/></svg>
+          <span style="font-size: 16px; font-weight: 800">App QR: scan to open the app</span>
+          <span class="hint">Show this to someone who can’t find the link.</span>
+        </section>
+        <span class="sec">Subcontractor stands: what each one types to sign in</span>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <sc-for list="{{helpRows}}" as="h" hint-placeholder-count="4"><div class="row" style="align-items: flex-start; padding: 10px 0; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 800">{{h.t}}</span><span class="hint">{{h.d}}</span></div></sc-for>
+        </section>
+        <span class="hint">Only subcontractor stands are shown here. Employee, warehouse and NPO logins are never listed.</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.track}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div role="tablist" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: #EEF0F3; border-radius: 12px">
+          <sc-for list="{{trTabs}}" as="t" hint-placeholder-count="2"><button role="tab" onClick="{{t.pick}}" aria-selected="{{t.on}}" style="{{t.style}}">{{t.l}}</button></sc-for>
+        </div>
+        <sc-if value="{{trOut}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <button class="ghost" style="min-height: 50px; background: #16181D; color: #FFFFFF; border: 0">Remind every stand shown</button>
+            <section class="card" style="gap: 0; padding: 4px 14px">
+              <sc-for list="{{trRows}}" as="r" hint-placeholder-count="4"><div class="row" style="min-height: 58px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 800">{{r.i}}</span><span class="num hint" style="font-size: 12px">{{r.m}}</span></span><span style="{{r.chip}}">{{r.st}}</span></div></sc-for>
+            </section>
+          </div>
+        </sc-if>
+        <sc-if value="{{trInv}}" hint-placeholder-val="{{ false }}">
+          <section class="card" style="gap: 0; padding: 4px 14px">
+            <sc-for list="{{invRows}}" as="r" hint-placeholder-count="4"><div class="row"><span style="font-size: 14px; font-weight: 800">{{r.i}}</span><span class="num" style="font-size: 14px; font-weight: 800">{{r.n}}</span></div></sc-for>
+          </section>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.alerts}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <section class="card" style="flex-direction: row; align-items: center; gap: 12px">
+          <span style="{{alertIcon}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg></span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 800">{{alertTitle}}</span><span class="hint" style="font-size: 12px">{{alertSub}}</span></span>
+        </section>
+        <section class="card" style="gap: 0; padding: 4px 14px">
+          <sc-for list="{{alertChecks}}" as="c" hint-placeholder-count="4"><div class="row"><span style="font-size: 14px; font-weight: 700">{{c.t}}</span><span style="{{c.chip}}">{{c.st}}</span></div></sc-for>
+        </section>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"><button onClick="{{fixAlerts}}" class="ghost">Turn on alerts</button><button onClick="{{fixAlerts}}" class="primary" style="min-height: 46px; font-size: 15px">Send test alert</button></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{is.chat}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span class="hint">212P Beer Portable · lead, supervisor and warehouse can see this.</span>
+        <sc-for list="{{msgs}}" as="m" hint-placeholder-count="4">
+          <div style="{{m.wrap}}"><span style="font-size: 11px; font-weight: 800; color: #5B6270">{{m.who}}</span><span style="{{m.bubble}}">{{m.t}}</span></div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{is.chat}}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; gap: 8px; padding: 10px 16px 16px; background: #FFFFFF; border-top: 1px solid #E3E5E9">
+      <input class="in" placeholder="Message" style="flex: 1; width: auto">
+      <button onClick="{{send}}" aria-label="Send" style="width: 50px; height: 50px; flex-shrink: 0; border: 0; border-radius: 12px; background: #C8102E; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l16-8-6 16-2-7z"/></svg></button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { scr: 'live', area: 'Need help', rt: 'open', q: { a: 2, b: 0, c: 1 }, absent: { 2: true }, move: null, rf: {}, fb: {}, tr: 'out', alertsOn: false, sent: 0 }; }
+  renderVals() {
+    const s = this.state;
+    const S = [['live', 'All Stands Live'], ['status', 'Stand Status'], ['allreq', 'All requests'], ['other', 'Stock for another stand'], ['stand', 'Stand detail'], ['record', 'Transfer record'], ['refund', 'Refunds'], ['info', 'Game-day info'], ['qr', 'Sign-in help & QR'], ['track', 'Checkout & Inventory'], ['alerts', 'Alerts check'], ['chat', 'Stand chat']];
+    const screens = S.map(([k, l]) => ({ label: l, on: s.scr === k ? 'true' : 'false', pick: () => this.setState({ scr: k }), style: 'flex-shrink: 0; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 0; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; ' + (s.scr === k ? 'background: #FFFFFF; color: #16181D' : 'background: #33363D; color: #FFFFFF') }));
+    const is = {}; S.forEach(([k]) => is[k] = s.scr === k);
+    const chip = (c, b) => 'font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; color: ' + c + '; background: ' + b;
+    const OK = chip('#166534', '#E8F5EC'), WARN = chip('#8A4205', '#FDF1E3'), BAD = chip('#8E0E22', '#FDECEE'), INFO = chip('#163E91', '#E6EDFB'), GREY = chip('#3A3F48', '#EEF0F3');
+    const tab = on => 'min-height: 42px; border: 0; border-radius: 9px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (on ? 'background: #FFFFFF; color: #16181D; box-shadow: 0 1px 2px rgba(0,0,0,0.12)' : 'background: transparent; color: #3A3F48');
+    const kpi = (c, b) => 'display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 14px; color: ' + c + '; background: ' + b;
+    const ven = s.venue || 'MAS';
+    const liveKpi = ven === 'DFA' ? [{ n: 12, l: 'Open & OK', style: kpi('#166534', '#E8F5EC') }, { n: 2, l: 'Need help', style: kpi('#8E0E22', '#FDECEE') }, { n: 3, l: 'Not open yet', style: kpi('#3A3F48', '#EEF0F3') }] : [{ n: 38, l: 'Open & OK', style: kpi('#166534', '#E8F5EC') }, { n: 4, l: 'Need help', style: kpi('#8E0E22', '#FDECEE') }, { n: 12, l: 'Not open yet', style: kpi('#3A3F48', '#EEF0F3') }];
+    const venues = [['MAS', 'Mountain America'], ['DFA', 'Desert Financial']].map(([k, l]) => ({ l, pick: () => this.setState({ venue: k, area: 'All' }), style: 'min-height: 40px; border: 0; border-radius: 9px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (ven === k ? 'background: #FFFFFF; color: #16181D; box-shadow: 0 1px 2px rgba(0,0,0,.12)' : 'background: transparent; color: #3A3F48') }));
+    const areaChips = (ven === 'MAS' ? ['All', 'Need help', 'West', 'East', 'Upper'] : ['All', 'Need help', 'Concourse', 'Market']).map(l => ({ l, on: s.area === l ? 'true' : 'false', pick: () => this.setState({ area: l }), style: 'flex-shrink: 0; min-height: 38px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 800; cursor: pointer; ' + (s.area === l ? 'background: #16181D; color: #FFFFFF; border: 0' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') }));
+    const L = [['212P Beer Portable', 'West · 4/5 here · Count In done', 'OK', 'West'], ['219 Cold Beer Cheeseburgers', 'West · CO2 request 9 min', 'Needs stock', 'West'], ['204P Fan Fuel Bev', 'East · 2/4 here', 'Short staff', 'East'], ['408 Cold Beer', 'Upper · opening checklist missing', 'Late check', 'Upper'], ['DFA 111 Hot Dogs', 'Concourse · 3/3 here', 'OK', 'Concourse', 'DFA'], ['DFA 191 Pizza', 'Concourse · 3/5 here', 'Short staff', 'Concourse', 'DFA'], ['Market', 'Market · 7/7 here', 'OK', 'Market', 'DFA'], ['216M Fan Fuel BevMKT', 'East · not open', 'Not open', 'East']];
+    const tone = st => st === 'OK' ? OK : st === 'Not open' ? GREY : st === 'Short staff' ? WARN : BAD;
+    const liveRows = L.filter(r => (r[4] || 'MAS') === ven).filter(r => s.area === 'All' || r[3] === s.area || (s.area === 'Need help' && !/OK|Not open/.test(r[2]))).map(([a, m, st]) => ({ s: a, m, st, chip: tone(st) }));
+    const P = { ok: 'M5 12l5 5 9-10', bad: 'M6 6l12 12M18 6L6 18', wait: 'M8 12h8' };
+    const dot = (k, l) => ({ l, path: P[k], style: 'width: 34px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; ' + (k === 'ok' ? 'color: #166534; background: #E8F5EC' : k === 'bad' ? 'color: #8E0E22; background: #FDECEE' : 'color: #9AA0AA; background: #F1F2F4') });
+    const SR = [['212P', 'ok ok ok wait'], ['219', 'ok ok bad wait'], ['204P', 'ok bad ok wait'], ['408', 'ok bad wait wait'], ['DFA 111', 'ok ok ok wait'], ['216M', 'wait wait wait wait'], ['210', 'ok ok ok wait']];
+    const statusRows = SR.map(([a, d]) => ({ s: a, dots: d.split(' ').map((k, i) => dot(k, ['Count In', 'Opening', 'Food safety', 'Count Out'][i] + ' ' + k)) }));
+    const reqTabs = [['open', 'Open'], ['stock', 'Stock'], ['it', 'IT'], ['food', 'Food']].map(([k, l]) => ({ l, on: s.rt === k ? 'true' : 'false', pick: () => this.setState({ rt: k }), style: tab(s.rt === k) }));
+    const R = [['219 Cold Beer Cheeseburgers', 'CO2 35# ×1', 'stock', 'Late 9 min', 'Warehouse · not claimed'], ['401P Pizza', 'Register 2 frozen', 'it', 'Waiting', 'IT · Dev on it'], ['DFA 111 Hot Dogs', 'Buns ×2 trays', 'food', 'Cooking', 'Food · ready ~5 min'], ['204P Fan Fuel Bev', 'Dos Equis ×2', 'stock', 'On the way', 'Warehouse · Jordan']];
+    const reqRows = R.filter(r => s.rt === 'open' || r[2] === s.rt).map(([a, what, k, st, m]) => ({ s: a, what, st, m, chip: /Late/.test(st) ? BAD : /way|Cooking/.test(st) ? WARN : INFO, card: 'display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: #FFFFFF; border-radius: 16px; ' + (/Late/.test(st) ? 'border: 2px solid #B4122B' : 'border: 1px solid #E3E5E9') }));
+    const qs = n => 'min-width: 30px; text-align: center; font-size: 19px; font-weight: 800; color: ' + (n ? '#16181D' : '#C9CDD4');
+    const step = (k, name) => ({ name, q: s.q[k], qs: qs(s.q[k]), plus: () => this.setState({ q: { ...s.q, [k]: s.q[k] + 1 } }), minus: () => this.setState({ q: { ...s.q, [k]: Math.max(0, s.q[k] - 1) } }) });
+    const otherItems = [step('a', 'CO2 35#'), step('b', 'Ice bags'), step('c', 'Cups 24oz (sleeve)')];
+    const N = ['Maya Rodriguez', 'Chris Nguyen', 'Taylor Brooks', 'Jamie Patel', 'Morgan Diaz'];
+    const standPeople = N.map((n, i) => { const ab = !!s.absent[i], here = !ab && (i < 2 || (s.ci || {})[i]); return { n, st: ab ? 'Absent' : !here ? 'Not arrived' : i === 0 ? 'Lead · here' : 'Here', chip: ab ? BAD : !here ? WARN : OK, ciLabel: here ? 'Here ✓' : 'Check in', ciStyle: 'min-height: 40px; font-size: 13px; ' + (here ? 'background: #E8F5EC; color: #166534; border-color: #BFE3CB' : 'background: #166534; color: #FFFFFF; border: 0'), checkin: () => this.setState({ ci: { ...(s.ci || {}), [i]: true }, absent: { ...s.absent, [i]: false } }), btn: ab ? 'Undo absent' : 'Mark absent', toggle: () => this.setState({ absent: { ...s.absent, [i]: !ab } }), move: () => this.setState({ move: i }) }; });
+    const recRows = [{ s: '212P Beer Portable', in: 9, mv: 0, w: 0 }, { s: '204P Fan Fuel Bev', in: 6, mv: 2, w: 1 }, { s: 'DFA 111 Hot Dogs', in: 4, mv: 0, w: 3 }];
+    const F = [['204P Fan Fuel Bev', 'Chris N. · 6:48 PM', '$13.00', 'Wrong beer poured, customer returned'], ['219 Cold Beer Cheeseburgers', 'Sam O. · 7:05 PM', '$15.50', 'Burger cold, re-made and refunded'], ['DFA 111 Hot Dogs', 'Leah H. · 7:31 PM', '$7.00', 'Double charge on card']];
+    const refunds = F.map(([a, m, amt, why], i) => { const st = s.rf[i]; return { s: a, m, amt, why, open: !st, done: !!st, st: st === 'ok' ? 'Sent to manager' : 'Denied', chip: st === 'ok' ? INFO : BAD, ok: () => this.setState({ rf: { ...s.rf, [i]: 'ok' } }), deny: () => this.setState({ rf: { ...s.rf, [i]: 'no' } }) }; });
+    const infoRows = [{ k: 'Staff call time', v: '3:30 PM' }, { k: 'Stands open', v: '4:45 PM' }, { k: 'Alcohol cut-off', v: 'End of Q3' }, { k: 'Scheduled today', v: '312 people · 54 stands' }, { k: 'Weather', v: '84°F · clear' }];
+    const fbQs = [['How busy was it?', 'busy'], ['Did stock arrive on time?', 'stock'], ['How well did the app work?', 'app']].map(([t, k]) => ({ t, opts: [1, 2, 3, 4, 5].map(n => ({ n, on: s.fb[k] === n ? 'true' : 'false', pick: () => this.setState({ fb: { ...s.fb, [k]: n } }), style: 'min-height: 46px; border-radius: 10px; font-size: 16px; font-weight: 800; cursor: pointer; ' + (s.fb[k] === n ? 'background: #C8102E; color: #FFFFFF; border: 0' : 'background: #FFFFFF; color: #16181D; border: 1px solid #D5D8DE') })) }));
+const helpRows = [{ t: '216 Someburros SC', d: 'Types: 50216 (50000 + stand number)' }, { t: '232P Someburros SC', d: 'Types: 232' }, { t: '210P Someburros', d: 'Types: 50210' }, { t: '409P Someburros', d: 'Types: 50409' }];
+    const trTabs = [['out', 'Box not received'], ['inv', 'Missing counts']].map(([k, l]) => ({ l, on: s.tr === k ? 'true' : 'false', pick: () => this.setState({ tr: k }), style: tab(s.tr === k) }));
+    const trRows = [{ i: '204P Fan Fuel Bev', m: 'Stock box not picked up', st: 'No box', chip: BAD }, { i: '216M Fan Fuel BevMKT', m: 'Stock box not picked up', st: 'No box', chip: BAD }, { i: '212P Beer Portable', m: 'Box received 4:20 PM', st: 'Received', chip: OK }];
+    const invRows = [{ i: '219 Cold Beer Cheeseburgers', n: 'No Count Out' }, { i: '216M Fan Fuel BevMKT', n: 'No Count In' }, { i: '408 Cold Beer', n: 'No Count Out' }];
+    const msgs = [['Maya R. · lead', 'Out of CO2 on tap 2', false], ['You', 'Sent request to warehouse, Jordan has it', true], ['Jordan · warehouse', 'On my way, 5 min', false], ['Maya R. · lead', 'Thanks!', false]].concat(Array.from({ length: s.sent }, () => ['You', 'Checking in, all good?', true]))
+      .map(([who, t, me]) => ({ who, t, wrap: 'display: flex; flex-direction: column; gap: 3px; ' + (me ? 'align-items: flex-end' : 'align-items: flex-start'), bubble: 'max-width: 260px; padding: 10px 12px; border-radius: 14px; font-size: 14px; line-height: 1.4; ' + (me ? 'background: #16181D; color: #FFFFFF' : 'background: #FFFFFF; border: 1px solid #E3E5E9') }));
+    const on = s.alertsOn;
+    const titles = Object.fromEntries(S);
+    return { venues, screens, is, kicker: 'Supervisor · all stands', title: titles[s.scr], liveKpi, areaChips, liveRows, statusRows, reqTabs, reqRows, otherItems, standPeople,
+      moving: s.move !== null, movingName: s.move !== null ? N[s.move].split(' ')[0] : '', cancelMove: () => this.setState({ move: null }),
+      recRows, refunds, infoRows, fbQs, helpRows, trTabs, trOut: s.tr === 'out', trInv: s.tr === 'inv', trRows, invRows,
+      alertIcon: 'width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; ' + (on ? 'color: #166534; background: #E8F5EC' : 'color: #8E0E22; background: #FDECEE'),
+      alertTitle: on ? 'Alerts are working' : 'Alerts are off on this phone', alertSub: on ? 'Test alert arrived · 7:42 PM' : 'You won’t hear new requests',
+      alertChecks: [{ t: 'Notifications allowed', st: on ? 'Yes' : 'No', chip: on ? OK : BAD }, { t: 'App added to home screen', st: 'Yes', chip: OK }, { t: 'Sound on', st: on ? 'Yes' : 'Check', chip: on ? OK : WARN }, { t: 'Last alert received', st: on ? 'Just now' : '2 days ago', chip: on ? OK : WARN }],
+      fixAlerts: () => this.setState({ alertsOn: true }), msgs, send: () => this.setState({ sent: s.sent + 1 }) };
+  }
+}
+</script>
+</body>
+</html>
