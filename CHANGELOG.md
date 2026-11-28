@@ -4,6 +4,20 @@ Builds are tagged in `index.html` as `BUILD_TAG` and shown on the login
 screen footer. Newest first. Dates are the build date, not necessarily
 the deploy date — always verify the tag on the live site after deploying.
 
+## 2026-11-28-fix-176 · warehouse manager/supervisor home = the approved mockup
+
+- fix-175 only restyled the old warehouse screens, so they still looked old. The warehouse **manager and supervisor** home is now built from the approved mockup (`docs/ui-redesign-mockups/Main.dc.html`):
+  - Header "Warehouse · Today" with a **Live** pill (turns red "Offline" without signal) and a **menu** button.
+  - **Today**: game line, four tiles **Late / Waiting / Moving / Done** (tap opens the matching list), **Typical delivery today** (median request→delivered, goal 20) and **Wait to claim** (median request→claimed), a blue bar when deliveries wait for your sign-off, **Get someone on these** (late first, then oldest waiting) with **Send runner** / **Change runner** on each, and My jobs / Request stock / Quick Drop.
+  - **Bottom bar**: Today · Deliveries (red count of late) · Carts · Team.
+  - **Menu**: Game day (restock access, Quick Drop, request stock, my jobs) · Transfers (create, all, approvals with count) · Plan (assign areas & stands, stand transfer report, golf carts, my team) · This phone (alerts, dark mode, sign out). On request-only days the transfer items are hidden, as before.
+  - Laptop/tablet: content centered (max 1080px), cards two per row, bottom bar centered.
+  - Leaders now start on Today; phone back from a list returns to Today.
+- **Every button calls the existing function** (`whOpenRequests`, `whMgrOpenPane`, `whReassignOpen`, `openRestockAccess`, `whScanToOpen`, `whNewRequest`, …). The old tiles stay in the page hidden so code that updates them by id keeps working. `mapStock` now also keeps `claimedAt` / `deliveredAt` (for the two times).
+- **Warehouse workers' screen is unchanged.**
+- Tested on the test project with a made-up busy game: lands on Today; all 4 tiles, all 4 bottom-bar tabs (and highlight), all 9 menu items open the right place; Send runner opens the runner picker and **saves** (request assigned, card then says "Sent to …"); worker screen unchanged; worker job flow, golf cart rules (10/10) and the 15 sign-in cases still pass; no page errors; phone, laptop and dark mode checked by screenshot.
+- **Undo:** fix-175 zip.
+
 ## 2026-11-28-fix-175 · warehouse new look + one golf cart per person (UI redesign step 2)
 
 - **One golf cart per person.** A driver could take a second key while still holding one (only two people grabbing the *same* key was blocked). Now:
